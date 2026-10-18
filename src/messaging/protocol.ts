@@ -52,7 +52,7 @@ export type Msg =
               | { accepted: false; code: 'JOB_ALREADY_RUNNING'; conflictJobId: string; active: ActiveJob[] } }
   | { type: 'job/progress'; payload: JobProgress; response: void }
   | { type: 'job/finish'; payload: { jobId: string; attempt: number; status: JobStatus; result?: unknown; error?: JobError }; response: void }
-  | { type: 'compose/open'; payload: { jobId: string; host: string; composePath?: string; selector: ComposeSelectorConfig }; response: { tabId: number } }
+  | { type: 'compose/open'; payload: { jobId: string; url: string; selector?: ComposeSelectorConfig }; response: { tabId: number } }
   | { type: 'compose/detect'; payload: { jobId: string }; response: { frames: ComposeDetect[] } }
   | { type: 'compose/bind'; payload: { jobId: string; frameId: number }; response: void }
   | { type: 'compose/focus'; payload: { jobId: string }; response: void }

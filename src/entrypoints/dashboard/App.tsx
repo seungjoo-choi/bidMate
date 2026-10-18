@@ -68,10 +68,7 @@ export function App() {
       <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col gap-6 border-r border-line bg-surface px-3 py-6">
         <div className="flex items-center gap-2.5 px-3">
           <Logo size={30} />
-          <div className="text-lg leading-tight font-bold tracking-tight">
-            BidMate
-            <span className="block text-xs font-normal tracking-normal text-faint">입찰 공고 정리</span>
-          </div>
+          <div className="text-lg leading-tight font-bold tracking-tight">나의 입찰메이트</div>
         </div>
         <nav className="grid gap-1">
           {MENU.map(({ id, label, Icon }) => (
@@ -91,7 +88,7 @@ export function App() {
         <FolderStatus refreshKey={hash} />
       </aside>
       <main className="min-w-0 flex-1 px-12 pt-10 pb-16">
-        <div className={`mx-auto space-y-6 ${wide ? 'max-w-[1120px]' : 'max-w-[800px]'}`}>
+        <div className={`mx-auto space-y-6 ${route.page === 'template' ? 'max-w-[1440px]' : wide ? 'max-w-[1120px]' : 'max-w-[800px]'}`}>
           {route.page === 'home' && <HomePage />}
           {route.page === 'notices' && <NoticesPage />}
           {route.page === 'recipients' && <RecipientsPage />}

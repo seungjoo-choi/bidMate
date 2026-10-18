@@ -10,7 +10,7 @@ import { openDashboard } from './dashboard-tabs';
 import {
   ACTIVE, addFinalListener, getJob, getJobForSender, listJobs, senderKind, setHandoff, startJob, type KV, type StartResult,
 } from './job-coordinator';
-import { getWebmailHost } from './site-registry';
+import { getComposeHost } from './site-registry';
 
 export const QUEUE_KEY = 'autoComposeQueue';
 
@@ -24,7 +24,7 @@ export interface AutoComposeDeps {
   setHandoff: (jobId: string, handoff: Handoff) => Promise<void>;
   permissions: Pick<typeof chrome.permissions, 'contains'>;
   openDashboard: typeof openDashboard;
-  getWebmailHost: () => Promise<string>;
+  getComposeHost: () => Promise<string>;
   getSettings: () => Promise<Settings>;
   now: () => ISODate;
 }
@@ -44,7 +44,7 @@ const deps = (): AutoComposeDeps => {
     setHandoff: injected.setHandoff ?? setHandoff,
     permissions: injected.permissions ?? chrome.permissions,
     openDashboard: injected.openDashboard ?? openDashboard,
-    getWebmailHost: injected.getWebmailHost ?? getWebmailHost,
+    getComposeHost: injected.getComposeHost ?? getComposeHost,
     getSettings: injected.getSettings ?? (async () => withDefaults(((await storage.local.get('settingsCache')).settingsCache as Settings | undefined))),
     now: injected.now ?? (() => new Date().toISOString()),
   };
@@ -144,7 +144,7 @@ async function handleCollect(job: Job): Promise<void> {
   // compose: 큐 직렬화 구간에서 중복 확인, 적재, pump
   await q(async () => {
     let granted = false;
-    try { granted = await d.permissions.contains({ origins: [`https://${await d.getWebmailHost()}/*`] }); } catch { /* 권한 확인 실패는 없음으로 본다 */ }
+    try { granted = await d.permissions.contains({ origins: [`https://${await d.getComposeHost()}/*`] }); } catch { /* 권한 확인 실패는 없음으로 본다 */ }
     if (!granted) return d.setHandoff(job.id, none('needs_site_permission'));
     const queue = await readQueue();
     if (queue.some((e) => e.noticeId === noticeId) || (await activeCompose()).some((j) => j.noticeId === noticeId)) {

@@ -146,6 +146,13 @@ describe('recipients-api', () => {
       expect(snap.groups).toHaveLength(1);
       expect(snap.groups[0]!.memberIds).toEqual([id1, id2]);
     });
+    it('전체가 있어도 groupIds를 주면 그 선택을 따르고 전체에 자동으로 넣지 않는다', async () => {
+      const mem = new MemoryStore();
+      const id1 = (await saveRecipient(mem, rcp())).recipients[0]!.id;
+      const snap = await saveRecipient(mem, rcp({ name: '이영희', email: 'b@c.com', groupIds: [] }));
+      expect(snap.groups).toHaveLength(1);
+      expect(snap.groups[0]!.memberIds).toEqual([id1]);
+    });
     it('사용자가 만든 다른 기본 그룹이 있고 전체가 없으면 그룹이 새로 생기지 않는다', async () => {
       const mem = new MemoryStore();
       const gid = (await saveGroup(mem, grp('A'))).groups[0]!.id;

@@ -13,7 +13,7 @@ describe('normalizeTemplate', () => {
         { fieldKey: 'custom.foo', label: 'y' },
       ] }],
     }, NOW);
-    expect(template.sections[0]!.items.map((i) => i.fieldKey)).toEqual(['title', 'custom.foo']);
+    expect(template.sections[0]!.items.map((i) => (i as { fieldKey: string }).fieldKey)).toEqual(['title', 'custom.foo']);
     expect(template.sections[0]!.items[1]!.visible).toBe(true);
     expect(warnings).toHaveLength(1);
   });

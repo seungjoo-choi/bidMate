@@ -3,11 +3,12 @@ import { builtinDefaultTemplate, TEMPLATE_DEFAULT_ID } from '../../src/core/temp
 import { CONFIG_PATHS } from '../../src/engine/config/config-store';
 import { deleteTemplate, listTemplates, saveTemplate, setDefaultTemplate } from '../../src/engine/config/templates-api';
 import type { TemplateInput } from '../../src/core/types/config-file';
+import type { Template } from '../../src/core/types/template';
 import { MemoryStore } from '../helpers/memory-store';
 
 const codeOf = async (p: Promise<unknown>) => p.then(() => null, (e) => e.code as string);
 const input = (o: Partial<TemplateInput> = {}): TemplateInput => ({
-  name: '내 템플릿', subject: '[공유] {공고명}', greeting: '안녕하세요', closing: '감사합니다',
+  name: '내 템플릿', subject: '[공유] {공고명}', greeting: '안녕하세요', closing: '감사합니다', layout: 'table',
   sections: [{ id: 's1', title: '개요', items: [{ fieldKey: 'title', label: '사업명', visible: true }] }], ...o,
 });
 
@@ -65,5 +66,50 @@ describe('templates-api', () => {
     const snap = await setDefaultTemplate(mem, id);
     expect(snap.templates.map((t) => t.isDefault)).toEqual([false, true]);
     expect(await codeOf(setDefaultTemplate(mem, 'nope'))).toBe('NOT_FOUND');
+  });
+  it('layout이 table/list가 아니면 INVALID_VALUE', async () => {
+    const mem = new MemoryStore();
+    expect(await codeOf(saveTemplate(mem, input({ layout: 'grid' as never })))).toBe('INVALID_VALUE');
+    expect(mem.files.size).toBe(0);
+  });
+  it('text 항목과 style, inlineValue는 저장 후 재로드해도 유지된다', async () => {
+    const mem = new MemoryStore();
+    const sections = [{ id: 's', title: 't', inlineValue: '{공고명}', items: [{ kind: 'text' as const, id: 'k', label: 'L', text: '{공고명}까지', visible: true, style: { bold: true } }] }];
+    await saveTemplate(mem, input({ layout: 'list', sections }));
+    const t = (await listTemplates(mem)).templates[1]!;
+    expect(t.layout).toBe('list');
+    expect(t.sections[0]!.inlineValue).toBe('{공고명}');
+    expect(t.sections[0]!.items[0]).toEqual({ kind: 'text', id: 'k', label: 'L', text: '{공고명}까지', visible: true, style: { bold: true } });
+  });
+  it('text 항목 text 누락과 알 수 없는 kind는 INVALID_VALUE', async () => {
+    const mem = new MemoryStore();
+    const mk = (it: unknown) => input({ sections: [{ id: 's', title: 't', items: [it as never] }] });
+    expect(await codeOf(saveTemplate(mem, mk({ kind: 'text', id: 'k', label: 'L', visible: true })))).toBe('INVALID_VALUE');
+    expect(await codeOf(saveTemplate(mem, mk({ kind: 'html', label: 'L', visible: true })))).toBe('INVALID_VALUE');
+    expect(mem.files.size).toBe(0);
+  });
+  it('style이 모두 false면 저장하지 않는다', async () => {
+    const mem = new MemoryStore();
+    const items = [{ fieldKey: 'title' as const, label: 'x', visible: true, style: { bold: false, underline: false } }];
+    await saveTemplate(mem, input({ sections: [{ id: 's', title: 't', items }] }));
+    expect('style' in (await listTemplates(mem)).templates[1]!.sections[0]!.items[0]!).toBe(false);
+  });
+  it('옛 형식 파일은 layout table로 읽고 warning이 없다', async () => {
+    const mem = new MemoryStore();
+    const old = { id: 'o', name: '옛', isDefault: true, subject: '', greeting: '', closing: '', sections: [{ id: 's', title: 't', items: [{ fieldKey: 'title', label: '사업명', visible: true }] }], updatedAt: 'x' };
+    await mem.writeText(CONFIG_PATHS.templates, JSON.stringify({ version: 1, items: [old] }));
+    const snap = await listTemplates(mem);
+    const t = snap.templates[0] as Template;
+    expect(t.layout).toBe('table');
+    expect(t.sections[0]!.items).toEqual([{ fieldKey: 'title', label: '사업명', visible: true }]);
+    expect(snap.warnings).toEqual([]);
+  });
+  it('알 수 없는 kind 항목은 제거하고 warning 1개', async () => {
+    const mem = new MemoryStore();
+    const raw = { id: 'o', name: '옛', isDefault: true, subject: '', greeting: '', closing: '', sections: [{ id: 's', title: 't', items: [{ kind: 'html', label: 'x' }, { fieldKey: 'title', label: 'a', visible: true }] }], updatedAt: 'x' };
+    await mem.writeText(CONFIG_PATHS.templates, JSON.stringify({ version: 1, items: [raw] }));
+    const snap = await listTemplates(mem);
+    expect(snap.templates[0]!.sections[0]!.items).toHaveLength(1);
+    expect(snap.warnings).toHaveLength(1);
   });
 });

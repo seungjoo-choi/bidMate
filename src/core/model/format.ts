@@ -56,3 +56,25 @@ export function formatDateFull(iso: string | undefined | null): string {
 export function formatJoint(v: unknown): string {
   return typeof v === 'boolean' ? (v ? '허용' : '불허') : '—';
 }
+
+/** YYYY/MM/DD HH:mm (로컬 시간). 해석 불가면 빈 문자열. 메일 본문용. */
+export function formatDateTimeSlash(iso: string | undefined | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}/${p2(d.getMonth() + 1)}/${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+}
+
+/** YYYY/MM/DD (로컬 시간). 해석 불가면 빈 문자열. 메일 본문용. */
+export function formatDateSlash(iso: string | undefined | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}/${p2(d.getMonth() + 1)}/${p2(d.getDate())}`;
+}
+
+/** 콤마 금액. 1923000000 → "1,923,000,000 원". 유효하지 않으면 "—". */
+export function formatAmountComma(n: number | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return '—';
+  return `${comma(n)} 원`;
+}

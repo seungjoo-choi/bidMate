@@ -4,4 +4,6 @@ export * from './StatusBadge';
 export * from './Field';
 export * from './InlineAlert';
 export * from './Toast';
+export * from './ConfirmDialog';
+export * from './Select';
 export * from './Logo';

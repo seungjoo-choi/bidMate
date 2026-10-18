@@ -1,4 +1,4 @@
-import { FolderCheck } from 'lucide-react';
+import { FolderCheck, FolderOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { loadRootRecord } from '../../engine/file-store/idb-handles';
 import { send } from '../../messaging/bus';
@@ -29,12 +29,21 @@ export function GrantPage() {
     }
   };
 
+  const openSettings = async () => {
+    try { await send('ui/open', { page: 'settings' }); window.close(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+  };
+
   return (
     <div className="p-6">
       <Card title="저장 폴더 접근">
         <div className="space-y-3">
           <Button className="w-full" icon={<FolderCheck />} disabled={!handle} onClick={grant}>폴더 접근 허용</Button>
-          {loaded && !handle && <InlineAlert tone="error">저장 폴더가 설정되지 않았습니다. 대시보드 설정에서 폴더를 먼저 선택해 주세요.</InlineAlert>}
+          {loaded && !handle && (
+            <>
+              <InlineAlert tone="error">저장 폴더가 설정되지 않았습니다. 설정에서 폴더를 먼저 선택해 주세요.</InlineAlert>
+              <Button variant="secondary" className="w-full" icon={<FolderOpen />} onClick={openSettings}>설정에서 폴더 선택</Button>
+            </>
+          )}
           {error && <InlineAlert tone="error">{error}</InlineAlert>}
         </div>
       </Card>

@@ -282,6 +282,19 @@ describe('webmail 발신자', () => {
     await expect(assertRetryAllowed({ type: 'collect' }, mail(7, 'https://other.example.com/'))).rejects.toMatchObject({ code: 'SENDER_FORBIDDEN' });
     await expect(assertRetryAllowed({ type: 'collect' }, mail(7, `http://${HOST}/`))).rejects.toMatchObject({ code: 'SENDER_FORBIDDEN' });
   });
+  it('inbox가 gmail이면 mail.google.com 탭이 webmail, naverworks 호스트는 unknown', async () => {
+    const local = new MemKV();
+    await local.set({ settingsCache: { sites: { trackerbot: { provider: 'gmail' } } } });
+    setCoordinatorDeps({ storage: { session, local }, send: ((t: string, p: unknown) => sendImpl(t, p)) as never, offscreen });
+    await expect(assertRetryAllowed({ type: 'collect' }, mail(7, 'https://mail.google.com/mail/u/0/'))).resolves.toBeUndefined();
+    await expect(assertRetryAllowed({ type: 'collect' }, mail(7, 'https://mail.worksmobile.com/'))).rejects.toMatchObject({ code: 'SENDER_FORBIDDEN' });
+  });
+  it('작성 gmail, 수신 naverworks면 mail.google.com 탭은 unknown', async () => {
+    const local = new MemKV();
+    await local.set({ settingsCache: { mail: { provider: 'gmail' }, sites: { trackerbot: { provider: 'naverworks' } } } });
+    setCoordinatorDeps({ storage: { session, local }, send: ((t: string, p: unknown) => sendImpl(t, p)) as never, offscreen });
+    await expect(assertRetryAllowed({ type: 'collect' }, mail(7, 'https://mail.google.com/'))).rejects.toMatchObject({ code: 'SENDER_FORBIDDEN' });
+  });
   it('extract/compose 시작은 금지', async () => {
     await expect(assertRetryAllowed({ type: 'extract' } as never, mail(7))).rejects.toMatchObject({ code: 'SENDER_FORBIDDEN' });
     await expect(assertRetryAllowed({ type: 'compose' } as never, mail(7))).rejects.toMatchObject({ code: 'SENDER_FORBIDDEN' });

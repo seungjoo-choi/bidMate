@@ -4,11 +4,12 @@ type GlobMap = Record<string, string>;
 type Meta = { glob(pattern: string, opts: { query: string; import: string; eager: true }): GlobMap };
 
 const adapterSrc = (import.meta as unknown as Meta).glob('../../src/adapters/naverworks/**/*.ts', { query: '?raw', import: 'default', eager: true });
+const gmailSrc = (import.meta as unknown as Meta).glob('../../src/adapters/gmail/**/*.ts', { query: '?raw', import: 'default', eager: true });
 const csSrc = (import.meta as unknown as Meta).glob('../../src/entrypoints/naverworks-compose.ts', { query: '?raw', import: 'default', eager: true });
 const trackerAdapterSrc = (import.meta as unknown as Meta).glob('../../src/adapters/trackerbot/**/*.ts', { query: '?raw', import: 'default', eager: true });
 const trackerUiSrc = (import.meta as unknown as Meta).glob('../../src/ui/trackerbot/**/*.ts', { query: '?raw', import: 'default', eager: true });
 const trackerCsSrc = (import.meta as unknown as Meta).glob('../../src/entrypoints/trackerbot-mail.ts', { query: '?raw', import: 'default', eager: true });
-const all = { ...adapterSrc, ...csSrc, ...trackerAdapterSrc, ...trackerUiSrc, ...trackerCsSrc };
+const all = { ...adapterSrc, ...gmailSrc, ...csSrc, ...trackerAdapterSrc, ...trackerUiSrc, ...trackerCsSrc };
 const isDomActions = (p: string): boolean => p.endsWith('/dom-actions.ts');
 
 describe('금지된 디스패치 소스 스캔', () => {

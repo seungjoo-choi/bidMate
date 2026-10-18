@@ -1,19 +1,22 @@
 import type { Settings } from '../types/settings';
 
 export const DEFAULT_WEBMAIL_HOST = 'mail.worksmobile.com';
+/** mail-provider에서 다시 내보낸다(순환 import를 피하려고 여기에 둔다). */
+export const GMAIL_HOST = 'mail.google.com';
 
 export function defaultSettings(): Settings {
   return {
     schemaVersion: 1,
     g2b: { apiBaseUrl: '', detailUrlPatterns: [] },
     sites: {
-      trackerbot: { urlPatterns: [] },
+      trackerbot: { urlPatterns: [], provider: 'naverworks' },
       naverworks: { host: DEFAULT_WEBMAIL_HOST, selectorSetId: 'naverworks-v1' },
+      gmail: { accountIndex: 0, selectorSetId: 'gmail-v1' },
     },
     download: { concurrency: 3, maxRetries: 3, backoffMs: 1000, maxFileMB: 100 },
     extraction: { budgetMs: 90000, fileTimeoutMs: 20000, maxParseMB: 50 },
     autoCompose: { enabled: false, recipients: { mode: 'default' }, reviewGate: 'conflicts' },
-    mail: {},
+    mail: { provider: 'naverworks' },
     customFields: [],
     updatedAt: new Date().toISOString(),
   };
@@ -23,9 +26,19 @@ export function defaultSettings(): Settings {
 export function withDefaults(stored: Settings | undefined): Settings {
   const d = defaultSettings();
   if (!stored) return d;
+  // 실험 저장본 보정: 웹메일 호스트를 mail.google.com으로 바꿔 쓰던 상태를 Gmail 설정으로 읽는다(멱등).
+  const legacyGmail = !stored.mail?.provider && stored.sites?.naverworks?.host?.trim().toLowerCase() === GMAIL_HOST;
+  const sites = {
+    ...stored.sites,
+    trackerbot: { ...d.sites.trackerbot, ...stored.sites?.trackerbot, ...(legacyGmail ? { provider: 'gmail' as const } : {}) },
+    naverworks: { ...d.sites.naverworks, ...stored.sites?.naverworks, ...(legacyGmail ? { host: DEFAULT_WEBMAIL_HOST } : {}) },
+    gmail: { ...d.sites.gmail, ...stored.sites?.gmail },
+  };
   return {
     ...stored,
+    sites,
     extraction: { ...d.extraction, ...stored.extraction },
     autoCompose: { ...d.autoCompose, ...stored.autoCompose },
+    mail: { ...d.mail, ...stored.mail, ...(legacyGmail ? { provider: 'gmail' as const } : {}) },
   };
 }

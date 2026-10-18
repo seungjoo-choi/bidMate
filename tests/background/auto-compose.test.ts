@@ -61,7 +61,7 @@ beforeEach(() => {
     setHandoff: async (id, h) => { handoffs[id] = h; },
     permissions: { contains } as never,
     openDashboard,
-    getWebmailHost: async () => 'mail.example.com',
+    getComposeHost: async () => 'mail.example.com',
     getSettings: async () => withDefaults({ autoCompose: auto } as never),
     now: () => 'NOW',
   });

@@ -104,3 +104,27 @@ describe('composeView 자동 작성 오류 코드', () => {
       .toMatchObject({ kind: 'error', message: '자동 작성 설정의 템플릿이 삭제되었습니다', action: 'settings' });
   });
 });
+
+describe('composeView url 모드', () => {
+  const urlJob = (p: Partial<ComposeResult>) => job({
+    status: 'partial',
+    result: result({ mode: 'url', provider: 'gmail', fields: [field('to', 'prefilled'), field('cc', 'prefilled'), field('subject', 'prefilled'), field('body', 'prefilled')], ...p }),
+  });
+  it('mode url -> kind url, prefilled, 본문만 복사', () => {
+    const v = composeView(urlJob({}));
+    expect(v).toMatchObject({ kind: 'url', provider: 'gmail', copies: ['body'], pending: [] });
+    expect(v?.kind === 'url' && v.prefilled.map((f) => f.field)).toEqual(['to', 'cc', 'subject', 'body']);
+  });
+  it('첨부 미업로드면 copies에 attach 추가', () => {
+    expect(composeView(urlJob({ attachments: [att('a', 'skipped')] }))).toMatchObject({ kind: 'url', copies: ['body', 'attach'] });
+  });
+  it('URL_TOO_LONG으로 본문이 pending이면 pending에 body', () => {
+    const v = composeView(urlJob({ fields: [field('to', 'prefilled'), field('subject', 'prefilled'), field('body', 'unsupported')] }));
+    expect(v).toMatchObject({ kind: 'url', copies: ['body'] });
+    expect(v?.kind === 'url' && v.pending.map((f) => f.field)).toEqual(['body']);
+  });
+  it('manual 불변', () => {
+    expect(composeView(job({ status: 'partial', result: result({ mode: 'manual' }) })))
+      .toEqual({ kind: 'manual', copies: ['to', 'cc', 'subject', 'body', 'attach'], attachDir: 'f/attachments', canFocus: false });
+  });
+});

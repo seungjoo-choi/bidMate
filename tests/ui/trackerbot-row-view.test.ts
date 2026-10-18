@@ -42,7 +42,10 @@ describe('rowView', () => {
   });
   it('error 3종 action', () => {
     expect(v(entry({ job: job({ status: 'failed', errors: [err('NEEDS_FS_PERMISSION')] }) }))).toMatchObject({ kind: 'error', label: '수집 실패', action: 'grant' });
-    expect(v(entry({ job: job({ status: 'failed', errors: [err('G2B_KEY_MISSING')] }) }))).toMatchObject({ kind: 'error', action: 'settings' });
+    expect(v(entry({ job: job({ status: 'failed', errors: [err('G2B_KEY_MISSING')] }) })))
+      .toMatchObject({ kind: 'error', action: 'retry', actionLabel: '다시 시도', subAction: 'settings', subActionLabel: '설정 열기' });
+    expect(v(entry({ job: job({ status: 'failed', errors: [err('G2B_KEY_INVALID')] }) })))
+      .toMatchObject({ kind: 'error', action: 'retry', subAction: 'settings' });
     expect(v(entry({ job: job({ status: 'failed', errors: [err('X')] }) }))).toMatchObject({ kind: 'error', action: 'retry' });
   });
   it('orphaned -> disabled', () => {
@@ -81,6 +84,11 @@ describe('rowView', () => {
       const r = v(entry({ job: done({ action: 'compose', state: 'started', jobId: 'c1', at }), compose: comp({ status: 'partial', result }) }));
       expect(r).toMatchObject({ kind: 'done', label: '메일 확인', tone: 'warn', action: 'open-mail' });
     });
+    it('url -> 메일 확인 warn + 열기', () => {
+      const result = { noticeId: 'n1', folder: 'f', mode: 'url', provider: 'gmail', fields: [], attachments: [], outcome: 'partial', attachDir: 'f/a' };
+      const r = v(entry({ job: done({ action: 'compose', state: 'started', jobId: 'c1', at }), compose: comp({ status: 'partial', result }) }));
+      expect(r).toMatchObject({ kind: 'done', label: '메일 확인', tone: 'warn', action: 'open-mail' });
+    });
     it('compose_failed -> error 메일 작성 실패 + 보조 동작', () => {
       const h = done({ action: 'compose', state: 'started', jobId: 'c1', at });
       expect(v(entry({ job: h, compose: comp({ status: 'failed', errors: [err('GROUP_NOT_FOUND')] }) })))
@@ -92,9 +100,9 @@ describe('rowView', () => {
       const r = v(entry({ job: job({ status: 'partial', result: { noticeId: 'n1', folder: 'f', attachments: [att('failed')] }, handoff: { action: 'review', reasons: ['attachments_failed'], opened: true, at } }) }));
       expect(r).toMatchObject({ kind: 'done', label: '검수 필요', tone: 'warn', action: 'open-review', actionLabel: '검수' });
     });
-    it('skipped(already_composed) -> 기존 표시 + 툴팁 + 열기', () => {
+    it('skipped(already_composed) -> 이미 작성함 + 툴팁 + 메일 보기', () => {
       const r = v(entry({ job: done({ action: 'none', reason: 'already_composed', at }) }));
-      expect(r).toMatchObject({ kind: 'done', label: '수집 완료', action: 'open-mail' });
+      expect(r).toMatchObject({ kind: 'done', label: '이미 작성함', tone: 'warn', action: 'open-mail', actionLabel: '메일 보기' });
       expect((r as { detail?: string }).detail).toContain('이미 메일을 작성한 공고입니다');
     });
     it('handoff 없음/disabled -> 기존 표시', () => {

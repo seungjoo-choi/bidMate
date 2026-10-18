@@ -5,12 +5,14 @@ import { renderMail } from '../../core/templates/render';
 import type { MailDraft } from '../../core/types/mail';
 import type { MailStatus, Notice } from '../../core/types/notice';
 import { send } from '../../messaging/bus';
-import { Button, Card, InlineAlert, StatusBadge, useToast, type BadgeStatus } from '../../ui/components';
+import { Button, Card, InlineAlert, StatusBadge, Select, useToast, type BadgeStatus } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useRecipients, useTemplates } from '../../ui/hooks/useConfig';
-import { FsErrorAlert, type FsErrorInfo } from '../../ui/hooks/useFsError';
+import { FsErrorAlert, type FsErrorInfo } from './FsErrorAlert';
 import { ComposeCard } from '../../ui/compose/ComposeCard';
 import { useJobs } from '../../ui/hooks/useJobs';
+import { useSettings } from '../../ui/hooks/useSettings';
+import { composeProvider, PROVIDER_LABEL } from '../../core/model/mail-provider';
 import { MailPreviewFrame } from './templates/MailPreviewFrame';
 
 const STATUS_LABEL: Record<MailStatus, string> = { none: '초안 없음', drafting: '초안 작성됨', ready_for_review: '검토 대기', delivered: '전달 완료' };
@@ -39,6 +41,8 @@ export function MailPreparePage({ noticeId }: { noticeId: string }) {
   const rec = useRecipients();
   const tpls = useTemplates();
   const jobs = useJobs();
+  const { settings: mailSettings } = useSettings();
+  const provider = mailSettings ? composeProvider(mailSettings) : 'naverworks';
 
   const load = async () => {
     try {
@@ -126,7 +130,11 @@ export function MailPreparePage({ noticeId }: { noticeId: string }) {
         <div className="mt-2 pl-[calc(3px+0.75rem)] text-sm text-muted"><span className="font-mono text-sm">{noticeNo}</span></div>
       </header>
 
-      <InlineAlert tone="info">네이버웍스 자동 작성은 아직 검증 전입니다. 초안은 로컬 파일로 저장되며 메일은 직접 작성해 보내 주세요.</InlineAlert>
+      <InlineAlert tone="info">
+        {provider === 'gmail'
+          ? 'Gmail은 작성 창을 열고 받는 사람, 참조, 제목, 본문(서식 없음)을 채웁니다. 첨부와 서식 본문은 직접 넣어 주세요.'
+          : '네이버웍스 자동 작성은 아직 검증 전입니다. 초안은 로컬 파일로 저장되며 메일은 직접 작성해 보내 주세요.'}
+      </InlineAlert>
       {knownCode ? <InlineAlert tone="error">{knownCode}</InlineAlert> : <FsErrorAlert error={error} onRetry={() => void load()} />}
       {rec.error && <FsErrorAlert error={rec.error} onRetry={() => void rec.reload()} />}
       {tpls.error && <FsErrorAlert error={tpls.error} onRetry={() => void tpls.reload()} />}
@@ -146,21 +154,27 @@ export function MailPreparePage({ noticeId }: { noticeId: string }) {
             <div className="space-y-4">
               <label className="block space-y-1.5 text-sm font-semibold text-ink">
                 수신자 그룹
-                <select className={`${inputClass} font-normal`} value={groupId} onChange={(e) => setGroupSel(e.target.value)}>
-                  {!groupId && <option value="">(선택 없음)</option>}
-                  {groups.map((g) => <option key={g.id} value={g.id}>{g.name}{g.isDefault ? ' (기본)' : ''}</option>)}
-                </select>
+                <Select
+                  className="font-normal"
+                  value={groupId}
+                  placeholder="(선택 없음)"
+                  onChange={setGroupSel}
+                  options={groups.map((g) => ({ value: g.id, label: g.name, hint: g.isDefault ? '기본' : undefined }))}
+                />
               </label>
               <label className="block space-y-1.5 text-sm font-semibold text-ink">
                 템플릿
-                <select className={`${inputClass} font-normal`} value={templateId} onChange={(e) => setTplSel(e.target.value)}>
-                  {templates.map((t) => <option key={t.id} value={t.id}>{t.name}{t.isDefault ? ' (기본)' : ''}</option>)}
-                </select>
+                <Select
+                  className="font-normal"
+                  value={templateId}
+                  onChange={setTplSel}
+                  options={templates.map((t) => ({ value: t.id, label: t.name, hint: t.isDefault ? '기본' : undefined }))}
+                />
               </label>
             </div>
           </Card>
 
-          <Card title="웹메일로 작성" description="선택한 그룹과 템플릿으로 네이버웍스 작성 화면을 엽니다.">
+          <Card title="웹메일로 작성" description={`선택한 그룹과 템플릿으로 ${PROVIDER_LABEL[provider]} 작성 화면을 엽니다.`}>
             <ComposeCard noticeId={noticeId} noticeRef={notice.ref} params={{ ...(groupId ? { groupId } : {}), ...(templateId ? { templateId } : {}) }} jobs={jobs} />
           </Card>
 

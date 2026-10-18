@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { GMAIL_URL_MAX } from '../../src/adapters/gmail/compose-url';
+import { gmailV1 } from '../../src/adapters/gmail/selectors/gmail-v1';
 import { naverworksV1 } from '../../src/adapters/naverworks/selectors/naverworks-v1';
 import type { ComposeSelectorSet, ComposeState } from '../../src/adapters/naverworks/types';
 import { defaultSettings } from '../../src/core/model/default-settings';
@@ -208,5 +210,58 @@ describe('runComposeJob', () => {
     expect(d.to).toEqual([]);
     expect(d.recipientSource).toBe('custom');
     expect(d.groupId).toBeUndefined();
+  });
+});
+
+describe('runComposeJob gmail 주소 방식', () => {
+  const gmailSettings = () => { const s = defaultSettings(); s.mail.provider = 'gmail'; return s; };
+  const gmailSets = { 'gmail-v1': gmailV1 };
+
+  it('open url, selector 없음, detect/fill 미호출, prefilled, partial, mode url, provider gmail', async () => {
+    const mem = await setup();
+    let openPayload: any;
+    const h = harness(mem, { 'compose/open': (p) => { openPayload = p; return { tabId: 7 }; } }, { selectorSets: gmailSets }, gmailSettings());
+    const r = await h.run();
+    expect(openPayload.url.startsWith('https://mail.google.com/mail/u/0/?fs=1&tf=cm')).toBe(true);
+    expect(openPayload.selector).toBeUndefined();
+    expect(h.calls).toEqual(['compose/open', 'compose/focus']);
+    expect(r.status).toBe('partial');
+    expect(r.result?.mode).toBe('url');
+    expect(r.result?.provider).toBe('gmail');
+    expect(r.result?.outcome).toBe('partial');
+    expect(r.result?.fields.map((f) => [f.field, f.status, f.method])).toEqual([
+      ['to', 'prefilled', 'url'], ['cc', 'prefilled', 'url'], ['subject', 'prefilled', 'url'], ['body', 'prefilled', 'url'],
+    ]);
+    expect(r.result?.attachments.every((a) => a.status === 'skipped' && a.error === 'ATTACH_MANUAL')).toBe(true);
+    expect(h.progress.filter((p) => p.status === 'skipped').map((p) => p.step)).toEqual(['fill_fields', 'attach_files', 'verify']);
+    expect(JSON.stringify(r.result)).not.toContain('mail.google.com');
+  });
+
+  it('기록: adapterId gmail, selectorSetVersion none, ready_for_review 상태', async () => {
+    const mem = await setup();
+    await harness(mem, { 'compose/open': () => ({ tabId: 7 }) }, { selectorSets: gmailSets }, gmailSettings()).run();
+    const rec = JSON.parse(await mem.readText(`${FOLDER}/mail.json`))[0];
+    expect(rec.adapterId).toBe('gmail');
+    expect(rec.selectorSetVersion).toBe('none');
+    expect(rec.webmailUrl).toContain('mail.google.com');
+    expect((await new NoticeStore(mem).loadNotice('R1-000'))?.mail.status).toBe('ready_for_review');
+  });
+
+  it('긴 본문이면 body는 URL_TOO_LONG, mode url 유지', async () => {
+    const mem = await setup();
+    const store = new NoticeStore(mem);
+    const n = (await store.loadNotice('R1-000'))!;
+    // 사업기간은 본문에만 렌더되고 제목, 받는 사람, 참조에는 나오지 않는다. 본문을 빼면 주소가 한도 안에 들어온다.
+    n.basic.projectPeriod.value = '가'.repeat(3000);
+    await store.saveNotice(n);
+    let openUrl = '';
+    const h = harness(mem, { 'compose/open': (p) => { openUrl = p.url; return { tabId: 7 }; } }, { selectorSets: gmailSets }, gmailSettings());
+    const r = await h.run();
+    expect(openUrl.length).toBeLessThanOrEqual(GMAIL_URL_MAX);
+    expect(openUrl).not.toContain('&body=');
+    expect(r.result?.fields.filter((f) => f.field !== 'body').map((f) => f.status)).toEqual(['prefilled', 'prefilled', 'prefilled']);
+    const body = r.result?.fields.find((f) => f.field === 'body');
+    expect(body).toMatchObject({ status: 'unsupported', method: 'none', error: 'URL_TOO_LONG' });
+    expect(r.result?.mode).toBe('url');
   });
 });

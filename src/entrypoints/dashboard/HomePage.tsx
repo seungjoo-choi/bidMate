@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { IndexEntry } from '../../core/types/index-file';
 import { computeHomeStats } from '../../core/dashboard/stats';
 import { send } from '../../messaging/bus';
-import { FsErrorAlert } from '../../ui/hooks/useFsError';
+import { FsErrorAlert } from './FsErrorAlert';
 import { Card } from '../../ui/components';
 import { dDayLevel, formatDDay, formatDate } from '../../ui/review/format';
 import { StatCard } from './home/StatCard';

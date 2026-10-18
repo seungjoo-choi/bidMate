@@ -4,7 +4,7 @@ import type { CollectStatus } from '../../core/types/notice';
 import type { ExtractionStatus } from '../../core/types/extraction';
 import type { IndexEntry } from '../../core/types/index-file';
 import { send } from '../../messaging/bus';
-import { FsErrorAlert } from '../../ui/hooks/useFsError';
+import { FsErrorAlert } from './FsErrorAlert';
 import { Button, StatusBadge } from '../../ui/components';
 import type { BadgeStatus } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';

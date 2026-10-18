@@ -1,4 +1,5 @@
-import { DEFAULT_WEBMAIL_HOST, withDefaults } from '../core/model/default-settings';
+import { withDefaults } from '../core/model/default-settings';
+import { composeHost, inboxHost } from '../core/model/mail-provider';
 import type { Settings } from '../core/types/settings';
 
 export async function getSettingsCache(): Promise<Settings | undefined> {
@@ -6,15 +7,20 @@ export async function getSettingsCache(): Promise<Settings | undefined> {
   return settingsCache as Settings | undefined;
 }
 
-/** 설정된 웹메일 호스트. 설정이 없으면 기본값. */
-export async function getWebmailHost(): Promise<string> {
-  return withDefaults(await getSettingsCache()).sites.naverworks.host || DEFAULT_WEBMAIL_HOST; // job-coordinator와 같은 기준
+/** 트래커봇 메일을 받는 서비스의 호스트. 설정이 없으면 기본값. */
+export async function getInboxHost(): Promise<string> {
+  return inboxHost(withDefaults(await getSettingsCache()));
+}
+
+/** 메일을 작성하는 서비스의 호스트. 설정이 없으면 기본값. */
+export async function getComposeHost(): Promise<string> {
+  return composeHost(withDefaults(await getSettingsCache()));
 }
 
 export async function isWebmailUrl(url: string | undefined): Promise<boolean> {
   if (!url) return false;
   try {
-    return new URL(url).hostname === (await getWebmailHost());
+    return new URL(url).hostname === (await getInboxHost());
   } catch {
     return false;
   }
@@ -41,7 +47,7 @@ const deps = (): RegistryDeps => ({
   scripting: injected.scripting ?? chrome.scripting,
   permissions: injected.permissions ?? chrome.permissions,
   tabs: injected.tabs ?? chrome.tabs,
-  getHost: injected.getHost ?? getWebmailHost,
+  getHost: injected.getHost ?? getInboxHost,
 });
 
 async function doSync(): Promise<SyncResult> {

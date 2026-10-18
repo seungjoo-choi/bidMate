@@ -2,14 +2,13 @@ import { newId } from '../../core/model/ids';
 import { isValidEmail, normalizeEmail } from '../../core/recipients/email';
 import { dedupeDefault, normalizeGroup, normalizeRecipient } from '../../core/recipients/normalize';
 import type { GroupInput, RecipientInput, RecipientsSnapshot } from '../../core/types/config-file';
-import type { Group, Recipient } from '../../core/types/recipient';
+import { ALL_GROUP_ID, type Group, type Recipient } from '../../core/types/recipient';
 import type { IFileStore } from '../file-store/types';
 import { loadList, saveList, withConfigLock } from './config-store';
 
 export interface ConfigOpts { now?: () => Date }
 
-/** 수신자만 등록해도 메일 작성이 되도록 자동으로 만드는 기본 그룹. 고정 id로 알아본다. */
-export const ALL_GROUP_ID = 'grp-all';
+export { ALL_GROUP_ID } from '../../core/types/recipient';
 export const ALL_GROUP_NAME = '전체';
 
 const err = (code: string, message: string) => Object.assign(new Error(message), { code });
@@ -110,13 +109,14 @@ export function saveRecipient(store: IFileStore, input: RecipientInput, opts: Co
         return g;
       });
     }
-    // 기본 그룹이 없으면 '전체'를 만들어 기본으로 지정하고, 새 수신자는 '전체'에 자동으로 넣는다.
+    // 기본 그룹이 없으면 '전체'를 만들어 기본으로 지정한다. 새 수신자는 groupIds를 주지 않았을 때만 '전체'에 자동으로 넣는다
+    // (화면은 소속 그룹을 항상 보내므로 사용자 선택을 따른다).
     const all = s.groups.find((g) => g.id === ALL_GROUP_ID);
     if (!s.groups.some((g) => g.isDefault)) {
       groupsChanged = true;
       if (all) s.groups = s.groups.map((g) => (g.id === ALL_GROUP_ID ? { ...g, isDefault: true, updatedAt: nowIso } : g));
       else s.groups.push({ id: ALL_GROUP_ID, name: ALL_GROUP_NAME, memberIds: s.recipients.map((r) => r.id), isDefault: true, updatedAt: nowIso });
-    } else if (all && idx < 0 && !all.memberIds.includes(id)) {
+    } else if (all && idx < 0 && input.groupIds === undefined && !all.memberIds.includes(id)) {
       groupsChanged = true;
       s.groups = s.groups.map((g) => (g.id === ALL_GROUP_ID ? { ...g, memberIds: [...g.memberIds, id], updatedAt: nowIso } : g));
     }

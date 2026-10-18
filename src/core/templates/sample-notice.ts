@@ -18,7 +18,7 @@ export function sampleNotice(): Notice {
     awardMethod: ok('협상에 의한 계약 체결'), priceMethod: ok('복수예비가격'),
     jointVentureAllowed: ok(true), eligibility: ok('소프트웨어사업자'),
     registrationDeadline: ok(local(2026, 10, 20, 17)), bidStartAt: ok(local(2026, 10, 15, 9)),
-    bidCloseAt: ok(local(2026, 10, 22, 14)), proposalPeriod: ok('2026-10-23 ~ 2026-10-27'),
+    bidCloseAt: ok(local(2026, 10, 22, 14)), proposalPeriod: ok('2026/10/23 10:00 ~ 2026/10/27 14:00'),
     proposalEvalAt: ok(local(2026, 10, 30, 10)), openingAt: ok(local(2026, 10, 22, 15)),
     evalMethod: ok('기술 90 : 가격 10'), differentialScoring: ok(true),
     credibilityScore: ok(2), managementScore: ok(5),

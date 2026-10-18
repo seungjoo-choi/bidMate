@@ -61,7 +61,7 @@ export function App() {
     <div className="w-[380px] space-y-4 bg-canvas p-5">
       <div className="flex items-center justify-between">
         <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight"><Logo size={22} />BidMate</h1>
-        {detected && <StatusBadge status="ok">네이버웍스 감지</StatusBadge>}
+        {detected && <StatusBadge status="ok">웹메일 감지</StatusBadge>}
         {detected === false && <StatusBadge status="idle">대상 사이트 아님</StatusBadge>}
       </div>
       {isG2b && (
@@ -78,11 +78,11 @@ export function App() {
         </div>
       )}
       <div className="space-y-2">
-        <Button className="w-full" icon={<PanelRight />} disabled={windowId === null} onClick={openSidePanel}>
-          사이드 패널 열기
-        </Button>
-        <Button className="w-full" variant="secondary" icon={<LayoutDashboard />} onClick={openDashboard}>
+        <Button className="w-full" icon={<LayoutDashboard />} onClick={openDashboard}>
           대시보드 열기
+        </Button>
+        <Button className="w-full" variant="secondary" icon={<PanelRight />} disabled={windowId === null} onClick={openSidePanel}>
+          사이드 패널 열기
         </Button>
       </div>
       {error && <p className="text-xs text-danger">{error}</p>}

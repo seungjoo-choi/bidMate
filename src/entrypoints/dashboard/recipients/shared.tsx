@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import { Button } from '../../../ui/components';
+import { Trash2, X } from 'lucide-react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { Button, ConfirmDialog } from '../../../ui/components';
 
 export interface OpError { code: string; message: string; path?: string }
 
@@ -15,24 +17,83 @@ export function errorText(e: OpError): string {
   return MESSAGES[e.code] ?? `${e.code}: ${e.message}`;
 }
 
-/** 클릭하면 "정말 삭제"로 바뀌고 3초 뒤 원래대로 돌아가는 2단계 삭제 버튼. */
-export function ConfirmDeleteButton({ onConfirm, disabled }: { onConfirm: () => void; disabled?: boolean }) {
-  const [armed, setArmed] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  const click = () => {
-    if (armed) {
-      clearTimeout(timer.current);
-      setArmed(false);
-      onConfirm();
-      return;
-    }
-    setArmed(true);
-    timer.current = setTimeout(() => setArmed(false), 3000);
-  };
+/** 누르면 확인 팝업을 띄우고, 팝업에서 삭제를 눌러야 onConfirm을 부르는 삭제 버튼. */
+export function ConfirmDeleteButton({ onConfirm, disabled, title = '삭제할까요?', description }: { onConfirm: () => void; disabled?: boolean; title?: string; description?: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const cancel = useCallback(() => setOpen(false), []);
   return (
-    <Button variant={armed ? 'primary' : 'ghost'} disabled={disabled} onClick={click} className={armed ? '' : 'text-danger'}>
-      {armed ? '정말 삭제' : '삭제'}
-    </Button>
+    <>
+      <Button variant="ghost" icon={<Trash2 />} disabled={disabled} onClick={() => setOpen(true)} className="text-danger">삭제</Button>
+      <ConfirmDialog
+        open={open}
+        title={title}
+        description={description}
+        onCancel={cancel}
+        onConfirm={() => { setOpen(false); onConfirm(); }}
+      />
+    </>
+  );
+}
+
+export type Role = 'to' | 'cc';
+export const ROLE_LABEL: Record<Role, string> = { to: '받는 사람', cc: '참조' };
+
+/** 켜고 끄는 스위치. 누르는 즉시 onChange를 부른다. */
+export function Switch({ checked, onChange, disabled, label }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-10 shrink-0 items-center rounded-full border transition-colors disabled:opacity-40 motion-reduce:transition-none ${checked ? 'border-accent bg-accent' : 'border-line-strong bg-sunken'}`}
+    >
+      <span aria-hidden className={`absolute size-4 rounded-full bg-surface shadow-btn transition-transform motion-reduce:transition-none ${checked ? 'translate-x-[19px]' : 'translate-x-[3px]'}`} />
+    </button>
+  );
+}
+
+/** 받는 사람/참조 중 하나를 고르는 두 칸 버튼. */
+export function RoleToggle({ value, onChange, disabled, label }: { value: Role; onChange: (v: Role) => void; disabled?: boolean; label: string }) {
+  return (
+    <div role="group" aria-label={label} className="inline-flex rounded-ctl border border-line-strong bg-sunken p-0.5">
+      {(['to', 'cc'] as const).map((r) => (
+        <button
+          key={r}
+          type="button"
+          aria-pressed={value === r}
+          disabled={disabled}
+          onClick={() => { if (value !== r) onChange(r); }}
+          className={`h-8 rounded-[5px] px-3 text-sm font-semibold whitespace-nowrap transition-colors disabled:opacity-40 motion-reduce:transition-none ${value === r ? 'bg-surface text-ink shadow-btn' : 'text-muted hover:text-ink'}`}
+        >
+          {ROLE_LABEL[r]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** 오른쪽에서 열리는 패널. 바깥을 누르거나 Esc를 누르면 닫힌다. */
+export function Drawer({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: ReactNode }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+  if (!open) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="flex h-full w-full max-w-md flex-col border-l border-line bg-surface shadow-overlay">
+        <header className="flex items-center justify-between gap-4 border-b border-line px-6 py-4">
+          <h2 className="title-mark text-lg font-semibold text-ink">{title}</h2>
+          <Button variant="ghost" size="icon" aria-label="닫기" icon={<X />} onClick={onClose} />
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+      </div>
+    </div>,
+    document.body,
   );
 }

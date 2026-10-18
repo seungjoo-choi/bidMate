@@ -1,4 +1,3 @@
-import { mergeSelectorSet } from '../../adapters/naverworks/selectors';
 import type { ComposeSelectorSet, ComposeState } from '../../adapters/naverworks/types';
 import type { AttachResult, ComposeRecord, FieldResult } from '../../core/types/compose';
 import type { ComposeResult, Job, JobError, JobProgress, JobStatus, StepId } from '../../core/types/job';
@@ -8,6 +7,7 @@ import type { ComposeDetect, MsgType, PayloadOf, ResponseOf } from '../../messag
 import type { IFileStore } from '../file-store/types';
 import { chunkBlob } from '../mail/chunker';
 import { draftToComposeFill, prepareMail } from '../mail/prepare';
+import { planCompose } from '../mail/compose-plan';
 import { appendComposeRecord, markComposed } from '../mail/record';
 
 export interface ComposeJobDeps {
@@ -37,7 +37,8 @@ function fieldsWith(fill: { to: string[]; cc: string[]; subject: string; html: s
 /** Job.result에는 html/본문 전문을 넣지 않는다. */
 const slim = (f: FieldResult): FieldResult => (f.field !== 'body' ? f : { ...f, requested: '', rendered: null });
 const norm = (xs: string[]) => new Set(xs.map((s) => s.trim().toLowerCase()).filter(Boolean));
-const sameSet = (a: Set<string>, b: Set<string>) => a.size === b.size && [...a].every((x) => b.has(x));
+const squash = (s: string) => s.replace(/\s+/g, ' ');
+const sameSet =(a: Set<string>, b: Set<string>) => a.size === b.size && [...a].every((x) => b.has(x));
 
 /** 본문 텍스트의 첫 섹션 제목 줄("1. ...")에서 번호를 뗀 라벨. 없으면 undefined. */
 function firstSectionLabel(draft: MailDraft): string | undefined {
@@ -58,7 +59,9 @@ function reverify(fields: FieldResult[], state: ComposeState, draft: MailDraft, 
     if (f.field === 'subject') {
       return { ...f, rendered: state.subject, status: state.subject.trim() === (f.requested as string).trim() ? 'ok' : 'mismatch' };
     }
-    const okText = (!title || state.bodyText.includes(title)) && (label === undefined || state.bodyText.includes(label));
+    // innerText는 연속 공백을 하나로 줄이므로 양쪽 공백을 정규화해 비교한다.
+    const body = squash(state.bodyText);
+    const okText = (!title || body.includes(squash(title))) && (label === undefined || body.includes(squash(label)));
     const okLen = state.bodyHtml.length >= fill.html.length * 0.5;
     return { ...f, rendered: state.bodyText, status: okText && okLen ? 'ok' : 'mismatch' };
   });
@@ -71,7 +74,6 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
   const detectTimeoutMs = deps.detectTimeoutMs ?? 120_000;
   const attachPollMs = deps.attachPollMs ?? 1500;
   const { signal } = deps;
-  const site = settings.sites.naverworks;
 
   let cur: StepId = 'render_mail';
   let opened = false;
@@ -103,11 +105,10 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
     const { fill, files } = draftToComposeFill(draft);
     emit('render_mail', 'done', '메일 초안 완료');
 
-    // 2. 셀렉터셋
-    const base = deps.selectorSets[site.selectorSetId];
-    const set = base ? mergeSelectorSet(base, site.selectorOverrides) : undefined;
-    const manual = !set || set.status !== 'verified';
-    const webmailUrl = `https://${site.host}${site.composePath ?? '/'}`;
+    // 2. 작성 계획(서비스별 주소, 셀렉터)
+    const plan = planCompose(settings, draft, deps.selectorSets);
+    const manual = !plan.selector;
+    const isGmail = plan.provider === 'gmail';
     const attachDir = `${notice.folder}/attachments`;
 
     const finish = async (
@@ -121,7 +122,7 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
         id: `${job.id}-${job.attempt}`, jobId: job.id, noticeId: notice.id, composedAt: composedAt.toISOString(),
         templateId: draft.templateId, groupId: draft.groupId,
         snapshot: { to: fill.to, cc: fill.cc, subject: fill.subject, html: fill.html },
-        fields, attachments, outcome, adapterId: 'naverworks', selectorSetVersion: set?.version ?? 'none', webmailUrl,
+        fields, attachments, outcome, adapterId: plan.provider, selectorSetVersion: plan.selector?.set.version ?? 'none', webmailUrl: plan.url,
       };
       let recordId: string | undefined;
       try {
@@ -131,7 +132,7 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
       } catch { /* 기록 실패는 결과를 바꾸지 않는다(탭은 이미 열려 있음) */ }
       check();
       try { await deps.call('compose/focus', { jobId: job.id }, T.short); } catch { /* 무시 */ }
-      const result: ComposeResult = { noticeId: notice.id, folder: notice.folder, title: notice.basic.title.value ?? undefined, mode, tabId, fields: fields.map(slim), attachments, outcome, recordId, attachDir };
+      const result: ComposeResult = { noticeId: notice.id, folder: notice.folder, title: notice.basic.title.value ?? undefined, mode, provider: plan.provider, tabId, fields: fields.map(slim), attachments, outcome, recordId, attachDir };
       if (outcome === 'failed') {
         return { status: 'failed', result, error: { code: 'COMPOSE_FILL_FAILED', message: '입력에 모두 실패했습니다.', step: 'fill_fields', retryable: true } };
       }
@@ -141,18 +142,28 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
     // 3. open_compose
     emit('open_compose', 'running', '웹메일 작성 탭을 여는 중');
     const { tabId } = await rpc('compose/open', {
-      jobId: job.id, host: site.host, composePath: site.composePath,
-      selector: { selectorSetId: site.selectorSetId, selectorOverrides: site.selectorOverrides },
+      jobId: job.id, url: plan.url, selector: plan.selector?.config,
     }, T.open);
     opened = true;
 
-    // 4. 수동 모드
+    // 4. 셀렉터 없음(수동 또는 주소 방식)
     if (manual) {
       emit('open_compose', 'done', '작성 탭을 열었습니다');
-      for (const s of ['fill_fields', 'attach_files', 'verify'] as const) emit(s, 'skipped', '수동 모드: 셀렉터 미검증');
-      const fields = fieldsWith(fill, 'unsupported', 'SELECTOR_UNVERIFIED');
-      const attachments = files.map((f): ComposeResult['attachments'][number] => ({ fileId: f.fileId, name: f.name, size: f.size, status: 'skipped', method: 'none', elapsedMs: 0, error: 'SELECTOR_UNVERIFIED' }));
-      return await finish('manual', fields, attachments, tabId);
+      if (isGmail) {
+        emit('fill_fields', 'skipped', '주소로 전달(받는 사람, 참조, 제목, 본문)');
+        emit('attach_files', 'skipped', '첨부는 직접');
+        emit('verify', 'skipped', '주소 방식은 확인 생략');
+      } else {
+        for (const s of ['fill_fields', 'attach_files', 'verify'] as const) emit(s, 'skipped', '수동 모드: 셀렉터 미검증');
+      }
+      const fields = fieldsWith(fill, 'unsupported', 'SELECTOR_UNVERIFIED').map((f): FieldResult => {
+        if (plan.prefilled.includes(f.field)) return { ...f, status: 'prefilled', method: 'url', error: undefined };
+        if (plan.omitted.some((o) => o.field === f.field)) return { ...f, error: 'URL_TOO_LONG' };
+        return f;
+      });
+      const attachError = isGmail ? 'ATTACH_MANUAL' : 'SELECTOR_UNVERIFIED';
+      const attachments = files.map((f): ComposeResult['attachments'][number] => ({ fileId: f.fileId, name: f.name, size: f.size, status: 'skipped', method: 'none', elapsedMs: 0, error: attachError }));
+      return await finish(plan.prefilled.length > 0 ? 'url' : 'manual', fields, attachments, tabId);
     }
 
     // 5. 감지
@@ -170,7 +181,7 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
     for (;;) {
       const waited = now().getTime() - detectStart;
       const left = Math.max(0, Math.ceil((detectTimeoutMs - waited) / 1000));
-      emit('open_compose', 'running', `웹메일에서 [메일쓰기]를 눌러 주세요 (남은 ${left}초)`);
+      emit('open_compose', 'running', `${plan.needsUserOpen ? '웹메일에서 [메일쓰기]를 눌러 주세요' : '작성 화면을 확인하는 중'} (남은 ${left}초)`);
       let frames: ComposeDetect[] = [];
       try {
         frames = (await rpc('compose/detect', { jobId: job.id }, T.detect)).frames;

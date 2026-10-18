@@ -51,6 +51,10 @@ export function rowView(entry: RowEntry, opts: { orphaned: boolean }): RowView {
       case 'queued':
         return { kind: 'done', label: '수집 완료', tone: 'ok', canRetry: false, detail: tip };
       case 'skipped':
+        // 중복 방지로 자동 작성을 건너뛴 경우는 툴팁만으로는 모르고 지나치므로 라벨로 알린다
+        if (entry.job?.handoff?.action === 'none' && entry.job.handoff.reason === 'already_composed') {
+          return { kind: 'done', label: '이미 작성함', tone: 'warn', canRetry: false, detail: tip, ...(hAction ? { action: hAction, actionLabel: '메일 보기' } : {}) };
+        }
         return {
           kind: 'done', label: v.kind === 'completed' ? '수집 완료' : '일부 실패', tone: v.kind === 'completed' ? 'ok' : 'warn',
           canRetry: v.kind === 'partial' && v.canRetry, detail: tip, ...act,
@@ -76,6 +80,13 @@ export function rowView(entry: RowEntry, opts: { orphaned: boolean }): RowView {
         detail: withError([v.headline, ...v.failures.map((f) => `${f.name}: ${f.reason}`)].join('\n')),
       };
     case 'error':
+      // 서비스키 오류는 키를 고친 뒤 이 행에서 바로 다시 수집할 수 있어야 한다
+      if (v.action === 'settings') {
+        return {
+          kind: 'error', label: '수집 실패', detail: withError([v.message, v.detail, h?.text].filter(Boolean).join('\n')),
+          action: 'retry', actionLabel: '다시 시도', subAction: 'settings', subActionLabel: '설정 열기',
+        };
+      }
       return {
         kind: 'error', label: '수집 실패', detail: withError([v.message, v.detail, h?.text].filter(Boolean).join('\n')),
         action: v.action, actionLabel: v.actionLabel,

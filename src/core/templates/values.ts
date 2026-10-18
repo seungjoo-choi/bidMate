@@ -1,4 +1,4 @@
-import { formatAmountFull, formatDateFull, formatDateTimeFull, formatJoint, formatPeriod, formatScore, formatDifferential } from '../model/format';
+import { formatAmountComma, formatAmountShort, formatDateSlash, formatDateTimeSlash, formatJoint, formatPeriod, formatScore, formatDifferential } from '../model/format';
 import { ALL_FIELD_KEYS, getField } from '../model/notice-fields';
 import type { FieldValue } from '../types/common';
 import type { ResolvedValue } from '../types/mail';
@@ -12,9 +12,13 @@ const MISSING: ResolvedValue = { text: NEEDS_REVIEW_TEXT, status: 'missing', raw
 
 function formatByKind(kind: VariableKind, value: unknown): string {
   switch (kind) {
-    case 'amount': return typeof value === 'number' ? formatAmountFull(value) : '';
-    case 'datetime': return typeof value === 'string' ? (formatDateTimeFull(value) || value.trim()) : '';
-    case 'date': return typeof value === 'string' ? (formatDateFull(value) || value.trim()) : '';
+    case 'amount': return typeof value === 'number' ? formatAmountComma(value) : '';
+    case 'amount_short': {
+      const t = typeof value === 'number' ? formatAmountShort(value) : '';
+      return t === '—' ? '' : t;
+    }
+    case 'datetime': return typeof value === 'string' ? (formatDateTimeSlash(value) || value.trim()) : '';
+    case 'date': return typeof value === 'string' ? (formatDateSlash(value) || value.trim()) : '';
     case 'bool_joint': return typeof value === 'boolean' ? formatJoint(value) : '';
     case 'bool_apply': return typeof value === 'boolean' ? formatDifferential(value) : '';
     case 'score': return typeof value === 'number' ? formatScore(value) : '';
@@ -39,8 +43,14 @@ function attachmentLine(a: Notice['attachments'][number]): string {
   return a.originalName;
 }
 
-/** 공고에서 템플릿 필드 값을 해석한다. attachmentList의 raw는 줄 배열(string[]). */
-export function resolveValue(notice: Notice, fieldKey: TemplateFieldKey): ResolvedValue {
+/** 한국 시간 기준 YYYYMMDD(예: 20261019). */
+export function formatToday(now: Date): string {
+  const k = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return `${k.getUTCFullYear()}${String(k.getUTCMonth() + 1).padStart(2, '0')}${String(k.getUTCDate()).padStart(2, '0')}`;
+}
+
+/** 공고에서 템플릿 필드 값을 해석한다. attachmentList의 raw는 줄 배열(string[]). today는 now(메일 내용을 만드는 시각)로 정한다. */
+export function resolveValue(notice: Notice, fieldKey: TemplateFieldKey, now: Date = new Date()): ResolvedValue {
   if (fieldKey.startsWith('custom.')) {
     const key = fieldKey.slice('custom.'.length);
     return fromFieldValue(notice.customFields && Object.hasOwn(notice.customFields, key) ? notice.customFields[key] : undefined, 'text');
@@ -48,8 +58,12 @@ export function resolveValue(notice: Notice, fieldKey: TemplateFieldKey): Resolv
   switch (fieldKey) {
     case 'sourceUrl': return fromFieldValue(notice.sourceUrl, 'url');
     case 'collectedAt': {
-      const text = formatDateTimeFull(notice.collect?.collectedAt);
+      const text = formatDateTimeSlash(notice.collect?.collectedAt);
       return text ? { text, status: 'ok', raw: notice.collect.collectedAt } : { ...MISSING };
+    }
+    case 'today': {
+      const text = formatToday(now);
+      return { text, status: 'ok', raw: text };
     }
     case 'isCorrection': return { text: notice.isCorrection ? '정정공고' : '', status: 'ok', raw: notice.isCorrection };
     case 'attachmentCount': return { text: String(notice.attachments.length), status: 'ok', raw: notice.attachments.length };

@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import type { Job } from '../../core/types/job';
 import type { NoticeRef } from '../../core/types/notice';
 import type { MailDraft } from '../../core/types/mail';
-import { getWebmailHost } from '../../background/site-registry';
+import { composeHost, originOf } from '../../core/model/mail-provider';
+import { withDefaults } from '../../core/model/default-settings';
+import type { Settings } from '../../core/types/settings';
 import { send } from '../../messaging/bus';
 import { Button, InlineAlert, StatusBadge } from '../components';
 import { copyRich, copyText } from '../clipboard';
@@ -24,17 +26,25 @@ function useWebmailPermission(): { origin: string | null; granted: boolean | nul
   const [granted, setGranted] = useState<boolean | null>(null);
   useEffect(() => {
     let alive = true;
+    let seq = 0;
     const check = async () => {
-      const o = `https://${await getWebmailHost()}/*`;
+      const my = ++seq;
+      const { settingsCache } = await chrome.storage.local.get('settingsCache');
+      const o = originOf(composeHost(withDefaults(settingsCache as Settings | undefined)));
       const ok = await chrome.permissions.contains({ origins: [o] }).catch(() => false);
-      if (alive) { setOrigin(o); setGranted(ok); }
+      if (alive && my === seq) { setOrigin(o); setGranted(ok); }
     };
     void check();
     const onChange = () => void check();
+    const onStorage = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === 'local' && changes.settingsCache) void check();
+    };
+    chrome.storage.onChanged.addListener(onStorage);
     chrome.permissions.onAdded.addListener(onChange);
     chrome.permissions.onRemoved.addListener(onChange);
     return () => {
       alive = false;
+      chrome.storage.onChanged.removeListener(onStorage);
       chrome.permissions.onAdded.removeListener(onChange);
       chrome.permissions.onRemoved.removeListener(onChange);
     };
@@ -55,7 +65,7 @@ export function ComposeCard({ noticeId, noticeRef, params, jobs }: {
   const [rootName, setRootName] = useState<string | undefined>();
   const [copied, setCopied] = useState<CopyKind | null>(null);
 
-  const needsCopy = view?.kind === 'manual' || view?.kind === 'partial';
+  const needsCopy = view?.kind === 'manual' || view?.kind === 'partial' || view?.kind === 'url';
   useEffect(() => {
     setCopied(null);
     if (!needsCopy) return;
@@ -194,6 +204,21 @@ export function ComposeCard({ noticeId, noticeRef, params, jobs }: {
         )}
         {copyBtns(view.copies)}
         {focusBtn(view.canFocus)}
+      </div>
+    );
+  } else if (view.kind === 'url') {
+    body = (
+      <div className="space-y-3">
+        <InlineAlert tone="info">Gmail 작성 창을 열었습니다. 받는 사람, 참조, 제목, 본문(서식 없음)은 주소로 전달했습니다. 화면에서 내용을 확인하세요.</InlineAlert>
+        {view.pending.some((f) => f.field === 'body') && (
+          <InlineAlert tone="warn">본문이 길어 주소로 넣지 못했습니다. [본문 복사(서식)] 후 붙여 넣으세요.</InlineAlert>
+        )}
+        {view.attachments.length > 0 && view.attachDir && (
+          <p className="text-sm text-muted">첨부: 탐색기에서 <span className="font-mono">{view.attachDir}</span>의 파일을 첨부 영역에 끌어다 놓으세요</p>
+        )}
+        {copyBtns(view.copies)}
+        {focusBtn(view.canFocus)}
+        <Button className="w-full" variant="ghost" loading={busy} onClick={() => void start()}>다시 작성</Button>
       </div>
     );
   } else {

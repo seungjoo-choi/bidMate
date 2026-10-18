@@ -13,6 +13,7 @@
 ## 1. 실행 컨텍스트별 책임
 ```
 [사이트 탭 CS]  trackerbot.content / g2b.content / naverworks.content / probe(주입형)
+               (메일 수신 서비스는 `sites.trackerbot.provider`, 작성 서비스는 `mail.provider`로 naverworks/gmail 중 선택)
       │ runtime.sendMessage / Port
       ▼
 [SW: background]  라우터/잡 코디네이터/탭 관리/권한/사이트 등록. 상태는 storage.session/local. 파일/무거운 연산 없음.
@@ -26,6 +27,7 @@
 - **offscreen = 엔진.** SW는 30초 유휴 시 종료되고 `new Worker`를 쓸 수 없다. offscreen은 명시적으로 `closeDocument`할 때까지 살아 있다. FSA 핸들은 확장 origin의 IDB에 있으므로 offscreen에서 읽을 수 있고, `createWritable`/`getFile`은 제스처가 필요 없다.
 - **UI는 상태를 구독한다.** SW가 `chrome.storage.session`의 `jobs.<id>`를 갱신하고, popup/sidepanel/dashboard는 `storage.onChanged`를 구독한다. CS는 storage.session에 접근할 수 없으므로 플로팅 패널만 `tabs.sendMessage`로 push를 받는다.
 - **사이트 CS는 전부 동적 등록.** `optional_host_permissions: ["https://*/*"]`를 두고, 설정을 저장할 때 `permissions.request({origins})`(제스처 안에서) → `scripting.registerContentScripts`를 호출한다. 플로팅 패널은 Shadow DOM 안에 React로 마운트한다.
+- **메일 서비스 호스트.** 호스트는 provider별 값에서 유도한다(`src/core/model/mail-provider.ts`: `providerHost`, `inboxHost`, `composeHost`). SW는 `getInboxHost()`(수신/webmail 발신자 판정/CS 등록)와 `getComposeHost()`(작성 탭 권한)를 쓴다. `getWebmailHost`는 없다.
 - **비밀값 분리.** 나라장터 서비스키는 `chrome.storage.local.secrets`에만 저장하고, `config/settings.json`에는 쓰지 않는다.
 
 ### 1.1 메시지 프로토콜 (`src/messaging/protocol.ts`, discriminated union)
@@ -209,6 +211,17 @@ Job 상태 전이:
 
 `interrupted|partial|failed`는 실패한 step부터 재개한다(attempt+1, 이미 성공한 step은 skipped). 필수 step: collect=`fetch_basic`, compose=`open_compose, fill_fields`.
 
+### 3.1 메일 서비스 설정 (Gmail 지원 추가)
+```ts
+export type MailProvider = 'naverworks' | 'gmail';
+// Settings.sites.trackerbot: { urlPatterns: string[]; provider: MailProvider }   // 메일을 받는 서비스
+// Settings.sites.gmail:      { accountIndex: number; selectorSetId: string; selectorOverrides?: Partial<ComposeSelectorSet> }
+// Settings.mail:             { provider: MailProvider; defaultGroupId?: string; defaultTemplateId?: string }   // provider = 메일 작성 서비스
+```
+- Gmail 호스트는 상수 `GMAIL_HOST`(`mail.google.com`), 계정은 `accountIndex`(`/mail/u/N/`). 네이버웍스 호스트는 기존 `sites.naverworks.host`를 그대로 쓴다.
+- `withDefaults` 깊은 병합이라 옛 저장본은 provider 기본값(naverworks)으로 읽힌다. 실험 저장본(`sites.naverworks.host`가 Gmail 호스트)은 읽을 때 한 번 보정한다.
+- 대시보드 설정 카드는 `MailServiceCard`(구 `NaverWorksCard`).
+
 ## 4. 어댑터 인터페이스 (`src/adapters/*`)
 ### 4.1 NaverWorksComposeAdapter (CS)
 ```ts
@@ -241,6 +254,11 @@ export interface ComposeAdapter {
 - **본문 검증**: `bodyText`에 핵심 문자열이 들어 있고, `bodyHtml` 길이가 요청 길이의 50%를 넘어야 한다.
 - **첨부**: `DataTransfer` → `input.files` + `change` → 안 되면 `drop`(`dragenter`/`dragover` 선행) → 안 되면 `paste`. 완료 판정은 해당 이름의 item이 있고, 진행 표시가 사라지고, 오류가 없는 상태가 1초 이상 유지될 때다. 타임아웃은 `max(60s, size/100KB/s)`.
 - **2차 수단**(optional `debugger`): 1차 수단이 실패한 필드가 있을 때만 구현한다.
+
+### 4.1.1 Gmail 어댑터 (`src/adapters/gmail/`)
+- `compose-url.ts`: `buildGmailComposeUrl({accountIndex, to, cc, subject, bodyText})` → `{url, bodyIncluded}`. DOM 조작 없이 작성 주소로 전달하는 순수 함수. 8000자(`GMAIL_URL_MAX`) 초과 시 본문 생략.
+- `selectors/gmail-v1.ts`: `ComposeSelectorSet`, `status: 'unverified'`, 값은 비어 있다(추정 금지). 검증 전에는 자동 입력에 쓰이지 않는다.
+- provider 분기는 `src/engine/mail/compose-plan.ts`의 `planCompose` 한 곳.
 
 ### 4.2 NoticeSourceAdapter (offscreen)
 ```ts

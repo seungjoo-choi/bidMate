@@ -15,6 +15,7 @@ export function StorageFolderCard() {
   const [busy, setBusy] = useState<'pick' | 'reauth' | 'smoke' | null>(null);
   const [smoke, setSmoke] = useState<SmokeTestResult | null>(null);
   const [handle, setHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -31,7 +32,8 @@ export function StorageFolderCard() {
     setError(null);
     setBusy('pick');
     try {
-      const h = await window.showDirectoryPicker({ mode: 'readwrite' });
+      // 선택 창을 문서 폴더에서 연다. 한 번 고른 뒤에는 Chrome이 id별로 마지막 위치를 기억한다.
+      const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'bidmate-root', startIn: 'documents' });
       await saveRootHandle(h);
       await send('fs/root-updated', undefined, { timeoutMs: 30_000 });
       setSmoke(null);
@@ -76,7 +78,16 @@ export function StorageFolderCard() {
   return (
     <Card
       title="저장 폴더"
-      description="공고 파일과 데이터가 저장될 로컬 폴더입니다."
+      description={
+        <>
+          공고 파일과 데이터가 저장될 내 컴퓨터의 폴더입니다.{' '}
+          {status?.hasRoot && (
+            <button type="button" aria-expanded={showGuide} onClick={() => setShowGuide((v) => !v)} className="font-medium text-accent underline underline-offset-2 hover:text-ink">
+              폴더 고르는 방법 {showGuide ? '접기' : '보기'}
+            </button>
+          )}
+        </>
+      }
       action={
         <Button variant="secondary" icon={<FolderOpen />} loading={busy === 'pick'} onClick={pick}>
           폴더 선택
@@ -94,6 +105,13 @@ export function StorageFolderCard() {
           <StatusBadge status="idle">미설정</StatusBadge>
         )}
       </div>
+
+      {status && (!status.hasRoot || showGuide) && (
+        <InlineAlert tone="info">
+          <div className="font-medium">{status.hasRoot ? '폴더 고르는 방법' : '처음 한 번만 폴더를 골라 주세요'}</div>
+          <FolderGuide />
+        </InlineAlert>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {perm === 'prompt' && handle && (
@@ -123,5 +141,19 @@ export function StorageFolderCard() {
       )}
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
     </Card>
+  );
+}
+
+/** 저장 폴더 고르는 순서. 폴더가 없을 때는 항상 보이고, 있을 때는 설명 옆 버튼으로 펼친다. */
+function FolderGuide() {
+  return (
+    <>
+      <ol className="mt-1 list-decimal space-y-0.5 pl-5">
+        <li>오른쪽 위 <b>폴더 선택</b>을 누르면 <b>문서</b> 폴더에서 선택 창이 열립니다.</li>
+        <li>선택 창 왼쪽 아래 <b>새 폴더</b>를 눌러 <b>BidMate</b> 폴더를 만듭니다.</li>
+        <li>만든 <b>BidMate</b> 폴더를 고른 채로 <b>선택</b>을 누르고, 이어서 뜨는 접근 허용 창에서 허용합니다.</li>
+      </ol>
+      <div className="mt-1 text-xs">바탕화면, 다운로드 폴더 전체, iCloud나 NAS 동기화 폴더는 피해 주세요. 폴더를 바꾸면 기존 폴더의 파일은 옮겨지지 않습니다.</div>
+    </>
   );
 }

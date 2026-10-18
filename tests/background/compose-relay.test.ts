@@ -38,7 +38,7 @@ describe('compose-relay', () => {
     for (const t of TYPES) await expect((async () => handlerOf(t)({ jobId: 'j' }, {}))()).rejects.toMatchObject({ code: 'SENDER_FORBIDDEN' });
   });
   it('open: 사이트 권한이 없으면 NEEDS_SITE_PERMISSION', async () => {
-    await expect(handlerOf('compose/open')({ jobId: 'j', host: 'mail.worksmobile.com', selector: { selectorSetId: 's' } }, sender))
+    await expect(handlerOf('compose/open')({ jobId: 'j', url: 'https://mail.worksmobile.com/', selector: { selectorSetId: 's' } }, sender))
       .rejects.toMatchObject({ code: 'NEEDS_SITE_PERMISSION' });
   });
   it('open: 탭 생성 후 주입이 실패해도 tabId를 반환한다', async () => {
@@ -54,8 +54,33 @@ describe('compose-relay', () => {
       },
       scripting: { executeScript: vi.fn().mockRejectedValue(new Error('denied')) },
     });
-    await expect(handlerOf('compose/open')({ jobId: 'j', host: 'mail.worksmobile.com', selector: { selectorSetId: 's' } }, sender))
+    await expect(handlerOf('compose/open')({ jobId: 'j', url: 'https://mail.worksmobile.com/', selector: { selectorSetId: 's' } }, sender))
       .resolves.toEqual({ tabId: 9 });
+  });
+  it('open: http 주소는 COMPOSE_BAD_URL', async () => {
+    await expect(handlerOf('compose/open')({ jobId: 'j', url: 'http://mail.google.com/', selector: { selectorSetId: 's' } }, sender))
+      .rejects.toMatchObject({ code: 'COMPOSE_BAD_URL' });
+  });
+  it('open: 권한 검사는 url의 origin으로 한다', async () => {
+    const contains = vi.fn().mockResolvedValue(false);
+    vi.stubGlobal('chrome', { permissions: { contains } });
+    await expect(handlerOf('compose/open')({ jobId: 'j', url: 'https://mail.google.com/mail/u/0/?fs=1&tf=cm', selector: { selectorSetId: 's' } }, sender))
+      .rejects.toMatchObject({ code: 'NEEDS_SITE_PERMISSION' });
+    expect(contains).toHaveBeenCalledWith({ origins: ['https://mail.google.com/*'] });
+  });
+  it('open: selector가 없으면 주입 없이 tabId만 반환하고 url로 탭을 만든다', async () => {
+    const executeScript = vi.fn();
+    const create = vi.fn().mockResolvedValue({ id: 9 });
+    vi.stubGlobal('chrome', {
+      permissions: { contains: vi.fn().mockResolvedValue(true) },
+      windows: { getLastFocused: vi.fn().mockResolvedValue({ id: 1 }) },
+      tabs: { create, onUpdated: { addListener: vi.fn((fn: (id: number, info: { status?: string }) => void) => { fn(9, { status: 'complete' }); }), removeListener: vi.fn() } },
+      scripting: { executeScript },
+    });
+    const url = 'https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=a%40x.com';
+    await expect(handlerOf('compose/open')({ jobId: 'j', url }, sender)).resolves.toEqual({ tabId: 9 });
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ url }));
+    expect(executeScript).not.toHaveBeenCalled();
   });
   it('릴레이: ledger에 탭이 없으면 COMPOSE_TAB_CLOSED', async () => {
     vi.mocked(getJob).mockResolvedValue({ id: 'j' } as never);

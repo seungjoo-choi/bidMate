@@ -21,8 +21,9 @@
 [SW coordinator] ledger queued → job/run → offscreen
 [offscreen compose-job] 단계 실행. 탭 관련 동작은 전부 SW에 요청
   render_mail   prepareMail(noticeId) → MailDraft
-  open_compose  compose/open → SW: 탭 생성 + CS 주입 + configure
-                셀렉터셋 unverified면 여기서 수동 모드로 분기(아래 생략하고 마무리)
+  render_mail 직후 planCompose(settings, draft, selectorSets)로 서비스별 계획(provider, url, prefilled, selector?)을 만든다
+  open_compose  compose/open {url, selector?} → SW: 탭 생성 + (selector 있을 때만) CS 주입 + configure
+                selector 없음(셀렉터셋 unverified, 또는 Gmail 주소 방식)이면 여기서 수동/주소 모드로 분기(아래 생략하고 마무리)
                 compose/detect 1초 폴링(최대 120초) → 감지된 프레임으로 compose/bind
   fill_fields   compose/fill → SW(ledger에서 탭/프레임 조회) → CS
   attach_files  파일마다 compose/attach-begin → file/chunk ×N(응답이 ack) → file/end(주입 시작)
@@ -31,6 +32,9 @@
   마무리        ComposeRecord를 notices/<folder>/mail.json에 append, notice.mail 갱신, compose/focus
 [SW] job/finish → ledger → 사이드패널이 storage.session 구독으로 표시
 ```
+- provider 분기는 `planCompose`(`src/engine/mail/compose-plan.ts`) 한 곳에서만 한다. `Settings.mail.provider`가 작성 서비스다.
+  - naverworks: url = `https://<host><composePath>`, 사용자가 [메일쓰기]를 눌러야 하므로 `needsUserOpen`. 셀렉터셋이 verified면 자동 입력, 아니면 수동 모드.
+  - gmail: url에 받는 사람, 참조, 제목, 본문을 담은 작성 주소(`buildGmailComposeUrl`, `https://mail.google.com/mail/u/<accountIndex>/?fs=1&tf=cm&to=&cc=&su=&body=`)를 쓴다. 본문은 `draft.text`. 주소가 8000자를 넘으면 본문을 통째로 뺀다(절단 금지, `URL_TOO_LONG`). `gmail-v1` 셀렉터셋은 unverified라 작성 화면 감지, 필드 입력, 첨부, 확인은 모두 생략하고 첨부는 사용자가 직접 한다(`ATTACH_MANUAL`). 결과는 항상 partial.
 
 ## 2. 메시지 프로토콜 (`src/messaging/protocol.ts`)
 기존 compose 정의(`cs/ready`, `compose/open`, `compose/fill`, `compose/attach-begin`, `file/chunk`, `file/end`, `compose/attach-result`, `compose/verify`)는 처리부가 없으므로 아래로 교체한다. `cs/ready`, `compose/attach-result`는 삭제한다. `cs/ping`은 유지(compose에서는 안 씀).
@@ -44,7 +48,7 @@ export type AttachStatus =
 export interface FileMeta { fileId: string; name: string; size: number; mime?: string }   // 기존 유지
 
 // offscreen→SW (SW 핸들러 첫 줄에서 isOffscreenSender 검사 필수)
-| { type: 'compose/open';    payload: { jobId: string; host: string; composePath?: string; selector: ComposeSelectorConfig }; response: { tabId: number } }
+| { type: 'compose/open';    payload: { jobId: string; url: string; selector?: ComposeSelectorConfig }; response: { tabId: number } }
 | { type: 'compose/detect';  payload: { jobId: string }; response: { frames: ComposeDetect[] } }
 | { type: 'compose/bind';    payload: { jobId: string; frameId: number }; response: void }
 | { type: 'compose/focus';   payload: { jobId: string }; response: void }
@@ -57,9 +61,10 @@ export interface FileMeta { fileId: string; name: string; size: number; mime?: s
 | { type: 'compose/attach-status'; payload: { jobId: string; fileId: string }; response: AttachStatus }
 | { type: 'compose/verify';        payload: { jobId: string }; response: ComposeState }
 ```
+- `compose/open`: `url`은 planCompose가 만든 전체 주소다. SW는 https가 아니거나 파싱 실패면 `COMPOSE_BAD_URL`로 거부하고, url의 origin으로 권한을 확인한다. `selector`가 없으면 CS 주입과 configure를 생략하고 탭만 연다.
 - 호출 측(offscreen) 타임아웃: open 60초(SW 로드 대기 20초 + 주입), detect 10초, fill 90초, attach-begin 15초, chunk 30초, end 15초, attach-status 10초, verify 15초. 모든 호출은 `signal`과 race. abort면 `compose/abort`를 보내고 `cancelled`로 끝낸다.
 - 오류 code
-  - SW: `NEEDS_SITE_PERMISSION`(permissions.contains 거짓), `COMPOSE_TAB_CLOSED`(tabs.get 실패 또는 ledger에 탭 없음), `COMPOSE_INJECT_FAILED`(executeScript 거부), `COMPOSE_CS_UNREACHABLE`(수신자 없음, "Receiving end does not exist")
+  - SW: `NEEDS_SITE_PERMISSION`(permissions.contains 거짓), `COMPOSE_BAD_URL`(url 파싱 실패 또는 https 아님), `COMPOSE_TAB_CLOSED`(tabs.get 실패 또는 ledger에 탭 없음), `COMPOSE_INJECT_FAILED`(executeScript 거부), `COMPOSE_CS_UNREACHABLE`(수신자 없음, "Receiving end does not exist")
   - offscreen: `COMPOSE_NOT_DETECTED`(120초 초과), `COMPOSE_UNVERIFIED`(수동 모드 표식, 오류 아님), `COMPOSE_FILL_FAILED`, prepareMail의 `NO_GROUP`/`NO_RECIPIENTS`/`NOT_FOUND`/`JOB_ALREADY_RUNNING`/`NEEDS_FS_PERMISSION`은 그대로 전파
   - CS: `COMPOSE_JOB_MISMATCH`(jobId 불일치)
 
@@ -72,7 +77,8 @@ export interface FileMeta { fileId: string; name: string; size: number; mime?: s
 ```ts
 export interface ComposeResult {
   noticeId: string; folder: string; title?: string;
-  mode: 'auto' | 'manual';                 // manual = 셀렉터 미검증 또는 전 필드 unsupported
+  mode: 'auto' | 'manual' | 'url';         // manual = 셀렉터 미검증 또는 전 필드 unsupported, url = 주소 파라미터로 전달(Gmail)
+  provider?: MailProvider;                 // 'naverworks' | 'gmail'
   tabId?: number;
   fields: FieldResult[];                   // to, cc, subject, body
   attachments: Array<AttachResult & { error?: string }>;
@@ -81,10 +87,15 @@ export interface ComposeResult {
   attachDir: string;                       // `${folder}/attachments`
 }
 ```
+- `FieldResult.status`에 `'prefilled'`가 추가됐다(주소 파라미터로 전달, 화면 확인 안 함). `prefilled`는 `ok`로 취급하지 않는다. 생략된 본문은 `unsupported` + `error: 'URL_TOO_LONG'`.
+- Gmail 결과는 항상 partial이다(mode 'url', 필드 prefilled, 첨부 skipped). 화면 확인 없이 completed로 올리지 않는다.
 - 상태 전이: completed = 모든 필드 ok 그리고 모든 첨부 uploaded(첨부 0개 포함). partial = open/fill은 됐으나 mismatch/unsupported/첨부 실패/타임아웃, 또는 수동 모드. failed = render 실패, 탭 열기 실패, 감지 타임아웃, fill 전부 failed. cancelled/interrupted는 기존 규칙. **수동 모드를 completed로 올리지 않는다.**
 - `notice.mail`: outcome이 failed가 아니면 `status='ready_for_review'`(이미 delivered면 유지), `lastComposedAt=now`.
 - ComposeRecord는 `notices/<folder>/mail.json`(`ComposeRecord[]`)에 경로 락 안에서 append.
 - Job.result(storage.session)에 html/base64를 넣지 않는다.
+
+## 3.1 이후 변경 (Gmail 지원, 2026-10-18)
+S1~S6 기록은 당시 기준이다. `compose/open`은 `{ jobId, url, selector? }`로 바뀌었고(host/composePath 제거), `site.host`로 주소를 만드는 일은 planCompose가 맡는다. 상세는 `.claude/specs/gmail-provider.md`.
 
 ## 4. 공통 금지
 - 셀렉터 추정 금지. `naverworks-v1`은 빈 값 + unverified.

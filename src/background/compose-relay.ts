@@ -54,12 +54,19 @@ async function tabOrThrow(jobId: string): Promise<{ tabId: number; windowId?: nu
 }
 
 async function open(p: PayloadOf<'compose/open'>): Promise<{ tabId: number }> {
-  const origin = `https://${p.host}/*`;
-  if (!(await chrome.permissions.contains({ origins: [origin] }))) throw err('NEEDS_SITE_PERMISSION', `${p.host} 접근 권한이 필요합니다.`);
+  let u: URL;
+  try { u = new URL(p.url); } catch { throw err('COMPOSE_BAD_URL', '작성 주소가 올바르지 않습니다.'); }
+  if (u.protocol !== 'https:') throw err('COMPOSE_BAD_URL', '작성 주소는 https여야 합니다.');
+  const origin = `${u.origin}/*`;
+  if (!(await chrome.permissions.contains({ origins: [origin] }))) throw err('NEEDS_SITE_PERMISSION', `${u.host} 접근 권한이 필요합니다.`);
   const win = await chrome.windows.getLastFocused();
-  const tab = await chrome.tabs.create({ windowId: win.id, url: `https://${p.host}${p.composePath ?? '/'}`, active: true });
+  const tab = await chrome.tabs.create({ windowId: win.id, url: p.url, active: true });
   const tabId = tab.id as number;
   await setComposeTab(p.jobId, { composeTabId: tabId });
+  if (!p.selector) {   // 주소 방식: 셀렉터 저장과 주입 없이 로딩만 기다린다
+    await waitComplete(tabId, LOAD_WAIT_MS);
+    return { tabId };
+  }
   const maxFileMB = (await getSettingsCache())?.download.maxFileMB;
   const cfg: Cfg = { ...p.selector, jobId: p.jobId, ...(maxFileMB ? { maxFileMB } : {}) };
   selectors.set(p.jobId, cfg);

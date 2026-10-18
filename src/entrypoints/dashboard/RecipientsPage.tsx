@@ -1,22 +1,27 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { send } from '../../messaging/bus';
 import type { RecipientInput } from '../../core/types/config-file';
-import type { Recipient } from '../../core/types/recipient';
+import { ALL_GROUP_ID, type Recipient } from '../../core/types/recipient';
 import { Button, InlineAlert, useToast } from '../../ui/components';
 import { useRecipients } from '../../ui/hooks/useConfig';
-import { FsErrorAlert } from '../../ui/hooks/useFsError';
+import { FsErrorAlert } from './FsErrorAlert';
 import { GroupDetail } from './recipients/GroupDetail';
-import { GroupList } from './recipients/GroupList';
+import { GroupList, type View } from './recipients/GroupList';
 import { RecipientForm } from './recipients/RecipientForm';
 import { RecipientTable } from './recipients/RecipientTable';
-import type { OpError } from './recipients/shared';
+import { Drawer, type OpError } from './recipients/shared';
 
-type FormState = null | { recipient: Recipient | null };
-type Area = 'group' | 'recipient' | 'other';
+/** 사람 등록/수정 서랍. recipient가 null이면 새 사람, groupIds는 새 사람일 때 미리 체크할 그룹 */
+type FormState = null | { recipient: Recipient | null; groupIds: string[] };
+type Area = 'newGroup' | 'group' | 'recipient' | 'other';
+const FORM_CODES = ['INVALID_EMAIL', 'DUPLICATE_EMAIL', 'DUPLICATE_NAME', 'INVALID_VALUE', 'NOT_FOUND'];
 
 export function RecipientsPage() {
   const { data, error: loadError, reload, run } = useRecipients();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // null이면 아직 고르지 않음(기본 그룹, 없으면 주소록 전체를 보여 준다)
+  const [view, setView] = useState<View | null>(null);
+  // 새로 만든 그룹은 응답이 와야 id를 알 수 있어 이름으로 찾아 고른다(그룹 이름은 중복 불가)
+  const [pendingName, setPendingName] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(null);
   const [opError, setOpError] = useState<(OpError & { area: Area }) | null>(null);
   const [busy, setBusy] = useState(false);
@@ -24,7 +29,8 @@ export function RecipientsPage() {
 
   const error: OpError | null = opError ?? (loadError ? { code: loadError.code ?? 'INTERNAL', message: loadError.message, path: loadError.path } : null);
   const isConfigErr = error?.code === 'CONFIG_CORRUPT' || error?.code === 'CONFIG_NEWER';
-  const formErr = (area: Area) => (opError && opError.area === area && !isConfigErr ? opError : null);
+  // 입력값 오류만 해당 입력 옆에 보이고, 나머지(파일 오류 등)는 위쪽 경고 한 곳에만 보인다.
+  const formErr = (area: Area) => (opError && opError.area === area && FORM_CODES.includes(opError.code) ? opError : null);
 
   const exec = async (area: Area, fn: () => ReturnType<typeof run>, okText?: string): Promise<boolean> => {
     setBusy(true);
@@ -40,6 +46,7 @@ export function RecipientsPage() {
   };
 
   const retry = async () => { await reload(); setOpError(null); };
+  const closeForm = useCallback(() => { setForm(null); setOpError(null); }, []);
 
   const repair = async () => {
     // 경로로 대상 파일을 정한다. 짐작해서 멀쩡한 파일을 초기화하면 안 되므로 모르면 하지 않는다.
@@ -58,75 +65,117 @@ export function RecipientsPage() {
     }
   };
 
+  const header = (
+    <div>
+      <h1 className="title-mark text-2xl font-bold tracking-tight">수신자</h1>
+      <p className="mt-1 pl-[13px] text-sm text-muted">공고 메일을 받을 수신자를 주소록에 등록하고 그룹으로 묶습니다. 메일을 작성할 때 그룹을 고릅니다.</p>
+    </div>
+  );
+
   if (!data) {
     return (
       <div className="space-y-6">
-        <h1 className="title-mark text-2xl font-bold tracking-tight">수신자</h1>
+        {header}
         {isConfigErr && error ? <ConfigAlert error={error} busy={busy} onRepair={repair} /> : <FsErrorAlert error={error} onRetry={retry} />}
         {!error && <p className="text-muted">불러오는 중입니다.</p>}
       </div>
     );
   }
 
-  const group = data.groups.find((g) => g.id === selectedId) ?? data.groups.find((g) => g.isDefault) ?? data.groups[0] ?? null;
-  const hasDefault = data.groups.some((g) => g.isDefault);
+  const { groups, recipients } = data;
+  const pending = pendingName ? groups.find((g) => g.name === pendingName) : undefined;
+  if (pending) { setPendingName(null); setView(pending.id); }
+  const group = pending
+    ?? (view === 'all' ? undefined : groups.find((g) => g.id === view) ?? (view === null ? groups.find((g) => g.isDefault) : undefined));
+  const current: View = group ? group.id : 'all';
+  const hasDefault = groups.some((g) => g.isDefault);
 
-  const saveGroup = (g: Parameters<NonNullable<React.ComponentProps<typeof GroupList>['onSave']>>[0]) =>
-    exec('group', () => run('groups/save', { group: g }), '저장했습니다.');
+  const select = (v: View) => { setPendingName(null); setView(v); setOpError(null); };
+  const openNew = (groupId?: string) => {
+    setOpError(null);
+    const preset = new Set<string>();
+    if (groups.some((g) => g.id === ALL_GROUP_ID)) preset.add(ALL_GROUP_ID);
+    if (groupId) preset.add(groupId);
+    setForm({ recipient: null, groupIds: [...preset] });
+  };
+  const createGroup = async (name: string) => {
+    const ok = await exec('newGroup', () => run('groups/save', { group: { name, memberIds: [] } }), '그룹을 만들었습니다.');
+    if (ok) setPendingName(name.trim());
+    return ok;
+  };
   const saveRecipient = async (input: RecipientInput) => {
     if (await exec('recipient', () => run('recipients/save', { recipient: input }), '저장했습니다.')) setForm(null);
+  };
+  const toggleEnabled = (r: Recipient) => {
+    const groupIds = groups.filter((g) => g.memberIds.includes(r.id)).map((g) => g.id);
+    void exec('other', () => run('recipients/save', { recipient: { id: r.id, name: r.name, email: r.email, dept: r.dept, memo: r.memo, defaultRole: r.defaultRole, enabled: !r.enabled, groupIds } }),
+      r.enabled ? `${r.name}: 메일 발송을 껐습니다.` : `${r.name}: 메일 발송을 켰습니다.`);
   };
 
   return (
     <div className="space-y-6">
-      <h1 className="title-mark text-2xl font-bold tracking-tight">수신자</h1>
+      {header}
       {isConfigErr && error
         ? <ConfigAlert error={error} busy={busy} onRepair={repair} />
-        : <FsErrorAlert error={error && (opError?.area === 'other' || !['INVALID_EMAIL', 'DUPLICATE_EMAIL', 'DUPLICATE_NAME', 'INVALID_VALUE', 'NOT_FOUND'].includes(error.code)) ? error : null} onRetry={retry} />}
-      {!hasDefault && <InlineAlert tone="warn">기본 그룹이 없습니다. 수신자를 추가하거나 [수정] 후 저장하면 '전체' 그룹이 자동으로 만들어져 기본으로 지정됩니다.</InlineAlert>}
+        : <FsErrorAlert error={error && (opError?.area === 'other' || !FORM_CODES.includes(error.code)) ? error : null} onRetry={retry} />}
+      {!hasDefault && recipients.length > 0 && (
+        <InlineAlert tone="warn">메일을 작성할 때 먼저 선택될 그룹이 없습니다. 그룹을 열고 [메일 기본으로]를 눌러 주세요.</InlineAlert>
+      )}
       {data.warnings.length > 0 && (
         <InlineAlert tone="info">
           <ul className="list-inside list-disc">{data.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
         </InlineAlert>
       )}
-      <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="grid items-start gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
         <GroupList
-          groups={data.groups}
-          selectedId={group?.id ?? null}
-          error={formErr('group')}
+          groups={groups}
+          recipientCount={recipients.length}
+          view={current}
+          error={formErr('newGroup')}
           busy={busy}
-          onSelect={setSelectedId}
-          onSave={saveGroup}
-          onDelete={(id) => void exec('group', () => run('groups/delete', { id }), '삭제했습니다.')}
-          onSetDefault={(id) => void exec('group', () => run('groups/set-default', { id }), '기본 그룹을 바꿨습니다.')}
+          onSelect={select}
+          onCreate={createGroup}
         />
-        <div className="min-w-0 space-y-6">
-          <GroupDetail group={group} recipients={data.recipients} busy={busy} onSave={(g) => void saveGroup(g)} />
-          {form && (
-            <RecipientForm
-              key={form.recipient?.id ?? 'new'}
-              recipient={form.recipient}
-              groups={data.groups}
-              error={formErr('recipient')}
+        <div className="min-w-0">
+          {group ? (
+            <GroupDetail
+              key={group.id}
+              group={group}
+              recipients={recipients}
+              error={formErr('group')}
               busy={busy}
-              onSubmit={(i) => void saveRecipient(i)}
-              onCancel={() => { setForm(null); setOpError(null); }}
+              onSave={(g, okText) => exec('group', () => run('groups/save', { group: g }), okText ?? '저장했습니다.')}
+              onDelete={() => void exec('group', () => run('groups/delete', { id: group.id }), '그룹을 삭제했습니다.').then((ok) => { if (ok) select('all'); })}
+              onSetDefault={() => void exec('group', () => run('groups/set-default', { id: group.id }), `메일을 작성할 때 '${group.name}'이(가) 먼저 선택됩니다.`)}
+              onNewRecipient={() => openNew(group.id)}
+            />
+          ) : (
+            <RecipientTable
+              recipients={recipients}
+              groups={groups}
+              busy={busy}
+              onAdd={() => openNew()}
+              onEdit={(r) => { setOpError(null); setForm({ recipient: r, groupIds: [] }); }}
+              onToggle={toggleEnabled}
+              onDelete={(id) => void exec('other', () => run('recipients/delete', { id }), '삭제했습니다.')}
             />
           )}
-          <RecipientTable
-            recipients={data.recipients}
-            groups={data.groups}
-            busy={busy}
-            onAdd={() => { setOpError(null); setForm({ recipient: null }); }}
-            onEdit={(r) => { setOpError(null); setForm({ recipient: r }); }}
-            onToggle={(r) => {
-              const groupIds = data.groups.filter((g) => g.memberIds.includes(r.id)).map((g) => g.id);
-              void exec('other', () => run('recipients/save', { recipient: { id: r.id, name: r.name, email: r.email, dept: r.dept, memo: r.memo, defaultRole: r.defaultRole, enabled: !r.enabled, groupIds } }));
-            }}
-            onDelete={(id) => void exec('other', () => run('recipients/delete', { id }), '삭제했습니다.')}
-          />
         </div>
       </div>
+      <Drawer open={form !== null} title={form?.recipient ? '수신자 정보 수정' : '수신자 추가'} onClose={closeForm}>
+        {form && (
+          <RecipientForm
+            key={form.recipient?.id ?? 'new'}
+            recipient={form.recipient}
+            groups={groups}
+            initialGroupIds={form.groupIds}
+            error={formErr('recipient')}
+            busy={busy}
+            onSubmit={(i) => void saveRecipient(i)}
+            onCancel={closeForm}
+          />
+        )}
+      </Drawer>
       {toast.node}
     </div>
   );

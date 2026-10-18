@@ -1,5 +1,6 @@
 import { redactKey } from '../adapters/g2b/openapi';
 import { DEFAULT_WEBMAIL_HOST, withDefaults } from '../core/model/default-settings';
+import { inboxHost } from '../core/model/mail-provider';
 import { refsConflict } from '../core/model/job-conflict';
 import { noticeId as makeNoticeId } from '../core/model/ids';
 import type { CollectResult, Handoff, Job, JobError, JobProgress, JobStatus, StepId, StepState } from '../core/types/job';
@@ -157,13 +158,13 @@ export function senderKind(sender: Sender, runtimeId: string | undefined = globa
 }
 
 const forbid = (code: string, message: string) => Object.assign(new Error(message), { code });
-/** 설정된 웹메일 호스트를 반영해 발신자 종류를 판정한다. */
+/** 설정된 수신 서비스 호스트를 반영해 발신자 종류를 판정한다. */
 async function resolveKind(sender: Sender): Promise<SenderKind> {
   const runtimeId = globalThis.chrome?.runtime?.id;
   const k = senderKind(sender, runtimeId);
   if (k !== 'unknown' || !sender.tab) return k; // 웹메일 판정이 필요할 때만 설정을 읽는다
   let host = DEFAULT_WEBMAIL_HOST;
-  try { host = (await getSettings()).sites.naverworks.host || DEFAULT_WEBMAIL_HOST; } catch { /* 설정 읽기 실패 시 기본 호스트 */ }
+  try { host = inboxHost(await getSettings()); } catch { /* 설정 읽기 실패 시 기본 호스트 */ }
   return senderKind(sender, runtimeId, host);
 }
 /** job/* 요청은 확장 페이지, 나라장터 탭, 웹메일 탭만 허용한다. */

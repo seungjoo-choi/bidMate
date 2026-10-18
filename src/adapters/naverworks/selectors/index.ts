@@ -1,8 +1,10 @@
 import type { ComposeSelectorSet } from '../types';
+import { gmailV1 } from '../../gmail/selectors/gmail-v1';
 import { naverworksV1 } from './naverworks-v1';
 
 export const SELECTOR_SETS: Record<string, ComposeSelectorSet> = {
   [naverworksV1.id]: naverworksV1,
+  [gmailV1.id]: gmailV1,
 };
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>

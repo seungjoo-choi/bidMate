@@ -1,7 +1,7 @@
 import type { TemplateFieldKey } from '../types/template';
 
 export type { TemplateFieldKey };
-export type VariableKind = 'text' | 'amount' | 'datetime' | 'date' | 'bool_joint' | 'bool_apply' | 'score' | 'period' | 'url' | 'list' | 'number';
+export type VariableKind = 'text' | 'amount' | 'amount_short' | 'datetime' | 'date' | 'bool_joint' | 'bool_apply' | 'score' | 'period' | 'url' | 'list' | 'number';
 export interface VariableDef { name: string; fieldKey: TemplateFieldKey; label: string; group: '기본' | '일정' | '평가' | '기타'; kind: VariableKind; }
 
 const v = (name: string, fieldKey: TemplateFieldKey, group: VariableDef['group'], kind: VariableKind): VariableDef =>
@@ -35,13 +35,14 @@ export const VARIABLES: VariableDef[] = [
   v('경영상태', 'managementScore', '평가', 'score'),
   v('실적평가', 'performanceScore', '평가', 'score'),
   v('실적인정기간', 'performancePeriod', '평가', 'period'),
-  v('실적인정금액', 'performanceMinAmount', '평가', 'amount'),
+  v('실적인정금액', 'performanceMinAmount', '평가', 'amount_short'),
   v('실적인정조건', 'performanceCondition', '평가', 'text'),
   v('공고URL', 'sourceUrl', '기타', 'url'),
   v('첨부파일목록', 'attachmentList', '기타', 'list'),
   v('첨부파일수', 'attachmentCount', '기타', 'number'),
   v('수집일시', 'collectedAt', '기타', 'datetime'),
   v('정정공고', 'isCorrection', '기타', 'text'),
+  v('오늘', 'today', '기타', 'text'),
 ];
 
 export const VARIABLE_BY_NAME = new Map<string, VariableDef>(VARIABLES.map((d) => [d.name, d]));

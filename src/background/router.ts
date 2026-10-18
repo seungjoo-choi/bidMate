@@ -2,7 +2,7 @@ import { listen, send } from '../messaging/bus';
 import type { Envelope, MsgType, PayloadOf, ResponseOf } from '../messaging/protocol';
 import { openDashboard } from './dashboard-tabs';
 import { assertExtensionSender } from './job-coordinator';
-import { getWebmailHost } from './site-registry';
+import { getInboxHost } from './site-registry';
 import { ensureOffscreen } from './offscreen-manager';
 
 const MAX_LOOKUP_BATCH = 200;
@@ -110,7 +110,7 @@ function registerUiMessages(): void {
     'fs/permission-granted',
     async (_, sender) => {
       assertExtensionSender(sender);
-      const host = await getWebmailHost();
+      const host = await getInboxHost();
       const tabs = [
         ...(await chrome.tabs.query({ url: 'https://www.g2b.go.kr/*' })),
         ...(await chrome.tabs.query({ url: `https://${host}/*` })),

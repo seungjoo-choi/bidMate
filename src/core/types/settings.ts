@@ -14,17 +14,21 @@ export interface AutoComposeSettings {
   templateId?: string;
   reviewGate: ReviewGate;
 }
+export type MailProvider = 'naverworks' | 'gmail';
 export interface Settings {
   schemaVersion: 1;
   g2b: { apiBaseUrl: string; detailUrlPatterns: string[] };
   sites: {
-    trackerbot: { urlPatterns: string[] };
+    /** 트래커봇 메일을 받는 서비스. CS 등록, webmail 발신자 판정, fs/permission-granted 알림 대상 */
+    trackerbot: { urlPatterns: string[]; provider: MailProvider };
     naverworks: { host: string /* 기본 'mail.worksmobile.com' */; composePath?: string; selectorSetId: string; selectorOverrides?: Partial<ComposeSelectorSet> };
+    gmail: { accountIndex: number; selectorSetId: string; selectorOverrides?: Partial<ComposeSelectorSet> };
   };
   download: { concurrency: number; maxRetries: number; backoffMs: number; maxFileMB: number };
   extraction: { budgetMs: number; fileTimeoutMs: number; maxParseMB: number };
   autoCompose: AutoComposeSettings;
-  mail: { defaultGroupId?: string; defaultTemplateId?: string };
+  /** provider = 메일 작성 서비스 */
+  mail: { provider: MailProvider; defaultGroupId?: string; defaultTemplateId?: string };
   customFields: FieldMapping[];
   updatedAt: ISODate;
 }

@@ -1,64 +1,88 @@
-import { useState } from 'react';
+import { BookUser, Plus, Star } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import type { Group } from '../../../core/types/recipient';
-import { Button, Card, Field, StatusBadge, inputClass } from '../../../ui/components';
-import { ConfirmDeleteButton, errorText, type OpError } from './shared';
+import { Button, inputClass } from '../../../ui/components';
+import { errorText, type OpError } from './shared';
+
+/** 'all'이면 주소록 전체, 아니면 그룹 id */
+export type View = 'all' | string;
 
 interface Props {
   groups: Group[];
-  selectedId: string | null;
+  recipientCount: number;
+  view: View;
   error: OpError | null;
   busy: boolean;
-  onSelect: (id: string) => void;
-  onSave: (group: { id?: string; name: string; memberIds: string[]; roleOverrides?: Record<string, 'to' | 'cc'> }) => Promise<boolean>;
-  onDelete: (id: string) => void;
-  onSetDefault: (id: string) => void;
+  onSelect: (view: View) => void;
+  onCreate: (name: string) => Promise<boolean>;
 }
 
-export function GroupList({ groups, selectedId, error, busy, onSelect, onSave, onDelete, onSetDefault }: Props) {
-  // editingId: 이름 수정 중인 그룹 id, 'new'면 추가 중
-  const [editingId, setEditingId] = useState<string | null>(null);
+/** 왼쪽 목록: 주소록 전체와 그룹들. 고르면 오른쪽에 그 목록이 보인다. */
+export function GroupList({ groups, recipientCount, view, error, busy, onSelect, onCreate }: Props) {
+  const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
 
-  const startNew = () => { setEditingId('new'); setName(''); };
-  const startEdit = (g: Group) => { setEditingId(g.id); setName(g.name); };
   const submit = async () => {
-    const g = groups.find((x) => x.id === editingId);
-    const ok = await onSave(g ? { id: g.id, name, memberIds: g.memberIds, roleOverrides: g.roleOverrides } : { name, memberIds: [] });
-    if (ok) setEditingId(null);
+    if (busy || !name.trim()) return;
+    if (await onCreate(name)) { setAdding(false); setName(''); }
   };
 
   return (
-    <Card title="그룹" action={<Button variant="secondary" disabled={busy} onClick={startNew}>그룹 추가</Button>}>
-      {editingId && (
-        <div className="space-y-2">
-          <Field label={editingId === 'new' ? '새 그룹 이름' : '그룹 이름 수정'} htmlFor="group-name" error={error ? errorText(error) : undefined}>
-            <input id="group-name" className={inputClass} value={name} autoFocus onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void submit(); }} />
-          </Field>
-          <div className="flex gap-2">
-            <Button disabled={busy} onClick={() => void submit()}>저장</Button>
-            <Button variant="ghost" onClick={() => setEditingId(null)}>취소</Button>
-          </div>
-        </div>
-      )}
-      {groups.length === 0 && <p className="text-sm text-muted">그룹이 없습니다.</p>}
-      <ul className="space-y-2">
+    <nav aria-label="수신자 목록" className="rounded-card border border-line bg-surface p-3 shadow-card lg:sticky lg:top-6">
+      <ul className="space-y-1">
+        <Item active={view === 'all'} icon={<BookUser />} label="주소록 전체" count={recipientCount} onClick={() => onSelect('all')} />
+      </ul>
+      <div className="mt-4 mb-1 px-3 text-xs font-semibold text-muted">그룹</div>
+      {groups.length === 0 && !adding && <p className="px-3 py-1 text-sm text-faint">아직 그룹이 없습니다.</p>}
+      <ul className="space-y-1">
         {groups.map((g) => (
-          <li key={g.id} className={`rounded-ctl border p-3 ${g.id === selectedId ? 'border-accent bg-info-wash' : 'border-line'}`}>
-            <button type="button" onClick={() => onSelect(g.id)} className="block w-full text-left">
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate font-semibold text-ink">{g.name}</span>
-                {g.isDefault && <StatusBadge status="ok">기본</StatusBadge>}
-              </div>
-              <div className="mt-0.5 text-sm text-muted">멤버 {g.memberIds.length}명</div>
-            </button>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {!g.isDefault && <Button variant="ghost" disabled={busy} onClick={() => onSetDefault(g.id)}>기본으로</Button>}
-              <Button variant="ghost" disabled={busy} onClick={() => startEdit(g)}>이름 수정</Button>
-              <ConfirmDeleteButton disabled={busy} onConfirm={() => onDelete(g.id)} />
-            </div>
-          </li>
+          <Item
+            key={g.id}
+            active={view === g.id}
+            icon={g.isDefault ? <Star className="fill-current text-mark-strong" role="img" aria-label="메일 기본 선택" /> : <span className="size-4" />}
+            label={g.name}
+            count={g.memberIds.length}
+            onClick={() => onSelect(g.id)}
+          />
         ))}
       </ul>
-    </Card>
+      {adding ? (
+        <div className="mt-2 space-y-2 px-1">
+          <input
+            aria-label="새 그룹 이름"
+            placeholder="새 그룹 이름"
+            className={inputClass}
+            value={name}
+            autoFocus
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void submit(); if (e.key === 'Escape') setAdding(false); }}
+          />
+          {error && <p className="text-xs text-danger">{errorText(error)}</p>}
+          <div className="flex gap-2">
+            <Button disabled={busy || !name.trim()} onClick={() => void submit()}>만들기</Button>
+            <Button variant="ghost" onClick={() => { setAdding(false); setName(''); }}>취소</Button>
+          </div>
+        </div>
+      ) : (
+        <Button variant="secondary" className="mt-3 w-full" icon={<Plus />} disabled={busy} onClick={() => setAdding(true)}>새 그룹</Button>
+      )}
+    </nav>
+  );
+}
+
+function Item({ active, icon, label, count, onClick }: { active: boolean; icon: ReactNode; label: string; count: number; onClick: () => void }) {
+  return (
+    <li>
+      <button
+        type="button"
+        aria-current={active ? 'page' : undefined}
+        onClick={onClick}
+        className={`flex w-full items-center gap-2 rounded-ctl px-3 py-2 text-left text-sm transition-colors motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0 ${active ? 'bg-info-wash font-semibold text-ink' : 'text-ink hover:bg-sunken'}`}
+      >
+        {icon}
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <span className="tabular-nums text-muted">{count}</span>
+      </button>
+    </li>
   );
 }

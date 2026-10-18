@@ -1,75 +1,135 @@
+import { Pencil, Star, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { resolveRecipients } from '../../../core/recipients/resolve';
 import type { Group, Recipient } from '../../../core/types/recipient';
-import { Button, Card, inputClass } from '../../../ui/components';
+import { Button, InlineAlert, StatusBadge, inputClass } from '../../../ui/components';
+import { MemberPicker } from './MemberPicker';
+import { ConfirmDeleteButton, RoleToggle, errorText, type OpError, type Role } from './shared';
 
-type Role = 'to' | 'cc';
-const REASON: Record<string, string> = { missing: '삭제된 수신자', disabled: '사용 안 함', duplicate: '중복' };
+const REASON: Record<string, string> = { missing: '삭제된 수신자', disabled: '발송 꺼짐', duplicate: '이메일 중복' };
 
 interface Props {
-  group: Group | null;
+  group: Group;
   recipients: Recipient[];
+  error: OpError | null;
   busy: boolean;
-  onSave: (group: { id: string; name: string; memberIds: string[]; roleOverrides?: Record<string, Role> }) => void;
+  onSave: (group: { id: string; name: string; memberIds: string[]; roleOverrides?: Record<string, Role> }, okText?: string) => Promise<boolean>;
+  onDelete: () => void;
+  onSetDefault: () => void;
+  onNewRecipient: () => void;
 }
 
-export function GroupDetail({ group, recipients, busy, onSave }: Props) {
-  const [addId, setAddId] = useState('');
-  if (!group) return <Card title="그룹 상세" description="왼쪽에서 그룹을 선택해 주세요." />;
+/** 선택한 그룹의 멤버와 받는 방식. 여기서 바꾸는 것은 누르는 즉시 저장된다. */
+export function GroupDetail({ group, recipients, error, busy, onSave, onDelete, onSetDefault, onNewRecipient }: Props) {
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
 
   const byId = new Map(recipients.map((r) => [r.id, r]));
   const resolved = resolveRecipients(group, recipients);
-  const candidates = recipients.filter((r) => !group.memberIds.includes(r.id));
-  const save = (memberIds: string[], roleOverrides?: Record<string, Role>) =>
-    onSave({ id: group.id, name: group.name, memberIds, roleOverrides });
+  const overrides = group.roleOverrides ?? {};
+  const roleOf = (r: Recipient): Role => (Object.hasOwn(overrides, r.id) ? overrides[r.id]! : r.defaultRole);
+  const save = (memberIds: string[], roleOverrides: Record<string, Role>, okText?: string) =>
+    onSave({ id: group.id, name: group.name, memberIds, roleOverrides }, okText);
 
-  const setRole = (id: string, v: string) => {
-    const next = { ...(group.roleOverrides ?? {}) };
-    if (v === 'to' || v === 'cc') next[id] = v; else delete next[id];
-    save(group.memberIds, next);
-  };
+  const setRole = (id: string, v: Role) => void save(group.memberIds, { ...overrides, [id]: v }, '받는 방식을 바꿨습니다.');
   const remove = (id: string) => {
-    const next = { ...(group.roleOverrides ?? {}) };
+    const next = { ...overrides };
     delete next[id];
-    save(group.memberIds.filter((m) => m !== id), next);
+    void save(group.memberIds.filter((m) => m !== id), next, '그룹에서 뺐습니다.');
   };
-  const add = () => {
-    if (!addId) return;
-    save([...group.memberIds, addId], group.roleOverrides);
-    setAddId('');
+  const add = async (ids: string[]) => {
+    if (await save([...group.memberIds, ...ids], overrides, `${ids.length}명을 추가했습니다.`)) setPicking(false);
+  };
+  const rename = async () => {
+    if (renaming === null || busy || !renaming.trim()) return;
+    if (await onSave({ id: group.id, name: renaming, memberIds: group.memberIds, roleOverrides: group.roleOverrides }, '이름을 바꿨습니다.')) setRenaming(null);
   };
 
+  const candidates = recipients.filter((r) => !group.memberIds.includes(r.id));
   const skipped = resolved.skipped;
+
   return (
-    <Card title={`${group.name} 상세`} description={`TO ${resolved.to.length}명, CC ${resolved.cc.length}명, 제외 ${skipped.length}명${skipped.length ? `(${skipped.map((s) => `${s.name ?? s.email ?? s.id}: ${REASON[s.reason]}`).join(', ')})` : ''}`}>
-      {group.memberIds.length === 0 && <p className="text-sm text-muted">멤버가 없습니다.</p>}
-      <ul className="divide-y divide-line">
-        {group.memberIds.map((id) => {
-          const r = byId.get(id);
-          const override = group.roleOverrides && Object.hasOwn(group.roleOverrides, id) ? group.roleOverrides[id] : '';
-          return (
-            <li key={id} className="flex flex-wrap items-center gap-3 py-2">
-              <div className="min-w-0 flex-1">
-                <div className={`truncate font-semibold ${r ? 'text-ink' : 'text-faint'}`}>{r ? r.name : '(삭제된 수신자)'}</div>
-                {r && <div className="truncate font-mono text-sm text-muted">{r.email}</div>}
-              </div>
-              <select aria-label="역할" className={`${inputClass} !w-28`} disabled={busy || !r} value={override ?? ''} onChange={(e) => setRole(id, e.target.value)}>
-                <option value="">기본</option>
-                <option value="to">TO</option>
-                <option value="cc">CC</option>
-              </select>
-              <Button variant="ghost" disabled={busy} onClick={() => remove(id)}>제거</Button>
-            </li>
-          );
-        })}
-      </ul>
-      <div className="flex flex-wrap gap-2">
-        <select aria-label="추가할 수신자" className={`${inputClass} min-w-0 flex-1`} value={addId} onChange={(e) => setAddId(e.target.value)}>
-          <option value="">추가할 수신자 선택</option>
-          {candidates.map((r) => <option key={r.id} value={r.id}>{r.name} ({r.email})</option>)}
-        </select>
-        <Button variant="secondary" disabled={busy || !addId} onClick={add}>멤버 추가</Button>
+    <section className="rounded-card border border-line bg-surface shadow-card">
+      <header className="space-y-3 border-b border-line px-6 pt-5 pb-4">
+        {renaming !== null ? (
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <input
+                aria-label="그룹 이름"
+                className={`${inputClass} min-w-0 flex-1`}
+                value={renaming}
+                autoFocus
+                onChange={(e) => setRenaming(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void rename(); if (e.key === 'Escape') setRenaming(null); }}
+              />
+              <Button disabled={busy || !renaming.trim()} onClick={() => void rename()}>저장</Button>
+              <Button variant="ghost" onClick={() => setRenaming(null)}>취소</Button>
+            </div>
+            {error && <p className="text-xs text-danger">{errorText(error)}</p>}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <h2 className="title-mark truncate text-lg font-semibold text-ink">{group.name}</h2>
+              {group.isDefault && <StatusBadge status="ok">메일 기본 선택</StatusBadge>}
+            </div>
+            <div className="flex flex-wrap gap-1">
+              <Button variant="ghost" icon={<Pencil />} disabled={busy} onClick={() => setRenaming(group.name)}>이름 바꾸기</Button>
+              {!group.isDefault && <Button variant="ghost" icon={<Star />} disabled={busy} onClick={onSetDefault}>메일 기본으로</Button>}
+              <ConfirmDeleteButton disabled={busy} title={`'${group.name}' 그룹을 삭제할까요?`} description="그룹만 지워지고 수신자는 주소록에 남습니다. 삭제하면 되돌릴 수 없습니다." onConfirm={onDelete} />
+            </div>
+          </div>
+        )}
+        <p className="text-sm text-muted">
+          메일을 받는 사람 <b className="text-ink tabular-nums">{resolved.to.length}</b>명, 참조 <b className="text-ink tabular-nums">{resolved.cc.length}</b>명
+          {group.isDefault ? '. 메일을 작성할 때 이 그룹이 먼저 선택됩니다.' : ''}
+        </p>
+      </header>
+
+      <div className="space-y-4 px-6 py-5">
+        {error && renaming === null && <p className="text-xs text-danger">{errorText(error)}</p>}
+        {skipped.length > 0 && (
+          <InlineAlert tone="warn">
+            메일에서 빠지는 수신자 {skipped.length}명: {skipped.map((s) => `${s.name ?? s.email ?? '(이름 없음)'}(${REASON[s.reason]})`).join(', ')}
+          </InlineAlert>
+        )}
+
+        {picking ? (
+          <MemberPicker candidates={candidates} busy={busy} onAdd={(ids) => void add(ids)} onClose={() => setPicking(false)} onNewRecipient={onNewRecipient} />
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" icon={<UserPlus />} disabled={busy} onClick={() => setPicking(true)}>주소록에서 추가</Button>
+            <Button variant="ghost" disabled={busy} onClick={onNewRecipient}>새 수신자 추가</Button>
+          </div>
+        )}
+
+        {group.memberIds.length === 0 ? (
+          <p className="rounded-ctl border border-dashed border-line-strong px-4 py-8 text-center text-sm text-muted">
+            이 그룹에 아직 아무도 없습니다. [주소록에서 추가]로 수신자를 넣어 주세요.
+          </p>
+        ) : (
+          <ul className="divide-y divide-line rounded-ctl border border-line">
+            {group.memberIds.map((id) => {
+              const r = byId.get(id);
+              return (
+                <li key={id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className={`truncate text-[15px] font-semibold ${r ? 'text-ink' : 'text-faint'}`}>
+                      {r ? r.name : '(삭제된 수신자)'}
+                      {r?.dept && <span className="ml-2 text-xs font-normal text-muted">{r.dept}</span>}
+                    </div>
+                    {r && <div className="mt-0.5 truncate font-mono text-xs text-muted">{r.email}</div>}
+                  </div>
+                  {r && !r.enabled && <StatusBadge status="idle">발송 꺼짐</StatusBadge>}
+                  {r && <RoleToggle label={`${r.name} 받는 방식`} value={roleOf(r)} disabled={busy} onChange={(v) => setRole(id, v)} />}
+                  <Button variant="ghost" disabled={busy} onClick={() => remove(id)}>빼기</Button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
-    </Card>
+    </section>
   );
 }
+

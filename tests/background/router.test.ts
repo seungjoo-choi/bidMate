@@ -47,6 +47,14 @@ describe('SW 릴레이 발신자 검사', () => {
     await expect(handlerOf(type)(undefined, tabSender)).rejects.toMatchObject({ code: 'SENDER_FORBIDDEN' });
   });
 
+  it('fs/permission-granted는 수신 서비스(inbox) 호스트 탭에 알린다', async () => {
+    const query = vi.fn().mockResolvedValue([]);
+    const settingsCache = { sites: { trackerbot: { provider: 'gmail' } }, mail: { provider: 'naverworks' } };
+    vi.stubGlobal('chrome', { runtime: { id: RID }, storage: { local: { get: vi.fn().mockResolvedValue({ settingsCache }) } }, tabs: { query, sendMessage: vi.fn() } });
+    await handlerOf('fs/permission-granted')(undefined, { id: RID, url: `chrome-extension://${RID}/dashboard.html` });
+    expect(query).toHaveBeenCalledWith({ url: 'https://mail.google.com/*' });
+  });
+
   it('notice/lookup은 탭 발신도 거부하지 않는다', async () => {
     vi.mocked(send).mockResolvedValue({ found: false } as never);
     await expect(handlerOf('notice/lookup')({}, tabSender)).resolves.toEqual({ found: false });

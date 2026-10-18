@@ -1,5 +1,6 @@
 import type { AttachResult, FieldResult } from '../core/types/compose';
 import type { ComposeResult, Job } from '../core/types/job';
+import type { MailProvider } from '../core/types/settings';
 import { progressRatio } from './g2b-panel/panel-view';
 
 /** compose 잡 → 표시 상태. 순수 함수(UI는 이 결과만 그린다). */
@@ -13,6 +14,10 @@ export type ComposeView =
   | {
       kind: 'partial'; fields: FieldResult[]; attachments: Array<AttachResult & { error?: string }>;
       copies: CopyKind[]; attachDir?: string; canFocus: boolean;
+    }
+  | {
+      kind: 'url'; provider: MailProvider; prefilled: FieldResult[]; pending: FieldResult[];
+      attachments: Array<AttachResult & { error?: string }>; copies: CopyKind[]; attachDir?: string; canFocus: boolean;
     }
   | { kind: 'error'; message: string; detail?: string; action: ComposeAction; actionLabel?: string };
 
@@ -54,7 +59,8 @@ function errorOf(code: string | undefined, message: string | undefined): Extract
 /** 실패한 항목에 해당하는 복사 버튼만 고른다. 첨부가 하나라도 업로드되지 않았으면 폴더 경로 복사를 둔다. */
 function copiesFor(r: ComposeResult): CopyKind[] {
   const out: CopyKind[] = [];
-  for (const f of r.fields) if (f.status !== 'ok') out.push(f.field);
+  // 주소로 넣은 필드는 복사 대상이 아니다. 단 본문은 서식이 빠지므로 prefilled여도 복사를 둔다.
+  for (const f of r.fields) if (f.status !== 'ok' && (f.field === 'body' || f.status !== 'prefilled')) out.push(f.field);
   if (r.attachments.some((a) => a.status !== 'uploaded')) out.push('attach');
   return ALL_COPIES.filter((k) => out.includes(k));
 }
@@ -79,6 +85,15 @@ export function composeView(job: Job | null): ComposeView | null {
       return { kind: 'done', canFocus };
     case 'partial':
       if (!result) return errorOf(job.errors[0]?.code, job.errors[0]?.message);
+      if (result.mode === 'url') {
+        return {
+          kind: 'url', provider: result.provider ?? 'gmail',
+          prefilled: result.fields.filter((f) => f.status === 'prefilled'),
+          pending: result.fields.filter((f) => f.status !== 'ok' && f.status !== 'prefilled'),
+          attachments: result.attachments.filter((a) => a.status !== 'uploaded'),
+          copies: copiesFor(result), attachDir: result.attachDir, canFocus,
+        };
+      }
       return result.mode === 'manual'
         ? { kind: 'manual', copies: ALL_COPIES, attachDir: result.attachDir, canFocus }
         : {

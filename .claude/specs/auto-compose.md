@@ -170,7 +170,7 @@ export function openDashboard(hash: string, opts?: { nearTabId?: number }): Prom
 ```ts
 export const QUEUE_KEY = 'autoComposeQueue';
 export interface QueueEntry { collectJobId: string; noticeId: string; ref?: NoticeRef; originTabId?: number; enqueuedAt: ISODate }
-export function setAutoComposeDeps(d: Partial<AutoComposeDeps>): void; // storage(session/local), startJob, listJobs, getJob, setHandoff, permissions.contains, openDashboard, getWebmailHost, getSettings, now
+export function setAutoComposeDeps(d: Partial<AutoComposeDeps>): void; // storage(session/local), startJob, listJobs, getJob, setHandoff, permissions.contains, openDashboard, getComposeHost, getSettings, now
 export function registerAutoCompose(): void;
 export function onFinal(job: Job): Promise<void>;
 export function pump(): Promise<void>;

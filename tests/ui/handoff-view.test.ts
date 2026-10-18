@@ -68,3 +68,12 @@ describe('handoffView', () => {
     expect(n('no_notice')).toBeNull();
   });
 });
+
+describe('handoffView url 결과', () => {
+  it('url -> compose_partial Gmail 안내', () => {
+    const c = compose({ status: 'partial', result: cres({ mode: 'url', provider: 'gmail' }) });
+    expect(handoffView(collect(started), c)).toMatchObject({
+      kind: 'compose_partial', text: 'Gmail 작성 창을 열었습니다. 첨부와 서식 본문은 직접 넣어 주세요', tone: 'warn', action: 'open-mail', actionLabel: '열기',
+    });
+  });
+});

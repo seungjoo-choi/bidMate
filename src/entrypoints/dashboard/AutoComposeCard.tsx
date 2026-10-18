@@ -1,8 +1,8 @@
 import { Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { DEFAULT_WEBMAIL_HOST } from '../../core/model/default-settings';
+import { composeHost, originOf } from '../../core/model/mail-provider';
 import type { AutoComposeSettings, ReviewGate } from '../../core/types/settings';
-import { Button, Card, Field, InlineAlert, StatusBadge } from '../../ui/components';
+import { Button, Card, Field, InlineAlert, Select, StatusBadge } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useRecipients, useTemplates } from '../../ui/hooks/useConfig';
 import { useSettings } from '../../ui/hooks/useSettings';
@@ -42,8 +42,8 @@ export function AutoComposeCard() {
     setError(null);
     if (on) {
       // 사용자 제스처 안에서 첫 await로 호출해야 한다.
-      const host = settings.sites.naverworks.host || DEFAULT_WEBMAIL_HOST; // permissions.request 전에 await를 두지 않는다(사용자 제스처 유지)
-      const ok = await requestToEnable(`https://${host}/*`, (p) => chrome.permissions.request(p));
+      const origin = originOf(composeHost(settings)); // permissions.request 전에 await를 두지 않는다(사용자 제스처 유지)
+      const ok = await requestToEnable(origin, (p) => chrome.permissions.request(p));
       if (!ok) { setError('웹메일 접근 권한이 허용되지 않아 켜지 않았습니다.'); return; }
     }
     update({ enabled: on });
@@ -110,11 +110,15 @@ export function AutoComposeCard() {
           </label>
           {draft.recipients.mode === 'group' && (
             <div className="flex items-center gap-2 pl-6">
-              <select aria-label="수신 그룹" className={inputClass} value={draft.recipients.groupId}
-                onChange={(e) => update({ recipients: { mode: 'group', groupId: e.target.value } })}>
-                {broken.groupMissing && <option value={draft.recipients.groupId}>(삭제됨)</option>}
-                {groups.map((g) => <option key={g.id} value={g.id}>{g.name}{g.isDefault ? ' (기본)' : ''}</option>)}
-              </select>
+              <Select
+                aria-label="수신 그룹"
+                value={draft.recipients.groupId}
+                onChange={(v) => update({ recipients: { mode: 'group', groupId: v } })}
+                options={[
+                  ...(broken.groupMissing ? [{ value: draft.recipients.groupId, label: '(삭제됨)' }] : []),
+                  ...groups.map((g) => ({ value: g.id, label: g.name, hint: g.isDefault ? '기본' : undefined })),
+                ]}
+              />
               {broken.groupMissing && <StatusBadge status="error">삭제됨</StatusBadge>}
             </div>
           )}
@@ -130,11 +134,14 @@ export function AutoComposeCard() {
                   <div key={r.id} className={`flex items-center gap-2 ${r.enabled ? '' : 'opacity-50'}`}>
                     <input type="checkbox" aria-label={r.name || r.email} className="accent-current" checked={!!m} onChange={(e) => setMember(r.id, { on: e.target.checked })} />
                     <span className="min-w-0 flex-1 truncate">{r.name || r.email}{!r.enabled && ' (사용 안 함)'}</span>
-                    <select aria-label={`${r.name || r.email} 역할`} className={`${inputClass} !w-24`} disabled={!m} value={m?.role ?? r.defaultRole}
-                      onChange={(e) => setMember(r.id, { role: e.target.value as 'to' | 'cc' })}>
-                      <option value="to">TO</option>
-                      <option value="cc">CC</option>
-                    </select>
+                    <Select
+                      aria-label={`${r.name || r.email} 역할`}
+                      className="!w-24"
+                      disabled={!m}
+                      value={m?.role ?? r.defaultRole}
+                      onChange={(v) => setMember(r.id, { role: v === 'cc' ? 'cc' : 'to' })}
+                      options={[{ value: 'to', label: 'TO' }, { value: 'cc', label: 'CC' }]}
+                    />
                   </div>
                 );
               })}
@@ -151,11 +158,16 @@ export function AutoComposeCard() {
 
       <Field label="템플릿" htmlFor="ac-tpl" help="비우면 기본 템플릿을 사용합니다.">
         <div className="flex items-center gap-2">
-          <select id="ac-tpl" className={inputClass} value={draft.templateId ?? ''} onChange={(e) => update({ templateId: e.target.value || undefined })}>
-            <option value="">(기본 템플릿)</option>
-            {broken.templateMissing && draft.templateId && <option value={draft.templateId}>(삭제됨)</option>}
-            {templates.map((t) => <option key={t.id} value={t.id}>{t.name}{t.isDefault ? ' (기본)' : ''}</option>)}
-          </select>
+          <Select
+            id="ac-tpl"
+            value={draft.templateId ?? ''}
+            onChange={(v) => update({ templateId: v || undefined })}
+            options={[
+              { value: '', label: '(기본 템플릿)' },
+              ...(broken.templateMissing && draft.templateId ? [{ value: draft.templateId, label: '(삭제됨)' }] : []),
+              ...templates.map((t) => ({ value: t.id, label: t.name, hint: t.isDefault ? '기본' : undefined })),
+            ]}
+          />
           {broken.templateMissing && <StatusBadge status="error">삭제됨</StatusBadge>}
         </div>
       </Field>

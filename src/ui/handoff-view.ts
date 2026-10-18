@@ -23,6 +23,7 @@ function reasonText(r: HandoffReason, result: Partial<CollectResult> | undefined
 }
 
 const MANUAL_TEXT = '웹메일 탭을 열었습니다. 내용은 직접 붙여 넣어야 합니다';
+const URL_TEXT = 'Gmail 작성 창을 열었습니다. 첨부와 서식 본문은 직접 넣어 주세요';
 
 export function handoffView(collect: Job, compose: Job | null): HandoffView | null {
   const h = collect.handoff;
@@ -79,6 +80,8 @@ export function handoffView(collect: Job, compose: Job | null): HandoffView | nu
       return { kind: 'manual', text: MANUAL_TEXT, tone: 'warn', action: 'open-mail', actionLabel: '열기', ...idPart, ...base };
     case 'partial':
       return { kind: 'compose_partial', text: MANUAL_TEXT, tone: 'warn', action: 'open-mail', actionLabel: '열기', ...idPart, ...base };
+    case 'url':
+      return { kind: 'compose_partial', text: URL_TEXT, tone: 'warn', action: 'open-mail', actionLabel: '열기', ...idPart, ...base };
     case 'error': {
       const toSettings = v.action === 'settings' || v.action === 'grant-site' || v.action === 'grant-fs' || v.action === 'recipients'; // 자동 작성 수신자는 설정 카드에서 고른다
       return {

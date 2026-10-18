@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { setSiteRegistryDeps, syncTrackerbotScript, TRACKERBOT_SCRIPT_FILE, TRACKERBOT_SCRIPT_ID } from '../../src/background/site-registry';
+import { getComposeHost, getInboxHost, setSiteRegistryDeps, syncTrackerbotScript, TRACKERBOT_SCRIPT_FILE, TRACKERBOT_SCRIPT_ID } from '../../src/background/site-registry';
 
 const HOST = 'mail.example.com';
 const PATTERN = `https://${HOST}/*`;
@@ -19,6 +19,23 @@ beforeEach(() => {
   vi.clearAllMocks();
   registered = []; granted = true;
   setSiteRegistryDeps({ scripting: scripting as never, permissions: permissions as never, tabs: tabs as never, getHost: async () => HOST });
+});
+
+describe('호스트 해석', () => {
+  const cache = (v: unknown) => vi.stubGlobal('chrome', { storage: { local: { get: vi.fn(async () => ({ settingsCache: v })) } } });
+  it('inbox gmail이면 mail.google.com 패턴을 등록한다(compose provider와 무관)', async () => {
+    cache({ sites: { trackerbot: { provider: 'gmail' } }, mail: { provider: 'naverworks' } });
+    setSiteRegistryDeps({ scripting: scripting as never, permissions: permissions as never, tabs: tabs as never });
+    expect(await getInboxHost()).toBe('mail.google.com');
+    expect(await getComposeHost()).toBe('mail.worksmobile.com');
+    expect(await syncTrackerbotScript()).toBe('registered');
+    expect(scripting.registerContentScripts).toHaveBeenCalledWith([expect.objectContaining({ matches: ['https://mail.google.com/*'] })]);
+  });
+  it('compose gmail, inbox naverworks면 compose만 mail.google.com', async () => {
+    cache({ sites: { trackerbot: { provider: 'naverworks' } }, mail: { provider: 'gmail' } });
+    expect(await getInboxHost()).toBe('mail.worksmobile.com');
+    expect(await getComposeHost()).toBe('mail.google.com');
+  });
 });
 
 describe('syncTrackerbotScript', () => {

@@ -8,16 +8,23 @@ import type { Template, TemplateFieldKey } from '../../core/types/template';
 import { send } from '../../messaging/bus';
 import { Button, Card, Field, InlineAlert, inputClass, useToast } from '../../ui/components';
 import { useTemplates } from '../../ui/hooks/useConfig';
-import { FsErrorAlert } from '../../ui/hooks/useFsError';
+import { FsErrorAlert } from './FsErrorAlert';
 import { templateErrorText } from './TemplatesPage';
 import { SectionEditor } from './templates/SectionEditor';
 import { VariablePalette } from './templates/VariablePalette';
+import { useVariableSuggest } from './templates/VariableSuggest';
+import { replaceRange, type FocusEl } from './templates/variable-suggest';
 import { MailPreviewFrame } from './templates/MailPreviewFrame';
 
-type FocusEl = HTMLInputElement | HTMLTextAreaElement;
+/** i, j 위치를 맞바꾼 새 배열. */
+function swap<T>(arr: T[], i: number, j: number): T[] {
+  const next = arr.slice();
+  [next[i], next[j]] = [next[j] as T, next[i] as T];
+  return next;
+}
 
 /** 편집 대상 필드만 비교용으로 직렬화한다(updatedAt, isDefault 제외). */
-const snapshotOf = (t: Template) => JSON.stringify({ name: t.name, subject: t.subject, greeting: t.greeting, closing: t.closing, sections: t.sections });
+const snapshotOf = (t: Template) => JSON.stringify({ name: t.name, layout: t.layout, subject: t.subject, greeting: t.greeting, closing: t.closing, sections: t.sections });
 
 export function TemplateEditor({ id }: { id: string }) {
   const { data, error, reload, run } = useTemplates();
@@ -26,13 +33,14 @@ export function TemplateEditor({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const [opError, setOpError] = useState<{ code: string; message: string } | null>(null);
   const [repairing, setRepairing] = useState(false);
-  const [hasFocus, setHasFocus] = useState(false);
   const [notice, setNotice] = useState<Notice>(() => sampleNotice());
   const [rendered, setRendered] = useState<RenderedMail | null>(null);
   const lastFocus = useRef<FocusEl | null>(null);
   const toast = useToast();
 
-  const found = data?.templates.find((t) => t.id === id) ?? null;
+  // 본문 형식은 번호 목록만 쓴다. 표로 저장된 옛 템플릿도 편집기에서는 목록으로 열고, 저장하면 목록으로 바뀐다.
+  const stored = data?.templates.find((t) => t.id === id) ?? null;
+  const found = stored && (stored.layout === 'list' ? stored : { ...stored, layout: 'list' as const });
 
   // 최초 로드 시에만 초안을 만든다(저장 후에는 save 핸들러가 교체).
   useEffect(() => {
@@ -64,26 +72,24 @@ export function TemplateEditor({ id }: { id: string }) {
   }, [draft, notice]);
 
   const dirty = draft !== null && snapshotOf(draft) !== savedSnap;
-  const usedKeys = useMemo(() => new Set<TemplateFieldKey>((draft?.sections ?? []).flatMap((s) => s.items.map((i) => i.fieldKey))), [draft]);
+  const usedKeys = useMemo(() => new Set<TemplateFieldKey>((draft?.sections ?? []).flatMap((s) => s.items.flatMap((i) => (i.kind === 'text' ? [] : [i.fieldKey])))), [draft]);
 
-  const onFocusInput = (el: FocusEl) => { lastFocus.current = el; setHasFocus(true); };
+  // 템플릿 이름은 렌더되지 않으므로 변수 대상에서 뺀다.
+  const onFocusInput = (el: FocusEl) => { if (el.id !== 'tpl-name') lastFocus.current = el; };
   const trackFocus = (e: { currentTarget: FocusEl }) => onFocusInput(e.currentTarget);
 
-  /** 마지막 포커스 입력의 커서 위치에 {이름}을 넣고 React onChange가 돌도록 input 이벤트를 발생시킨다. */
+  /** 마지막으로 선택한 입력칸의 커서 위치에 {이름}을 넣는다. 선택한 칸이 없으면 클립보드에 복사한다. */
   const insertVariable = (name: string) => {
     const el = lastFocus.current;
-    if (!el || !el.isConnected) return;
     const text = `{${name}}`;
+    if (!el || !el.isConnected) {
+      void navigator.clipboard.writeText(text).then(() => toast.show(`${text} 를 복사했습니다`), () => {});
+      return;
+    }
     const start = el.selectionStart ?? el.value.length;
-    const end = el.selectionEnd ?? start;
-    const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-    const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-    setter?.call(el, el.value.slice(0, start) + text + el.value.slice(end));
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-    el.focus();
-    const pos = start + text.length;
-    el.setSelectionRange(pos, pos);
+    replaceRange(el, start, el.selectionEnd ?? start, text);
   };
+  const suggest = useVariableSuggest((t): t is FocusEl => t === lastFocus.current && (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement));
 
   const patch = (p: Partial<Template>) => setDraft((d) => (d ? { ...d, ...p } : d));
 
@@ -92,7 +98,7 @@ export function TemplateEditor({ id }: { id: string }) {
     setSaving(true);
     setOpError(null);
     const r = await run('templates/save', {
-      template: { id: draft.id, name: draft.name, subject: draft.subject, greeting: draft.greeting, closing: draft.closing, sections: draft.sections },
+      template: { id: draft.id, name: draft.name, layout: draft.layout, subject: draft.subject, greeting: draft.greeting, closing: draft.closing, sections: draft.sections },
     });
     setSaving(false);
     if (!r.ok) { setOpError(r.error); return; }
@@ -161,22 +167,18 @@ export function TemplateEditor({ id }: { id: string }) {
       {opError && <InlineAlert tone="error">{templateErrorText(opError.code, opError.message)}</InlineAlert>}
 
       {draft && (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <div className="min-w-0 space-y-6">
-            <Card title="기본 정보">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_720px]">
+          <div className="min-w-0 space-y-6" {...suggest.handlers}>
+            <Card title="기본 정보" action={<VariablePalette onInsert={insertVariable} />}>
               <Field label="이름" htmlFor="tpl-name">
                 <input id="tpl-name" className={inputClass} value={draft.name} onFocus={trackFocus} onChange={(e) => patch({ name: e.target.value })} />
               </Field>
-              <Field label="제목" htmlFor="tpl-subject" help="메일 제목입니다. {변수}를 쓸 수 있습니다.">
+              <Field label="제목" htmlFor="tpl-subject" help="메일 제목입니다. { 를 입력하면 변수를 골라 넣을 수 있습니다.">
                 <input id="tpl-subject" className={inputClass} value={draft.subject} onFocus={trackFocus} onChange={(e) => patch({ subject: e.target.value })} />
               </Field>
               <Field label="인사말" htmlFor="tpl-greeting">
                 <textarea id="tpl-greeting" rows={3} className={inputClass} value={draft.greeting} onFocus={trackFocus} onChange={(e) => patch({ greeting: e.target.value })} />
               </Field>
-            </Card>
-
-            <Card title="변수">
-              <VariablePalette enabled={hasFocus} onInsert={insertVariable} />
             </Card>
 
             <Card
@@ -200,6 +202,8 @@ export function TemplateEditor({ id }: { id: string }) {
                   usedKeys={usedKeys}
                   onChange={(next) => patch({ sections: draft.sections.map((x) => (x.id === s.id ? next : x)) })}
                   onRemove={() => patch({ sections: draft.sections.filter((x) => x.id !== s.id) })}
+                  onMoveUp={i > 0 ? () => patch({ sections: swap(draft.sections, i, i - 1) }) : undefined}
+                  onMoveDown={i < draft.sections.length - 1 ? () => patch({ sections: swap(draft.sections, i, i + 1) }) : undefined}
                   onFocusInput={onFocusInput}
                 />
               ))}
@@ -236,6 +240,7 @@ export function TemplateEditor({ id }: { id: string }) {
         </div>
       )}
       {toast.node}
+      {suggest.popup}
     </div>
   );
 }

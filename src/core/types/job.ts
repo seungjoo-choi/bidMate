@@ -2,6 +2,7 @@ import type { AttachResult, FieldResult } from './compose';
 import type { ISODate } from './common';
 import type { Extraction, ExtractionStatus } from './extraction';
 import type { AttachmentStatus, MailStatus, NoticeFieldKey, NoticeRef } from './notice';
+import type { MailProvider } from './settings';
 
 export type JobType = 'collect' | 'compose' | 'extract' | 'download_retry';
 export type JobStatus = 'queued' | 'running' | 'cancelling' | 'completed' | 'partial' | 'failed' | 'cancelled' | 'interrupted';
@@ -55,7 +56,8 @@ export interface ExtractResult { noticeId: string; folder: string; extraction: E
 /** compose 잡의 Job.result 형태. html/base64는 넣지 않는다. */
 export interface ComposeResult {
   noticeId: string; folder: string; title?: string;
-  mode: 'auto' | 'manual';                 // manual = 셀렉터 미검증 또는 전 필드 unsupported
+  mode: 'auto' | 'manual' | 'url';         // manual = 셀렉터 미검증 또는 전 필드 unsupported, url = 주소 파라미터로 전달
+  provider?: MailProvider;
   tabId?: number;
   fields: FieldResult[];                   // to, cc, subject, body
   attachments: Array<AttachResult & { error?: string }>;
