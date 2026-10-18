@@ -1,0 +1,120 @@
+{
+  "version": "1.1.1",
+  "synonyms": {
+    "credibility": [
+      "대외신인도",
+      "신인도"
+    ],
+    "management": [
+      "경영상태",
+      "신용평가등급",
+      "신용평가",
+      "신용도"
+    ],
+    "mgmtExclude": ["수행실적", "실적평가", "사업실적", "이행실적", "용역실적", "입찰참가제한", "업무정지", "부정당", "제재"],
+    "performance": ["수행실적", "실적평가", "사업실적", "이행실적", "용역실적"],
+    "scoreHeader": [
+      "배점",
+      "배점한도",
+      "점수"
+    ],
+    "perfAnchor": ["유사사업", "유사실적", "실적인정", "수행실적", "유사용역", "사업실적", "이행실적", "용역실적", "동등실적", "유지보수실적", "납품실적"]
+  },
+  "rules": [
+    {
+      "id": "cred.table",
+      "target": "credibilityScore",
+      "strategy": "table-score",
+      "label": "credibility",
+      "scoreHeader": "scoreHeader",
+      "weight": 1
+    },
+    {
+      "id": "mgmt.table",
+      "target": "managementScore",
+      "strategy": "table-score",
+      "label": "management",
+      "scoreHeader": "scoreHeader", "excludeLabel": "mgmtExclude",
+      "weight": 1
+    },
+    {
+      "id": "perf.table",
+      "target": "performanceScore",
+      "strategy": "table-score",
+      "label": "performance",
+      "scoreHeader": "scoreHeader", "excludeLabel": "management",
+      "weight": 1
+    },
+    {
+      "id": "cred.inline",
+      "target": "credibilityScore",
+      "strategy": "inline-score",
+      "label": "credibility",
+      "maxGap": 20,
+      "weight": 0.3
+    },
+    {
+      "id": "mgmt.inline",
+      "target": "managementScore",
+      "strategy": "inline-score",
+      "label": "management",
+      "maxGap": 20, "excludeLabel": "mgmtExclude",
+      "weight": 0.3
+    },
+    {
+      "id": "perf.inline",
+      "target": "performanceScore",
+      "strategy": "inline-score",
+      "label": "performance",
+      "maxGap": 20, "excludeLabel": "management",
+      "weight": 0.3
+    },
+    {
+      "id": "diff.enum",
+      "target": "differentialScoring",
+      "strategy": "keyword-enum",
+      "weight": 1,
+      "pattern": "차등점수제?(?:적용(?:여부|유무))?(?:\\([^)]{0,20}\\))?(?:를|을)?[^가-힣]{0,6}(?<v>미적용|적용하지않|적용하지아니|적용안함|비적용|적용제외|해당없|적용대상이아|심사대상이아|대상이아|부여하지않|부여하지아니|적용|부여)(?![/／]|여부|유무|대상여부|대상유무|하지않|하지아니|안함|않|한경우|할경우|하는경우|시(?![킨행스])|닌경우|닌사업|닌때|닐경우|니면|대상이아)",
+      "map": {
+        "미적용": false,
+        "적용하지않": false,
+        "적용안함": false,
+        "적용제외": false,
+        "해당없": false,
+        "비적용": false,
+        "적용하지아니": false, "적용대상이아": false, "심사대상이아": false, "대상이아": false, "부여하지않": false, "부여하지아니": false, "적용": true, "부여": true
+      }
+    },
+    {
+      "id": "perf.period",
+      "target": "performancePeriod",
+      "strategy": "window-regex",
+      "weight": 0.8,
+      "anchor": "perfAnchor",
+      "blocksAfter": 3,
+      "valueType": "years",
+      "pattern": "(최근|입찰공고일기준|공고일(전일)?기준)?(?<!창업(?:(?!\\d+년)[^.]){0,20})(?<!^[^가-힣]*(?:(?:붙임|서식|별지)[^.]{0,30}|(?:붙임|별지)\\d*(?:서식|양식)\\d{1,2}\\.[^.]{0,30}))(?<!\\d)(?!\\d{1,2}년(?![^.]{0,40}(?:한하|한함|인정|만작성|만기재|평가|기준|\\d점))(?:(?!(?<!\\d)\\d{1,2}년(?:이내|간|내))[^.]){0,25}(?:기재|작성|요약|\\)증명서))(?<v>\\d{1,2})년(이내|간|내(?!외)|\\((?=[`'’]?\\d{2})|\\([^)]{0,12}기준\\)(?:이내|간|내(?!외)))(?!에?(사업을)?개시|에?창업)"
+    },
+    {
+      "id": "perf.amount",
+      "target": "performanceMinAmount",
+      "strategy": "window-regex",
+      "weight": 0.8,
+      "anchor": "perfAnchor",
+      "blocksAfter": 3,
+      "valueType": "amount",
+      "pattern": "(?<!(?:추정가격|예정가격|기초금액)(?:은|는|이|가|의|[:：])?)(?<![\\d.조억만천백])(?<!\\d,)(?<v>(?:\\d{1,3}(?:,\\d{3})+|\\d+(?:\\.\\d+)?)(?:조|억|천만|백만|만|천)?(?:(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:천만|백만|만|천))*원)(?:\\([^)]{0,15}\\))?(?:[/／]건)?이상(?![:：](?:\\d{1,3}(?:,\\d{3})+(?![\\d조억만천원])|\\d+(?!,\\d{3}(?![조억만천원])))(?:\\.\\d+)?(?:점|$|[,/])|\\d+(?:\\.\\d+)?(?:점|$)|[~∼～])"
+    },
+    {
+      "id": "perf.condition",
+      "target": "performanceCondition",
+      "strategy": "block-capture",
+      "weight": 1,
+      "anchor": "^[※*＊]?유사(사업|용역|실적)[:：]|실적인정(대상|범위|기준)(?!(은|는)?제안요청서|와|과)|유사(사업|용역)(이란|은|의범위|(인정)?범위[:：]|(의)?정의(?!에|와|가|를|로|하))",
+      "stopAt": "^※|^[가-힣]\\.|^\\d+\\.|^□|^○|^-?이행실적에따른배점|^수행실적평가기준|^평가(등급|항목)|^실적등급|^평점",
+      "maxBlocks": 6,
+      "maxChars": 600,
+      "conflictPolicy": "prefer_priority"
+    }
+  ]
+}

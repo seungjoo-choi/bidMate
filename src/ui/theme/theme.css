@@ -1,0 +1,118 @@
+@import 'tailwindcss';
+
+/* 색은 모두 토큰으로 쓴다. 다크 값은 아래 media 블록이 같은 변수를 덮어쓴다(시스템 설정을 따름). */
+@theme {
+  --color-canvas: #ebebe7;
+  --color-surface: #ffffff;
+  --color-sunken: #efefeb;
+  --color-select: #e9e9e4;
+  --color-line: #e2e2dd;
+  --color-line-strong: #cfcfc9;
+  --color-ink: #1b1b19;
+  --color-muted: #65655f;
+  --color-faint: #a1a19b;
+  /* 링크, 포커스, 선택 표시에만 쓴다. 버튼은 btn 색. */
+  --color-accent: #2a4f86;
+  --color-btn: #1b1b19;
+  --color-btn-hover: #3a3a37;
+  --color-btn-ink: #ffffff;
+  --color-ok: #2f7a4f;
+  --color-warn: #a1620a;
+  --color-danger: #b8382c;
+  --color-ok-wash: #ecf5ef;
+  --color-warn-wash: #fbf3e4;
+  --color-danger-wash: #fbeceb;
+  --color-info-wash: #eef2f8;
+  --color-mark: #fde9a8;
+  --color-mark-strong: #f6c945;
+  /* 글자 단계. 본문은 base(15px). rem이 아니라 px로 고정해 html 크기와 무관하게 한다. */
+  --text-xs: 13px;
+  --text-xs--line-height: 1.5;
+  --text-sm: 14px;
+  --text-sm--line-height: 1.55;
+  --text-base: 15px;
+  --text-base--line-height: 1.6;
+  --text-lg: 17px;
+  --text-lg--line-height: 1.5;
+  --text-xl: 20px;
+  --text-xl--line-height: 1.4;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 1.35;
+  --radius-card: 10px;
+  --radius-ctl: 6px;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Segoe UI', 'Malgun Gothic', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* 그림자 색. shadow 값은 빌드 시 인라인되므로 색만 변수로 빼서 다크에서 덮어쓴다. */
+  --color-shade-1: rgb(27 27 25 / 0.06);
+  --color-shade-2: rgb(27 27 25 / 0.09);
+  --color-shade-3: rgb(27 27 25 / 0.18);
+  /* 1단: 놓인 카드 */
+  --shadow-card: 0 1px 2px var(--color-shade-1), 0 2px 8px -2px var(--color-shade-2);
+  /* 2단: 들린 요소(hover한 클릭 카드, 토스트) */
+  --shadow-raised: 0 2px 6px var(--color-shade-1), 0 10px 24px -6px var(--color-shade-3);
+  /* 3단: 오버레이(서랍) */
+  --shadow-overlay: 0 8px 24px var(--color-shade-2), 0 32px 72px -12px var(--color-shade-3);
+  /* 보조 버튼 바닥선 */
+  --shadow-btn: 0 1px 2px var(--color-shade-1);
+  /* 패인 면, 입력창 안쪽 */
+  --inset-shadow-sunken: inset 0 1px 2px var(--color-shade-1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-canvas: #111110;
+    --color-surface: #1c1c1b;
+    --color-sunken: #171716;
+    --color-select: #2a2a28;
+    --color-line: #2e2e2b;
+    --color-line-strong: #3a3a37;
+    --color-ink: #e9e9e5;
+    --color-muted: #9b9b95;
+    --color-faint: #6a6a65;
+    --color-accent: #9bb8e8;
+    --color-btn: #e9e9e5;
+    --color-btn-hover: #cfcfca;
+    --color-btn-ink: #151514;
+    --color-ok: #6cc08e;
+    --color-warn: #e0a44a;
+    --color-danger: #ec7a6d;
+    --color-ok-wash: #18241c;
+    --color-warn-wash: #2a2216;
+    --color-danger-wash: #2c1a18;
+    --color-info-wash: #1b222d;
+    --color-mark: #4a3d12;
+    --color-mark-strong: #7a6213;
+    --color-shade-1: rgb(0 0 0 / 0.45);
+    --color-shade-2: rgb(0 0 0 / 0.35);
+    --color-shade-3: rgb(0 0 0 / 0.6);
+    color-scheme: dark;
+  }
+}
+
+@layer base {
+  /* html 글자 크기는 건드리지 않는다(rem 기준 16px 유지, 여백 단위가 여기에 묶여 있다). */
+  html, body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    font-size: var(--text-base);
+    line-height: 1.6;
+  }
+  button { cursor: pointer; }
+  /* 제목 앞 세로 막대. 첫 줄 가운데에 맞춰 여러 줄 제목에서도 위에 붙는다. */
+  .title-mark { display: flex; align-items: flex-start; gap: 0.5em; }
+  .title-mark::before {
+    content: '';
+    flex-shrink: 0;
+    width: 3px;
+    height: 0.95em;
+    margin-top: calc((1lh - 0.95em) / 2);
+    border-radius: 1px;
+    background: var(--color-ink);
+  }
+  button:disabled { cursor: not-allowed; }
+  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+}

@@ -1,0 +1,66 @@
+import { formatAmountFull, formatDateFull, formatDateTimeFull, formatJoint, formatPeriod, formatScore, formatDifferential } from '../model/format';
+import { ALL_FIELD_KEYS, getField } from '../model/notice-fields';
+import type { FieldValue } from '../types/common';
+import type { ResolvedValue } from '../types/mail';
+import type { Notice, NoticeFieldKey } from '../types/notice';
+import type { TemplateFieldKey } from '../types/template';
+import { VARIABLE_BY_KEY, type VariableKind } from './variables';
+
+export const NEEDS_REVIEW_TEXT = '확인 필요';
+
+const MISSING: ResolvedValue = { text: NEEDS_REVIEW_TEXT, status: 'missing', raw: null };
+
+function formatByKind(kind: VariableKind, value: unknown): string {
+  switch (kind) {
+    case 'amount': return typeof value === 'number' ? formatAmountFull(value) : '';
+    case 'datetime': return typeof value === 'string' ? (formatDateTimeFull(value) || value.trim()) : '';
+    case 'date': return typeof value === 'string' ? (formatDateFull(value) || value.trim()) : '';
+    case 'bool_joint': return typeof value === 'boolean' ? formatJoint(value) : '';
+    case 'bool_apply': return typeof value === 'boolean' ? formatDifferential(value) : '';
+    case 'score': return typeof value === 'number' ? formatScore(value) : '';
+    case 'period': return formatPeriod(value) === '—' ? '' : formatPeriod(value);
+    case 'number': return typeof value === 'number' ? String(Math.trunc(value)) : '';
+    default: return typeof value === 'string' ? value.trim() : (value === null || value === undefined ? '' : String(value).trim());
+  }
+}
+
+function fromFieldValue(fv: FieldValue<unknown> | undefined, kind: VariableKind): ResolvedValue {
+  if (!fv || fv.status === 'missing' || fv.value === null || fv.value === undefined) return { ...MISSING, raw: fv?.value ?? null };
+  const text = formatByKind(kind, fv.value);
+  if (!text) return { ...MISSING, raw: fv.value };
+  if (fv.status === 'needs_review') return { text: `${text} (${NEEDS_REVIEW_TEXT})`, status: 'needs_review', raw: fv.value };
+  return { text, status: 'ok', raw: fv.value };
+}
+
+/** 첨부 한 줄 표기. */
+function attachmentLine(a: Notice['attachments'][number]): string {
+  if (a.status === 'failed' || a.status === 'size_mismatch') return `${a.originalName} (다운로드 실패)`;
+  if (a.status === 'pending' || a.status === 'downloading' || a.status === 'skipped') return `${a.originalName} (미확보)`;
+  return a.originalName;
+}
+
+/** 공고에서 템플릿 필드 값을 해석한다. attachmentList의 raw는 줄 배열(string[]). */
+export function resolveValue(notice: Notice, fieldKey: TemplateFieldKey): ResolvedValue {
+  if (fieldKey.startsWith('custom.')) {
+    const key = fieldKey.slice('custom.'.length);
+    return fromFieldValue(notice.customFields && Object.hasOwn(notice.customFields, key) ? notice.customFields[key] : undefined, 'text');
+  }
+  switch (fieldKey) {
+    case 'sourceUrl': return fromFieldValue(notice.sourceUrl, 'url');
+    case 'collectedAt': {
+      const text = formatDateTimeFull(notice.collect?.collectedAt);
+      return text ? { text, status: 'ok', raw: notice.collect.collectedAt } : { ...MISSING };
+    }
+    case 'isCorrection': return { text: notice.isCorrection ? '정정공고' : '', status: 'ok', raw: notice.isCorrection };
+    case 'attachmentCount': return { text: String(notice.attachments.length), status: 'ok', raw: notice.attachments.length };
+    case 'attachmentList': {
+      const lines = [...notice.attachments].sort((a, b) => a.index - b.index).map(attachmentLine);
+      return lines.length === 0 ? { text: '첨부 없음', status: 'ok', raw: [] } : { text: lines.join('\n'), status: 'ok', raw: lines };
+    }
+    default: {
+      if (!(ALL_FIELD_KEYS as string[]).includes(fieldKey)) return { ...MISSING };
+      const kind = VARIABLE_BY_KEY.get(fieldKey)?.kind ?? 'text';
+      return fromFieldValue(getField(notice, fieldKey as NoticeFieldKey), kind);
+    }
+  }
+}

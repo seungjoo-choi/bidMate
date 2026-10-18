@@ -1,0 +1,38 @@
+# 의존성
+node_modules/
+
+# 빌드 산출물 (WXT)
+dist/
+.output/
+.wxt/
+*.zip
+stats.html
+stats-*.json
+
+# postinstall 에서 node_modules 로부터 복사되는 pdf.js 자산
+public/pdfjs/
+
+# 환경 변수 / 비밀값
+.env
+.env.*
+!.env.example
+
+# 테스트 / 커버리지
+coverage/
+*.lcov
+
+# 로그
+*.log
+npm-debug.log*
+
+# 에디터 / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# Claude Code 개인 설정 (specs 는 커밋 대상)
+.claude/settings.local.json
+CLAUDE.local.md

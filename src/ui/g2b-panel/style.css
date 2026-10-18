@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+
+/* 사이트의 html 글꼴 크기(rem)에 영향받지 않도록 px 기준으로 고정한다. */
+@theme {
+  --spacing: 4px;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 20px;
+  --font-sans: 'Pretendard', -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
+}
+
+:host { font-family: var(--font-sans); font-size: 13px; line-height: 20px; color: #0f172a; }
+
+@keyframes tm-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.tm-in { animation: tm-in 150ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .tm-in { animation: none; }
+  .tm-bar { transition: none !important; }
+}
