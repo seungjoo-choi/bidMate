@@ -1,7 +1,8 @@
-import { Camera, ChevronDown, ChevronRight, Circle, Square } from 'lucide-react';
+import { Camera, Search, ChevronDown, ChevronRight, Circle, Square } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { isWebmailUrl } from '../../background/site-registry';
 import { Button, InlineAlert, StatusBadge } from '../../ui/components';
+import { inputClass } from '../../ui/components/Field';
 import { callProbe, downloadJson, injectProbe, stamp, withSameOrigin } from './probe-runner';
 import type { TabInfo } from './useActiveTab';
 
@@ -16,6 +17,20 @@ const SCENARIO = [
   '녹화 정지/저장',
 ];
 
+const SEL_R1 = ['input[name="subjectbox"]', 'div[aria-label="메일 본문"]', 'input[type="file"][name="Filedata"]', '[command="Files"]', 'h2', '[role="dialog"]', '[email]', '[data-hovercard-id]', '[role="listbox"]', '[role="option"]'];
+const SEL_R2 = ['.dL', '[role="progressbar"]', '[aria-label="첨부파일 삭제"]', 'input[type="file"][name="Filedata"]'];
+const SEL_R4 = ['[role="alertdialog"]', '[role="dialog"]'];
+
+/** inspect/watch 셀렉터 프리셋. watch가 있으면 감시 입력란도 함께 채운다. */
+const PRESETS: Array<{ label: string; inspect: string[]; watch?: string[] }> = [
+  { label: 'R1 화면 구조', inspect: SEL_R1 },
+  { label: 'R2 첨부 업로드', inspect: SEL_R2, watch: SEL_R2 },
+  { label: 'R4 대화상자', inspect: SEL_R4 },
+];
+
+/** 줄바꿈으로 구분한 입력을 셀렉터 배열로 바꾼다. */
+const parseSelectors = (text: string): string[] => text.split('\n').map((l) => l.trim()).filter(Boolean);
+
 /** 개발자 진단(DOM 스냅샷/녹화). 기본은 접혀 있고, 녹화 중이면 접혀 있어도 머리줄에 표시한다. */
 export function DiagnosticsSection({ tab }: { tab: TabInfo | null }) {
   const [expanded, setExpanded] = useState(false);
@@ -24,7 +39,9 @@ export function DiagnosticsSection({ tab }: { tab: TabInfo | null }) {
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [eventCount, setEventCount] = useState(0);
-  const [busy, setBusy] = useState<'snap' | 'start' | 'stop' | null>(null);
+  const [busy, setBusy] = useState<'snap' | 'start' | 'stop' | 'inspect' | null>(null);
+  const [inspectText, setInspectText] = useState('');
+  const [watchText, setWatchText] = useState('');
   const [msg, setMsg] = useState<{ tone: 'ok' | 'error' | 'info'; text: string } | null>(null);
   const [open, setOpen] = useState(true);
   const startedRef = useRef(0);
@@ -72,7 +89,7 @@ export function DiagnosticsSection({ tab }: { tab: TabInfo | null }) {
     return () => chrome.tabs.onRemoved.removeListener(onRemoved);
   }, []);
 
-  const run = async (kind: 'snap' | 'start' | 'stop') => {
+  const run = async (kind: 'snap' | 'start' | 'stop' | 'inspect') => {
     const target = kind === 'stop' ? recTabRef.current : tab;
     if (!target) return;
     setBusy(kind);
@@ -84,8 +101,18 @@ export function DiagnosticsSection({ tab }: { tab: TabInfo | null }) {
         const frames = withSameOrigin(await callProbe(target.id, 'snapshot'));
         await downloadJson(`bidmate-probe-${target.host}-${stamp()}.json`, { frames, meta: { ...meta, kind: 'snapshot' } });
         setMsg({ tone: 'ok', text: `스냅샷 저장 완료 (프레임 ${frames.length}개)` });
+      } else if (kind === 'inspect') {
+        const selectors = parseSelectors(inspectText);
+        if (selectors.length === 0) {
+          setMsg({ tone: 'error', text: '셀렉터를 한 줄에 하나씩 입력하세요.' });
+          return;
+        }
+        const frames = withSameOrigin(await callProbe(target.id, 'inspect', [selectors]));
+        await downloadJson(`bidmate-probe-${target.host}-${stamp()}.json`, { frames, meta: { ...meta, kind: 'inspect' } });
+        setMsg({ tone: 'ok', text: `inspect 저장 완료 (프레임 ${frames.length}개)` });
       } else if (kind === 'start') {
-        await callProbe(target.id, 'startRecording');
+        const watchSelectors = parseSelectors(watchText);
+        await callProbe(target.id, 'startRecording', watchSelectors.length > 0 ? [{ watch: { selectors: watchSelectors } }] : []);
         // 시작 성공 직후 상태를 먼저 확정한다. 제목 조회 실패는 무시한다.
         recTabRef.current = target;
         startedRef.current = Date.now();
@@ -199,6 +226,26 @@ export function DiagnosticsSection({ tab }: { tab: TabInfo | null }) {
                   녹화 시작
                 </Button>
               )}
+            </div>
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                {PRESETS.map((p) => (
+                  <Button key={p.label} variant="ghost" disabled={!!busy} onClick={() => { setInspectText(p.inspect.join('\n')); if (p.watch) setWatchText(p.watch.join('\n')); }}>
+                    {p.label}
+                  </Button>
+                ))}
+              </div>
+              <label className="block space-y-1">
+                <span className="text-sm font-semibold text-muted">inspect 셀렉터 (한 줄에 하나)</span>
+                <textarea rows={4} className={`${inputClass} font-mono text-xs`} value={inspectText} onChange={(e) => setInspectText(e.target.value)} />
+              </label>
+              <Button variant="secondary" icon={<Search />} loading={busy === 'inspect'} disabled={!canDiag || recording || !!busy} onClick={() => run('inspect')}>
+                inspect 실행
+              </Button>
+              <label className="block space-y-1">
+                <span className="text-sm font-semibold text-muted">녹화 시 watch 셀렉터 (한 줄에 하나, 비우면 감시 안 함)</span>
+                <textarea rows={3} className={`${inputClass} font-mono text-xs`} value={watchText} disabled={recording} onChange={(e) => setWatchText(e.target.value)} />
+              </label>
             </div>
             {recording && recTab && tab?.id !== recTab.id && (
               <InlineAlert tone="warn">

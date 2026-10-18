@@ -4,7 +4,7 @@ import { resolveRecipients } from '../../../core/recipients/resolve';
 import type { Group, Recipient } from '../../../core/types/recipient';
 import { Button, InlineAlert, StatusBadge, inputClass } from '../../../ui/components';
 import { MemberPicker } from './MemberPicker';
-import { ConfirmDeleteButton, RoleToggle, errorText, type OpError, type Role } from './shared';
+import { ConfirmDeleteButton, matchesRecipient, RecipientFilterBar, RoleToggle, sortRecipients, errorText, type OpError, type RecipientSort, type Role } from './shared';
 
 const REASON: Record<string, string> = { missing: '삭제된 수신자', disabled: '발송 꺼짐', duplicate: '이메일 중복' };
 
@@ -23,6 +23,8 @@ interface Props {
 export function GroupDetail({ group, recipients, error, busy, onSave, onDelete, onSetDefault, onNewRecipient }: Props) {
   const [renaming, setRenaming] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState<RecipientSort>('added');
 
   const byId = new Map(recipients.map((r) => [r.id, r]));
   const resolved = resolveRecipients(group, recipients);
@@ -47,6 +49,11 @@ export function GroupDetail({ group, recipients, error, busy, onSave, onDelete, 
 
   const candidates = recipients.filter((r) => !group.memberIds.includes(r.id));
   const skipped = resolved.skipped;
+  // 삭제된 수신자는 검색에 걸리지 않으므로 검색 중이 아닐 때만 맨 끝에 보인다.
+  const members = group.memberIds.flatMap((id) => byId.get(id) ?? []);
+  const matched = q.trim() ? members.filter((r) => matchesRecipient(r, q)) : members;
+  const missingIds = q.trim() ? [] : group.memberIds.filter((id) => !byId.has(id));
+  const shownIds = [...sortRecipients(matched, sort).map((r) => r.id), ...missingIds];
 
   return (
     <section className="rounded-card border border-line bg-surface shadow-card">
@@ -108,25 +115,30 @@ export function GroupDetail({ group, recipients, error, busy, onSave, onDelete, 
             이 그룹에 아직 아무도 없습니다. [주소록에서 추가]로 수신자를 넣어 주세요.
           </p>
         ) : (
-          <ul className="divide-y divide-line rounded-ctl border border-line">
-            {group.memberIds.map((id) => {
-              const r = byId.get(id);
-              return (
-                <li key={id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <div className={`truncate text-[15px] font-semibold ${r ? 'text-ink' : 'text-faint'}`}>
-                      {r ? r.name : '(삭제된 수신자)'}
-                      {r?.dept && <span className="ml-2 text-xs font-normal text-muted">{r.dept}</span>}
+          <>
+            <RecipientFilterBar q={q} onQ={setQ} sort={sort} onSort={setSort} total={members.length} matched={matched.length} />
+            <ul className="divide-y divide-line rounded-ctl border border-line">
+              {shownIds.length === 0 && <li className="px-4 py-4 text-center text-sm text-muted">찾는 수신자가 없습니다.</li>}
+              {shownIds.map((id, i) => {
+                const r = byId.get(id);
+                return (
+                  <li key={id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+                    <span className="w-6 shrink-0 text-center text-sm text-muted tabular-nums">{i + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className={`truncate text-[15px] font-semibold ${r ? 'text-ink' : 'text-faint'}`}>
+                        {r ? r.name : '(삭제된 수신자)'}
+                        {r?.dept && <span className="ml-2 text-xs font-normal text-muted">{r.dept}</span>}
+                      </div>
+                      {r && <div className="mt-0.5 truncate font-mono text-xs text-muted">{r.email}</div>}
                     </div>
-                    {r && <div className="mt-0.5 truncate font-mono text-xs text-muted">{r.email}</div>}
-                  </div>
-                  {r && !r.enabled && <StatusBadge status="idle">발송 꺼짐</StatusBadge>}
-                  {r && <RoleToggle label={`${r.name} 받는 방식`} value={roleOf(r)} disabled={busy} onChange={(v) => setRole(id, v)} />}
-                  <Button variant="ghost" disabled={busy} onClick={() => remove(id)}>빼기</Button>
-                </li>
-              );
-            })}
-          </ul>
+                    {r && !r.enabled && <StatusBadge status="idle">발송 꺼짐</StatusBadge>}
+                    {r && <RoleToggle label={`${r.name} 받는 방식`} value={roleOf(r)} disabled={busy} onChange={(v) => setRole(id, v)} />}
+                    <Button variant="ghost" disabled={busy} onClick={() => remove(id)}>빼기</Button>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         )}
       </div>
     </section>

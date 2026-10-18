@@ -1,8 +1,8 @@
-import { Search, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import type { Group, Recipient } from '../../../core/types/recipient';
-import { Button, inputClass } from '../../../ui/components';
-import { ConfirmDeleteButton, Switch } from './shared';
+import { Button } from '../../../ui/components';
+import { ConfirmDeleteButton, matchesRecipient, RecipientFilterBar, sortRecipients, Switch, type RecipientSort } from './shared';
 
 interface Props {
   recipients: Recipient[];
@@ -17,10 +17,9 @@ interface Props {
 /** 주소록 전체: 등록된 모든 사람. 등록, 수정, 삭제, 발송 켬/끔은 여기서 한다. */
 export function RecipientTable({ recipients, groups, busy, onAdd, onEdit, onToggle, onDelete }: Props) {
   const [q, setQ] = useState('');
-  const needle = q.trim().toLowerCase();
-  const shown = needle
-    ? recipients.filter((r) => [r.name, r.email, r.dept ?? ''].some((v) => v.toLowerCase().includes(needle)))
-    : recipients;
+  const [sort, setSort] = useState<RecipientSort>('added');
+  const filtered = q.trim() ? recipients.filter((r) => matchesRecipient(r, q)) : recipients;
+  const shown = sortRecipients(filtered, sort);
   const groupNames = (id: string) => groups.filter((g) => g.memberIds.includes(id)).map((g) => g.name);
 
   return (
@@ -40,16 +39,12 @@ export function RecipientTable({ recipients, groups, busy, onAdd, onEdit, onTogg
           </div>
         ) : (
           <>
-            {recipients.length > 5 && (
-              <div className="relative max-w-sm">
-                <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" />
-                <input aria-label="이름, 이메일, 부서로 찾기" placeholder="이름, 이메일, 부서로 찾기" className={`${inputClass} pl-9`} value={q} onChange={(e) => setQ(e.target.value)} />
-              </div>
-            )}
+            <RecipientFilterBar q={q} onQ={setQ} sort={sort} onSort={setSort} total={recipients.length} matched={filtered.length} />
             <div className="overflow-x-auto rounded-ctl border border-line">
               <table className="w-full min-w-[640px] text-left text-sm">
                 <thead className="bg-sunken text-muted">
                   <tr>
+                    <th className="w-14 px-3 py-2 text-center font-medium">순번</th>
                     <th className="px-3 py-2 font-medium">이름</th>
                     <th className="px-3 py-2 font-medium">이메일</th>
                     <th className="px-3 py-2 font-medium">소속 그룹</th>
@@ -59,12 +54,13 @@ export function RecipientTable({ recipients, groups, busy, onAdd, onEdit, onTogg
                 </thead>
                 <tbody>
                   {shown.length === 0 && (
-                    <tr><td colSpan={5} className="px-3 py-4 text-center text-muted">찾는 수신자가 없습니다.</td></tr>
+                    <tr><td colSpan={6} className="px-3 py-4 text-center text-muted">찾는 수신자가 없습니다.</td></tr>
                   )}
-                  {shown.map((r) => {
+                  {shown.map((r, i) => {
                     const names = groupNames(r.id);
                     return (
                       <tr key={r.id} className={`border-t border-line ${r.enabled ? '' : 'text-faint'}`}>
+                        <td className="px-3 py-2 text-center text-muted tabular-nums">{i + 1}</td>
                         <td className="px-3 py-2">
                           <div className={`text-[15px] font-semibold ${r.enabled ? 'text-ink' : 'text-faint'}`}>{r.name}</div>
                           {r.dept && <div className="text-xs text-muted">{r.dept}</div>}

@@ -50,4 +50,26 @@ describe('planCompose', () => {
     s.sites.naverworks.selectorSetId = 'none';
     expect(planCompose(s, draft(), SELECTOR_SETS).selector).toBeUndefined();
   });
+
+  const gmailVerified = { ...gmailV1, status: 'verified' as const, attach: { ...gmailV1.attach, limits: { perFileBytes: 100, totalBytes: 200 } } };
+  it('fillFields: naverworks는 4필드 전부, detectTimeoutMs 없음', () => {
+    const p = planCompose(defaultSettings(), draft(), SELECTOR_SETS);
+    expect(p.fillFields).toEqual(['to', 'cc', 'subject', 'body']);
+    expect(p.detectTimeoutMs).toBeUndefined();
+    expect(p.attachLimits).toBeUndefined();
+  });
+  it('fillFields: gmail은 prefilled와 omitted를 뺀다(본문 포함 시 빈 배열, 본문 생략 시도 빈 배열)', () => {
+    const s = defaultSettings();
+    s.mail.provider = 'gmail';
+    expect(planCompose(s, draft(), { 'gmail-v1': gmailVerified }).fillFields).toEqual([]);
+    expect(planCompose(s, draft({ text: 'a'.repeat(9000) }), { 'gmail-v1': gmailVerified }).fillFields).toEqual([]);
+  });
+  it('gmail: detectTimeoutMs 30000, attachLimits는 셀렉터셋 limits 복사', () => {
+    const s = defaultSettings();
+    s.mail.provider = 'gmail';
+    const p = planCompose(s, draft(), { 'gmail-v1': gmailVerified });
+    expect(p.detectTimeoutMs).toBe(30_000);
+    expect(p.attachLimits).toEqual({ perFileBytes: 100, totalBytes: 200 });
+    expect(p.attachLimits).not.toBe(gmailVerified.attach.limits);
+  });
 });

@@ -1,7 +1,9 @@
-import { Trash2, X } from 'lucide-react';
+import { Search, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Button, ConfirmDialog } from '../../../ui/components';
+import type { Recipient } from '../../../core/types/recipient';
+import { Button, ConfirmDialog, inputClass, Select } from '../../../ui/components';
+import { matchesQuery } from '../../../ui/components/select-filter';
 
 export interface OpError { code: string; message: string; path?: string }
 
@@ -95,5 +97,75 @@ export function Drawer({ open, title, onClose, children }: { open: boolean; titl
       </div>
     </div>,
     document.body,
+  );
+}
+
+/** 화면 가운데 뜨는 팝업. 바깥을 누르거나 Esc를 누르면 닫힌다. */
+export function Modal({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: ReactNode }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+  if (!open) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col rounded-card border border-line bg-surface shadow-overlay">
+        <header className="flex items-center justify-between gap-4 border-b border-line px-6 py-4">
+          <h2 className="title-mark text-lg font-semibold text-ink">{title}</h2>
+          <Button variant="ghost" size="icon" aria-label="닫기" icon={<X />} onClick={onClose} />
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+export type RecipientSort = 'added' | 'recent' | 'name' | 'dept' | 'email' | 'enabled';
+
+const SORT_OPTIONS: { value: RecipientSort; label: string }[] = [
+  { value: 'added', label: '등록순' },
+  { value: 'recent', label: '최근 등록순' },
+  { value: 'name', label: '이름순' },
+  { value: 'dept', label: '부서순' },
+  { value: 'email', label: '이메일순' },
+  { value: 'enabled', label: '발송 켬 먼저' },
+];
+
+const byText = (a: string, b: string) => a.localeCompare(b, 'ko');
+
+const COMPARE: Record<Exclude<RecipientSort, 'added' | 'recent'>, (a: Recipient, b: Recipient) => number> = {
+  name: (a, b) => byText(a.name, b.name),
+  // 부서가 비어 있는 사람은 맨 뒤로.
+  dept: (a, b) => (a.dept ? 0 : 1) - (b.dept ? 0 : 1) || byText(a.dept ?? '', b.dept ?? '') || byText(a.name, b.name),
+  email: (a, b) => byText(a.email.toLowerCase(), b.email.toLowerCase()),
+  enabled: (a, b) => Number(b.enabled) - Number(a.enabled) || byText(a.name, b.name),
+};
+
+/** 이름, 부서, 이메일 중 하나라도 검색어에 맞는지(초성 검색 포함). */
+export const matchesRecipient = (r: Recipient, q: string) => [r.name, r.email, r.dept ?? ''].some((v) => matchesQuery(v, q));
+
+/** 들어온 배열 순서를 등록순으로 본다. 정렬은 안정 정렬이라 같은 값끼리는 원래 순서를 지킨다. */
+export function sortRecipients(list: Recipient[], key: RecipientSort): Recipient[] {
+  if (key === 'added') return list;
+  if (key === 'recent') return [...list].reverse();
+  return [...list].sort(COMPARE[key]);
+}
+
+/** 검색 칸과 정렬 선택을 한 줄에. 검색 중이면 몇 명이 걸렸는지 붙인다. */
+export function RecipientFilterBar({ q, onQ, sort, onSort, total, matched }: {
+  q: string; onQ: (v: string) => void; sort: RecipientSort; onSort: (v: RecipientSort) => void; total: number; matched: number;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative max-w-sm min-w-0 flex-1">
+        <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" />
+        <input type="search" aria-label="이름, 부서, 이메일로 찾기" placeholder="이름, 부서, 이메일로 찾기 (초성 가능)" className={`${inputClass} pl-9`} value={q} onChange={(e) => onQ(e.target.value)} />
+      </div>
+      <Select className="w-36 shrink-0" aria-label="정렬" value={sort} options={SORT_OPTIONS} onChange={(v) => onSort(v as RecipientSort)} />
+      {q.trim() && <span className="shrink-0 text-sm text-muted">{total}명 중 {matched}명</span>}
+    </div>
   );
 }

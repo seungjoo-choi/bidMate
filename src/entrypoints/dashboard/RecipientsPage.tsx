@@ -9,9 +9,9 @@ import { GroupDetail } from './recipients/GroupDetail';
 import { GroupList, type View } from './recipients/GroupList';
 import { RecipientForm } from './recipients/RecipientForm';
 import { RecipientTable } from './recipients/RecipientTable';
-import { Drawer, type OpError } from './recipients/shared';
+import { Drawer, Modal, type OpError } from './recipients/shared';
 
-/** 사람 등록/수정 서랍. recipient가 null이면 새 사람, groupIds는 새 사람일 때 미리 체크할 그룹 */
+/** 사람 등록 팝업/수정 서랍. recipient가 null이면 새 사람(팝업), groupIds는 새 사람일 때 미리 체크할 그룹 */
 type FormState = null | { recipient: Recipient | null; groupIds: string[] };
 type Area = 'newGroup' | 'group' | 'recipient' | 'other';
 const FORM_CODES = ['INVALID_EMAIL', 'DUPLICATE_EMAIL', 'DUPLICATE_NAME', 'INVALID_VALUE', 'NOT_FOUND'];
@@ -112,6 +112,19 @@ export function RecipientsPage() {
       r.enabled ? `${r.name}: 메일 발송을 껐습니다.` : `${r.name}: 메일 발송을 켰습니다.`);
   };
 
+  const recipientForm = (recipient: Recipient | null, groupIds: string[]) => (
+    <RecipientForm
+      key={recipient?.id ?? 'new'}
+      recipient={recipient}
+      groups={groups}
+      initialGroupIds={groupIds}
+      error={formErr('recipient')}
+      busy={busy}
+      onSubmit={(i) => void saveRecipient(i)}
+      onCancel={closeForm}
+    />
+  );
+
   return (
     <div className="space-y-6">
       {header}
@@ -162,20 +175,12 @@ export function RecipientsPage() {
           )}
         </div>
       </div>
-      <Drawer open={form !== null} title={form?.recipient ? '수신자 정보 수정' : '수신자 추가'} onClose={closeForm}>
-        {form && (
-          <RecipientForm
-            key={form.recipient?.id ?? 'new'}
-            recipient={form.recipient}
-            groups={groups}
-            initialGroupIds={form.groupIds}
-            error={formErr('recipient')}
-            busy={busy}
-            onSubmit={(i) => void saveRecipient(i)}
-            onCancel={closeForm}
-          />
-        )}
+      <Drawer open={form?.recipient != null} title="수신자 정보 수정" onClose={closeForm}>
+        {form?.recipient && recipientForm(form.recipient, form.groupIds)}
       </Drawer>
+      <Modal open={form !== null && !form.recipient} title="수신자 추가" onClose={closeForm}>
+        {form && !form.recipient && recipientForm(null, form.groupIds)}
+      </Modal>
       {toast.node}
     </div>
   );

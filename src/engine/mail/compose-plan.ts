@@ -7,6 +7,7 @@ import type { MailProvider, Settings } from '../../core/types/settings';
 import type { ComposeSelectorConfig } from '../../messaging/protocol';
 
 export type ComposeField = 'to' | 'cc' | 'subject' | 'body';
+const FIELDS: ComposeField[] = ['to', 'cc', 'subject', 'body'];
 export interface ComposePlan {
   provider: MailProvider;
   host: string;
@@ -14,6 +15,9 @@ export interface ComposePlan {
   prefilled: ComposeField[];
   omitted: Array<{ field: ComposeField; reason: 'URL_TOO_LONG' }>;
   needsUserOpen: boolean;
+  fillFields: ComposeField[];   // prefilled도 omitted도 아닌 필드(FIELDS 순서)
+  attachLimits?: { perFileBytes?: number; totalBytes?: number };
+  detectTimeoutMs?: number;     // 사용자 조작이 없는 서비스만 짧게
   selector?: { set: ComposeSelectorSet; config: ComposeSelectorConfig };   // verified일 때만
 }
 
@@ -42,5 +46,12 @@ export function planCompose(settings: Settings, draft: MailDraft, selectorSets: 
     ? { set, config: { selectorSetId: site.selectorSetId, selectorOverrides: site.selectorOverrides } }
     : undefined;
 
-  return { provider, host, url, prefilled, omitted, needsUserOpen: provider !== 'gmail', selector };
+  const needsUserOpen = provider !== 'gmail';
+  const fillFields = FIELDS.filter((f) => !prefilled.includes(f) && !omitted.some((o) => o.field === f));
+  const limits = set?.attach.limits;
+  return {
+    provider, host, url, prefilled, omitted, needsUserOpen, fillFields, selector,
+    ...(limits ? { attachLimits: { ...limits } } : {}),
+    ...(needsUserOpen ? {} : { detectTimeoutMs: 30_000 }),
+  };
 }

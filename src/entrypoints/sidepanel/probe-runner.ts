@@ -2,7 +2,7 @@
 import { maskDeep } from '../../core/privacy/mask';
 import type { ProbeReport } from '../../messaging/protocol';
 
-export type ProbeMethod = 'snapshot' | 'startRecording' | 'stopRecording' | 'status';
+export type ProbeMethod = 'snapshot' | 'inspect' | 'startRecording' | 'stopRecording' | 'status';
 
 export interface FrameResult extends ProbeReport {
   frameId: number;
@@ -13,15 +13,15 @@ export async function injectProbe(tabId: number): Promise<void> {
   await chrome.scripting.executeScript({ target: { tabId, allFrames: true }, files: ['probe.js'] });
 }
 
-export async function callProbe(tabId: number, method: ProbeMethod): Promise<FrameResult[]> {
+export async function callProbe(tabId: number, method: ProbeMethod, args: unknown[] = []): Promise<FrameResult[]> {
   const results = await chrome.scripting.executeScript({
     target: { tabId, allFrames: true },
-    func: (m: string) => {
-      const p = (window as unknown as { __bidMateProbe?: Record<string, () => unknown> }).__bidMateProbe;
+    func: (m: string, a: unknown[]) => {
+      const p = (window as unknown as { __bidMateProbe?: Record<string, (...x: unknown[]) => unknown> }).__bidMateProbe;
       const fn = p?.[m];
-      return fn ? fn() : { error: 'probe 미주입' };
+      return fn ? fn(...a) : { error: 'probe 미주입' };
     },
-    args: [method],
+    args: [method, args],
   });
   return results.map((r) => ({
     frameId: r.frameId,

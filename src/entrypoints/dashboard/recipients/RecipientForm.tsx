@@ -1,8 +1,13 @@
+import { Check, Search } from 'lucide-react';
 import { useState } from 'react';
 import type { RecipientInput } from '../../../core/types/config-file';
 import type { Group, Recipient } from '../../../core/types/recipient';
 import { Button, Field, inputClass } from '../../../ui/components';
+import { matchesQuery } from '../../../ui/components/select-filter';
 import { Switch, errorText, type OpError } from './shared';
+
+/** 그룹이 이 개수 이상이면 칩 위에 검색 칸을 둔다 */
+const GROUP_SEARCH_MIN = 8;
 
 interface Props {
   /** null이면 새 사람 */
@@ -16,7 +21,7 @@ interface Props {
   onCancel: () => void;
 }
 
-/** 사람 등록/수정 폼. 서랍 패널 안에 들어간다. 받는 방식(TO/CC)은 그룹에서 정하므로 여기에는 없다. */
+/** 사람 등록/수정 폼. 등록은 팝업, 수정은 서랍 패널 안에 들어간다. 받는 방식(TO/CC)은 그룹에서 정하므로 여기에는 없다. */
 export function RecipientForm({ recipient, groups, initialGroupIds, error, busy, onSubmit, onCancel }: Props) {
   const [name, setName] = useState(recipient?.name ?? '');
   const [email, setEmail] = useState(recipient?.email ?? '');
@@ -26,6 +31,8 @@ export function RecipientForm({ recipient, groups, initialGroupIds, error, busy,
   const [groupIds, setGroupIds] = useState<string[]>(
     recipient ? groups.filter((g) => g.memberIds.includes(recipient.id)).map((g) => g.id) : initialGroupIds,
   );
+  const [groupQ, setGroupQ] = useState('');
+  const shownGroups = groups.filter((g) => matchesQuery(g.name, groupQ));
   const toggleGroup = (id: string) => setGroupIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
   const emailErr = error && (error.code === 'INVALID_EMAIL' || error.code === 'DUPLICATE_EMAIL') ? errorText(error) : undefined;
@@ -49,12 +56,30 @@ export function RecipientForm({ recipient, groups, initialGroupIds, error, busy,
       <Field label="소속 그룹" help={noDefault ? "저장하면 '전체' 그룹이 만들어지고 메일 기본 선택으로 지정됩니다." : '메일은 그룹 단위로 보냅니다. 그룹에 넣어야 메일을 받습니다.'}>
         {groups.length === 0 ? <p className="text-sm text-muted">아직 그룹이 없습니다.</p> : (
           <div className="space-y-2">
-            {groups.map((g) => (
-              <label key={g.id} className="flex items-center gap-2 text-sm text-ink">
-                <input type="checkbox" checked={groupIds.includes(g.id)} onChange={() => toggleGroup(g.id)} />
-                {g.name}
-              </label>
-            ))}
+            {groups.length >= GROUP_SEARCH_MIN && (
+              <div className="relative">
+                <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" />
+                <input aria-label="그룹 찾기" placeholder="그룹 찾기 (초성 가능)" className={`${inputClass} pl-9`} value={groupQ} onChange={(e) => setGroupQ(e.target.value)} />
+              </div>
+            )}
+            <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
+              {shownGroups.map((g) => {
+                const on = groupIds.includes(g.id);
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggleGroup(g.id)}
+                    className={`inline-flex h-8 items-center gap-1 rounded-full border px-3 text-sm transition-colors motion-reduce:transition-none [&_svg]:size-3.5 ${on ? 'border-accent bg-accent/15 font-semibold text-accent' : 'border-line-strong text-muted hover:border-ink/40 hover:text-ink'}`}
+                  >
+                    {on && <Check aria-hidden />}
+                    {g.name}
+                  </button>
+                );
+              })}
+              {shownGroups.length === 0 && <p className="text-sm text-muted">찾는 그룹이 없습니다.</p>}
+            </div>
           </div>
         )}
       </Field>

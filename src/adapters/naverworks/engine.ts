@@ -1,5 +1,5 @@
 import type { AttachResult, FieldResult } from '../../core/types/compose';
-import type { ComposeAdapter, ComposeSelectorSet, ComposeState, RecipientSel } from './types';
+import type { ComposeAdapter, ComposeAnchor, ComposeSelectorSet, ComposeState, RecipientSel } from './types';
 import {
   blurElement, click as safeClick, dropFiles, insertHtml, pasteFiles, pressKey, setInputFiles, setNativeValue, settle, typeText, waitFor,
 } from './dom-actions';
@@ -16,7 +16,10 @@ export class GenericComposeAdapter implements ComposeAdapter {
   private readonly pollMs: number;
   private readonly itemAppearMs: number;
 
-  constructor(readonly selectorSet: ComposeSelectorSet, private root: Document, timing: EngineTiming = {}) {
+  private pinned: Element | null = null;
+  private lost = false;
+
+  constructor(readonly selectorSet: ComposeSelectorSet, private root: Document, timing: EngineTiming = {}, private anchor?: ComposeAnchor) {
     this.id = selectorSet.id;
     this.settleMs = timing.settleMs ?? 400;
     this.stableMs = timing.stableMs ?? 1000;
@@ -25,19 +28,62 @@ export class GenericComposeAdapter implements ComposeAdapter {
   }
 
   // ---------- 탐색 ----------
-  private q<T extends Element = HTMLElement>(sel: string, doc: Document = this.root): T | null {
-    if (!sel) return null;
-    try { return doc.querySelector<T>(sel); } catch { return null; }
+  private scopeCandidates(): HTMLElement[] {
+    return this.qaIn(this.root, this.selectorSet.compose.scope ?? '');
   }
-  private qa(sel: string, doc: Document = this.root): HTMLElement[] {
+  private qaIn(base: ParentNode, sel: string): HTMLElement[] {
     if (!sel) return [];
-    try { return Array.from(doc.querySelectorAll<HTMLElement>(sel)); } catch { return []; }
+    try { return Array.from(base.querySelectorAll<HTMLElement>(sel)); } catch { return []; }
   }
 
-  /** 본문이 들어 있는 문서. iframe 본문이 접근 불가면 null. */
-  private resolveRoot(): Document | null {
+  /** 작성 창 범위. scope가 없으면 문서 전체. 끊어진 pin은 1회 재해석한다. */
+  resolveScope(): { el: ParentNode | null; reason?: 'SCOPE_NOT_FOUND' | 'SCOPE_AMBIGUOUS' } {
+    const scope = this.selectorSet.compose.scope;
+    if (!scope) return { el: this.root };
+    const want = (this.anchor?.subject ?? '').replace(/\s+/g, ' ').trim();
+    if (this.pinned) {
+      if (this.pinned.isConnected) return { el: this.pinned };
+      this.pinned = null;
+      this.lost = true;
+    }
+    // 제목 앵커 없이 잃은 창은 다시 고르지 않는다(남은 후보가 다른 창일 수 있음)
+    if (this.lost && !want) return { el: null };
+    let cands = this.scopeCandidates();
+    if (want) {
+      const subjSel = this.selectorSet.subject.input;
+      cands = cands.filter((c) => {
+        const inp = subjSel ? this.qIn<HTMLInputElement>(c, subjSel) : null;
+        return !!inp && inp.value.replace(/\s+/g, ' ').trim() === want;
+      });
+    }
+    if (cands.length === 0) return { el: null, reason: 'SCOPE_NOT_FOUND' };
+    if (cands.length > 1) return { el: null, reason: 'SCOPE_AMBIGUOUS' };
+    this.pinned = cands[0]!;
+    this.lost = false;
+    return { el: this.pinned };
+  }
+  /** scope 해석 실패 사유. pin이 끊어진 뒤 재해석 실패면 SCOPE_LOST. */
+  private scopeError(): string {
+    return this.lost ? 'SCOPE_LOST' : (this.resolveScope().reason ?? 'SCOPE_NOT_FOUND');
+  }
+
+  private qIn<T extends Element = HTMLElement>(base: ParentNode, sel: string): T | null {
+    if (!sel) return null;
+    try { return base.querySelector<T>(sel); } catch { return null; }
+  }
+  private q<T extends Element = HTMLElement>(sel: string, doc?: ParentNode): T | null {
+    const base = doc ?? this.resolveScope().el;
+    return base ? this.qIn<T>(base, sel) : null;
+  }
+  private qa(sel: string, doc?: ParentNode): HTMLElement[] {
+    const base = doc ?? this.resolveScope().el;
+    return base ? this.qaIn(base, sel) : [];
+  }
+
+  /** 본문을 찾을 기준. iframe이 아니면 작성 창 범위(해석 실패 시 null), iframe 본문이 접근 불가면 null. */
+  private resolveRoot(): ParentNode | null {
     const b = this.selectorSet.body;
-    if (b.kind !== 'iframe') return this.root;
+    if (b.kind !== 'iframe') return this.resolveScope().el;
     const f = this.q<HTMLIFrameElement>(b.iframe ?? '');
     return f?.contentDocument ?? null;
   }
@@ -49,6 +95,19 @@ export class GenericComposeAdapter implements ComposeAdapter {
   // ---------- 감지 ----------
   detect(): { isCompose: boolean; ready: boolean; reason?: string } {
     const s = this.selectorSet;
+    if (s.compose.scope) {
+      const isCompose = this.scopeCandidates().length >= 1;
+      if (!isCompose) return { isCompose: false, ready: false, reason: 'SCOPE_NOT_FOUND' };
+      const sc = this.resolveScope();
+      if (!sc.el) return { isCompose, ready: false, reason: this.scopeError() };
+      const need: Array<() => boolean> = [];
+      if (s.to.input) need.push(() => !!this.q(s.to.input));
+      if (s.subject.input) need.push(() => !!this.q(s.subject.input));
+      if (s.body.editable) need.push(() => !!this.bodyEditable());
+      if (need.length === 0) return { isCompose, ready: false, reason: 'SELECTOR_MISSING' };
+      const ready = need.every((f) => f());
+      return { isCompose, ready, reason: ready ? undefined : 'FIELDS_NOT_FOUND' };
+    }
     if (!s.compose.readySelector) return { isCompose: false, ready: false, reason: 'SELECTOR_MISSING' };
     const isCompose = this.q(s.compose.readySelector) !== null;
     if (!isCompose) return { isCompose: false, ready: false, reason: 'NOT_COMPOSE' };
@@ -132,7 +191,11 @@ export class GenericComposeAdapter implements ComposeAdapter {
     const b = this.selectorSet.body;
     const base = { field: 'body', requested: html, method: 'none' } as const;
     if (!b.editable || (b.kind === 'iframe' && !b.iframe)) return { ...base, rendered: null, status: 'unsupported', error: 'SELECTOR_MISSING' };
-    if (this.resolveRoot() === null) return { ...base, rendered: null, status: 'unsupported', error: 'CROSS_ORIGIN_FRAME' };
+    if (this.resolveRoot() === null) {
+      return b.kind === 'iframe'
+        ? { ...base, rendered: null, status: 'unsupported', error: 'CROSS_ORIGIN_FRAME' }
+        : { ...base, rendered: null, status: 'failed', error: this.scopeError() };
+    }
     const el = this.bodyEditable();
     if (!el) return { ...base, rendered: null, status: 'failed', error: 'EDITABLE_NOT_FOUND' };
     try {
@@ -168,7 +231,20 @@ export class GenericComposeAdapter implements ComposeAdapter {
     const a = this.selectorSet.attach;
     if (a.itemProgress && item.querySelector(a.itemProgress)) return true;
     if (a.uploadingClass && item.classList.contains(a.uploadingClass)) return true;
+    if (a.pendingSelector) {
+      const base = this.resolveScope().el;
+      if (base && this.qIn(base, a.pendingSelector) !== null) return true;
+    }
     return false;
+  }
+  private dialogShown(): boolean {
+    const d = this.selectorSet.attach.blockingDialog;
+    return !!d && this.qIn(this.root, d) !== null;
+  }
+  private dropTarget(): HTMLElement | null {
+    const z = this.selectorSet.attach.dropZone ?? '';
+    if (z === ':scope' && this.selectorSet.compose.scope) return this.resolveScope().el as HTMLElement | null;
+    return this.q(z);
   }
   private itemError(item: HTMLElement): boolean {
     const a = this.selectorSet.attach;
@@ -183,6 +259,8 @@ export class GenericComposeAdapter implements ComposeAdapter {
       ({ fileId, name: file.name, size: file.size, status, method, elapsedMs: Date.now() - t0, ...extra });
     if (!a.item || a.methods.length === 0) return res('skipped', 'none', { error: 'SELECTOR_MISSING' });
 
+    if (!this.resolveScope().el) return res('failed', 'none', { error: this.scopeError() });
+
     opts.onPhase('injecting');
     let used: AttachResult['method'] | null = null;
     for (const m of a.methods) {
@@ -193,18 +271,22 @@ export class GenericComposeAdapter implements ComposeAdapter {
           if (!input) continue;
           setInputFiles(input, [file]);
         } else if (m === 'drop') {
-          const zone = this.q(a.dropZone ?? '');
+          const zone = this.dropTarget();
           if (!zone) continue;
           dropFiles(zone, [file]);
         } else {
-          const target = this.q(a.dropZone ?? '') ?? this.bodyEditable();
+          const target = this.dropTarget() ?? this.bodyEditable();
           if (!target) continue;
           pasteFiles(target, [file]);
         }
       } catch { continue; }
       used = m;
       await settle(this.settleMs);
-      if (await waitFor(() => opts.signal.aborted || this.findItem(file.name), this.itemAppearMs, this.pollMs)) break;
+      if (this.dialogShown()) return res('failed', used, { error: 'DIALOG_SHOWN' });
+      if (await waitFor(() => opts.signal.aborted || this.dialogShown() || this.findItem(file.name), this.itemAppearMs, this.pollMs)) {
+        if (this.dialogShown()) return res('failed', used, { error: 'DIALOG_SHOWN' });
+        break;
+      }
     }
     if (!used) return res('failed', 'none', { error: 'NO_INJECTION_PATH' });
 
@@ -215,6 +297,8 @@ export class GenericComposeAdapter implements ComposeAdapter {
     let last: HTMLElement | null = null;
     while (Date.now() < end) {
       if (opts.signal.aborted) return res('failed', used, { error: 'ABORTED' });
+      if (this.dialogShown()) return res('failed', used, { error: 'DIALOG_SHOWN' });
+      if (!this.resolveScope().el) return res('failed', used, { error: this.scopeError() });
       const item = this.findItem(file.name);
       last = item;
       if (item && this.itemError(item)) return res('failed', used, { error: 'UPLOAD_ERROR' });
@@ -236,6 +320,12 @@ export class GenericComposeAdapter implements ComposeAdapter {
   // ---------- 상태 ----------
   readState(): ComposeState {
     const s = this.selectorSet;
+    if (!this.resolveScope().el) {
+      return {
+        to: [], cc: [], subject: '', bodyText: '', bodyHtml: '', attachments: [],
+        supported: { to: false, cc: false, subject: false, body: false, attachments: false },
+      };
+    }
     const subj = this.q<HTMLInputElement>(s.subject.input);
     const body = this.bodyEditable();
     const bodyText = body ? (body instanceof HTMLTextAreaElement ? body.value : body.textContent ?? '') : '';
@@ -250,6 +340,12 @@ export class GenericComposeAdapter implements ComposeAdapter {
         const size = s.attach.itemSize ? item.querySelector<HTMLElement>(s.attach.itemSize)?.textContent?.trim() : undefined;
         return { name: (nameEl?.textContent ?? '').trim(), ...(size ? { size } : {}), uploading: this.itemUploading(item) };
       }),
+      supported: {
+        // 수신자는 칩으로 읽으므로 칩 셀렉터가 있어야 대조할 수 있다
+        to: !!s.to.chip, cc: !!s.cc.chip, subject: !!s.subject.input,
+        body: !!s.body.editable && (s.body.kind !== 'iframe' || !!s.body.iframe),
+        attachments: !!s.attach.item && s.attach.methods.length > 0,
+      },
     };
   }
 }

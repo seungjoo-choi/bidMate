@@ -68,7 +68,10 @@ export function App() {
       <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col gap-6 border-r border-line bg-surface px-3 py-6">
         <div className="flex items-center gap-2.5 px-3">
           <Logo size={30} />
-          <div className="text-lg leading-tight font-bold tracking-tight">나의 입찰메이트</div>
+          <div>
+            <div className="text-lg leading-tight font-bold tracking-tight">BidMate</div>
+            <div className="text-xs leading-tight text-muted">나의 입찰메이트</div>
+          </div>
         </div>
         <nav className="grid gap-1">
           {MENU.map(({ id, label, Icon }) => (

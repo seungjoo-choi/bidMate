@@ -238,8 +238,11 @@ export function App() {
   return (
     <div className="min-h-screen bg-canvas text-base">
       <header className="sticky top-0 z-10 flex items-center gap-2.5 border-b border-line bg-surface px-5 py-3.5 shadow-card">
-        <Logo size={22} />
-        <b className="text-lg tracking-tight">BidMate</b>
+        <Logo size={26} />
+        <div>
+          <div className="text-lg leading-tight font-bold tracking-tight">BidMate</div>
+          <div className="text-xs leading-tight text-muted">나의 입찰메이트</div>
+        </div>
         <span className="ml-auto flex items-center gap-3">
           <button onClick={openDashboard} className="inline-flex items-center gap-1 text-sm text-accent hover:underline">
             <LayoutDashboard className="size-3.5" />대시보드

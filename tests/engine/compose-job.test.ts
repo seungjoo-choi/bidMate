@@ -55,7 +55,7 @@ function harness(mem: MemoryStore, handlers: Record<string, Handler>, extra: Par
 const okFields = (p: any) => (['to', 'cc', 'subject', 'body'] as const).map((field) => ({ field, requested: p[field] ?? '', rendered: null, status: 'ok' as const, method: 'm' }));
 const okState = async (mem: MemoryStore): Promise<ComposeState> => {
   const d = (await getDraft(mem, 'R1-000'))!;
-  return { to: d.to, cc: d.cc, subject: d.subject, bodyText: d.text, bodyHtml: d.html, attachments: [] };
+  return { to: d.to, cc: d.cc, subject: d.subject, bodyText: d.text, bodyHtml: d.html, attachments: [], supported: { to: true, cc: true, subject: true, body: true, attachments: true } };
 };
 const attachDone = (p: any) => ({ done: true, result: { fileId: p.fileId, name: '공고문.hwp', size: 12, status: 'uploaded', method: 'input', elapsedMs: 5 } });
 
@@ -263,5 +263,120 @@ describe('runComposeJob gmail 주소 방식', () => {
     const body = r.result?.fields.find((f) => f.field === 'body');
     expect(body).toMatchObject({ status: 'unsupported', method: 'none', error: 'URL_TOO_LONG' });
     expect(r.result?.mode).toBe('url');
+  });
+});
+
+describe('runComposeJob gmail 자동 첨부(테스트 전용 verified 셀렉터셋)', () => {
+  const gmailSettings = () => { const s = defaultSettings(); s.mail.provider = 'gmail'; return s; };
+  const gmailVerified = (limits?: { perFileBytes?: number; totalBytes?: number }): ComposeSelectorSet => ({
+    ...gmailV1, status: 'verified', version: 'test',
+    compose: { readySelector: '', scope: '.win' },
+    subject: { input: '.subj' },
+    body: { kind: 'contenteditable', editable: '.bd', insert: ['innerHTML'] },
+    attach: { item: '.att', itemName: '.nm', methods: ['input'], ...(limits ? { limits } : {}) },
+  });
+  const sets = (limits?: { perFileBytes?: number; totalBytes?: number }) => ({ 'gmail-v1': gmailVerified(limits) });
+  const supportedAll = { to: true, cc: true, subject: true, body: true, attachments: true };
+  const gmailHandlers = (mem: MemoryStore, supported: ComposeState['supported'] = supportedAll): Record<string, Handler> => ({
+    ...autoHandlers(mem),
+    'compose/verify': async () => ({ ...(await okState(mem)), supported }),
+  });
+
+  it('open에 anchor(제목), fill 미호출, fill_fields skipped, 첨부 호출, 전부 ok면 completed/url', async () => {
+    const mem = await setup();
+    let openPayload: any;
+    const hs = gmailHandlers(mem);
+    hs['compose/open'] = (p) => { openPayload = p; return { tabId: 7 }; };
+    const h = harness(mem, hs, { selectorSets: sets() }, gmailSettings());
+    const r = await h.run();
+    const d = (await getDraft(mem, 'R1-000'))!;
+    expect(openPayload.anchor).toEqual({ subject: d.subject });
+    expect(h.calls).not.toContain('compose/fill');
+    expect(h.calls).toContain('compose/attach-begin');
+    expect(h.progress.find((p) => p.step === 'fill_fields' && p.status === 'skipped')?.label).toBe('주소로 전달됨, 확인 단계에서 대조');
+    expect(r.status).toBe('completed');
+    expect(r.result?.mode).toBe('url');
+    expect(r.result?.fields.every((f) => f.status === 'ok')).toBe(true);
+  });
+
+  it('to, cc가 supported false면 prefilled 유지, partial', async () => {
+    const mem = await setup();
+    const h = harness(mem, gmailHandlers(mem, { ...supportedAll, to: false, cc: false }), { selectorSets: sets() }, gmailSettings());
+    const r = await h.run();
+    const st = Object.fromEntries((r.result?.fields ?? []).map((f) => [f.field, f.status]));
+    expect(st).toMatchObject({ to: 'prefilled', cc: 'prefilled', subject: 'ok', body: 'ok' });
+    expect(r.status).toBe('partial');
+  });
+
+  it('perFileBytes 초과는 PROVIDER_FILE_LIMIT로 skipped, 릴레이하지 않는다', async () => {
+    const mem = await setup();
+    const h = harness(mem, gmailHandlers(mem), { selectorSets: sets({ perFileBytes: 5 }) }, gmailSettings());
+    const r = await h.run();
+    expect(h.calls).not.toContain('compose/attach-begin');
+    expect(r.result?.attachments[0]).toMatchObject({ status: 'skipped', error: 'PROVIDER_FILE_LIMIT' });
+    expect(r.status).toBe('partial');
+  });
+
+  it('totalBytes 초과는 PROVIDER_TOTAL_LIMIT로 skipped', async () => {
+    const mem = await setup();
+    const h = harness(mem, gmailHandlers(mem), { selectorSets: sets({ totalBytes: 5 }) }, gmailSettings());
+    const r = await h.run();
+    expect(r.result?.attachments[0]).toMatchObject({ status: 'skipped', error: 'PROVIDER_TOTAL_LIMIT' });
+  });
+
+  it('감지 타임아웃은 30초(deps 값보다 plan 우선)', async () => {
+    const mem = await setup();
+    const hs = gmailHandlers(mem);
+    let detects = 0;
+    hs['compose/detect'] = () => { detects++; return { frames: [] }; };
+    const r = await harness(mem, hs, { selectorSets: sets(), detectTimeoutMs: 999_000 }, gmailSettings()).run();
+    expect(r.error?.code).toBe('COMPOSE_NOT_DETECTED');
+    expect(detects).toBeGreaterThanOrEqual(30);
+    expect(detects).toBeLessThanOrEqual(32);
+  });
+
+  it('마지막 reason이 SCOPE_AMBIGUOUS면 안내 메시지, code 유지', async () => {
+    const mem = await setup();
+    const hs = gmailHandlers(mem);
+    hs['compose/detect'] = () => ({ frames: [{ frameId: 0, injected: true, isCompose: true, ready: false, reason: 'SCOPE_AMBIGUOUS' }] });
+    const r = await harness(mem, hs, { selectorSets: sets() }, gmailSettings()).run();
+    expect(r.error?.code).toBe('COMPOSE_NOT_DETECTED');
+    expect(r.error?.message).toBe('같은 제목의 작성 창이 여러 개라 하나로 특정하지 못했습니다. 다른 작성 창을 닫고 다시 시도하세요');
+  });
+});
+
+describe('runComposeJob naverworks 페이로드 불변', () => {
+  it('open에 anchor가 없고 fill에 fields가 없다', async () => {
+    const mem = await setup();
+    const payloads: Record<string, any> = {};
+    const hs = autoHandlers(mem);
+    for (const t of ['compose/open', 'compose/fill'] as const) {
+      const orig = hs[t]!;
+      hs[t] = (p) => { payloads[t] = p; return orig(p); };
+    }
+    const r = await harness(mem, hs).run();
+    expect(r.status).toBe('completed');
+    expect('anchor' in payloads['compose/open']).toBe(false);
+    expect('fields' in payloads['compose/fill']).toBe(false);
+  });
+});
+
+describe('runComposeJob url 본문 길이 비교', () => {
+  it('bodyText가 줄바꿈 없이 이어진 텍스트여도 body ok', async () => {
+    const mem = await setup();
+    const s = defaultSettings();
+    s.mail.provider = 'gmail';
+    const set: ComposeSelectorSet = {
+      ...gmailV1, status: 'verified', version: 'test', compose: { readySelector: '', scope: '.win' },
+      subject: { input: '.subj' }, body: { kind: 'contenteditable', editable: '.bd', insert: ['innerHTML'] },
+      attach: { item: '.att', itemName: '.nm', methods: ['input'] },
+    };
+    const hs = autoHandlers(mem);
+    hs['compose/verify'] = async () => {
+      const st = await okState(mem);
+      return { ...st, bodyText: st.bodyText.replace(/\n+/g, ''), supported: { to: true, cc: true, subject: true, body: true, attachments: true } };
+    };
+    const r = await harness(mem, hs, { selectorSets: { 'gmail-v1': set } }, s).run();
+    expect(r.result?.fields.find((f) => f.field === 'body')?.status).toBe('ok');
   });
 });

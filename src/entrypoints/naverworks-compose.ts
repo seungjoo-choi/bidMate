@@ -1,15 +1,15 @@
 import { defineUnlistedScript } from 'wxt/utils/define-unlisted-script';
 import { listen } from '../messaging/bus';
 import type { AttachStatus, ComposeDetect, ComposeSelectorConfig, FileMeta } from '../messaging/protocol';
-import type { AttachResult } from '../core/types/compose';
+import type { AttachResult, FieldResult } from '../core/types/compose';
 import { GenericComposeAdapter } from '../adapters/naverworks/engine';
 import { FileBuffer } from '../adapters/naverworks/file-buffer';
 import { mergeSelectorSet, SELECTOR_SETS } from '../adapters/naverworks/selectors';
-import type { ComposeAdapter } from '../adapters/naverworks/types';
+import type { ComposeAdapter, ComposeAnchor } from '../adapters/naverworks/types';
 
 // 웹메일 작성 화면 content script. 요청에만 답하고 storage.session은 읽지 않는다.
 
-export interface ComposeCsConfig extends ComposeSelectorConfig { jobId?: string; maxFileMB?: number }
+export interface ComposeCsConfig extends ComposeSelectorConfig { jobId?: string; maxFileMB?: number; anchor?: ComposeAnchor }
 interface ComposeCsApi { configure(cfg: ComposeCsConfig): void; detect(): ComposeDetect | null }
 type Phase = 'buffering' | 'injecting' | 'uploading';
 interface AttachState { startedAt: number; phase: Phase; result?: AttachResult }
@@ -43,7 +43,7 @@ export default defineUnlistedScript(() => {
     configure(cfg) {
       const base = SELECTOR_SETS[cfg.selectorSetId];
       if (!base) throw err('SELECTOR_SET_NOT_FOUND', `알 수 없는 셀렉터셋: ${cfg.selectorSetId}`);
-      adapter = new GenericComposeAdapter(mergeSelectorSet(base, cfg.selectorOverrides), document);
+      adapter = new GenericComposeAdapter(mergeSelectorSet(base, cfg.selectorOverrides), document, {}, cfg.anchor);
       buffer = new FileBuffer(cfg.maxFileMB ?? 100);
       boundJob = cfg.jobId;
     },
@@ -51,7 +51,7 @@ export default defineUnlistedScript(() => {
     detect() {
       if (!adapter) return null;
       const d = adapter.detect();
-      return { frameId: 0, injected: true, isCompose: d.isCompose, ready: d.ready };
+      return { frameId: 0, injected: true, isCompose: d.isCompose, ready: d.ready, ...(d.reason ? { reason: d.reason } : {}) };
     },
   };
   window.__bidMateCompose = api;
@@ -59,7 +59,11 @@ export default defineUnlistedScript(() => {
   listen('compose/fill', async (p) => {
     checkJob(p.jobId);
     const a = need();
-    return [await a.setRecipients('to', p.to), await a.setRecipients('cc', p.cc), await a.setSubject(p.subject), await a.setBody(p.html)];
+    const out: FieldResult[] = [];
+    for (const f of p.fields ?? ['to', 'cc', 'subject', 'body']) {
+      out.push(f === 'to' ? await a.setRecipients('to', p.to) : f === 'cc' ? await a.setRecipients('cc', p.cc) : f === 'subject' ? await a.setSubject(p.subject) : await a.setBody(p.html));
+    }
+    return out;
   }, 'content');
 
   listen('compose/attach-begin', (p) => {

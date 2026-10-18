@@ -4,9 +4,14 @@ import { defineUnlistedScript } from 'wxt/utils/define-unlisted-script';
 
 type Json = Record<string, unknown>;
 
+export interface InspectOpts { depth?: number; maxMatches?: number }
+export interface WatchOpts { selectors: string[]; intervalMs?: number }
+export interface RecordingOpts { watch?: WatchOpts }
+
 interface ProbeApi {
   snapshot(): Json;
-  startRecording(): Json;
+  inspect(selectors: string[], opts?: InspectOpts): Json;
+  startRecording(opts?: RecordingOpts): Json;
   stopRecording(): Json;
   status(): Json;
 }
@@ -17,6 +22,8 @@ declare global {
 
 const MAX_RECORDS = 5000;
 const MAX_PER_CATEGORY = 500;
+const MAX_WATCHES = 200;
+const MAX_CHILDREN = 30;
 
 import { maskDeep, maskStr, truncateMasked } from '../core/privacy/mask';
 
@@ -229,13 +236,101 @@ function snapshot(): Json {
   return maskDeep(report);
 }
 
+// ---------- inspect (읽기 전용) ----------
+const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT']);
+
+/** 요소 자신의 직접 텍스트 노드만 40자 이하로 모은다(자손 텍스트는 자식 노드에서 따로 기록). */
+function ownText(el: Element): string {
+  let t = '';
+  for (const n of Array.from(el.childNodes)) if (n.nodeType === Node.TEXT_NODE) t += n.textContent ?? '';
+  return truncateMasked(t.replace(/\s+/g, ' ').trim(), 40);
+}
+
+function subtreeOf(el: Element, depth: number): Json {
+  const out: Json = { tag: el.tagName.toLowerCase() };
+  const cls = el.getAttribute('class');
+  if (cls) out.class = cls;
+  const role = el.getAttribute('role');
+  if (role) out.role = role;
+  const aria: Record<string, string> = {};
+  for (const a of Array.from(el.attributes)) if (a.name.startsWith('aria-')) aria[a.name] = maskStr(a.value);
+  if (Object.keys(aria).length > 0) out.aria = aria;
+  // input은 type/name만 기록한다. value는 수집하지 않는다.
+  if (el.tagName === 'INPUT') {
+    out.type = el.getAttribute('type');
+    out.name = el.getAttribute('name');
+  }
+  if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' && el.tagName !== 'SELECT') {
+    const text = ownText(el);
+    if (text) out.text = text;
+  }
+  if (depth > 0) {
+    const kids = Array.from(el.children).filter((c) => !SKIP_TAGS.has(c.tagName));
+    if (kids.length > 0) {
+      out.children = kids.slice(0, MAX_CHILDREN).map((c) => subtreeOf(c, depth - 1));
+      if (kids.length > MAX_CHILDREN) out.childrenOmitted = kids.length - MAX_CHILDREN;
+    }
+  }
+  return out;
+}
+
+function ancestorsOf(el: Element): Json[] {
+  const out: Json[] = [];
+  let cur = el.parentElement;
+  while (cur) {
+    out.push({
+      tag: cur.tagName.toLowerCase(),
+      id: cur.id || null,
+      class: cur.getAttribute('class'),
+      role: cur.getAttribute('role'),
+      ariaLabel: cur.getAttribute('aria-label') === null ? null : maskStr(cur.getAttribute('aria-label')!),
+    });
+    if (cur.tagName === 'BODY') break;
+    cur = cur.parentElement;
+  }
+  return out;
+}
+
+function inspectRaw(selectors: string[], opts?: InspectOpts): { results: Json[]; invalid: string[] } {
+  const depth = Math.max(0, opts?.depth ?? 4);
+  const maxMatches = Math.max(1, opts?.maxMatches ?? 20);
+  const results: Json[] = [];
+  const invalid: string[] = [];
+  for (const selector of selectors) {
+    let list: Element[];
+    try {
+      list = Array.from(document.querySelectorAll(selector)).slice(0, maxMatches);
+    } catch {
+      invalid.push(selector);
+      continue;
+    }
+    for (const el of list) {
+      results.push({ selector, cssPath: cssPath(el), ancestors: ancestorsOf(el), subtree: subtreeOf(el, depth) });
+    }
+  }
+  return { results, invalid };
+}
+
+function inspect(selectors: string[], opts?: InspectOpts): Json {
+  const { results, invalid } = inspectRaw(selectors, opts);
+  return maskDeep({
+    url: location.href,
+    isTop: window === window.top,
+    ts: new Date().toISOString(),
+    selectors,
+    invalid,
+    results,
+  });
+}
+
 // ---------- recording ----------
 interface Recording {
   startedAt: number;
   mutations: Json[];
   resources: Json[];
   events: Json[];
-  truncated: { mutations: boolean; events: boolean; resources: boolean };
+  watches: Json[];
+  truncated: { mutations: boolean; events: boolean; resources: boolean; watches: boolean };
   mo: MutationObserver;
   po: PerformanceObserver | null;
   stopListeners: Array<() => void>;
@@ -253,7 +348,7 @@ function realTarget(e: Event): Element | null {
   return t instanceof Element ? t : t instanceof Node ? t.parentElement : null;
 }
 
-function startRecording(): Json {
+function startRecording(recOpts?: RecordingOpts): Json {
   if (rec) return { ok: true, alreadyRecording: true, startedAt: rec.startedAt };
   const startedAt = Date.now();
   const now = () => Date.now() - startedAt;
@@ -378,12 +473,46 @@ function startRecording(): Json {
     pushEvent({ ...base('click', e), text: t ? textOf(t, 30) : '' });
   });
 
-  rec = { startedAt, mutations, resources, events, truncated: { mutations: false, events: false, resources: false }, mo, po, stopListeners };
+  // URL 변화: hashchange와 location.href 폴링으로 기록한다(SPA의 pushState 포함).
+  let lastHref = location.href;
+  const checkHref = (type: string) => {
+    if (location.href === lastHref) return;
+    pushEvent({ t: now(), type, from: lastHref, to: location.href });
+    lastHref = location.href;
+  };
+  on('hashchange', () => checkHref('hashchange'));
+  on('popstate', () => checkHref('popstate'));
+  const hrefTimer = setInterval(() => checkHref('urlchange'), 500);
+  stopListeners.push(() => clearInterval(hrefTimer));
+
+  // watch: 간격마다 inspect 결과를 기록한다. 직전과 같으면 생략, 상한 MAX_WATCHES회.
+  const watches: Json[] = [];
+  const truncated = { mutations: false, events: false, resources: false, watches: false };
+  const watch = recOpts?.watch;
+  if (watch && watch.selectors.length > 0) {
+    let lastKey = '';
+    const tick = () => {
+      const { results } = inspectRaw(watch.selectors);
+      const key = JSON.stringify(results);
+      if (key === lastKey) return;
+      if (watches.length >= MAX_WATCHES) {
+        truncated.watches = true;
+        return;
+      }
+      lastKey = key;
+      watches.push({ t: now(), results });
+    };
+    tick();
+    const watchTimer = setInterval(tick, Math.max(100, watch.intervalMs ?? 500));
+    stopListeners.push(() => clearInterval(watchTimer));
+  }
+
+  rec = { startedAt, mutations, resources, events, watches, truncated, mo, po, stopListeners };
   return { ok: true, startedAt };
 }
 
 function stopRecording(): Json {
-  if (!rec) return maskDeep({ url: location.href, recording: false, mutations: [], resources: [], events: [] });
+  if (!rec) return maskDeep({ url: location.href, recording: false, mutations: [], resources: [], events: [], watches: [] });
   const r = rec;
   rec = null;
   r.mo.disconnect();
@@ -398,6 +527,7 @@ function stopRecording(): Json {
     mutations: r.mutations,
     resources: r.resources,
     events: r.events,
+    watches: r.watches,
   });
 }
 
@@ -409,5 +539,5 @@ function status(): Json {
 
 export default defineUnlistedScript(() => {
   if (window.__bidMateProbe) return; // 중복 주입 시 기존 인스턴스 유지
-  window.__bidMateProbe = { snapshot, startRecording, stopRecording, status };
+  window.__bidMateProbe = { snapshot, inspect, startRecording, stopRecording, status };
 });

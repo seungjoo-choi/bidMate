@@ -28,7 +28,7 @@ export interface JobRunPayload { job: Job; html?: HtmlFields; secrets: { g2bServ
 export interface ActiveJob { jobId: string; attempt: number }
 export interface G2bTestResult { ok: boolean; title?: string; error?: { code: string; message: string } }
 export interface ComposeSelectorConfig { selectorSetId: string; selectorOverrides?: Partial<ComposeSelectorSet> }
-export interface ComposeDetect { frameId: number; injected: boolean; isCompose: boolean; ready: boolean }
+export interface ComposeDetect { frameId: number; injected: boolean; isCompose: boolean; ready: boolean; reason?: string }
 export type AttachStatus =
   | { done: false; phase: 'buffering' | 'injecting' | 'uploading'; elapsedMs: number }
   | { done: true; result: AttachResult };
@@ -52,12 +52,12 @@ export type Msg =
               | { accepted: false; code: 'JOB_ALREADY_RUNNING'; conflictJobId: string; active: ActiveJob[] } }
   | { type: 'job/progress'; payload: JobProgress; response: void }
   | { type: 'job/finish'; payload: { jobId: string; attempt: number; status: JobStatus; result?: unknown; error?: JobError }; response: void }
-  | { type: 'compose/open'; payload: { jobId: string; url: string; selector?: ComposeSelectorConfig }; response: { tabId: number } }
+  | { type: 'compose/open'; payload: { jobId: string; url: string; selector?: ComposeSelectorConfig; anchor?: { subject: string } }; response: { tabId: number } }
   | { type: 'compose/detect'; payload: { jobId: string }; response: { frames: ComposeDetect[] } }
   | { type: 'compose/bind'; payload: { jobId: string; frameId: number }; response: void }
   | { type: 'compose/focus'; payload: { jobId: string }; response: void }
   | { type: 'compose/abort'; payload: { jobId: string }; response: void }   // SW->CS로도 같은 type(target 'content')
-  | { type: 'compose/fill'; payload: { jobId: string; to: string[]; cc: string[]; subject: string; html: string }; response: FieldResult[] }
+  | { type: 'compose/fill'; payload: { jobId: string; to: string[]; cc: string[]; subject: string; html: string; fields?: Array<'to' | 'cc' | 'subject' | 'body'> }; response: FieldResult[] }
   | { type: 'compose/attach-begin'; payload: { jobId: string; files: FileMeta[] }; response: { accepted: string[]; rejected: Array<{ fileId: string; reason: string }> } }
   | { type: 'file/chunk'; payload: { jobId: string; fileId: string; seq: number; total: number; b64: string }; response: { received: number } }
   | { type: 'file/end'; payload: { jobId: string; fileId: string }; response: { started: boolean; error?: string } }

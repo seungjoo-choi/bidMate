@@ -17,16 +17,27 @@ export function useVariableSuggest(isTarget: (el: EventTarget) => el is FocusEl)
   const refresh = (e: SyntheticEvent) => {
     const el = e.target;
     if (!isTarget(el)) return;
+    // 한글 입력기가 조합 중일 때 다시 그리면 조합이 깨져 글자가 사라질 수 있어, 조합이 끝난 뒤(compositionend)에 갱신한다.
+    if ((e.nativeEvent as InputEvent).isComposing) return;
+    // 입력 이벤트 처리 중(capture)에 상태를 바꾸면 React가 바로 다시 그리며 입력칸을 이전 값으로 되돌리고,
+    // 뒤이은 onChange는 값이 안 바뀐 것으로 보고 실행되지 않는다. microtask는 리스너 사이에 돌아 같은 문제가 생기므로
+    // 이벤트 전파가 모두 끝난 뒤(setTimeout)에 목록을 갱신한다.
+    setTimeout(() => update(el), 0);
+  };
+
+  const update = (el: FocusEl) => {
+    if (!el.isConnected || document.activeElement !== el) { setState(null); return; }
     const caret = el.selectionStart ?? el.value.length;
     const q = el.selectionEnd === caret ? findVariableQuery(el.value, caret) : null;
     const matches = q ? matchVariables(q.query) : [];
     if (!q || matches.length === 0) { setState(null); return; }
     const p = caretPoint(el, q.start);
-    setState((s) => ({
-      el, start: q.start, query: q.query, matches,
-      active: s && s.el === el && s.start === q.start && s.query === q.query ? s.active : 0,
-      x: p.left, y: p.bottom,
-    }));
+    setState((s) => {
+      const same = s && s.el === el && s.start === q.start && s.query === q.query;
+      // 커서만 움직여 select 이벤트가 와도 내용이 같으면 다시 그리지 않는다.
+      if (same && s.x === p.left && s.y === p.bottom) return s;
+      return { el, start: q.start, query: q.query, matches, active: same ? s.active : 0, x: p.left, y: p.bottom };
+    });
   };
 
   const pick = (d: VariableDef) => {
@@ -68,6 +79,7 @@ export function useVariableSuggest(isTarget: (el: EventTarget) => el is FocusEl)
   const handlers = {
     onInputCapture: refresh,
     onSelectCapture: refresh,
+    onCompositionEndCapture: refresh,
     onKeyDownCapture: onKeyDown,
     onBlurCapture: () => setState(null),
   };

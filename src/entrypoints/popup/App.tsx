@@ -60,7 +60,13 @@ export function App() {
   return (
     <div className="w-[380px] space-y-4 bg-canvas p-5">
       <div className="flex items-center justify-between">
-        <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight"><Logo size={22} />BidMate</h1>
+        <h1 className="flex items-center gap-2">
+          <Logo size={26} />
+          <span>
+            <span className="block text-lg leading-tight font-bold tracking-tight">BidMate</span>
+            <span className="block text-xs leading-tight font-normal text-muted">나의 입찰메이트</span>
+          </span>
+        </h1>
         {detected && <StatusBadge status="ok">웹메일 감지</StatusBadge>}
         {detected === false && <StatusBadge status="idle">대상 사이트 아님</StatusBadge>}
       </div>

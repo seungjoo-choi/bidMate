@@ -3,20 +3,23 @@ import type { AttachResult, FieldResult } from '../../core/types/compose';
 export interface RecipientSel { input: string; chip: string; chipEmail: string; commit: Array<'enter' | 'semicolon' | 'comma' | 'blur' | 'tab'>; }
 export interface ComposeSelectorSet {
   id: string; version: string; status: 'unverified' | 'verified'; hostPattern: string;
-  compose: { url?: string; openButton?: string; readySelector: string; inFrame?: string };
+  compose: { url?: string; openButton?: string; readySelector: string; inFrame?: string; scope?: string };
   to: RecipientSel; cc: RecipientSel & { revealButton?: string };
   subject: { input: string };
   body: { kind: 'contenteditable' | 'iframe' | 'textarea'; editable: string; iframe?: string; insert: Array<'execCommand' | 'paste' | 'innerHTML'> };
-  attach: { fileInput?: string; dropZone?: string; item: string; itemName: string; itemSize?: string; itemProgress?: string; itemError?: string; uploadingClass?: string; methods: Array<'input' | 'drop' | 'paste'> };
+  attach: { fileInput?: string; dropZone?: string; item: string; itemName: string; itemSize?: string; itemProgress?: string; itemError?: string; uploadingClass?: string; pendingSelector?: string; blockingDialog?: string; limits?: { perFileBytes?: number; totalBytes?: number }; methods: Array<'input' | 'drop' | 'paste'> };
   draft?: { button: string; savedIndicator?: string };
   forbidden: { send: string[]; textPatterns: string[] /* 기본 ["보내기","전송","Send"] */ };
 }
 export interface ComposeState {
   to: string[]; cc: string[]; subject: string; bodyText: string; bodyHtml: string;
   attachments: Array<{ name: string; size?: string; uploading: boolean }>;
+  supported: { to: boolean; cc: boolean; subject: boolean; body: boolean; attachments: boolean };
 }
+export interface ComposeAnchor { subject?: string }
 export interface ComposeAdapter {
   readonly id: string; readonly selectorSet: ComposeSelectorSet;
+  /** reason: 'NOT_COMPOSE' | 'SELECTOR_MISSING' | 'FIELDS_NOT_FOUND' | 'SCOPE_NOT_FOUND' | 'SCOPE_AMBIGUOUS' 등. 진단과 메시지 분기용. */
   detect(): { isCompose: boolean; ready: boolean; reason?: string };
   waitReady(timeoutMs: number): Promise<void>;
   setRecipients(role: 'to' | 'cc', emails: string[]): Promise<FieldResult>;

@@ -8,7 +8,7 @@ const CS_FILE = 'naverworks-compose.js';
 
 type Sender = chrome.runtime.MessageSender;
 // CS의 ComposeCsConfig와 같은 꼴: jobId로 CS를 잡에 묶고, maxFileMB로 FileBuffer 상한을 정한다.
-type Cfg = ComposeSelectorConfig & { jobId?: string; maxFileMB?: number };
+type Cfg = ComposeSelectorConfig & { jobId?: string; maxFileMB?: number; anchor?: { subject: string } };
 
 // jobId별 셀렉터 설정(재주입용). SW가 재시작되면 사라지지만 detect는 offscreen 폴링으로 재시도된다.
 const selectors = new Map<string, Cfg>();
@@ -68,7 +68,7 @@ async function open(p: PayloadOf<'compose/open'>): Promise<{ tabId: number }> {
     return { tabId };
   }
   const maxFileMB = (await getSettingsCache())?.download.maxFileMB;
-  const cfg: Cfg = { ...p.selector, jobId: p.jobId, ...(maxFileMB ? { maxFileMB } : {}) };
+  const cfg: Cfg = { ...p.selector, jobId: p.jobId, ...(maxFileMB ? { maxFileMB } : {}), ...(p.anchor ? { anchor: p.anchor } : {}) };
   selectors.set(p.jobId, cfg);
   await waitComplete(tabId, LOAD_WAIT_MS);
   try { await inject(tabId, cfg); } catch { /* 주입 실패는 detect 폴링의 재주입에 맡긴다 */ }
@@ -92,8 +92,8 @@ async function detect(p: PayloadOf<'compose/detect'>): Promise<{ frames: Compose
     res = await runDetect(tabId);
   }
   const frames = res.map((r): ComposeDetect => {
-    const d = r.result as { isCompose?: boolean; ready?: boolean } | null;
-    return { frameId: r.frameId, injected: d != null, isCompose: !!d?.isCompose, ready: !!d?.ready };
+    const d = r.result as { isCompose?: boolean; ready?: boolean; reason?: string } | null;
+    return { frameId: r.frameId, injected: d != null, isCompose: !!d?.isCompose, ready: !!d?.ready, ...(d?.reason ? { reason: d.reason } : {}) };
   });
   return { frames };
 }

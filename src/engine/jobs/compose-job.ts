@@ -7,6 +7,7 @@ import type { ComposeDetect, MsgType, PayloadOf, ResponseOf } from '../../messag
 import type { IFileStore } from '../file-store/types';
 import { chunkBlob } from '../mail/chunker';
 import { draftToComposeFill, prepareMail } from '../mail/prepare';
+import { selectAttachTargets } from '../mail/attach-limits';
 import { planCompose } from '../mail/compose-plan';
 import { appendComposeRecord, markComposed } from '../mail/record';
 
@@ -51,6 +52,7 @@ function reverify(fields: FieldResult[], state: ComposeState, draft: MailDraft, 
   const label = firstSectionLabel(draft);
   return fields.map((f) => {
     if (f.status === 'unsupported' || f.status === 'failed') return f;
+    if (state.supported[f.field] === false) return f;   // 대조할 셀렉터가 없으면 현 상태 유지
     if (f.field === 'to' || f.field === 'cc') {
       const want = norm(f.requested as string[]);
       const got = state[f.field];
@@ -62,7 +64,11 @@ function reverify(fields: FieldResult[], state: ComposeState, draft: MailDraft, 
     // innerText는 연속 공백을 하나로 줄이므로 양쪽 공백을 정규화해 비교한다.
     const body = squash(state.bodyText);
     const okText = (!title || body.includes(squash(title))) && (label === undefined || body.includes(squash(label)));
-    const okLen = state.bodyHtml.length >= fill.html.length * 0.5;
+    // 주소로 넣은 본문은 서식이 없어 html 길이 대신 평문 길이로 비교한다.
+    // textContent는 줄바꿈을 잃으므로 공백을 모두 뺀 길이끼리 비교한다.
+    const okLen = f.method === 'url'
+      ? state.bodyText.replace(/\s+/g, '').length >= draft.text.replace(/\s+/g, '').length * 0.8
+      : state.bodyHtml.length >= fill.html.length * 0.5;
     return { ...f, rendered: state.bodyText, status: okText && okLen ? 'ok' : 'mismatch' };
   });
 }
@@ -71,7 +77,6 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
   const { job, settings } = input;
   const now = deps.now ?? (() => new Date());
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
-  const detectTimeoutMs = deps.detectTimeoutMs ?? 120_000;
   const attachPollMs = deps.attachPollMs ?? 1500;
   const { signal } = deps;
 
@@ -107,6 +112,7 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
 
     // 2. 작성 계획(서비스별 주소, 셀렉터)
     const plan = planCompose(settings, draft, deps.selectorSets);
+    const detectTimeoutMs = plan.detectTimeoutMs ?? deps.detectTimeoutMs ?? 120_000;
     const manual = !plan.selector;
     const isGmail = plan.provider === 'gmail';
     const attachDir = `${notice.folder}/attachments`;
@@ -143,6 +149,7 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
     emit('open_compose', 'running', '웹메일 작성 탭을 여는 중');
     const { tabId } = await rpc('compose/open', {
       jobId: job.id, url: plan.url, selector: plan.selector?.config,
+      ...(plan.prefilled.includes('subject') ? { anchor: { subject: fill.subject } } : {}),
     }, T.open);
     opened = true;
 
@@ -178,6 +185,7 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
       }
     };
     const detectStart = now().getTime();
+    let lastReason: string | undefined;
     for (;;) {
       const waited = now().getTime() - detectStart;
       const left = Math.max(0, Math.ceil((detectTimeoutMs - waited) / 1000));
@@ -188,10 +196,14 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
       } catch (e) {
         if (e instanceof Aborted || errCode(e) === 'COMPOSE_TAB_CLOSED' || errCode(e) === 'SENDER_FORBIDDEN') throw e;
       }
+      lastReason = frames.find((f) => f.reason === 'SCOPE_AMBIGUOUS')?.reason ?? frames.find((f) => f.reason)?.reason;
       const hit = frames.find((f) => f.isCompose && f.ready);
       if (hit) { frameId = hit.frameId; break; }
       if (now().getTime() - detectStart >= detectTimeoutMs) {
-        const error: JobError = { code: 'COMPOSE_NOT_DETECTED', message: '작성 화면을 찾지 못했습니다.', step: 'open_compose', retryable: true };
+        const message = lastReason === 'SCOPE_AMBIGUOUS'
+          ? '같은 제목의 작성 창이 여러 개라 하나로 특정하지 못했습니다. 다른 작성 창을 닫고 다시 시도하세요'
+          : '작성 화면을 찾지 못했습니다.';
+        const error: JobError = { code: 'COMPOSE_NOT_DETECTED', message, step: 'open_compose', retryable: true };
         emit('open_compose', 'failed', error.message);
         return await failAfterOpen(error);
       }
@@ -200,25 +212,38 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
     await rpc('compose/bind', { jobId: job.id, frameId }, T.short);
     emit('open_compose', 'done', '작성 화면을 찾았습니다');
 
-    // fill_fields
-    emit('fill_fields', 'running', '수신자/제목/본문을 입력하는 중');
-    let fields: FieldResult[];
-    try {
-      fields = await rpc('compose/fill', { jobId: job.id, ...fill }, T.fill);
-    } catch (e) {
-      if (e instanceof Aborted) throw e;
-      const error: JobError = { code: errCode(e) ?? 'COMPOSE_FILL_FAILED', message: errMsg(e), step: 'fill_fields', retryable: true };
-      emit('fill_fields', 'failed', error.message);
-      return await failAfterOpen(error);
+    // fill_fields: 주소로 전달된 필드는 prefilled, 생략된 필드는 unsupported로 시작한다.
+    const initial = new Map<FieldResult['field'], FieldResult>();
+    for (const field of FIELDS) {
+      const base = { field, requested: requestedOf(field, fill), rendered: null } as const;
+      if (plan.prefilled.includes(field)) initial.set(field, { ...base, status: 'prefilled', method: 'url' });
+      else if (plan.omitted.some((o) => o.field === field)) initial.set(field, { ...base, status: 'unsupported', method: 'none', error: 'URL_TOO_LONG' });
     }
-    emit('fill_fields', 'done', '입력 완료');
+    if (plan.fillFields.length === 0) {
+      emit('fill_fields', 'skipped', '주소로 전달됨, 확인 단계에서 대조');
+    } else {
+      emit('fill_fields', 'running', '수신자/제목/본문을 입력하는 중');
+      try {
+        const filled = await rpc('compose/fill', {
+          jobId: job.id, ...fill, ...(plan.fillFields.length < FIELDS.length ? { fields: plan.fillFields } : {}),
+        }, T.fill);
+        for (const r of filled) initial.set(r.field, r);
+      } catch (e) {
+        if (e instanceof Aborted) throw e;
+        const error: JobError = { code: errCode(e) ?? 'COMPOSE_FILL_FAILED', message: errMsg(e), step: 'fill_fields', retryable: true };
+        emit('fill_fields', 'failed', error.message);
+        return await failAfterOpen(error);
+      }
+      emit('fill_fields', 'done', '입력 완료');
+    }
+    let fields: FieldResult[] = FIELDS.flatMap((f) => initial.get(f) ?? []);
 
     // 6. attach_files
     const attachments: ComposeResult['attachments'] = [];
     const maxBytes = settings.download.maxFileMB * MB;
-    const targets = files.filter((f) => f.size <= maxBytes);
-    for (const f of files) {
-      if (f.size > maxBytes) attachments.push({ fileId: f.fileId, name: f.name, size: f.size, status: 'skipped', method: 'none', elapsedMs: 0, error: 'FILE_TOO_LARGE' });
+    const { targets, skipped } = selectAttachTargets(files, maxBytes, plan.attachLimits);
+    for (const { file: f, error } of skipped) {
+      attachments.push({ fileId: f.fileId, name: f.name, size: f.size, status: 'skipped', method: 'none', elapsedMs: 0, error });
     }
     emit('attach_files', files.length === 0 ? 'skipped' : 'running', files.length === 0 ? '첨부 없음' : '첨부 파일을 올리는 중', { progress: { done: 0, total: files.length } });
     if (targets.length > 0) {
@@ -295,7 +320,7 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
     }
 
     // 8. 마무리
-    return await finish('auto', fields, attachments, tabId);
+    return await finish(plan.prefilled.length > 0 ? 'url' : 'auto', fields, attachments, tabId);
   } catch (e) {
     if (e instanceof Aborted || signal.aborted) {
       if (opened) { try { await deps.call('compose/abort', { jobId: job.id }, T.short); } catch { /* 무시 */ } }

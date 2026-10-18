@@ -99,6 +99,46 @@ describe('compose-relay', () => {
   });
 });
 
+describe('compose-relay anchor, reason', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(isOffscreenSender).mockReturnValue(true);
+    registerComposeRelay();
+  });
+  it('open: anchor를 CS configure 설정에 전달하고, 없으면 키를 넣지 않는다', async () => {
+    const executeScript = vi.fn().mockResolvedValue([]);
+    vi.stubGlobal('chrome', {
+      permissions: { contains: vi.fn().mockResolvedValue(true) },
+      windows: { getLastFocused: vi.fn().mockResolvedValue({ id: 1 }) },
+      tabs: {
+        create: vi.fn().mockResolvedValue({ id: 9 }),
+        onUpdated: { addListener: vi.fn((fn: (id: number, info: { status?: string }) => void) => { fn(9, { status: 'complete' }); }), removeListener: vi.fn() },
+      },
+      scripting: { executeScript },
+    });
+    await handlerOf('compose/open')({ jobId: 'j', url: 'https://mail.google.com/', selector: { selectorSetId: 's' }, anchor: { subject: '제목' } }, sender);
+    const withAnchor = executeScript.mock.calls.find((c) => c[0].func)?.[0].args[0];
+    expect(withAnchor.anchor).toEqual({ subject: '제목' });
+    executeScript.mockClear();
+    await handlerOf('compose/open')({ jobId: 'k', url: 'https://mail.google.com/', selector: { selectorSetId: 's' } }, sender);
+    const without = executeScript.mock.calls.find((c) => c[0].func)?.[0].args[0];
+    expect('anchor' in without).toBe(false);
+  });
+  it('detect: 프레임 결과의 reason을 전달한다', async () => {
+    vi.mocked(getJob).mockResolvedValue({ id: 'j', composeTabId: 9 } as never);
+    vi.stubGlobal('chrome', {
+      tabs: { get: vi.fn().mockResolvedValue({ windowId: 1 }) },
+      scripting: { executeScript: vi.fn().mockResolvedValue([
+        { frameId: 0, result: { isCompose: true, ready: false, reason: 'SCOPE_AMBIGUOUS' } },
+        { frameId: 2, result: { isCompose: false, ready: false } },
+      ]) },
+    });
+    const r = await handlerOf('compose/detect')({ jobId: 'j' }, sender) as { frames: Array<Record<string, unknown>> };
+    expect(r.frames[0]).toMatchObject({ frameId: 0, isCompose: true, ready: false, reason: 'SCOPE_AMBIGUOUS' });
+    expect('reason' in r.frames[1]!).toBe(false);
+  });
+});
+
 describe('sendToTab', () => {
   it('frameId 지정 시 sendMessage 3번째 인자로 전달하고, 미지정이면 기존 호출과 동일', async () => {
     const { sendToTab: real } = await vi.importActual<typeof import('../../src/messaging/bus')>('../../src/messaging/bus');

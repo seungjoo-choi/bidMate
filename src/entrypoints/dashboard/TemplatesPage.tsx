@@ -1,8 +1,9 @@
-import { Copy, FilePlus, Star } from 'lucide-react';
+import { Copy, FilePlus, Search, Star } from 'lucide-react';
 import { useState } from 'react';
 import { builtinDefaultTemplate } from '../../core/templates/default-template';
 import type { Template } from '../../core/types/template';
-import { Button, Card, InlineAlert, StatusBadge, useToast } from '../../ui/components';
+import { Button, Card, InlineAlert, inputClass, Select, StatusBadge, useToast } from '../../ui/components';
+import { matchesQuery } from '../../ui/components/select-filter';
 import { send } from '../../messaging/bus';
 import { ConfirmDeleteButton } from './recipients/shared';
 import { useTemplates } from '../../ui/hooks/useConfig';
@@ -15,9 +16,28 @@ export function templateErrorText(code: string, message: string): string {
   return message;
 }
 
+type SortKey = 'recent' | 'added' | 'updated' | 'name';
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'recent', label: '최근 만든 순' },
+  { value: 'added', label: '만든 순' },
+  { value: 'updated', label: '최근 수정순' },
+  { value: 'name', label: '이름순' },
+];
+
+/** 템플릿 배열 순서가 곧 만든 순서다(새 템플릿은 끝에 붙는다). */
+function sortTemplates(list: Template[], key: SortKey): Template[] {
+  if (key === 'added') return list;
+  if (key === 'recent') return [...list].reverse();
+  if (key === 'updated') return [...list].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return [...list].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+}
+
 export function TemplatesPage() {
   const { data, error, reload, run } = useTemplates();
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState<SortKey>('recent');
   const [opError, setOpError] = useState<{ code: string; message: string } | null>(null);
   const [repairing, setRepairing] = useState(false);
   const toast = useToast();
@@ -65,6 +85,7 @@ export function TemplatesPage() {
 
   const corrupt = error?.code === 'CONFIG_CORRUPT';
   const newer = error?.code === 'CONFIG_NEWER';
+  const shownTemplates = sortTemplates((data?.templates ?? []).filter((t) => matchesQuery(t.name, q)), sort);
 
   return (
     <div className="space-y-6">
@@ -95,24 +116,49 @@ export function TemplatesPage() {
 
       {data && (
         <Card title="템플릿 목록" description="행을 누르면 편집 화면으로 이동합니다.">
-          <ul className="divide-y divide-line">
-            {data.templates.map((t) => (
-              <li
-                key={t.id}
-                onClick={() => go(t.id)}
-                className="flex cursor-pointer flex-wrap items-center gap-3 py-3 hover:bg-sunken"
-              >
-                <span className="min-w-0 flex-1 truncate font-semibold text-ink">{t.name}</span>
-                {t.isDefault && <StatusBadge status="ok">기본</StatusBadge>}
-                <span className="w-24 shrink-0 text-sm text-muted">{t.updatedAt.slice(0, 10)}</span>
-                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  <Button variant="secondary" icon={<Star />} disabled={busy || t.isDefault} onClick={() => void handle(() => run('templates/set-default', { id: t.id }), '기본 템플릿을 변경했습니다')}>기본으로</Button>
-                  <Button variant="secondary" icon={<Copy />} disabled={busy} onClick={() => void create(t, `${t.name} 복사`)}>복제</Button>
-                  <ConfirmDeleteButton disabled={busy} title={`'${t.name}' 템플릿을 삭제할까요?`} description="삭제하면 되돌릴 수 없습니다." onConfirm={() => void handle(() => run('templates/delete', { id: t.id }), '템플릿을 삭제했습니다')} />
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="mb-3 flex items-center gap-2">
+            <div className="relative max-w-sm min-w-0 flex-1">
+              <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" />
+              <input type="search" aria-label="템플릿 이름으로 찾기" placeholder="템플릿 이름으로 찾기 (초성 가능)" className={`${inputClass} pl-9`} value={q} onChange={(e) => setQ(e.target.value)} />
+            </div>
+            <Select className="w-36 shrink-0" aria-label="정렬" value={sort} options={SORT_OPTIONS} onChange={(v) => setSort(v as SortKey)} />
+          </div>
+          <div className="overflow-x-auto rounded-ctl border border-line">
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <thead className="bg-sunken text-muted">
+                <tr>
+                  <th className="w-14 px-3 py-2 text-center font-medium">순번</th>
+                  <th className="px-3 py-2 text-center font-medium">이름</th>
+                  <th className="w-32 px-3 py-2 text-center font-medium">수정일</th>
+                  <th className="px-3 py-2"><span className="sr-only">작업</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {shownTemplates.length === 0 && (
+                  <tr><td colSpan={4} className="px-3 py-4 text-center text-muted">찾는 템플릿이 없습니다.</td></tr>
+                )}
+                {shownTemplates.map((t, i) => (
+                  <tr key={t.id} onClick={() => go(t.id)} className="cursor-pointer border-t border-line hover:bg-sunken">
+                    <td className="px-3 py-2 text-center text-muted tabular-nums">{i + 1}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-[15px] font-semibold text-ink">{t.name}</span>
+                        {t.isDefault && <StatusBadge status="ok">기본</StatusBadge>}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-muted tabular-nums">{t.updatedAt.slice(0, 10)}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                        {!t.isDefault && <Button variant="ghost" icon={<Star />} disabled={busy} onClick={() => void handle(() => run('templates/set-default', { id: t.id }), '기본 템플릿을 변경했습니다')}>기본으로</Button>}
+                        <Button variant="ghost" icon={<Copy />} disabled={busy} onClick={() => void create(t, `${t.name} 복사`)}>복제</Button>
+                        <ConfirmDeleteButton disabled={busy} title={`'${t.name}' 템플릿을 삭제할까요?`} description="삭제하면 되돌릴 수 없습니다." onConfirm={() => void handle(() => run('templates/delete', { id: t.id }), '템플릿을 삭제했습니다')} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
       )}
       {toast.node}

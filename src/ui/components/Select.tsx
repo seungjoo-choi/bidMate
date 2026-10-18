@@ -136,6 +136,8 @@ export function Select({ value, options, onChange, placeholder = '선택', disab
   let lastGroup: string | undefined;
 
   const showClear = clearable && !!selected && !disabled;
+  // className에 너비가 있으면 inputClass의 w-full이 이겨서 늘어나므로 뺀다
+  const baseClass = /(^|\s)w-/.test(className) ? inputClass.replace('w-full ', '') : inputClass;
 
   return (
     <div className={clearable ? 'relative w-full min-w-0' : 'contents'}>
@@ -151,7 +153,7 @@ export function Select({ value, options, onChange, placeholder = '선택', disab
         disabled={disabled}
         onClick={() => (open ? close() : openPanel())}
         onKeyDown={onTriggerKey}
-        className={`${inputClass} flex items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:opacity-50 ${open ? 'border-accent ring-2 ring-accent/20' : ''} ${className}`}
+        className={`${baseClass} flex items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:opacity-50 ${open ? 'border-accent ring-2 ring-accent/20' : ''} ${className}`}
       >
         <span className={`min-w-0 truncate ${selected ? '' : 'text-faint'} ${showClear ? 'mr-7' : ''}`}>
           {selected ? selected.label : placeholder}
