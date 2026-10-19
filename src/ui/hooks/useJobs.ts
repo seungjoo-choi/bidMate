@@ -7,16 +7,17 @@ export function useJobs(): Job[] {
 
   useEffect(() => {
     const load = async () => {
-      const all = await chrome.storage.session.get(null);
-      const list = Object.entries(all)
-        .filter(([k]) => k.startsWith('jobs.'))
-        .map(([, v]) => v as Job)
+      const ids = ((await chrome.storage.session.get('jobIds')).jobIds as string[] | undefined) ?? [];
+      const got = await chrome.storage.session.get(ids.map((id) => `jobs.${id}`));
+      const list = ids
+        .map((id) => got[`jobs.${id}`] as Job | undefined)
+        .filter((j): j is Job => !!j)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       setJobs(list);
     };
     void load();
-    const onChanged = (_c: Record<string, chrome.storage.StorageChange>, area: string) => {
-      if (area === 'session') void load();
+    const onChanged = (c: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === 'session' && Object.keys(c).some((k) => k === 'jobIds' || k.startsWith('jobs.'))) void load();
     };
     chrome.storage.onChanged.addListener(onChanged);
     return () => chrome.storage.onChanged.removeListener(onChanged);

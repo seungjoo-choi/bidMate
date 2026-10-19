@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { loadRootRecord } from '../../engine/file-store/idb-handles';
 import { send } from '../../messaging/bus';
 import { Button, InlineAlert } from '../../ui/components';
+import { Mascot } from '../../ui/mascot';
 
 export interface FsErrorInfo { code?: string; message: string }
 
@@ -48,7 +49,7 @@ export function FsErrorAlert({ error, onRetry }: { error: FsErrorInfo | null; on
   if (needsFs) {
     const noFolder = handle === null;
     return (
-      <InlineAlert tone="warn">
+      <InlineAlert tone="warn" leading={<Mascot mood="huh" size={40} />}>
         <div className="flex items-center justify-between gap-4">
           <span>{noFolder ? '저장 폴더가 설정되지 않았습니다. 설정에서 폴더를 선택해 주세요.' : '저장 폴더 접근 권한이 필요합니다.'}</span>
           {noFolder
@@ -59,5 +60,5 @@ export function FsErrorAlert({ error, onRetry }: { error: FsErrorInfo | null; on
       </InlineAlert>
     );
   }
-  return <InlineAlert tone="error">{error.code ? `${error.code}: ` : ''}{error.message}</InlineAlert>;
+  return <InlineAlert tone="error" leading={<Mascot mood="huh" size={40} />}>{error.code ? `${error.code}: ` : ''}{error.message}</InlineAlert>;
 }

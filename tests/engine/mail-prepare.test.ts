@@ -6,7 +6,8 @@ import { saveGroup, saveRecipient, setDefaultGroup } from '../../src/engine/conf
 import { createMailEdits } from '../../src/core/mail/edits';
 import type { MailEdits } from '../../src/core/types/mail';
 import { deleteTemplate, listTemplates, saveTemplate } from '../../src/engine/config/templates-api';
-import { draftPath, draftToComposeFill, getDraft, getEdits, prepareMail, setMailStatus } from '../../src/engine/mail/prepare';
+import { draftPath, draftToComposeFill, getDraft, getEdits, prepareMail } from '../../src/engine/mail/prepare';
+import { SentStore } from '../../src/engine/mail/sent-store';
 import { NoticeStore } from '../../src/engine/notices/notice-store';
 import { MemoryStore } from '../helpers/memory-store';
 
@@ -97,13 +98,11 @@ describe('prepareMail', () => {
     const before = new Map(mem.files);
     expect(await codeOf(prepareMail(mem, { noticeId: 'R1-000' }, { ...opts, isBusy: () => true }))).toBe('JOB_ALREADY_RUNNING');
     expect(new Map(mem.files)).toEqual(before);
-    expect(await codeOf(setMailStatus(mem, { noticeId: 'R1-000', status: 'delivered' }, { ...opts, isBusy: () => true }))).toBe('JOB_ALREADY_RUNNING');
-    expect(new Map(mem.files)).toEqual(before);
   });
   it('이미 delivered면 다시 준비해도 delivered를 유지한다', async () => {
     const { mem } = await setup();
     await prepareMail(mem, { noticeId: 'R1-000' }, opts);
-    await setMailStatus(mem, { noticeId: 'R1-000', status: 'delivered' }, opts);
+    await new SentStore(mem).addManual({ noticeId: 'R1-000' }, NOW);
     const { notice } = await prepareMail(mem, { noticeId: 'R1-000' }, opts);
     expect(notice.mail.status).toBe('delivered');
   });
@@ -147,20 +146,7 @@ describe('prepareMail recipients(합성 그룹)', () => {
   });
 });
 
-describe('setMailStatus / getDraft', () => {
-  it('delivered는 deliveredAt을 기록하고, none은 초안 유무로 drafting/none을 정한다', async () => {
-    const { mem } = await setup();
-    let { notice } = await setMailStatus(mem, { noticeId: 'R1-000', status: 'delivered' }, opts);
-    expect(notice.mail).toMatchObject({ status: 'delivered', deliveredAt: NOW.toISOString() });
-    ({ notice } = await setMailStatus(mem, { noticeId: 'R1-000', status: 'none' }, opts));
-    expect(notice.mail.status).toBe('none');
-    expect('deliveredAt' in notice.mail).toBe(false);
-    await prepareMail(mem, { noticeId: 'R1-000' }, opts);
-    await setMailStatus(mem, { noticeId: 'R1-000', status: 'delivered' }, opts);
-    ({ notice } = await setMailStatus(mem, { noticeId: 'R1-000', status: 'none' }, opts));
-    expect(notice.mail.status).toBe('drafting');
-    expect(await codeOf(setMailStatus(mem, { noticeId: 'nope', status: 'none' }, opts))).toBe('NOT_FOUND');
-  });
+describe('getDraft', () => {
   it('getDraft는 초안을 돌려주고, 없거나 손상되면 null', async () => {
     const { mem } = await setup();
     expect(await getDraft(mem, 'R1-000')).toBeNull();

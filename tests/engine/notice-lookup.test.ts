@@ -18,6 +18,10 @@ describe('lookupInIndex', () => {
   it('차수가 없으면 최신 collectedAt', () => {
     expect(lookupInIndex(idx, { noticeNo: 'A' })).toMatchObject({ found: true, collectedAt: '2026-02-01T00:00:00Z' });
   });
+  it('noticeId, bidCloseAt, title을 채운다', () => {
+    const i2: IndexFile = { ...idx, notices: [{ ...entry('C', '000', '2026-04-01T00:00:00Z'), bidCloseAt: '2026-05-01T00:00:00Z' }] };
+    expect(lookupInIndex(i2, { noticeNo: 'C' })).toMatchObject({ noticeId: 'C-000', bidCloseAt: '2026-05-01T00:00:00Z', title: 't' });
+  });
   it('없으면 found:false', () => {
     expect(lookupInIndex(idx, { noticeNo: 'Z' })).toEqual({ found: false });
   });

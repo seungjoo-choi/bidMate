@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, ClipboardCopy, Loader2, Plus, RotateCcw, Save, Undo2, X } from 'lucide-react';
+import { ArrowLeft, Check, ClipboardCopy, Loader2, Plus, RotateCcw, Save, X } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { kindOf, noticeLabel } from '../../core/model/ids';
 import { normalizeEmail } from '../../core/recipients/email';
@@ -13,6 +13,8 @@ import { Button, Card, ConfirmDialog, Field, InlineAlert, StatusBadge, Select, u
 import { inputClass } from '../../ui/components/Field';
 import { useRecipients, useTemplates } from '../../ui/hooks/useConfig';
 import { FsErrorAlert, type FsErrorInfo } from './FsErrorAlert';
+import { noticeHash } from './route';
+import { formatDateTime } from '../../ui/review/format';
 import { ComposeStartButton, ComposeStatus, useComposeController } from '../../ui/compose/ComposeCard';
 import { useJobs } from '../../ui/hooks/useJobs';
 import { useSettings } from '../../ui/hooks/useSettings';
@@ -21,7 +23,7 @@ import { MailPreviewFrame } from './templates/MailPreviewFrame';
 import { SectionEditor } from './templates/SectionEditor';
 import { addRecipient, convertItem, patchTemplate, removeRecipient, resetRecipients, startEditing, toggleAttachment, type Recipients, type Role } from './mail-edit-logic';
 
-const STATUS_LABEL: Record<MailStatus, string> = { none: '초안 없음', drafting: '초안 작성됨', ready_for_review: '검토 대기', delivered: '전달 완료' };
+const STATUS_LABEL: Record<MailStatus, string> = { none: '초안 없음', drafting: '초안 작성됨', ready_for_review: '검토 대기', delivered: '발송 완료' };
 const STATUS_TONE: Record<MailStatus, BadgeStatus> = { none: 'idle', drafting: 'warn', ready_for_review: 'warn', delivered: 'ok' };
 const SKIP_LABEL = { missing: '없음', disabled: '사용 안 함', duplicate: '중복' } as const;
 const CODE_MESSAGE: Record<string, string> = {
@@ -196,11 +198,11 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
     beforeStart: async () => (dirty ? save() : true),
   });
 
-  const setStatus = async (status: 'delivered' | 'none') => {
+  const recordSent = async () => {
     setStatusBusy(true);
     setError(null);
     try {
-      const r = await send('mail/set-status', { noticeId, status });
+      const r = await send('mail/sent-add', { noticeId });
       setNotice(r.notice);
     } catch (e) {
       setError(toInfo(e));
@@ -273,9 +275,13 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <StatusBadge status={STATUS_TONE[mailStatus]}>{STATUS_LABEL[mailStatus]}</StatusBadge>
-          {mailStatus === 'delivered'
-            ? <Button variant="secondary" loading={statusBusy} disabled={saving} icon={<Undo2 />} onClick={() => void setStatus('none')}>전달 완료 해제</Button>
-            : <Button variant="secondary" loading={statusBusy} disabled={saving} icon={<Check />} onClick={() => void setStatus('delivered')}>전달 완료로 표시</Button>}
+          <Button variant="secondary" loading={statusBusy} disabled={saving} icon={<Check />} onClick={() => void recordSent()}>{mailStatus === 'delivered' ? '발송 1회 더 기록' : '발송 완료로 기록'}</Button>
+          {notice.mail.deliveredAt && (
+            <span className="text-sm text-muted">
+              마지막 발송 <span className="font-mono tabular-nums">{formatDateTime(notice.mail.deliveredAt)}</span>
+              <a href={noticeHash(notice.id, 'history')} className="ml-2 text-accent hover:underline">이력 보기</a>
+            </span>
+          )}
         </div>
       </header>
 
@@ -306,7 +312,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
 
       <section className="flex flex-wrap items-end gap-3 rounded-card border border-line bg-surface px-5 py-4 shadow-card">
         <label className="block w-full space-y-1.5 text-sm font-semibold text-ink sm:w-60">
-          수신자 그룹
+          <span className="block">수신자 그룹</span>
           <Select
             className="font-normal"
             value={groupId}

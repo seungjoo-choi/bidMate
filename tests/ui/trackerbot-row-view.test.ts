@@ -26,7 +26,7 @@ describe('rowView', () => {
   });
   it('lookup found -> 다시 수집 + 칩', () => {
     const at = new Date(2026, 9, 17, 13, 40).toISOString();
-    expect(v(entry({ lookup: { found: true, collectedAt: at } }))).toMatchObject({ kind: 'idle', label: '다시 수집', chip: '수집됨, 10/17 13:40', tone: 'secondary' });
+    expect(v(entry({ lookup: { found: true, collectedAt: at, collectStatus: 'collected' } }))).toMatchObject({ kind: 'idle', label: '다시 수집', chip: '수집 완료', tone: 'secondary' });
   });
   it('starting', () => {
     expect(v(entry({ starting: true }))).toEqual({ kind: 'busy', label: '시작 중', canCancel: false, cancelling: false, cancelTarget: 'collect' });

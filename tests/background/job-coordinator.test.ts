@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  addFinalListener, assertCancelAllowed, assertRetryAllowed, cancelJob, clearFinalListeners, latestJobForSender, registerCoordinator, setHandoff, getJob, getJobForSender, listJobs, listJobsForTab, originTabIdFor, senderKind, onFinish, onProgress, reconcile, setAfterCollect, setComposeTab, setCoordinatorDeps, startJob, type KV,
+  addFinalListener, getJobLog, assertCancelAllowed, assertRetryAllowed, cancelJob, clearFinalListeners, latestJobForSender, registerCoordinator, setHandoff, getJob, getJobForSender, listJobs, listJobsForTab, originTabIdFor, senderKind, onFinish, onProgress, reconcile, setAfterCollect, setComposeTab, setCoordinatorDeps, startJob, type KV,
 } from '../../src/background/job-coordinator';
 import type { Job } from '../../src/core/types/job';
 
@@ -501,5 +501,66 @@ describe('afterCollect 스냅샷 / setAfterCollect', () => {
     await session.set({ 'jobs.c': { ...(await getJob('c')), type: 'compose' } });
     expect(await setAfterCollect('c', 'dashboard')).toBe(false);
     expect(await setAfterCollect('nope', 'dashboard')).toBe(false);
+  });
+});
+
+describe('실행 기록(jobLog)', () => {
+  const logOf = async (id: string) => (await getJobLog(id))?.events ?? [];
+  const stepProgress = (jobId: string, attempt: number, status: 'running' | 'done', extra: Record<string, unknown> = {}) =>
+    ({ jobId, attempt, step: 'fetch_basic' as const, status, label: 'L', ...extra });
+
+  it('running 반복 progress 2회 → step 이벤트 1건', async () => {
+    await seed('a', 'running');
+    await onProgress(stepProgress('a', 1, 'running'));
+    await onProgress(stepProgress('a', 1, 'running'));
+    expect((await logOf('a')).filter((e) => e.kind === 'step')).toHaveLength(1);
+  });
+  it('bytes만 있는 progress → 0건', async () => {
+    await seed('a', 'running');
+    await onProgress(stepProgress('a', 1, 'running'));
+    const before = (await logOf('a')).length;
+    await onProgress(stepProgress('a', 1, 'running', { bytes: { received: 1, total: 10 } }));
+    expect((await logOf('a')).length).toBe(before);
+  });
+  it('event.facts 동봉 → facts 1건, step 전이 없음', async () => {
+    await seed('a', 'running');
+    await onProgress(stepProgress('a', 1, 'running'));
+    const before = (await logOf('a')).filter((e) => e.kind === 'step').length;
+    const facts = { kind: 'bid', noticeNo: 'a' } as never;
+    await onProgress(stepProgress('a', 1, 'running', { event: { kind: 'facts', step: 'fetch_basic', facts } }));
+    const ev = await logOf('a');
+    expect(ev.filter((e) => e.kind === 'facts')).toHaveLength(1);
+    expect(ev.filter((e) => e.kind === 'step')).toHaveLength(before);
+  });
+  it('재시도 → attempt 2 이벤트 누적, attempt 1 유지', async () => {
+    sendImpl = async () => ({ accepted: true, active: [] });
+    const r = await startJob({ type: 'collect', ref: { noticeNo: 'X', origin: 'g2b' } });
+    await onFinish({ jobId: r.jobId, attempt: 1, status: 'failed' });
+    await startJob({ type: 'collect', retryOf: r.jobId });
+    const ev = await logOf(r.jobId);
+    expect(ev.filter((e) => e.kind === 'attempt').map((e) => e.attempt)).toEqual([1, 2]);
+    expect(ev.some((e) => e.attempt === 1 && e.kind === 'finish')).toBe(true);
+  });
+  it('401건째 → 오래된 회차 제거', async () => {
+    await seed('a', 'running', 2);
+    const events = Array.from({ length: 400 }, (_, i) => ({ seq: i + 1, at: 't', attempt: 1, kind: 'note', step: 'fetch_basic', label: 'n' }));
+    await session.set({ 'jobLog.a': { jobId: 'a', seq: 400, events } });
+    await onProgress({ ...stepProgress('a', 2, 'running') });
+    const ev = await logOf('a');
+    expect(ev.some((e) => e.attempt === 1)).toBe(false);
+    expect(ev.length).toBe(1);
+  });
+  it('잡 drop 시 로그 키 remove', async () => {
+    await seed('active', 'running');
+    for (let i = 0; i < 19; i++) await seed(`done${i}`, 'completed');
+    await session.set({ 'jobLog.done0': { jobId: 'done0', seq: 0, events: [] } });
+    sendImpl = async () => ({ accepted: true, active: [{ jobId: 'active', attempt: 1 }] });
+    await startJob({ type: 'collect', ref: { noticeNo: 'NEW', origin: 'g2b' } });
+    expect('jobLog.done0' in session.data).toBe(false);
+  });
+  it('attempt 불일치 늦은 progress는 기록 없음', async () => {
+    await seed('a', 'running', 2);
+    await onProgress(stepProgress('a', 1, 'running', { event: { kind: 'note', step: 'fetch_basic', label: 'x' } }));
+    expect(await logOf('a')).toHaveLength(0);
   });
 });

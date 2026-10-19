@@ -9,3 +9,4 @@ export * from './job';
 export * from './compose';
 export * from './config-file';
 export * from './mail';
+export * from './evaluation';

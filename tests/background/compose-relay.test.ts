@@ -80,7 +80,8 @@ describe('compose-relay', () => {
     const url = 'https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=a%40x.com';
     await expect(handlerOf('compose/open')({ jobId: 'j', url }, sender)).resolves.toEqual({ tabId: 9 });
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ url }));
-    expect(executeScript).not.toHaveBeenCalled();
+    // CS(naverworks-compose.js)는 주입하지 않는다. 발송 관찰(send-watch.js)만 주입된다.
+    expect(executeScript.mock.calls.some((c) => c[0].files?.includes('naverworks-compose.js'))).toBe(false);
   });
   it('릴레이: ledger에 탭이 없으면 COMPOSE_TAB_CLOSED', async () => {
     vi.mocked(getJob).mockResolvedValue({ id: 'j' } as never);

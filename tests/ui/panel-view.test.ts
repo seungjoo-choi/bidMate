@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Job, StepState } from '../../src/core/types/job';
-import { collectedChip, panelView, progressRatio } from '../../src/ui/g2b-panel/panel-view';
+import { collectedView, panelView, progressRatio } from '../../src/ui/g2b-panel/panel-view';
 
 const steps = (...s: Array<Partial<StepState>>): StepState[] =>
   (['fetch_basic', 'download_attachments', 'fetch_html'] as const).map((id, i) => ({ id, status: 'pending', ...s[i] }));
@@ -14,10 +14,25 @@ describe('panelView', () => {
   it('job 없음 + 미수집 → 공고 수집', () => {
     expect(panelView(null, none)).toEqual({ kind: 'idle', buttonLabel: '공고 수집' });
   });
-  it('수집됨 → 칩 + 다시 수집', () => {
-    const at = new Date(2026, 9, 17, 13, 40).toISOString();
-    expect(panelView(null, { found: true, collectedAt: at })).toEqual({ kind: 'idle', buttonLabel: '다시 수집', chip: '수집됨, 10/17 13:40' });
-    expect(collectedChip(at)).toBe('수집됨, 10/17 13:40');
+  const at = new Date(2026, 9, 17, 13, 40).toISOString();
+  const close = new Date(2026, 9, 20, 18, 0).toISOString();
+  const now = new Date(2026, 9, 17, 9, 0);
+  it('idle: 수집 완료 → ok 칩 + dday', () => {
+    const l = { found: true, collectedAt: at, collectStatus: 'collected' as const, bidCloseAt: close };
+    expect(collectedView(l, now)).toEqual({ tone: 'ok', text: '수집 완료', dday: 'D-3' });
+    expect(panelView(null, l)).toMatchObject({ kind: 'idle', buttonLabel: '다시 수집', collected: { tone: 'ok', text: '수집 완료' } });
+  });
+  it('idle: 일부 실패 → warn 칩', () => {
+    const l = { found: true, collectedAt: at, collectStatus: 'partial' as const, bidCloseAt: close };
+    expect(collectedView(l, now)).toEqual({ tone: 'warn', text: '일부 실패', dday: 'D-3' });
+    expect(collectedView({ ...l, collectStatus: 'failed' }, now)?.tone).toBe('warn');
+  });
+  it('idle: 미수집 → collected 없음', () => {
+    expect(collectedView(none)).toBeUndefined();
+    expect(panelView(null, none)).toEqual({ kind: 'idle', buttonLabel: '공고 수집' });
+  });
+  it('idle: 마감일 없으면 dday null', () => {
+    expect(collectedView({ found: true, collectedAt: at, collectStatus: 'collected' }, now)).toEqual({ tone: 'ok', text: '수집 완료', dday: null });
   });
   it('진행: 비율/첨부/취소 중', () => {
     const j = job({
@@ -27,8 +42,8 @@ describe('panelView', () => {
     });
     const v = panelView(j, none, { title: '공고' });
     expect(v).toMatchObject({ kind: 'progress', title: '공고', attach: { done: 3, total: 6 }, errorCount: 1, cancelling: false, pillText: '수집 중 3/6' });
-    // (1 + (3+0.5)/6) / 3
-    expect((v as { ratio: number }).ratio).toBeCloseTo((1 + 3.5 / 6) / 3);
+    // 무게 fetch_basic 1, download 1.5, fetch_html 4: (1 + 1.5 * (3+0.5)/6) / 6.5
+    expect((v as { ratio: number }).ratio).toBeCloseTo((1 + 1.5 * 3.5 / 6) / 6.5);
     expect(panelView({ ...j, status: 'cancelling' }, none)).toMatchObject({ kind: 'progress', cancelling: true });
     expect(progressRatio(steps({ status: 'done' }, { status: 'done' }, { status: 'skipped' }))).toBe(1);
   });

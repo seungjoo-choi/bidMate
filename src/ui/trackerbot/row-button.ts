@@ -60,7 +60,8 @@ export function createRowButton(
         if (view.canCancel) items.push(mkBtn('취소', 'cancel', undefined, () => on.cancel()));
         break;
       case 'done':
-        items.push(mkBtn(view.label, view.tone, view.detail, null));
+        // 누르면 이 탭의 사이드 패널을 연다(요약 보기)
+        items.push(mkBtn(view.label, view.tone, view.detail ? `${view.detail}\n누르면 사이드 패널에서 봅니다` : '누르면 사이드 패널에서 봅니다', () => on.action('sidepanel')));
         if (view.canRetry) items.push(mkBtn('재시도', 'cancel', undefined, () => on.action('retry')));
         if (view.action) { const a = view.action; items.push(mkBtn(view.actionLabel ?? '열기', 'cancel', undefined, () => on.action(a))); }
         break;

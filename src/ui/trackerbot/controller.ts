@@ -302,7 +302,7 @@ export class TrackerbotController {
     if (a === 'choose-dashboard') { await this.chooseAfterCollect(key, 'dashboard'); return; }
     if (a === 'choose-compose') { await this.chooseAfterCollect(key, 'compose'); return; }
     const noticeId = entry?.job ? handoffView(entry.job, entry.compose)?.noticeId ?? key : key;
-    const payload = a === 'open-mail' ? { page: 'mail' as const, noticeId } : a === 'open-review' ? { page: 'review' as const, noticeId } : a === 'settings' ? this.fixOf(entry) : { page: a };
+    const payload = a === 'open-mail' ? { page: 'mail' as const, noticeId } : a === 'open-review' ? { page: 'review' as const, noticeId } : a === 'settings' ? this.fixOf(entry) : a === 'sidepanel' ? { page: 'sidepanel' as const, noticeId } : { page: a };
     try { await this.send('ui/open', payload); } catch { /* 무시 */ }
   }
 

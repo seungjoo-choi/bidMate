@@ -1,5 +1,6 @@
 import type { AttachResult, FieldResult } from './compose';
 import type { ISODate } from './common';
+import type { BasicFacts, EvalFacts } from '../model/notice-summary';
 import type { Extraction, ExtractionStatus } from './extraction';
 import type { AttachmentStatus, MailStatus, NoticeFieldKey, NoticeRef } from './notice';
 import type { AfterCollect, MailProvider } from './settings';
@@ -36,7 +37,29 @@ export interface Job {
 export interface JobProgress {
   jobId: string; attempt: number; step: StepId; status: StepState['status'];
   progress?: StepState['progress']; bytes?: { received: number; total: number | null; name?: string }; label: string;
+  /** 사이드 패널 기록용 이벤트(전이와 무관하게 기록) */
+  event?: ProgressEvent;
+  /** 엔진이 잰 단계 소요(ms). 있으면 SW 시계 대신 쓴다 */
+  ms?: number;
 }
+
+export type LogStep = StepId | 'handoff';
+export type JobEventBase = { seq: number; at: ISODate; attempt: number };
+export type JobEvent = JobEventBase & (
+  | { kind: 'attempt'; label: string }
+  | { kind: 'step'; step: StepId; status: 'running' | 'done' | 'failed' | 'skipped'; label: string; ms?: number; error?: JobError }
+  | { kind: 'file'; step: 'download_attachments' | 'extract'; phase: 'start' | 'end';
+      file: { id: string; name: string; size: number | null }; status?: string; ms?: number; error?: string }
+  | { kind: 'note'; step: LogStep; label: string }
+  | { kind: 'facts'; step: 'fetch_basic' | 'extract'; facts: BasicFacts | EvalFacts }
+  | { kind: 'handoff'; handoff: Handoff }
+  | { kind: 'finish'; status: JobStatus; error?: JobError }
+);
+export interface JobLog { jobId: string; seq: number; events: JobEvent[] }
+export type ProgressEvent =
+  | { kind: 'file'; step: 'download_attachments' | 'extract'; phase: 'start' | 'end'; file: { id: string; name: string; size: number | null }; status?: string; ms?: number; error?: string }
+  | { kind: 'note'; step: LogStep; label: string }
+  | { kind: 'facts'; step: 'fetch_basic' | 'extract'; facts: BasicFacts | EvalFacts };
 
 /** content script(Stage B)가 화면에서 읽어 job/start에 동봉하는 값. 매핑은 Stage B에서 한다. */
 export interface HtmlFields {

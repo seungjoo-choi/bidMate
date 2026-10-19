@@ -5,7 +5,7 @@ import { allTables, Grid } from '../../src/core/doc/grid';
 import type { DocBlock, DocModel } from '../../src/core/doc/model';
 import { loadRules } from '../../src/core/extraction/rules/load';
 import { runRules as runRulesFull, type RuleDocInput } from '../../src/core/extraction/run-rules';
-import type { RuleSet } from '../../src/core/extraction/rules/schema';
+import { validateRule, type RuleSet } from '../../src/core/extraction/rules/schema';
 import { computeStatus, decide, type Candidate } from '../../src/core/extraction/decide';
 import type { DocKind } from '../../src/core/extraction/classify';
 import type { EvidenceRef } from '../../src/core/types/extraction';
@@ -29,7 +29,7 @@ describe('실제 문서 f1+f3', () => {
   it('기대값', () => {
     const rules = loadRules();
     const cands = runRules([f1, f3], rules);
-    const { items } = decide(cands, rules);
+    const { items, extras } = decide(cands, rules);
 
     const quant = allTables(f3.doc).find((t) => {
       const g = new Grid(t);
@@ -38,8 +38,10 @@ describe('실제 문서 f1+f3', () => {
     expect(items.managementScore).toMatchObject({ value: 4, status: 'verified' });
     expect(items.managementScore.evidence!.location).toBe(`표${quant.index} r1c3`);
     expect(items.managementScore.evidence!.attachmentId).toBe('f3');
-    expect(items.credibilityScore).toMatchObject({ value: null, status: 'needs_review', reason: 'not_found' });
+    expect(items.credibilityScore).toMatchObject({ value: null, status: 'needs_review', reason: 'no_total', raw: '가점 6항목, 감점 2항목' });
+    expect(items.credibilityScore.evidence!.evidence).toMatch(/^(가점|감점)/);
     expect(items.performanceScore).toMatchObject({ value: 6, status: 'verified' });
+    expect(extras.projectPeriod).toMatchObject({ value: '계약체결일로부터 2028.02.28.까지', status: 'verified' });
     expect(items.performancePeriod).toMatchObject({ value: '5년', status: 'verified' });
     expect(items.performancePeriod.raw).toContain('5년 이내');
     expect(items.performanceMinAmount).toMatchObject({ value: 500000000, status: 'verified' });
@@ -81,7 +83,7 @@ describe('실제 문서 f1+f3+f6 (질의답변 포함 실측 고정)', () => {
     const rules = loadRules();
     const { items } = decide(runRules([f1, f3, f6], rules), rules);
     expect(items.managementScore).toMatchObject({ value: 4, status: 'verified' });
-    expect(items.credibilityScore).toMatchObject({ value: null, status: 'needs_review', reason: 'not_found' });
+    expect(items.credibilityScore).toMatchObject({ value: null, status: 'needs_review', reason: 'no_total' });
     expect(items.performanceScore).toMatchObject({ value: 6, status: 'verified' });
     expect(items.performancePeriod).toMatchObject({ value: '5년', status: 'verified' });
     // qna의 "5억 이상"은 질문 행(r1c1)에만 있어 answersOnly로 빠지므로 후보가 늘지 않는다.
@@ -417,7 +419,10 @@ describe('규칙 격리', () => {
   });
   it('extras 결과는 JSON 직렬화 가능', () => {
     const d = decide([], loadRules());
-    expect(JSON.parse(JSON.stringify(d.extras))).toEqual({});
+    expect(JSON.parse(JSON.stringify(d.extras))).toEqual({
+      bonusTable: { value: null, status: 'needs_review', reason: 'not_found' },
+      projectPeriod: { value: null, status: 'needs_review', reason: 'not_found' },
+    });
   });
 });
 
@@ -478,5 +483,88 @@ describe('대외신인도와 경영상태 분리', () => {
     const r = loadRules({ synonyms: { credibility: ['대외신인도', '경영상태'] } });
     expect(r.warnings.some((w) => w.includes('동의어 겹침') && w.includes('경영상태'))).toBe(true);
     expect(r.rules).toHaveLength(base.rules.length);
+  });
+});
+
+describe('가감점 표와 사업기간', () => {
+  const table = (rows: string[][], index = 0): DocBlock => ({
+    kind: 'table', index, rows: rows.length, cols: rows[0]!.length, loc: { block: 0 },
+    cells: rows.flatMap((row, r) => row.map((text, c) => ({ r, c, rowSpan: 1, colSpan: 1, text, blocks: [], loc: { block: 0 } }))),
+  });
+  const bonus = table([['구분', '평가항목', '배점'], ['가점', 'A. 지방 소재 중소기업', '0.5점\n(최대 0.5점)'], ['감점', 'G. 경고조치', '0.5점\n(최대 2.5점)']]);
+  const run = (inputs: RuleDocInput[]) => {
+    const rules = loadRules();
+    return { cands: runRules(inputs, rules), ...decide(runRules(inputs, rules), rules) };
+  };
+  const period = (text: string) => run([input(doc([P(text)]))]).extras.projectPeriod!;
+
+  it('1. 가감점 표만 있으면 no_total', () => {
+    const { items, extras } = run([input(doc([bonus]), 'rfp', 3)]);
+    expect(extras.bonusTable).toMatchObject({ value: '가점 1항목, 감점 1항목', status: 'verified' });
+    expect(extras.bonusTable!.evidence!.location).toBe('표0 r1c0');
+    expect(items.credibilityScore).toMatchObject({ value: null, status: 'needs_review', reason: 'no_total', raw: '가점 1항목, 감점 1항목' });
+  });
+  it('1-1. 병합 없이 행마다 같은 라벨을 적으면 라벨별로 합친다', () => {
+    const rows = table([['구분', '평가항목', '배점'], ['가점', 'A. 지방', '0.5점'], ['가점', 'C. 여성', '0.2점'], ['감점', 'G. 경고', '0.5점']]);
+    const { extras } = run([input(doc([rows]), 'rfp', 3)]);
+    expect(extras.bonusTable).toMatchObject({ value: '가점 2항목, 감점 1항목' });
+  });
+  it('2. 신인도 배점 표가 있으면 그 값', () => {
+    const quant = table([['구분', '평가항목', '배점'], ['정량', '대외신인도', '4']], 1);
+    const { items } = run([input(doc([bonus, quant]), 'rfp', 3)]);
+    expect(items.credibilityScore).toMatchObject({ value: 4, status: 'verified' });
+  });
+  it('3. 점수 칸이 빈 자가진단표는 제외', () => {
+    const { items, extras } = run([input(doc([table([['평가항목', '증빙요약', '점수'], ['가점', '', ''], ['감점', '', '']])]), 'rfp', 3)]);
+    expect(extras.bonusTable).toMatchObject({ value: null, reason: 'not_found' });
+    expect(items.credibilityScore).toMatchObject({ reason: 'not_found' });
+  });
+  it('4. 라벨은 완전 일치만', () => {
+    const { cands } = run([input(doc([table([['구분', '평가항목', '배점'], ['정량', '중소기업 가점을 부여하지 않는다', '4']])]), 'rfp', 3)]);
+    expect(cands.filter((c) => c.target === 'extras.bonusTable')).toHaveLength(0);
+  });
+  it('5. 문서 간 항목 수가 다르면 우선순위 높은 문서 값', () => {
+    const other = table([['구분', '평가항목', '배점'], ['가점', 'A', '0.5점'], ['가점', 'B', '0.5점'], ['감점', 'G', '0.5점']]);
+    const hi = { ...input(doc([bonus]), 'rfp', 2), attachmentId: 'hi' };
+    const lo = { ...input(doc([other]), 'rfp', 3), attachmentId: 'lo' };
+    const { items } = run([lo, hi]);
+    expect(items.credibilityScore).toMatchObject({ value: null, reason: 'no_total', raw: '가점 1항목, 감점 1항목' });
+    expect(items.credibilityScore.evidence!.attachmentId).toBe('hi');
+  });
+  it('6. 용역기간 문구는 띄어쓰기를 유지', () => {
+    expect(period('나. 용역기간 : 계약체결일로부터 2028.02.28.까지')).toMatchObject({ value: '계약체결일로부터 2028.02.28.까지', status: 'verified' });
+  });
+  it('7. 문장 속 계약기간은 제외', () => {
+    expect(period('1) 계약기간이 90일 이내인 경우 2) 납품대금이 1억원 이하인 경우')).toMatchObject({ reason: 'not_found' });
+  });
+  it('8. 괄호 머리말', () => {
+    expect(period('(사업기간) 2026-2031')).toMatchObject({ value: '2026-2031' });
+  });
+  it('9. 오탐 문구는 제외', () => {
+    for (const t of ['전체 사업기간 중 총 2회', '추정 사업기간', '사업기간', '하자담보기간 : 2년']) {
+      expect(period(t)).toMatchObject({ reason: 'not_found' });
+    }
+    const cell = table([['구분', '내용'], ['사업기간', '']]);
+    expect(run([input(doc([cell]))]).extras.projectPeriod).toMatchObject({ reason: 'not_found' });
+  });
+  it('10. 기호가 붙은 머리말', () => {
+    expect(period('□ 사업기간: 계약일로부터 12개월')).toMatchObject({ value: '계약일로부터 12개월' });
+  });
+  it('11. 두 문서 값이 다르면 conflict', () => {
+    const a = { ...input(doc([P('사업기간: 계약일로부터 12개월')]), 'notice', 2), attachmentId: 'a' };
+    const b = { ...input(doc([P('사업기간: 계약일로부터 6개월')]), 'rfp', 3), attachmentId: 'b' };
+    expect(run([a, b]).extras.projectPeriod).toMatchObject({ status: 'needs_review', reason: 'conflict' });
+  });
+});
+
+describe('스키마 검증', () => {
+  const syn = loadRules().synonyms;
+  it('bonus-table 통과, rowLabel 누락 오류', () => {
+    const base = { id: 'x', target: 'extras.x', strategy: 'bonus-table', scoreHeader: 'scoreHeader', rowLabel: 'bonusLabel' };
+    expect(validateRule(base, syn)).toEqual([]);
+    expect(validateRule({ ...base, rowLabel: undefined }, syn).join()).toContain('rowLabel 누락');
+  });
+  it('window-regex valueType text 통과', () => {
+    expect(validateRule({ id: 'x', target: 'extras.x', strategy: 'window-regex', anchor: 'a', pattern: '(?<v>b)', blocksAfter: 0, valueType: 'text' }, syn)).toEqual([]);
   });
 });

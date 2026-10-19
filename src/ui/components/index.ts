@@ -7,3 +7,4 @@ export * from './Toast';
 export * from './ConfirmDialog';
 export * from './Select';
 export * from './Logo';
+export * from './EmptyState';

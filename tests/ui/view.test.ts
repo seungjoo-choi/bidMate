@@ -22,6 +22,7 @@ describe('카드 모델', () => {
     expect(buildCard('performanceScore', item({ status: 'needs_review', reason: 'not_found' })).reason).toBe('문서에서 찾지 못함');
     expect(buildCard('performanceScore', item({ status: 'needs_review', reason: 'conflict' })).reason).toBe('문서 간 값 다름');
     expect(buildCard('performanceScore', item({ status: 'needs_review', reason: 'low_confidence' })).reason).toBe('질의답변에만 있음');
+    expect(buildCard('credibilityScore', item({ status: 'needs_review', reason: 'no_total' })).reason).toBe('가감점 표만 있음, 합계 배점 없음');
   });
   it('경영상태 배점 카드는 대외신인도 바로 뒤, not_run은 다시 추출 안내', () => {
     const keys = buildCards(make({})).map((c) => c.key);

@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, CheckCircle2, Copy, ExternalLink, Mail, XCircle } from 'lucide-react';
+import { AlertTriangle, Check, Copy, ExternalLink, Mail, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Job } from '../../core/types/job';
 import type { NoticeRef } from '../../core/types/notice';
@@ -9,6 +9,7 @@ import type { Settings } from '../../core/types/settings';
 import { send } from '../../messaging/bus';
 import { Button, InlineAlert, StatusBadge } from '../components';
 import { copyRich, copyText } from '../clipboard';
+import { Mascot } from '../mascot';
 import { composeView, type CopyKind } from '../compose-view';
 
 const COPY_LABEL: Record<CopyKind, string> = {
@@ -221,7 +222,7 @@ export function ComposeStatus({ ctl, detached = false }: { ctl: ComposeControlle
     body = (
       <div className="space-y-3">
         <div className="flex items-start gap-2">
-          <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-ok" />
+          <Mascot mood="happy" size={40} />
           <div className="font-semibold">메일 작성 완료. 웹메일에서 내용을 확인한 뒤 직접 보내 주세요</div>
         </div>
         {focusBtn(view.canFocus)}

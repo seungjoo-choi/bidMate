@@ -87,8 +87,8 @@ export function listen<T extends MsgType>(
       sendResponse({ ok: false, error: { code: 'SENDER_FORBIDDEN', message: '허용되지 않은 발신자입니다.' } });
       return true;
     }
-    Promise.resolve()
-      .then(() => handler(env.payload as PayloadOf<T>, sender))
+    // 핸들러를 동기로 시작한다(첫 await 전까지). sidePanel.open처럼 사용자 제스처가 살아 있어야 하는 호출이 있다.
+    new Promise<ResponseOf<T>>((resolve) => resolve(handler(env.payload as PayloadOf<T>, sender)))
       .then((data) => sendResponse({ ok: true, data }))
       .catch((e) => sendResponse(toErrorReply(e)));
     return true;

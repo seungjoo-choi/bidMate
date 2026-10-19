@@ -1,16 +1,17 @@
-import { Inbox } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { IndexEntry } from '../../core/types/index-file';
 import { computeHomeStats } from '../../core/dashboard/stats';
 import { send } from '../../messaging/bus';
 import { FsErrorAlert } from './FsErrorAlert';
+import { noticeHash } from './route';
 import { kindOf, noticeLabel } from '../../core/model/ids';
-import { Card, StatusBadge } from '../../ui/components';
+import { Card, EmptyState, StatusBadge } from '../../ui/components';
 import { dDayLevel, formatDDay, formatDate } from '../../ui/review/format';
 import { StatCard } from './home/StatCard';
 import { MonthlyBars } from './home/MonthlyBars';
+import { PageTitle } from './menu';
 
-const open = (id: string) => { location.hash = `#/review/${encodeURIComponent(id)}`; };
+const open = (id: string) => { location.hash = noticeHash(id); };
 
 function Row({ n, right }: { n: IndexEntry; right: React.ReactNode }) {
   return (
@@ -52,16 +53,12 @@ export function HomePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="title-mark text-2xl font-bold tracking-tight">홈</h1>
+      <PageTitle page="home" />
       <FsErrorAlert error={error} onRetry={load} />
       {!list && !error && <p className="text-muted">불러오는 중...</p>}
 
       {list && list.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-card border border-dashed border-line-strong py-20 text-center text-muted">
-          <Inbox className="size-9 text-faint" strokeWidth={1.5} />
-          <p className="font-semibold text-ink">아직 수집한 공고가 없습니다</p>
-          <p className="text-sm">나라장터 공고 화면에서 [공고 수집]을 누르면 여기에 쌓입니다.</p>
-        </div>
+        <EmptyState title="아직 수집한 공고가 없습니다" hint="나라장터 공고 화면에서 [공고 수집]을 누르면 여기에 쌓입니다." />
       )}
 
       {stats && list && list.length > 0 && (
@@ -81,7 +78,7 @@ export function HomePage() {
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card title="마감 예정">
-              {stats.dueSoon.items.length === 0 && <p className="text-muted">7일 안에 마감되는 공고가 없습니다.</p>}
+              {stats.dueSoon.items.length === 0 && <EmptyState size="sm" title="7일 안에 마감되는 공고가 없습니다." />}
               <div>
                 {stats.dueSoon.items.map((n) => {
                   const dday = formatDDay(n.bidCloseAt, now);
@@ -92,7 +89,7 @@ export function HomePage() {
               </div>
             </Card>
             <Card title="최근 수집">
-              {stats.recent.items.length === 0 && <p className="text-muted">최근 7일 안에 수집한 공고가 없습니다.</p>}
+              {stats.recent.items.length === 0 && <EmptyState size="sm" title="최근 7일 안에 수집한 공고가 없습니다." />}
               <div>
                 {stats.recent.items.map((n) => (
                   <Row key={n.noticeId} n={n} right={<span className="font-mono text-sm text-muted tabular-nums">{formatDate(n.collectedAt)}</span>} />

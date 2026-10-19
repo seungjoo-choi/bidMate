@@ -1,5 +1,5 @@
 {
-  "version": "1.1.1",
+  "version": "1.2.0",
   "synonyms": {
     "credibility": [
       "대외신인도",
@@ -13,6 +13,7 @@
     ],
     "mgmtExclude": ["수행실적", "실적평가", "사업실적", "이행실적", "용역실적", "입찰참가제한", "업무정지", "부정당", "제재"],
     "performance": ["수행실적", "실적평가", "사업실적", "이행실적", "용역실적"],
+    "bonusLabel": ["가점", "감점", "가감점", "가․감점", "가·감점", "가ㆍ감점", "가산점", "감산점"],
     "scoreHeader": [
       "배점",
       "배점한도",
@@ -115,6 +116,26 @@
       "maxBlocks": 6,
       "maxChars": 600,
       "conflictPolicy": "prefer_priority"
+    },
+    {
+      "id": "cred.bonusTable",
+      "target": "extras.bonusTable",
+      "strategy": "bonus-table",
+      "scoreHeader": "scoreHeader",
+      "rowLabel": "bonusLabel",
+      "weight": 1,
+      "conflictPolicy": "prefer_priority"
+    },
+    {
+      "id": "basic.projectPeriod",
+      "target": "extras.projectPeriod",
+      "strategy": "window-regex",
+      "weight": 1,
+      "blocksAfter": 0,
+      "valueType": "text",
+      "conflictPolicy": "prefer_priority",
+      "anchor": "^(?:[가-힣]\\.)?[^가-힣]{0,8}(?:사업|용역|계약|수행|과업)기간[:)]",
+      "pattern": "^(?:[가-힣]\\.)?[^가-힣]{0,8}(?:사업|용역|계약|수행|과업)기간[:)]+(?=[^:]{0,40}(?:\\d{4}[.\\-/년]|\\d{1,3}(?:개월|일|년|주)|계약(?:체결)?일|착수일|협약일))(?<v>[^:]{2,80})"
     }
   ]
 }

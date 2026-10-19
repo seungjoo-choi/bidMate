@@ -4,7 +4,7 @@ import { inboxHost } from '../core/model/mail-provider';
 import { refsConflict } from '../core/model/job-conflict';
 import { kindOf, noticeIdOf } from '../core/model/ids';
 import { COLLECTIBLE_NOTICE_KINDS, type NoticeKind } from '../core/types/notice';
-import type { CollectResult, Handoff, Job, JobError, JobProgress, JobStatus, StepId, StepState } from '../core/types/job';
+import type { CollectResult, Handoff, Job, JobError, JobEvent, JobLog, JobProgress, JobStatus, StepId, StepState } from '../core/types/job';
 import type { AfterCollect, Settings } from '../core/types/settings';
 import { listen, send as busSend } from '../messaging/bus';
 import type { ActiveJob, Envelope, JobRequest, JobRunPayload } from '../messaging/protocol';
@@ -13,6 +13,10 @@ import { ensureOffscreen, hasOffscreen } from './offscreen-manager';
 const MAX_JOBS = 20;
 const IDS_KEY = 'jobIds';
 const jobKey = (id: string) => `jobs.${id}`;
+const logKey = (id: string) => `jobLog.${id}`;
+const MAX_LOG_EVENTS = 400;
+const LABEL_MAX = 200;
+const MESSAGE_MAX = 300;
 const COLLECT_STEPS: StepId[] = ['fetch_basic', 'download_attachments', 'extract', 'fetch_html'];
 const EXTRACT_STEPS: StepId[] = ['extract'];
 const COMPOSE_STEPS: StepId[] = ['render_mail', 'open_compose', 'fill_fields', 'attach_files', 'verify'];
@@ -85,6 +89,62 @@ export async function listJobs(): Promise<Job[]> {
   const got = await deps().storage.session.get(ids.map(jobKey));
   return ids.map((id) => got[jobKey(id)] as Job | undefined).filter((j): j is Job => !!j);
 }
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+type LogItem = DistributiveOmit<JobEvent, 'seq' | 'at' | 'attempt'>;
+
+export async function getJobLog(id: string): Promise<JobLog | undefined> {
+  return (await deps().storage.session.get(logKey(id)))[logKey(id)] as JobLog | undefined;
+}
+const clip = (text: string, max: number): string => (text.length > max ? text.slice(0, max) : text);
+async function scrubError(e: JobError): Promise<JobError> {
+  return { code: e.code, message: clip(await redact(e.message), MESSAGE_MAX), step: e.step, retryable: e.retryable };
+}
+/** 기록에 남기기 전 문자열을 가리고(redact) 자른다. */
+async function scrubItem(item: LogItem): Promise<LogItem> {
+  switch (item.kind) {
+    case 'attempt':
+    case 'note':
+      return { ...item, label: clip(await redact(item.label), LABEL_MAX) };
+    case 'step':
+      return { ...item, label: clip(await redact(item.label), LABEL_MAX), ...(item.error ? { error: await scrubError(item.error) } : {}) };
+    case 'file':
+      return { ...item, ...(item.error ? { error: clip(await redact(item.error), MESSAGE_MAX) } : {}) };
+    case 'finish':
+      return { ...item, ...(item.error ? { error: await scrubError(item.error) } : {}) };
+    default:
+      return item;
+  }
+}
+/** 상한 초과 시 가장 오래된 회차를 통째로 버린다. 한 회차뿐이면 오래된 file 이벤트부터 버린다. */
+function trimLog(events: JobEvent[]): JobEvent[] {
+  let out = events;
+  while (out.length > MAX_LOG_EVENTS) {
+    const attempts = [...new Set(out.map((e) => e.attempt))];
+    if (attempts.length > 1) {
+      const oldest = Math.min(...attempts);
+      out = out.filter((e) => e.attempt !== oldest);
+    } else {
+      const i = out.findIndex((e) => e.kind === 'file');
+      if (i < 0) break;
+      out = [...out.slice(0, i), ...out.slice(i + 1)];
+    }
+  }
+  return out;
+}
+/** serial 안에서만 호출한다. 쓰기 실패는 삼키고 잡 갱신은 유지한다. */
+async function appendLog(jobId: string, attempt: number, items: LogItem[]): Promise<void> {
+  if (items.length === 0) return;
+  try {
+    const prev = await getJobLog(jobId);
+    const log: JobLog = prev ?? { jobId, seq: 0, events: [] };
+    const at = new Date().toISOString();
+    const added: JobEvent[] = [];
+    for (const it of items) added.push({ ...(await scrubItem(it)), seq: ++log.seq, at, attempt } as JobEvent);
+    log.events = trimLog([...log.events, ...added]);
+    await deps().storage.session.set({ [logKey(jobId)]: log });
+  } catch { /* 기록 실패는 잡 갱신을 막지 않는다 */ }
+}
+
 async function addJob(job: Job): Promise<void> {
   let ids = [...(await getIds()).filter((i) => i !== job.id), job.id];
   let drop: string[] = [];
@@ -100,12 +160,12 @@ async function addJob(job: Job): Promise<void> {
     ids = ids.filter((i) => !drop.includes(i));
   }
   await deps().storage.session.set({ [IDS_KEY]: ids });
-  if (drop.length) await deps().storage.session.remove(drop.map(jobKey));
+  if (drop.length) await deps().storage.session.remove(drop.flatMap((i) => [jobKey(i), logKey(i)]));
   await putJob(job);
 }
 async function deleteJob(id: string): Promise<void> {
   await deps().storage.session.set({ [IDS_KEY]: (await getIds()).filter((i) => i !== id) });
-  await deps().storage.session.remove([jobKey(id)]);
+  await deps().storage.session.remove([jobKey(id), logKey(id)]);
 }
 
 async function getSettings(): Promise<Settings> {
@@ -254,6 +314,7 @@ async function syncActive(active: ActiveJob[], exceptId?: string): Promise<void>
     if (ACTIVE.has(j.status) && !ids.has(j.id) && j.id !== exceptId) {
       const next: Job = { ...j, status: 'interrupted' };
       await putJob(next);
+      await appendLog(next.id, next.attempt, [{ kind: 'finish', status: 'interrupted' }]);
       emitFinal(next);
     }
   }
@@ -275,6 +336,7 @@ export function setHandoff(jobId: string, handoff: Handoff): Promise<void> {
     if (!cur) return;
     const next: Job = { ...cur, handoff };
     await putJob(next);
+    await appendLog(next.id, next.attempt, [{ kind: 'handoff', handoff }]);
     notifyUpdate(next);
   });
 }
@@ -333,7 +395,10 @@ export function startJob(req: JobRequest): Promise<StartResult> {
     } catch (e) {
       throw Object.assign(new Error(await redact(e instanceof Error ? e.message : String(e))), { code: 'OFFSCREEN_ERROR' });
     }
+    // 거부되면 되돌리도록 재시도 전 기록을 잡아 둔다(attempt 이벤트로 상한 절단이 일어나 이전 회차가 지워질 수 있음).
+    const prevLog = prevRecord ? await getJobLog(job.id).catch(() => undefined) : undefined;
     await addJob(job);
+    await appendLog(job.id, job.attempt, [{ kind: 'attempt', label: job.type === 'compose' ? '메일 작성 시작' : req.retryOf ? '다시 시도' : '수집 시작' }]);
     const payload: JobRunPayload = {
       job, html: req.html,
       secrets: ((await deps().storage.local.get('secrets')).secrets as JobRunPayload['secrets'] | undefined) ?? {},
@@ -347,14 +412,21 @@ export function startJob(req: JobRequest): Promise<StartResult> {
       if (cur) {
         const failed: Job = { ...cur, status: 'failed', errors: [await redactError({ code: 'OFFSCREEN_ERROR', message: e instanceof Error ? e.message : String(e), retryable: true })] };
         await putJob(failed);
+        await appendLog(failed.id, failed.attempt, [{ kind: 'finish', status: 'failed', error: failed.errors[0] }]);
         emitFinal(failed);
       }
       return { jobId: job.id };
     }
     if (!resp.accepted) {
       // 거부: 이번에 만든 기록은 남기지 않는다(재시도였다면 이전 기록 복원).
-      if (prevRecord) await putJob(prevRecord);
-      else await deleteJob(job.id);
+      if (prevRecord) {
+        await putJob(prevRecord);
+        // 이번 attempt 이전의 기록으로 되돌린다.
+        try {
+          if (prevLog) await deps().storage.session.set({ [logKey(job.id)]: prevLog });
+          else await deps().storage.session.remove([logKey(job.id)]);
+        } catch { /* 기록 실패는 무시 */ }
+      } else await deleteJob(job.id);
       await syncActive(resp.active, job.id);
       return { jobId: resp.conflictJobId, code: resp.code };
     }
@@ -370,12 +442,29 @@ export function onProgress(p: JobProgress): Promise<void> {
     const cur = await getJob(p.jobId);
     if (!cur || !ACTIVE.has(cur.status) || p.attempt !== cur.attempt) return;
     const safe: JobProgress = { ...p, label: await redact(p.label) };
-    const steps = cur.steps.map((s) =>
-      s.id === safe.step ? { ...s, status: safe.status, progress: safe.progress ?? s.progress, bytes: safe.bytes } : s);
+    const now = new Date().toISOString();
+    const prevStatus = cur.steps.find((s) => s.id === safe.step)?.status;
+    let ms: number | undefined;
+    const steps = cur.steps.map((s) => {
+      if (s.id !== safe.step) return s;
+      const n: StepState = { ...s, status: safe.status, progress: safe.progress ?? s.progress, bytes: safe.bytes };
+      if (safe.status === 'running' && !n.startedAt) n.startedAt = now;
+      if (safe.status === 'done' || safe.status === 'failed' || safe.status === 'skipped') {
+        n.endedAt = now;
+        ms = safe.ms ?? (n.startedAt ? Math.max(0, Date.parse(now) - Date.parse(n.startedAt)) : undefined);
+      }
+      return n;
+    });
     await putJob({
       ...cur, status: cur.status === 'cancelling' ? 'cancelling' : 'running', // cancelling을 running으로 되돌리지 않는다
       steps, currentStep: safe.step, label: safe.label,
     });
+    const items: LogItem[] = [];
+    if (safe.status !== prevStatus && safe.status !== 'pending') {
+      items.push({ kind: 'step', step: safe.step, status: safe.status, label: safe.label, ...(ms !== undefined ? { ms } : {}) });
+    }
+    if (safe.event) items.push(safe.event);
+    await appendLog(cur.id, cur.attempt, items);
     notifyTab(cur, safe);
   });
 }
@@ -397,6 +486,7 @@ export function onFinish(f: { jobId: string; attempt: number; status: JobStatus;
       errors: error ? [error] : [],
     };
     await putJob(next);
+    await appendLog(next.id, next.attempt, [{ kind: 'finish', status: f.status, ...(error ? { error } : {}) }]);
     notifyUpdate(next);
     emitFinal(next);
     return next;
@@ -412,6 +502,7 @@ export function reconcile(): Promise<void> {
       for (const j of active) {
         const next: Job = { ...j, status: 'interrupted' };
         await putJob(next);
+        await appendLog(next.id, next.attempt, [{ kind: 'finish', status: 'interrupted' }]);
         emitFinal(next);
       }
       return;
@@ -442,6 +533,7 @@ export function cancelJob(jobId: string, force = false): Promise<{ status: JobSt
         if (!ACTIVE.has(j.status)) continue;
         const next: Job = { ...j, status: j.id === jobId ? 'cancelled' : 'interrupted' };
         await putJob(next);
+        await appendLog(next.id, next.attempt, [{ kind: 'finish', status: next.status }]);
         emitFinal(next);
       }
       return { status: 'cancelled' };
@@ -455,7 +547,10 @@ export function cancelJob(jobId: string, force = false): Promise<{ status: JobSt
     }
     const updated: Job = { ...cur, status: next };
     await putJob(updated);
-    if (next === 'cancelled') emitFinal(updated);
+    if (next === 'cancelled') {
+      await appendLog(updated.id, updated.attempt, [{ kind: 'finish', status: 'cancelled' }]);
+      emitFinal(updated);
+    }
     return { status: next };
   });
 }

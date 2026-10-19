@@ -11,7 +11,8 @@ export type Rule = Base & (
   | { strategy: 'table-score'; label: string; scoreHeader: string; excludeLabel?: string }
   | { strategy: 'inline-score'; label: string; maxGap: number; excludeLabel?: string }
   | { strategy: 'keyword-enum'; pattern: string; map: Record<string, boolean | string> }
-  | { strategy: 'window-regex'; anchor: string; pattern: string; blocksAfter: number; valueType: 'amount' | 'years' | 'number' | 'string' }
+  | { strategy: 'window-regex'; anchor: string; pattern: string; blocksAfter: number; valueType: 'amount' | 'years' | 'number' | 'string' | 'text' }
+  | { strategy: 'bonus-table'; scoreHeader: string; rowLabel: string }
   | { strategy: 'block-capture'; anchor: string; stopAt: string; maxBlocks: number; maxChars: number }
 );
 export interface RuleSet { version: string; synonyms: Record<string, string[]>; rules: Rule[] }
@@ -91,7 +92,10 @@ export function validateRule(r: unknown, syn: Record<string, string[]>, user = t
     case 'window-regex':
       terms('anchor', 'pattern');
       if (!isNum(r.blocksAfter)) bad('blocksAfter 오류');
-      if (!['amount', 'years', 'number', 'string'].includes(r.valueType as string)) bad('valueType 오류');
+      if (!['amount', 'years', 'number', 'string', 'text'].includes(r.valueType as string)) bad('valueType 오류');
+      break;
+    case 'bonus-table':
+      terms('scoreHeader', 'rowLabel');
       break;
     case 'block-capture':
       terms('anchor', 'stopAt');

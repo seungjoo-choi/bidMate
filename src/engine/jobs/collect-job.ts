@@ -13,6 +13,7 @@ import type { Settings } from '../../core/types/settings';
 import { DownloadAbort, downloadAttachments } from '../downloader/downloader';
 import type { IFileStore } from '../file-store/types';
 import { conflictCountOf, reviewCountOf, runExtractStep } from '../extraction/extract-step';
+import { basicFacts, evalFacts } from '../../core/model/notice-summary';
 import type { ParserRegistry } from '../parsers/types';
 import { NoticeStore } from '../notices/notice-store';
 import { matchAttachments } from './attachments';
@@ -106,8 +107,8 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
   const now = deps.now ?? (() => new Date());
   const ns = new NoticeStore(deps.store);
   const isDone = (id: StepId) => job.steps.find((s) => s.id === id)?.status === 'done';
-  const step = (id: StepId, status: JobProgress['status'], label: string, progress?: JobProgress['progress']) =>
-    deps.emit({ jobId: job.id, attempt: job.attempt, step: id, status, label, progress });
+  const step = (id: StepId, status: JobProgress['status'], label: string, extra?: Pick<JobProgress, 'event' | 'ms' | 'progress'>) =>
+    deps.emit({ jobId: job.id, attempt: job.attempt, step: id, status, label, ...extra });
   const cancelled = (n?: Notice | null): CollectOutcome => ({ status: 'cancelled', result: n ? resultOf(n) : undefined });
 
   let notice: Notice | null = null;
@@ -121,18 +122,28 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
 
     const src = sourceFor(kindOf(ref));
 
+    // fetch_basic 소요에서 뺄 상세화면 읽기 시간(ms)
+    let detailMs = 0;
+    let basicMs: number | undefined;
     // 상세화면 값 확보. 취소되면 true를 반환한다. 실패는 detailError로 남기고 계속한다(partial).
     const acquireHtml = async (): Promise<boolean> => {
-      if (html) { step('fetch_html', 'done', '화면값 전달됨'); return false; }
+      if (html) {
+        const n = Object.values(html.fields).filter((f) => f && f.raw.trim() !== '').length;
+        step('fetch_html', 'done', `화면값 ${n}개 항목 전달됨`);
+        return false;
+      }
       if (!src.acceptsHtml || !deps.readDetail) {
         step('fetch_html', 'skipped', !src.acceptsHtml ? '상세화면 대상 아님' : '상세화면 읽기 건너뜀');
         return false;
       }
       step('fetch_html', 'running', '상세화면 읽는 중');
+      const t = Date.now();
       try {
         html = await deps.readDetail(job.id);
+        detailMs += Date.now() - t;
         step('fetch_html', 'done', '상세화면 읽기 완료');
       } catch (e) {
+        detailMs += Date.now() - t;
         const c = (e as { code?: unknown })?.code;
         const code = typeof c === 'string' && c.startsWith('DETAIL_') ? c : 'DETAIL_READ_FAILED';
         if (code === 'DETAIL_CANCELLED' || deps.signal?.aborted) return true;
@@ -155,6 +166,7 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
     }
     if (!notice) {
       step('fetch_basic', 'running', '공고정보 조회 중');
+      const basicStart = Date.now();
       const r = await src.fetch(ref, { serviceKey: key, fetch: deps.fetch, signal: deps.signal });
       if (!r.ok && r.error.code === 'JOB_CANCELLED') return cancelled();
       if (!r.ok) {
@@ -181,8 +193,11 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
       notice.collect = { status: 'partial', collectedAt: now().toISOString(), lastJobId: job.id, errors: [] };
       notice.updatedAt = now().toISOString();
       await ns.saveNotice(notice, { operation, item });
+      basicMs = Math.max(0, Date.now() - basicStart - detailMs);
     }
-    step('fetch_basic', 'done', '공고정보 조회 완료');
+    step('fetch_basic', 'done', '공고정보 조회 완료', {
+      event: { kind: 'facts', step: 'fetch_basic', facts: basicFacts(notice) }, ...(basicMs !== undefined ? { ms: basicMs } : {}),
+    });
     if (deps.signal?.aborted) return cancelled(notice);
 
     // ---- download_attachments ----
@@ -190,7 +205,7 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
     let failedAtts: Attachment[] = [];
     if (!isDone('download_attachments')) {
       const total = notice.attachments.length;
-      step('download_attachments', 'running', `첨부파일 다운로드 중 (0/${total})`, { done: 0, total });
+      step('download_attachments', 'running', `첨부파일 다운로드 중 (0/${total})`, { progress: { done: 0, total } });
       // bytes 진행: 잡당 trailing throttle. 파일 완료(done)는 즉시 보내고 대기 중 bytes는 버린다.
       const interval = deps.progressIntervalMs ?? 1000;
       let pendingBytes: JobProgress | null = null;
@@ -209,13 +224,24 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
           signal: deps.signal,
           keepSkipped: job.attempt > 1,
           onEvent: (e) => {
+            const att = notice!.attachments.find((x) => x.id === e.attachmentId);
+            const file = { id: e.attachmentId, name: att?.originalName ?? '', size: e.type === 'start' ? att?.expectedSize ?? null : e.size ?? null };
+            if (e.type === 'start') {
+              step('download_attachments', 'running', `첨부파일 다운로드 중 (${lastDone}/${e.totalFiles})`, {
+                progress: { done: lastDone, total: e.totalFiles }, event: { kind: 'file', step: 'download_attachments', phase: 'start', file },
+              });
+              return;
+            }
             if (e.type === 'done') {
               dropBytes();
               lastDone = e.done;
-              step('download_attachments', 'running', `첨부파일 다운로드 중 (${e.done}/${e.totalFiles})`, { done: e.done, total: e.totalFiles });
+              step('download_attachments', 'running', `첨부파일 다운로드 중 (${e.done}/${e.totalFiles})`, {
+                progress: { done: e.done, total: e.totalFiles },
+                event: { kind: 'file', step: 'download_attachments', phase: 'end', file, status: e.status, ms: e.ms, ...(e.error ? { error: e.error } : {}) },
+              });
               return;
             }
-            const name = notice!.attachments.find((x) => x.id === e.attachmentId)?.originalName;
+            const name = att?.originalName;
             const received = e.bytes ?? 0;
             const sizes = `${fmtMB(received)}${e.total ? `/${fmtMB(e.total)}` : ''}`;
             pendingBytes = {
@@ -259,7 +285,7 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
         throw e;
       }
       failedAtts = notice.attachments.filter(FAILED_ATT);
-      step('download_attachments', failedAtts.length ? 'failed' : 'done', failedAtts.length ? `첨부 ${failedAtts.length}건 실패` : '첨부파일 다운로드 완료', { done: total - failedAtts.length, total });
+      step('download_attachments', failedAtts.length ? 'failed' : 'done', failedAtts.length ? `첨부 ${failedAtts.length}건 실패` : '첨부파일 다운로드 완료', { progress: { done: total - failedAtts.length, total } });
     } else {
       failedAtts = notice.attachments.filter(FAILED_ATT);
     }
@@ -290,6 +316,9 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
         else {
           extraction = out.extraction!;
           extraction = await ns.saveExtractionLatest(notice, extraction);
+          step('extract', 'done', `평가정보 추출 완료, 확인 필요 ${reviewCountOf(extraction)}건`, {
+            event: { kind: 'facts', step: 'extract', facts: evalFacts(notice, extraction) },
+          });
         }
       } catch (e) {
         const err = toError(e, 'extract', key);

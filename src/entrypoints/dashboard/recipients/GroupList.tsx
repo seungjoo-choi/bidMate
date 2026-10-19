@@ -1,7 +1,7 @@
 import { BookUser, Plus, Star } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import type { Group } from '../../../core/types/recipient';
-import { Button, inputClass } from '../../../ui/components';
+import { Button, EmptyState, inputClass } from '../../../ui/components';
 import { errorText, type OpError } from './shared';
 
 /** 'all'이면 주소록 전체, 아니면 그룹 id */
@@ -33,7 +33,7 @@ export function GroupList({ groups, recipientCount, view, error, busy, onSelect,
         <Item active={view === 'all'} icon={<BookUser />} label="주소록 전체" count={recipientCount} onClick={() => onSelect('all')} />
       </ul>
       <div className="mt-4 mb-1 px-3 text-xs font-semibold text-muted">그룹</div>
-      {groups.length === 0 && !adding && <p className="px-3 py-1 text-sm text-faint">아직 그룹이 없습니다.</p>}
+      {groups.length === 0 && !adding && <EmptyState size="sm" className="justify-start px-3 !py-1" title="아직 그룹이 없습니다." />}
       <ul className="space-y-1">
         {groups.map((g) => (
           <Item

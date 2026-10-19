@@ -35,4 +35,5 @@ export const naverworksV1: ComposeSelectorSet = {
     methods: ['input'],
   },
   forbidden: { send: ['[data-hotkey="sendKey"]'], textPatterns: ['보내기', '전송', 'Send', '발송'] },
+  sendWatch: { buttons: ['button[data-hotkey="sendKey"]'], textPatterns: ['보내기'], hotkey: true, gone: '#cont_flex_area input[name="subject"]' },
 };

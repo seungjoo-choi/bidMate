@@ -128,7 +128,7 @@ const COMPARE: Record<Exclude<RecipientSort, 'added' | 'recent'>, (a: Recipient,
 };
 
 /** 이름, 부서, 이메일 중 하나라도 검색어에 맞는지(초성 검색 포함). */
-export const matchesRecipient = (r: Recipient, q: string) => [r.name, r.email, r.dept ?? ''].some((v) => matchesQuery(v, q));
+export const matchesRecipient = (r: Recipient, q: string) => [r.name, r.memo ?? '', r.email, r.dept ?? ''].some((v) => matchesQuery(v, q));
 
 /** 들어온 배열 순서를 등록순으로 본다. 정렬은 안정 정렬이라 같은 값끼리는 원래 순서를 지킨다. */
 export function sortRecipients(list: Recipient[], key: RecipientSort): Recipient[] {
@@ -145,7 +145,7 @@ export function RecipientFilterBar({ q, onQ, sort, onSort, total, matched }: {
     <div className="flex items-center gap-2">
       <div className="relative max-w-sm min-w-0 flex-1">
         <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" />
-        <input type="search" aria-label="이름, 부서, 이메일로 찾기" placeholder="이름, 부서, 이메일로 찾기 (초성 가능)" className={`${inputClass} pl-9`} value={q} onChange={(e) => onQ(e.target.value)} />
+        <input type="search" aria-label="이름, 닉네임, 부서, 이메일로 찾기" placeholder="이름, 닉네임, 부서, 이메일로 찾기 (초성 가능)" className={`${inputClass} pl-9`} value={q} onChange={(e) => onQ(e.target.value)} />
       </div>
       <Select className="w-36 shrink-0" aria-label="정렬" value={sort} options={SORT_OPTIONS} onChange={(v) => onSort(v as RecipientSort)} />
       {q.trim() && <span className="shrink-0 text-sm text-muted">{total}명 중 {matched}명</span>}

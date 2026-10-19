@@ -1,5 +1,5 @@
 import { mergeSelectorSet } from '../../adapters/naverworks/selectors';
-import type { ComposeSelectorSet } from '../../adapters/naverworks/types';
+import type { ComposeSelectorSet, SendWatchConfig } from '../../adapters/naverworks/types';
 import { buildGmailComposeUrl } from '../../adapters/gmail/compose-url';
 import { buildNaverworksComposeUrl } from '../../adapters/naverworks/compose-url';
 import { composeProvider, providerHost } from '../../core/model/mail-provider';
@@ -19,6 +19,7 @@ export interface ComposePlan {
   fillFields: ComposeField[];   // prefilled도 omitted도 아닌 필드(FIELDS 순서)
   attachLimits?: { perFileBytes?: number; totalBytes?: number };
   detectTimeoutMs?: number;     // 사용자 조작이 없는 서비스만 짧게
+  sendWatch?: SendWatchConfig;  // 셀렉터 검증 여부와 무관하게 발송 관찰용으로 항상 포함
   selector?: { set: ComposeSelectorSet; config: ComposeSelectorConfig };   // verified일 때만
 }
 
@@ -54,6 +55,7 @@ export function planCompose(settings: Settings, draft: MailDraft, selectorSets: 
   const limits = set?.attach.limits;
   return {
     provider, host, url, prefilled, omitted, needsUserOpen, fillFields, selector,
+    ...(set?.sendWatch ? { sendWatch: set.sendWatch } : {}),
     ...(limits ? { attachLimits: { ...limits } } : {}),
     ...(needsUserOpen ? {} : { detectTimeoutMs: 30_000 }),
   };

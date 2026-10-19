@@ -1,6 +1,8 @@
 import { refsConflict } from '../../core/model/job-conflict';
 import { defaultIsVisible, detectDetail, peekNoticeValue, readHtmlFields, readPageTitle, type DetectedDetail } from '../../adapters/g2b/detail-page';
 import type { Job } from '../../core/types/job';
+import { EVAL_COLLECT_UI_TIMEOUT_MS } from '../../core/evaluation/limits';
+import { evalErrorText } from '../../core/evaluation/error-text';
 import { send } from '../../messaging/bus';
 import type { FixTarget, G2bDetected, NoticeLookup } from '../../messaging/protocol';
 import { handoffView, type HandoffAction } from '../handoff-view';
@@ -22,11 +24,15 @@ export interface PanelState {
   compose: Job | null;
   lookup: NoticeLookup;
   startError: string | null;
+  /** 사이드 패널 열기 실패 문구 */
+  sidePanelError: string | null;
   starting: boolean;
   /** 다른 탭의 잡이 같은 공고를 수집 중(JOB_ALREADY_RUNNING) */
   otherTab: boolean;
   /** 확장이 업데이트되어 이 페이지의 content script가 고아가 됨 */
   orphaned: boolean;
+  /** 평가점수 가져오기 진행 중(버튼이 다시 그려져도 중복 실행을 막는다) */
+  evalBusy: boolean;
 }
 
 const isActive = (j: Job | null): boolean => !!j && ACTIVE.has(j.status);
@@ -38,7 +44,7 @@ const extAlive = (): boolean => !!globalThis.chrome?.runtime?.id;
 /** 상세화면 감지/잡 추적/SW 통신을 맡는 비-React 컨트롤러. 나라장터 DOM은 읽기만 한다. */
 export class PanelController {
   private state: PanelState = {
-    notice: null, job: null, compose: null, lookup: { found: false }, startError: null, starting: false, otherTab: false, orphaned: false,
+    notice: null, job: null, compose: null, lookup: { found: false }, startError: null, sidePanelError: null, starting: false, otherTab: false, orphaned: false, evalBusy: false,
   };
   private listeners = new Set<() => void>();
   private jobId: string | null = null;
@@ -316,6 +322,30 @@ export class PanelController {
     }
   }
 
+  /** 평가점수를 가져와 저장하고 평가분석 화면을 연다. 실패 문구는 코드별로 돌려준다. */
+  async collectEval(): Promise<{ ok: true } | { ok: false; message: string }> {
+    const n = this.state.notice;
+    if (!n) return { ok: false, message: '공고를 확인하지 못했습니다.' };
+    if (this.state.evalBusy) return { ok: false, message: '이미 평가점수를 가져오는 중입니다.' };
+    this.set({ evalBusy: true });
+    try {
+      let noticeId: string;
+      try {
+        noticeId = (await send('eval/collect', { ref: { noticeNo: n.noticeNo, round: n.round } }, { timeoutMs: EVAL_COLLECT_UI_TIMEOUT_MS })).noticeId;
+      } catch (e) {
+        return { ok: false, message: evalErrorText((e as { code?: string }).code, e instanceof Error ? e.message : String(e)) };
+      }
+      try {
+        await send('ui/open', { page: 'evaluation', noticeId });
+      } catch {
+        return { ok: false, message: '저장했지만 분석 화면을 열지 못했습니다. 대시보드 평가분석에서 확인하세요' };
+      }
+      return { ok: true };
+    } finally {
+      this.set({ evalBusy: false });
+    }
+  }
+
   /** 현재 공고의 잡만 재시도한다. */
   async retry(): Promise<void> {
     const j = this.state.job;
@@ -340,6 +370,13 @@ export class PanelController {
     this.ensurePoll();
   }
   openUi(page: 'settings' | 'grant' | 'review' | 'mail', noticeId?: string): void { void send('ui/open', { page, noticeId }).catch(() => undefined); }
+  /** 이 탭의 사이드 패널을 연다. 클릭 핸들러 안에서 바로 불러야 한다(사용자 제스처). */
+  openSidePanel(): void {
+    this.set({ sidePanelError: null });
+    send('ui/open', { page: 'sidepanel' }).catch((e: unknown) => {
+      this.set({ sidePanelError: `사이드 패널을 열지 못했습니다: ${e instanceof Error ? e.message : String(e)}` });
+    });
+  }
   /** 오류를 고칠 화면을 연다. 정해진 화면이 없으면 설정 첫 화면 */
   openFix(fix: FixTarget | undefined): void { void send('ui/open', fix ?? { page: 'settings' }).catch(() => undefined); }
 }

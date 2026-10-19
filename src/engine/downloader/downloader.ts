@@ -7,10 +7,15 @@ export interface DownloadSettings { concurrency: number; maxRetries: number; bac
 
 export interface DownloadEvent {
   attachmentId: string;
-  /** 'bytes': 받는 중, 'done': 파일 처리 종료(성공/실패/skip 포함) */
-  type: 'bytes' | 'done';
+  /** 'start': 파일 시작, 'bytes': 받는 중, 'done': 파일 처리 종료(성공/실패/skip 포함) */
+  type: 'start' | 'bytes' | 'done';
   bytes?: number;
   total?: number | null;
+  /** done: 최종 첨부 상태, 저장(또는 예상) 크기, 마지막 오류, 첫 시도부터의 소요(재시도 백오프 포함) */
+  status?: Attachment['status'];
+  size?: number | null;
+  error?: string;
+  ms?: number;
   done: number;
   totalFiles: number;
 }
@@ -101,8 +106,8 @@ export async function downloadAttachments(input: Attachment[], opts: DownloadOpt
 
   let doneCount = 0;
   let fatal: DownloadAbort | null = null;
-  const emit = (a: Attachment, type: 'bytes' | 'done', bytes?: number, total?: number | null) =>
-    opts.onEvent?.({ attachmentId: a.id, type, bytes, total, done: doneCount, totalFiles: atts.length });
+  const emit = (a: Attachment, type: DownloadEvent['type'], bytes?: number, total?: number | null, extra?: Partial<DownloadEvent>) =>
+    opts.onEvent?.({ attachmentId: a.id, type, bytes, total, done: doneCount, totalFiles: atts.length, ...extra });
 
   const attempt = async (a: Attachment): Promise<void> => {
     const path = `${opts.folder}/attachments/${a.savedName}`;
@@ -203,6 +208,7 @@ export async function downloadAttachments(input: Attachment[], opts: DownloadOpt
       if ((await opts.store.fileSize(path)) === a.savedSize) return; // 멱등 skip
     }
     a.status = 'downloading';
+    emit(a, 'start');
     for (let n = 0; ; n++) {
       a.attempts++;
       try {
@@ -223,9 +229,11 @@ export async function downloadAttachments(input: Attachment[], opts: DownloadOpt
 
   const queue = [...atts];
   const worker = async () => {
+    let startedAt = 0;
     for (let a = queue.shift(); a && !fatal; a = queue.shift()) {
       try {
         if (opts.signal?.aborted) throw new CancelledError();
+        startedAt = Date.now();
         await process(a);
       } catch (e) {
         if (e instanceof DownloadAbort) {
@@ -237,7 +245,9 @@ export async function downloadAttachments(input: Attachment[], opts: DownloadOpt
         throw e;
       }
       doneCount++;
-      emit(a, 'done');
+      emit(a, 'done', undefined, undefined, {
+        status: a.status, size: a.savedSize ?? a.expectedSize, ...(a.lastError ? { error: a.lastError } : {}), ms: Date.now() - startedAt,
+      });
       opts.onUpdate?.(atts);
     }
   };

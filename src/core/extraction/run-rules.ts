@@ -6,6 +6,7 @@ import { answersOnly } from './qna';
 import type { Candidate } from './decide';
 import type { Rule, RuleSet } from './rules/schema';
 import { blockCapture } from './strategies/block-capture';
+import { bonusTable } from './strategies/bonus-table';
 import { prepare, type Prepared, type RawHit } from './strategies/common';
 import { inlineScore } from './strategies/inline-score';
 import { keywordEnum } from './strategies/keyword-enum';
@@ -21,6 +22,7 @@ function runStrategy(doc: Prepared, rule: Rule, syn: RuleSet['synonyms']): RawHi
     case 'keyword-enum': return keywordEnum(doc, rule, syn);
     case 'window-regex': return windowRegex(doc, rule, syn);
     case 'block-capture': return blockCapture(doc, rule, syn);
+    case 'bonus-table': return bonusTable(doc, rule, syn);
   }
 }
 

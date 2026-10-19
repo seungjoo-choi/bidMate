@@ -11,10 +11,13 @@ import { editExtraction, getNotice, listNotices, readExtractionText } from '../.
 import { repairConfig } from '../../engine/config/config-store';
 import { deleteGroup, deleteRecipient, importRecipients, listRecipients, saveGroup, saveRecipient, setDefaultGroup } from '../../engine/config/recipients-api';
 import { deleteTemplate, listTemplates, saveTemplate, setDefaultTemplate } from '../../engine/config/templates-api';
-import { getDraft, getEdits, prepareMail, setMailStatus } from '../../engine/mail/prepare';
+import { getDraft, getEdits, prepareMail } from '../../engine/mail/prepare';
+import { SentStore } from '../../engine/mail/sent-store';
 import { JobRegistry } from '../../engine/jobs/job-registry';
 import { listen, send } from '../../messaging/bus';
 import { fileStore } from '../../engine/file-store/file-store';
+import { saveEval } from '../../engine/evaluation/eval-api';
+import { EvalStore } from '../../engine/evaluation/eval-store';
 import { lookupInIndex } from '../../engine/notices/lookup';
 import { NoticeStore } from '../../engine/notices/notice-store';
 import type { NoticeKind } from '../../core/types/notice';
@@ -183,6 +186,11 @@ listen('job/run', (p) => {
   return { accepted: true as const, active: registry.active() };
 }, 'offscreen');
 // 확장 페이지 발신 정책 검증은 SW 릴레이(router.ts)에서 한다. SW를 거치지 않은 직접 발신은 bus.listen이 'offscreen' target에서 거부한다.
+listen('eval/save', (p) => saveEval(fileStore, p), 'offscreen');
+listen('eval/list', async () => (await new EvalStore(fileStore).loadIndex()).entries, 'offscreen');
+listen('eval/get', ({ noticeId }) => new EvalStore(fileStore).get(noticeId), 'offscreen');
+listen('eval/get-many', ({ noticeIds }) => new EvalStore(fileStore).getMany(noticeIds), 'offscreen');
+listen('eval/delete', async ({ noticeId }) => ({ removed: await new EvalStore(fileStore).remove(noticeId) }), 'offscreen');
 listen('notice/list', () => listNotices(fileStore), 'offscreen');
 listen('notice/get', ({ noticeId }) => getNotice(fileStore, noticeId), 'offscreen');
 listen('extraction/edit', (p) => editExtraction(fileStore, p, { isBusy: (noticeId) => registry.findConflict({ type: 'extract', noticeId }) !== undefined }), 'offscreen');
@@ -202,7 +210,19 @@ listen('templates/set-default', ({ id }) => setDefaultTemplate(fileStore, id), '
 listen('mail/prepare', (p) => prepareMail(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
 listen('mail/draft-get', ({ noticeId }) => getDraft(fileStore, noticeId), 'offscreen');
 listen('mail/edits-get', ({ noticeId }) => getEdits(fileStore, noticeId), 'offscreen');
-listen('mail/set-status', (p) => setMailStatus(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
+const sentStore = new SentStore(fileStore, { isBusy: isNoticeBusy });
+listen('mail/sent-list', async () => (await sentStore.loadIndex()).entries, 'offscreen');
+listen('mail/sent-get', ({ noticeId }) => sentStore.list(noticeId), 'offscreen');
+listen('mail/sent-add', (p) => sentStore.addManual(p, new Date()), 'offscreen');
+listen('mail/sent-void', (p) => sentStore.voidRecord(p, new Date()), 'offscreen');
+listen('mail/sent-record', async ({ kind, confirmation, ...p }) => {
+  if (kind === 'confirm') {
+    if (!confirmation) return { recorded: false };
+    await sentStore.confirmAuto({ ...p, confirmation });
+    return { recorded: false };
+  }
+  return { recorded: (await sentStore.recordAuto({ ...p, kind }, new Date())).record !== null };
+}, 'offscreen');
 listen('config/repair', ({ file }) => repairConfig(fileStore, file), 'offscreen');
 listen('job/abort', ({ jobId }) => ({ known: registry.abort(jobId) }), 'offscreen');
 listen('job/status', ({ jobIds }) => ({ active: registry.active().filter((a) => !jobIds || jobIds.includes(a.jobId)) }), 'offscreen');

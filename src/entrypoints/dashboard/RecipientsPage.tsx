@@ -13,6 +13,7 @@ import { NaverworksImportModal } from './recipients/NaverworksImportModal';
 import { RecipientForm } from './recipients/RecipientForm';
 import { RecipientTable } from './recipients/RecipientTable';
 import { Modal, type OpError } from './recipients/shared';
+import { PageTitle } from './menu';
 
 /** 사람 등록 팝업/수정 서랍. recipient가 null이면 새 사람(팝업), groupIds는 새 사람일 때 미리 체크할 그룹 */
 type FormState = null | { recipient: Recipient | null; groupIds: string[] };
@@ -91,8 +92,8 @@ export function RecipientsPage() {
 
   const header = (
     <div>
-      <h1 className="title-mark text-2xl font-bold tracking-tight">수신자</h1>
-      <p className="mt-1 pl-[13px] text-sm text-muted">공고 메일을 받을 수신자를 주소록에 등록하고 그룹으로 묶습니다. 메일을 작성할 때 그룹을 고릅니다.</p>
+      <PageTitle page="recipients" />
+      <p className="mt-1 pl-[34px] text-sm text-muted">공고 메일을 받을 수신자를 주소록에 등록하고 그룹으로 묶습니다. 메일을 작성할 때 그룹을 고릅니다.</p>
     </div>
   );
 

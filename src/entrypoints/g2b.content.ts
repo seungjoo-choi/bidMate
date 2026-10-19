@@ -1,8 +1,9 @@
 import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { defaultIsVisible, detectDetail, readHtmlFields } from '../adapters/g2b/detail-page';
+import { fetchEvalRaw } from '../adapters/g2b/eval-fetch';
 import { sameRound } from '../adapters/g2b/link';
-import { listen } from '../messaging/bus';
+import { BusError, listen } from '../messaging/bus';
 import { PanelController } from '../ui/g2b-panel/controller';
 import { mountPanel } from '../ui/g2b-panel/mount';
 import '../ui/g2b-panel/style.css';
@@ -24,6 +25,11 @@ export default defineContentScript({
       const match = !!detected && detected.noticeNo === noticeNo && (!round || !detected.round || sameRound(detected.round, round));
       const html = match ? readHtmlFields(document, { isVisible: defaultIsVisible }) : null;
       return { detected, match, html, readyState: document.readyState };
+    }, 'content');
+    listen('g2b/eval-fetch', async ({ noticeNo, round, withoutIdHeaders }) => {
+      const r = await fetchEvalRaw({ noticeNo, ...(round ? { round } : {}) }, { fetch: window.fetch.bind(window), ...(withoutIdHeaders ? { withoutIdHeaders } : {}) });
+      if (!r.ok) throw new BusError(r.error.code, `[단계 ${r.error.step}] ${r.error.message}`);
+      return { raw: r.raw, warnings: r.warnings };
     }, 'content');
     listen('g2b/collect', () => controller.collect(), 'content');
     listen('g2b/retry', ({ jobId }) => controller.collect(jobId), 'content');

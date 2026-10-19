@@ -18,6 +18,7 @@ export const ITEM_KIND: Record<ExtractionKey, ValueKind> = {
 export const NOT_RUN_TEXT = '이전 버전 결과, 다시 추출 필요';
 export const REASON_TEXT: Record<string, string> = {
   not_found: '문서에서 찾지 못함', conflict: '문서 간 값 다름', low_confidence: '질의답변에만 있음', no_documents: '분석할 문서 없음',
+  no_total: '가감점 표만 있음, 합계 배점 없음',
 };
 export const reasonText = (r: string | undefined): string | undefined => (r ? REASON_TEXT[r] : undefined);
 

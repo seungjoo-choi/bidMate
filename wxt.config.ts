@@ -18,5 +18,6 @@ export default defineConfig({
     host_permissions: ['https://apis.data.go.kr/*', 'https://www.g2b.go.kr/*'],
     optional_host_permissions: ['https://*/*'],
     background: { type: 'module' },
+    web_accessible_resources: [{ resources: ['icon/mascot/*'], matches: ['https://*/*'] }],
   },
 });

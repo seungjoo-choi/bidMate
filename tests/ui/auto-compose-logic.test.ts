@@ -51,7 +51,7 @@ describe('requestToEnable', () => {
 describe('parseRoute query', () => {
   it('review 해시의 쿼리를 분리한다', () => {
     expect(parseRoute('#/review/a%2Fb?handoff=attachments_failed,needs_review')).toEqual({
-      page: 'review', noticeId: 'a/b', query: { handoff: 'attachments_failed,needs_review' },
+      page: 'notice', noticeId: 'a/b', tab: 'review', query: { handoff: 'attachments_failed,needs_review' },
     });
   });
   it('mail 해시, 쿼리 없음', () => {

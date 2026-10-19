@@ -1,9 +1,10 @@
 import { listen, send } from '../messaging/bus';
-import type { Envelope, MsgType, PayloadOf, ResponseOf } from '../messaging/protocol';
+import { SIDEPANEL_FOCUS_KEY, type Envelope, type MsgType, type PayloadOf, type ResponseOf } from '../messaging/protocol';
 import { openDashboard } from './dashboard-tabs';
 import { assertExtensionSender } from './job-coordinator';
 import { getInboxHost } from './site-registry';
 import { ensureOffscreen } from './offscreen-manager';
+import { closeSidePanel, isSidePanelOpen, setShownNotice, shownNoticeOf } from './sidepanel-ports';
 
 const MAX_LOOKUP_BATCH = 200;
 
@@ -70,7 +71,7 @@ export const EXTENSION_ONLY_TYPES = [
   'notice/list', 'notice/get', 'extraction/edit', 'extraction/text',
   'recipients/list', 'recipients/save', 'recipients/import', 'recipients/delete', 'groups/save', 'groups/delete', 'groups/set-default',
   'templates/list', 'templates/save', 'templates/delete', 'templates/set-default',
-  'mail/prepare', 'mail/draft-get', 'mail/edits-get', 'mail/set-status', 'config/repair',
+  'mail/prepare', 'mail/draft-get', 'mail/edits-get', 'mail/sent-list', 'mail/sent-get', 'mail/sent-add', 'mail/sent-void', 'config/repair',
 ] as const;
 type ExtensionOnlyType = (typeof EXTENSION_ONLY_TYPES)[number];
 
@@ -91,6 +92,27 @@ function registerUiMessages(): void {
   listen(
     'ui/open',
     async ({ page, noticeId, section }, sender) => {
+      // 사용자 제스처가 살아 있을 때 불러야 하므로 어떤 await보다 먼저 연다. 그 탭에 고정되도록 tabId로 연다.
+      if (page === 'sidepanel') {
+        const tabId = sender.tab?.id;
+        if (tabId === undefined) throw Object.assign(new Error('탭 정보가 없습니다.'), { code: 'NO_TAB' });
+        const win = sender.tab?.windowId;
+        // 이미 열려 있으면: 같은 공고(또는 공고 지정 없는 나라장터 칩)는 닫고, 다른 공고면 그 공고로 바꾼다
+        if (win !== undefined && isSidePanelOpen(win)) {
+          if (!noticeId || noticeId === shownNoticeOf(win)) { closeSidePanel(win); return; }
+          setShownNotice(win, noticeId);
+          await chrome.storage.session.set({ [SIDEPANEL_FOCUS_KEY]: { noticeId, tabId, at: new Date().toISOString() } });
+          return;
+        }
+        if (win !== undefined) setShownNotice(win, noticeId);
+        const p = chrome.sidePanel.open({ tabId });
+        try {
+          if (noticeId) await chrome.storage.session.set({ [SIDEPANEL_FOCUS_KEY]: { noticeId, tabId, at: new Date().toISOString() } });
+        } finally {
+          await p;
+        }
+        return;
+      }
       const near = sender.tab?.id;
       const enc = noticeId ? encodeURIComponent(noticeId) : undefined;
       if (page === 'grant') {
@@ -99,6 +121,8 @@ function registerUiMessages(): void {
         await openDashboard(`#/review/${enc}`, { nearTabId: near });
       } else if (page === 'mail' && enc) {
         await openDashboard(`#/mail/${enc}`, { nearTabId: near });
+      } else if (page === 'evaluation') {
+        await openDashboard(enc ? `#/evaluations/${enc}` : '#/evaluations', { nearTabId: near });
       } else if (page === 'recipients') {
         await openDashboard('#/recipients', { nearTabId: near });
       } else {

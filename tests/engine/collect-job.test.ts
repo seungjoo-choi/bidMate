@@ -147,8 +147,11 @@ describe('runCollectJob prespec (추정 매핑)', () => {
     expect(saved.basic.projectPeriod.value).toBeNull(); // html 무시
     expect(saved.isCorrection).toBe(false);
     expect(saved.attachments).toHaveLength(1);
-    expect(emitted.find((p) => p.step === 'fetch_html')).toMatchObject({ status: 'done', label: '화면값 전달됨' });
+    expect(emitted.find((p) => p.step === 'fetch_html')).toMatchObject({ status: 'done', label: '화면값 1개 항목 전달됨' });
     expect(emitted.find((p) => p.step === 'extract')).toMatchObject({ status: 'skipped', label: '평가정보 추출 대상 아님' });
+    const facts = emitted.find((p) => p.event?.kind === 'facts')!.event as { facts: { prespec?: object } };
+    expect(facts.facts.prespec).toBeTruthy();
+    expect(JSON.stringify(facts)).not.toMatch(/officer/);
   });
 
   it('orderplan은 KIND_UNSUPPORTED로 실패', async () => {
@@ -226,7 +229,7 @@ describe('runCollectJob 상세화면 읽기(readDetail)', () => {
     const out = await runCollectJob({ ...input(), html: detailHtml }, d);
     expect(out.status).toBe('completed');
     expect(readDetail).not.toHaveBeenCalled();
-    expect(stepOf(emitted, 'done')).toMatchObject({ label: '화면값 전달됨' });
+    expect(stepOf(emitted, 'done')).toMatchObject({ label: '화면값 1개 항목 전달됨' });
   });
 
   it('prespec → 미호출, skipped', async () => {
@@ -281,5 +284,40 @@ describe('runCollectJob 상세화면 읽기(readDetail)', () => {
     const out = await runCollectJob({ job: retryJob(true), secrets: {}, settings: defaultSettings() }, d);
     expect(out.status).toBe('completed');
     expect(readDetail).not.toHaveBeenCalled();
+  });
+});
+
+describe('runCollectJob 기록용 이벤트', () => {
+  const ev = (emitted: JobProgress[], kind: string) => emitted.flatMap((p) => (p.event?.kind === kind ? [p.event] : []));
+
+  it('file start/end 쌍 수는 첨부 수와 같고 facts는 2건(fetch_basic, extract)', async () => {
+    const { out, emitted } = await runCollect({
+      files: { '1. 입찰공고문.txt': 'a', '2. 제안요청서.txt': 'b' }, parsers: fakeParsers(async () => docOf('a')),
+    });
+    expect(out.status).toBe('completed');
+    const dl = ev(emitted, 'file').filter((e) => e.kind === 'file' && e.step === 'download_attachments');
+    expect(dl.filter((e) => e.kind === 'file' && e.phase === 'start')).toHaveLength(2);
+    expect(dl.filter((e) => e.kind === 'file' && e.phase === 'end')).toHaveLength(2);
+    const ex = ev(emitted, 'file').filter((e) => e.kind === 'file' && e.step === 'extract');
+    expect(ex.filter((e) => e.kind === 'file' && e.phase === 'start').length).toBeGreaterThan(0);
+    expect(ex.filter((e) => e.kind === 'file' && e.phase === 'start')).toHaveLength(ex.filter((e) => e.kind === 'file' && e.phase === 'end').length);
+    const facts = ev(emitted, 'facts');
+    expect(facts.map((e) => e.kind === 'facts' && e.step)).toEqual(['fetch_basic', 'extract']);
+  });
+
+  it('fetch_basic ms는 상세화면 읽기 지연을 포함하지 않는다', async () => {
+    const delay = 120;
+    const readDetail = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, delay));
+      return { capturedAt: '2026-10-19T00:00:00Z', fields: {} };
+    });
+    const f = vi.fn(async (url: string) => (url.includes('apis.data.go.kr')
+      ? new Response(apiBody(baseItem))
+      : new Response('x', { headers: { 'content-length': '1' } })));
+    const { d, emitted } = deps(new MemoryStore(), f, { readDetail });
+    await runCollectJob(input(), d);
+    const done = emitted.find((p) => p.step === 'fetch_basic' && p.status === 'done')!;
+    expect(done.ms).toBeDefined();
+    expect(done.ms!).toBeLessThan(delay);
   });
 });

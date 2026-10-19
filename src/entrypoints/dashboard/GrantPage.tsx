@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { loadRootRecord } from '../../engine/file-store/idb-handles';
 import { send } from '../../messaging/bus';
 import { Button, Card, InlineAlert } from '../../ui/components';
+import { MascotSay } from '../../ui/mascot';
 
 /** 패널의 [폴더 접근 허용]이 여는 작은 창. requestPermission은 클릭 핸들러의 첫 await여야 한다. */
 export function GrantPage() {
@@ -37,6 +38,11 @@ export function GrantPage() {
     <div className="p-6">
       <Card title="저장 폴더 접근">
         <div className="space-y-3">
+          <MascotSay mood="guide" size={72}>공고 첨부파일을 정리해 둘 폴더를 열 수 있게 허락해 주세요.</MascotSay>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+            <li>설정에서 고른 저장 폴더 하나만 엽니다</li>
+            <li>수집한 공고 파일을 그 폴더에 저장합니다</li>
+          </ul>
           <Button className="w-full" icon={<FolderCheck />} disabled={!handle} onClick={grant}>폴더 접근 허용</Button>
           {loaded && !handle && (
             <>

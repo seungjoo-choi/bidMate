@@ -1,0 +1,29 @@
+/* 사이드 패널 전용 애니메이션. 색은 theme.css 토큰만 쓴다. */
+.sp-rider { transition: left 0.25s; animation: sp-bob 0.6s ease-in-out infinite alternate; filter: drop-shadow(0 2px 2px var(--color-shade-2)); }
+.sp-track-done .sp-rider { animation: none; }
+@keyframes sp-bob { from { translate: 0 0; } to { translate: 0 -3px; } }
+
+.sp-node-run::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--color-primary); opacity: 0.5; animation: sp-ring 1.4s ease-out infinite; }
+@keyframes sp-ring { from { transform: scale(0.8); opacity: 0.6; } to { transform: scale(1.35); opacity: 0; } }
+.sp-mv { transform-box: fill-box; transform-origin: center; }
+
+.sp-a-search { animation: sp-a-search 1.6s ease-in-out infinite; }
+@keyframes sp-a-search { 0%, 100% { transform: translate(-1.5px, -1px); } 25% { transform: translate(1.5px, -1px); } 50% { transform: translate(1.5px, 1.2px); } 75% { transform: translate(-1.5px, 1.2px); } }
+.sp-a-scan { animation: sp-a-scan 1.1s ease-in-out infinite alternate; }
+@keyframes sp-a-scan { from { transform: translateY(-3px); } to { transform: translateY(3px); } }
+.sp-a-down { animation: sp-a-down 0.9s ease-in infinite; }
+@keyframes sp-a-down { 0% { transform: translateY(-3px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(2px); opacity: 0; } }
+.sp-a-mark { animation: sp-a-mark 1.2s ease-in-out infinite; transform-origin: left center !important; }
+@keyframes sp-a-mark { 0% { transform: scaleX(0); } 60%, 100% { transform: scaleX(1); } }
+.sp-a-fly { animation: sp-a-fly 1.2s ease-in-out infinite; }
+@keyframes sp-a-fly { 0% { transform: translate(-3px, 2px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(3px, -2px); opacity: 0; } }
+
+.sp-slide { animation: sp-slide 200ms ease-out; }
+@keyframes sp-slide { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+.sp-blink { animation: sp-blink 1s ease-in-out infinite; }
+@keyframes sp-blink { 50% { opacity: 0.3; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-rider, .sp-node-run::after, .sp-mv, .sp-slide, .sp-blink { animation: none; }
+  .sp-rider { transition: none; }
+}

@@ -1,36 +1,37 @@
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Copy, Download, ExternalLink, LayoutDashboard, XCircle } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
-import { refsConflict } from '../../core/model/job-conflict';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { basicFacts, evalFacts } from '../../core/model/notice-summary';
 import type { CollectResult, Job } from '../../core/types/job';
-import type { AttachmentStatus } from '../../core/types/notice';
+import type { Extraction } from '../../core/types/extraction';
+import type { Notice } from '../../core/types/notice';
 import { send, sendToTab } from '../../messaging/bus';
-import type { G2bDetected, NoticeLookup } from '../../messaging/protocol';
-import { Button, InlineAlert, Logo, StatusBadge, type BadgeStatus } from '../../ui/components';
-import { panelView, type PanelView } from '../../ui/g2b-panel/panel-view';
+import { SIDEPANEL_FOCUS_KEY, type G2bDetected, type NoticeLookup } from '../../messaging/protocol';
+import { Button, InlineAlert, Logo, StatusBadge } from '../../ui/components';
+import { panelView, progressRatio, type PanelView } from '../../ui/g2b-panel/panel-view';
+import { useJobLog } from '../../ui/hooks/useJobLog';
 import { useJobs } from '../../ui/hooks/useJobs';
-import { ComposeCard } from '../../ui/compose/ComposeCard';
 import { DiagnosticsSection } from './DiagnosticsSection';
+import { HistoryCard } from './HistoryCard';
+import { historyView } from './history-view';
+import { SummaryCard, TopCard } from './SummaryCard';
+import { ACTIVE, pickTarget, type Focus } from './pick-target';
+import { statusChip, summaryView } from './summary-view';
 import { useActiveTab } from './useActiveTab';
+import { secsText } from './view-format';
 
 const G2B_RE = /^https:\/\/www\.g2b\.go\.kr\//;
 const DETECT_MS = 2000;
 const COLLECT_TYPES = new Set<Job['type']>(['collect', 'download_retry']);
-const ACTIVE = new Set<Job['status']>(['queued', 'running', 'cancelling']);
+const EMPTY_TEXT = '나라장터 공고나 트래커봇 메일에서 수집 완료를 누르면 요약이 나옵니다';
 
-const ATTACH_BADGE: Record<AttachmentStatus, { status: BadgeStatus; label: string }> = {
-  saved: { status: 'ok', label: '저장됨' },
-  downloading: { status: 'idle', label: '받는 중' },
-  pending: { status: 'idle', label: '대기' },
-  skipped: { status: 'idle', label: '건너뜀' },
-  failed: { status: 'error', label: '실패' },
-  size_mismatch: { status: 'warn', label: '크기 불일치' },
-};
-
-/** 현재 공고의 최신 잡. 없으면 진행 중인 다른 공고의 잡(다른 공고로 표시된다). */
-function pickJob(jobs: Job[], notice: G2bDetected | null): Job | null {
-  const list = jobs.filter((j) => COLLECT_TYPES.has(j.type));
-  const mine = notice ? list.find((j) => !!j.ref && refsConflict(j.ref, notice)) : undefined;
-  return mine ?? list.find((j) => ACTIVE.has(j.status)) ?? null;
+/** 수집 중 경과 시간. 매초 자기만 다시 그린다. */
+function Elapsed({ startedAt }: { startedAt: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return <>{secsText(now - Date.parse(startedAt))}</>;
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -42,25 +43,32 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Progress({ ratio }: { ratio: number }) {
-  return (
-    <div className="h-1.5 overflow-hidden rounded-full bg-sunken">
-      <div className="h-full rounded-full bg-accent" style={{ width: `${Math.round(ratio * 100)}%`, transition: 'width 200ms' }} />
-    </div>
-  );
-}
-
 export function App() {
   const { tab } = useActiveTab();
   const jobs = useJobs();
   const [notice, setNotice] = useState<G2bDetected | null>(null);
   const [lookup, setLookup] = useState<NoticeLookup>({ found: false });
+  const [focus, setFocus] = useState<Focus | null>(null);
+  const [data, setData] = useState<{ notice: Notice; extraction: Extraction | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
+  const [logOpen, setLogOpen] = useState<boolean | null>(null);
+  const [attemptSel, setAttemptSel] = useState<number | null>(null);
 
   const g2bTabId = tab && G2B_RE.test(tab.url) ? tab.id : null;
+
+  // 트래커봇 등 나라장터 밖에서 요약 보기를 누르면 SW가 focus를 남긴다.
+  useEffect(() => {
+    let alive = true;
+    void chrome.storage.session.get(SIDEPANEL_FOCUS_KEY).then((r) => { if (alive) setFocus((r[SIDEPANEL_FOCUS_KEY] as Focus | undefined) ?? null); });
+    const onChanged = (c: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === 'session' && SIDEPANEL_FOCUS_KEY in c) setFocus((c[SIDEPANEL_FOCUS_KEY]?.newValue as Focus | undefined) ?? null);
+    };
+    chrome.storage.onChanged.addListener(onChanged);
+    return () => { alive = false; chrome.storage.onChanged.removeListener(onChanged); };
+  }, []);
 
   // 나라장터 탭이면 상세화면 공고를 감지한다. 화면 전환이 탭 이벤트 없이 일어나므로 주기적으로 다시 묻는다.
   useEffect(() => {
@@ -81,8 +89,15 @@ export function App() {
     return () => { alive = false; clearInterval(t); };
   }, [g2bTabId]);
 
-  const job = pickJob(jobs, notice);
+  const collectJobs = useMemo(
+    () => jobs.filter((j) => COLLECT_TYPES.has(j.type)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    [jobs],
+  );
+  const { job, noticeId } = pickTarget(collectJobs, notice, lookup, focus, tab?.id ?? null);
   const jobStatus = job?.status;
+  const active = !!job && ACTIVE.has(job.status);
+  // 감지된 공고에 자기 잡이 없는데 다른 공고가 수집 중이면 안내만 한다.
+  const otherActive = notice && !job ? collectJobs.find((j) => ACTIVE.has(j.status)) : undefined;
 
   // 공고가 바뀌면 초기화하고 note를 지운다.
   useEffect(() => { setLookup({ found: false }); setNote(null); }, [notice?.noticeNo, notice?.round]);
@@ -98,7 +113,32 @@ export function App() {
     return () => { alive = false; };
   }, [notice?.noticeNo, notice?.round, jobStatus]);
 
-  useEffect(() => { setCopied(false); setShowErrors(false); }, [job?.id]);
+  // 요약 재조회는 noticeId가 바뀌거나 잡이 끝났을 때(active가 false로 바뀔 때)만 한다.
+  useEffect(() => {
+    if (!noticeId) { setData(null); return; }
+    let alive = true;
+    send('notice/get', { noticeId }).then(
+      (r) => { if (alive) setData(r); },
+      () => { if (alive) setData(null); },
+    );
+    return () => { alive = false; };
+  }, [noticeId, active]);
+
+  useEffect(() => { setCopied(false); setShowErrors(false); setAttemptSel(null); setLogOpen(null); }, [job?.id, noticeId]);
+
+  const log = useJobLog(job?.id ?? null);
+  const current = data && data.notice.id === noticeId ? data : null;
+  const summary = useMemo(
+    () => (current && !active ? summaryView({ facts: basicFacts(current.notice), eval: evalFacts(current.notice, current.extraction), notice: current.notice }) : null),
+    [current, active],
+  );
+  const composeJob = job?.handoff?.action === 'compose' ? jobs.find((j) => j.id === (job.handoff as { jobId?: string }).jobId) ?? null : null;
+  const hist = useMemo(
+    () => (job ? historyView({ log, job, compose: composeJob, hasSummary: !!summary, attempt: attemptSel ?? undefined }) : null),
+    [log, job, composeJob, summary, attemptSel],
+  );
+  const startedAt = useMemo(() => log?.events.find((e) => e.attempt === job?.attempt)?.at ?? job?.createdAt, [log, job?.attempt, job?.createdAt]);
+  const showHistory = !!hist && (hist.runs.length > 0 || hist.live);
 
   const view: PanelView | null = notice || job ? panelView(job, lookup, { title: notice?.title, current: notice }) : null;
   const result = job?.result as CollectResult | undefined;
@@ -123,7 +163,7 @@ export function App() {
   };
   const collect = () => startOnTab((id) => sendToTab(id, 'g2b/collect', undefined));
   const retry = () => { if (job) void startOnTab((id) => sendToTab(id, 'g2b/retry', { jobId: job.id })); };
-  const cancel = (force: boolean) => { if (job) void send('job/cancel', { jobId: job.id, force }).catch(() => undefined); };
+  const cancel = (force: boolean, target: Job | null = job) => { if (target) void send('job/cancel', { jobId: target.id, force }).catch(() => undefined); };
   const openUi = (page: 'settings' | 'grant' | 'review', noticeId?: string) => void send('ui/open', { page, noticeId }).catch(() => undefined);
   const openDashboard = () => void chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
   const copyFolder = (folder: string) => void navigator.clipboard?.writeText(folder).then(() => setCopied(true)).catch(() => undefined);
@@ -151,7 +191,7 @@ export function App() {
   if (view?.kind === 'idle') {
     status = (
       <div className="space-y-2">
-        {view.chip ? <StatusBadge status="ok">{view.chip}</StatusBadge> : <StatusBadge status="idle">아직 수집하지 않음</StatusBadge>}
+        {!summary && (view.collected ? <StatusBadge status="ok">{view.collected.dday ? `${view.collected.text}, ${view.collected.dday}` : view.collected.text}</StatusBadge> : <StatusBadge status="idle">아직 수집하지 않음</StatusBadge>)}
         <Button className="w-full" icon={<Download />} loading={busy} disabled={!notice} onClick={collect}>{view.buttonLabel}</Button>
       </div>
     );
@@ -160,7 +200,6 @@ export function App() {
       <div className="space-y-2.5">
         {view.foreignLabel && <InlineAlert tone="info"><div className="truncate">{view.foreignLabel}</div></InlineAlert>}
         <div className="break-all text-sm">{view.label}</div>
-        <Progress ratio={view.ratio} />
         <div className="flex items-center justify-between gap-2 text-sm">
           <span className="flex items-center gap-3 text-muted">
             {view.attach && <span>첨부 {view.attach.done}/{view.attach.total}</span>}
@@ -178,7 +217,7 @@ export function App() {
         {errorList}
       </div>
     );
-  } else if (view?.kind === 'completed' || view?.kind === 'partial') {
+  } else if ((view?.kind === 'completed' && !summary) || view?.kind === 'partial') {
     const ok = view.kind === 'completed';
     status = (
       <div className="space-y-3">
@@ -189,13 +228,13 @@ export function App() {
             {view.foreign && view.title && <div className="truncate text-sm text-muted" title={view.title}>다른 공고: {view.title}</div>}
           </div>
         </div>
-        {view.extractionLine && (
+        {!summary && view.extractionLine && (
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1 truncate text-sm">{view.extractionLine}</div>
             {view.reviewNoticeId && <Button variant="secondary" onClick={() => openUi('review', view.reviewNoticeId)}>검수</Button>}
           </div>
         )}
-        {view.folder && (
+        {!summary && view.folder && (
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1 truncate font-mono text-xs text-muted" title={view.folder}>{view.folder}</div>
             <Button variant="ghost" icon={<Copy />} onClick={() => copyFolder(view.folder!)}>{copied ? '복사됨' : '경로 복사'}</Button>
@@ -233,7 +272,17 @@ export function App() {
     );
   }
 
-  const attachments = !view || view.kind === 'idle' ? [] : result?.attachments ?? [];
+  // 상단 카드 표시값. 요약이 있으면 요약 기준, 없으면 감지된 공고나 잡 기준.
+  const ref = job?.ref;
+  const refNo = ref ? (ref.round ? `${ref.noticeNo}-${ref.round}` : ref.noticeNo) : undefined;
+  const topTitle = summary?.title ?? result?.title ?? notice?.title ?? lookup.title ?? notice?.noticeNo ?? ref?.noticeNo ?? '';
+  const topNo = summary?.noticeNo ?? (notice ? (notice.round ? `${notice.noticeNo}-${notice.round}` : notice.noticeNo) : refNo ?? '');
+  const kindLabel = summary?.kindLabel ?? (ref?.kind === 'prespec' ? '사전규격' : '입찰공고');
+  const collectInfo = current?.notice.collect ?? (lookup.found && lookup.collectStatus && lookup.collectedAt ? { status: lookup.collectStatus, collectedAt: lookup.collectedAt } : null);
+  const chip = statusChip(job, collectInfo);
+  const hasTop = !!(summary || job || notice || lookup.found);
+  const elapsed = active && startedAt ? <Elapsed startedAt={startedAt} /> : undefined;
+  const progress = view?.kind === 'progress' && job ? { ratio: progressRatio(job.steps), done: false } : undefined;
 
   return (
     <div className="min-h-screen bg-canvas text-base">
@@ -254,43 +303,43 @@ export function App() {
       </header>
 
       <div className="space-y-3 p-4">
-      <Section title="현재 공고">
-        {notice ? (
-          <div className="min-w-0">
-            <div className="line-clamp-2 text-lg font-bold" title={notice.title}>{notice.title ?? notice.noticeNo}</div>
-            <div className="mt-0.5 font-mono text-sm text-muted">{notice.noticeNo}{notice.round ? `-${notice.round}` : ''}</div>
-          </div>
+        {hasTop ? (
+          <TopCard kindLabel={kindLabel} chip={chip} title={topTitle} noticeNo={topNo} elapsed={elapsed} progress={progress} />
         ) : (
-          <p className="text-sm text-muted">
-            {g2bTabId !== null ? '나라장터 공고 상세화면을 열면 공고 정보가 표시됩니다' : '나라장터 탭에서 공고 상세화면을 열어 주세요'}
-          </p>
+          <Section title="현재 공고">
+            <p className="text-sm text-muted">{EMPTY_TEXT}</p>
+            {g2bTabId !== null && <p className="text-sm text-muted">나라장터 공고 상세화면을 열면 바로 수집할 수 있습니다</p>}
+          </Section>
         )}
         {note && <InlineAlert tone="error">{note}</InlineAlert>}
-      </Section>
+        {otherActive && (
+          <InlineAlert tone="info">
+            <div className="space-y-2">
+              <div className="truncate">다른 공고 수집 중: {(otherActive.result as CollectResult | undefined)?.title ?? otherActive.ref?.noticeNo}</div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-sunken">
+                <i className="block h-full rounded-full bg-primary" style={{ width: `${Math.round(progressRatio(otherActive.steps) * 100)}%` }} />
+              </div>
+              <div className="flex justify-end">
+                {otherActive.status === 'cancelling'
+                  ? <Button variant="ghost" onClick={() => cancel(true, otherActive)}>강제 중단</Button>
+                  : <Button variant="ghost" onClick={() => cancel(false, otherActive)}>취소</Button>}
+              </div>
+            </div>
+          </InlineAlert>
+        )}
 
-      {status && <Section title="진행 상태">{status}</Section>}
+        {status && <Section title="진행 상태">{status}</Section>}
 
-      {job && result?.noticeId && (view?.kind === 'completed' || view?.kind === 'partial') && !view.foreign && (
-        <Section title="메일 작성"><ComposeCard noticeId={result.noticeId} noticeRef={job.ref} params={{}} jobs={jobs} /></Section>
-      )}
+        {summary && current && (
+          <SummaryCard view={summary} jobs={jobs} noticeRef={current.notice.ref} copied={copied}
+            onReview={(id) => openUi('review', id)} onCopyFolder={copyFolder} />
+        )}
 
-      {attachments.length > 0 && (
-        <Section title={`첨부 ${attachments.filter((a) => a.status === 'saved').length}/${attachments.length}`}>
-          <ul className="space-y-2">
-            {attachments.map((a, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm" title={a.name}>{a.name}</div>
-                  {a.error && <div className="truncate text-xs text-muted" title={a.error}>{a.error}</div>}
-                </div>
-                <StatusBadge status={ATTACH_BADGE[a.status].status}>{ATTACH_BADGE[a.status].label}</StatusBadge>
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
+        {showHistory && hist && (
+          <HistoryCard view={hist} open={logOpen ?? hist.defaultOpen} onToggle={() => setLogOpen(!(logOpen ?? hist.defaultOpen))} onSelectAttempt={setAttemptSel} />
+        )}
 
-      <DiagnosticsSection tab={tab} />
+        <DiagnosticsSection tab={tab} />
       </div>
     </div>
   );

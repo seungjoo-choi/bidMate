@@ -1,7 +1,7 @@
 import { Download, Pencil, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import type { Group, Recipient } from '../../../core/types/recipient';
-import { Button } from '../../../ui/components';
+import { Button, EmptyState } from '../../../ui/components';
 import { ConfirmDeleteButton, matchesRecipient, RecipientFilterBar, sortRecipients, Switch, type RecipientSort } from './shared';
 
 interface Props {
@@ -37,13 +37,12 @@ export function RecipientTable({ recipients, groups, busy, onAdd, onImport, onEd
       </header>
       <div className="space-y-4 px-6 py-5">
         {recipients.length === 0 ? (
-          <div className="rounded-ctl border border-dashed border-line-strong px-4 py-10 text-center">
-            <p className="text-sm text-muted">아직 수신자가 없습니다.</p>
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          <EmptyState title="아직 수신자가 없습니다.">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <Button variant="secondary" icon={<Download />} disabled={busy} onClick={onImport}>네이버웍스에서 불러오기</Button>
               <Button icon={<UserPlus />} disabled={busy} onClick={onAdd}>첫 수신자 추가</Button>
             </div>
-          </div>
+          </EmptyState>
         ) : (
           <>
             <RecipientFilterBar q={q} onQ={setQ} sort={sort} onSort={setSort} total={recipients.length} matched={filtered.length} />
@@ -70,7 +69,10 @@ export function RecipientTable({ recipients, groups, busy, onAdd, onImport, onEd
                       <tr key={r.id} className={`border-t border-line ${r.enabled ? '' : 'text-faint'}`}>
                         <td className="px-3 py-2 text-center text-muted tabular-nums">{i + 1}</td>
                         <td className="px-3 py-2">
-                          <div className={`text-[15px] font-semibold ${r.enabled ? 'text-ink' : 'text-faint'}`}>{r.name}</div>
+                          <div className={`text-[15px] font-semibold ${r.enabled ? 'text-ink' : 'text-faint'}`}>
+                            {r.name}
+                            {r.memo && <span className="ml-1.5 font-normal text-muted">({r.memo})</span>}
+                          </div>
                           {r.dept && <div className="text-xs text-muted">{r.dept}</div>}
                         </td>
                         <td className="px-3 py-2 font-mono text-xs text-muted">{r.email}</td>

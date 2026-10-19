@@ -20,6 +20,7 @@ export function defaultSettings(): Settings {
     autoCompose: { enabled: false, afterCollect: 'ask', recipients: { mode: 'default' }, reviewGate: 'conflicts' },
     mail: { provider: 'naverworks' },
     customFields: [],
+    company: { bizNo: '' },
     updatedAt: new Date().toISOString(),
   };
 }
@@ -41,6 +42,7 @@ export function withDefaults(stored: Settings | undefined): Settings {
     sites,
     extraction: { ...d.extraction, ...stored.extraction },
     autoCompose: { ...d.autoCompose, ...stored.autoCompose },
+    company: { ...d.company, ...stored.company },
     mail: { ...d.mail, ...stored.mail, ...(legacyGmail ? { provider: 'gmail' as const } : {}) },
   };
 }

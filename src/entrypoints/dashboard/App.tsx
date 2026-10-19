@@ -1,29 +1,23 @@
-import { FileText, LayoutDashboard, ListChecks, Settings as SettingsIcon, Stethoscope, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { send } from '../../messaging/bus';
 import type { FsStatus } from '../../messaging/protocol';
 import { parseHandoffReasons } from '../../core/model/handoff';
 import { Logo, StatusBadge } from '../../ui/components';
+import { EvaluationDetailPage } from './evaluations/EvaluationDetailPage';
+import { EvaluationsPage } from './evaluations/EvaluationsPage';
 import { GrantPage } from './GrantPage';
 import { DiagnosticsPage } from './DiagnosticsPage';
 import { HomePage } from './HomePage';
 import { MailPreparePage } from './MailPreparePage';
+import { NoticeDetailPage } from './notice/NoticeDetailPage';
 import { NoticesPage } from './NoticesPage';
 import { RecipientsPage } from './RecipientsPage';
-import { ReviewPage } from './ReviewPage';
+import { SentHistoryPage } from './SentHistoryPage';
 import { SettingsPage } from './SettingsPage';
 import { TemplateEditor } from './TemplateEditor';
 import { TemplatesPage } from './TemplatesPage';
+import { MENU } from './menu';
 import { parseRoute, settingsSectionOf, type Page } from './route';
-
-const MENU: Array<{ id: Page; label: string; Icon: typeof SettingsIcon }> = [
-  { id: 'home', label: '홈', Icon: LayoutDashboard },
-  { id: 'notices', label: '공고', Icon: ListChecks },
-  { id: 'recipients', label: '수신자', Icon: Users },
-  { id: 'templates', label: '템플릿', Icon: FileText },
-  { id: 'settings', label: '설정', Icon: SettingsIcon },
-  { id: 'diagnostics', label: '진단', Icon: Stethoscope },
-];
 
 const FOLDER_BADGE = {
   granted: { tone: 'ok', text: '저장 폴더 연결됨' },
@@ -60,7 +54,7 @@ export function App() {
   }, []);
   const route = parseRoute(hash);
   if (route.page === 'grant') return <GrantPage />;
-  const active: Page = route.page === 'review' || route.page === 'mail' ? 'notices' : route.page === 'template' ? 'templates' : route.page;
+  const active: Page = route.page === 'notice' || route.page === 'mail' ? 'notices' : route.page === 'template' ? 'templates' : route.page === 'evaluation' ? 'evaluations' : route.page;
   const wide = route.page !== 'settings' && route.page !== 'diagnostics';
 
   return (
@@ -91,14 +85,17 @@ export function App() {
         <FolderStatus refreshKey={hash} />
       </aside>
       <main className="min-w-0 flex-1 px-12 pt-10 pb-16">
-        <div className={`mx-auto space-y-6 ${route.page === 'template' || route.page === 'recipients' ? 'max-w-[1440px]' : wide ? 'max-w-[1120px]' : 'max-w-[800px]'}`}>
+        <div className={`mx-auto space-y-6 ${route.page === 'template' || route.page === 'recipients' ? 'max-w-[1440px]' : route.page === 'evaluation' ? 'max-w-[1680px]' : wide ? 'max-w-[1120px]' : 'max-w-[800px]'}`}>
           {route.page === 'home' && <HomePage />}
           {route.page === 'notices' && <NoticesPage />}
+          {route.page === 'sent' && <SentHistoryPage />}
+          {route.page === 'evaluations' && <EvaluationsPage />}
+          {route.page === 'evaluation' && <EvaluationDetailPage key={route.noticeId} noticeId={route.noticeId} />}
           {route.page === 'recipients' && <RecipientsPage />}
           {route.page === 'templates' && <TemplatesPage />}
           {route.page === 'template' && <TemplateEditor key={route.id} id={route.id} />}
           {route.page === 'mail' && <MailPreparePage key={route.noticeId} noticeId={route.noticeId} from={route.query.from} />}
-          {route.page === 'review' && <ReviewPage key={route.noticeId} noticeId={route.noticeId} handoff={parseHandoffReasons(route.query.handoff)} />}
+          {route.page === 'notice' && <NoticeDetailPage key={route.noticeId} noticeId={route.noticeId} tab={route.tab} handoff={parseHandoffReasons(route.query.handoff)} />}
           {route.page === 'settings' && <SettingsPage section={settingsSectionOf(hash)} nonce={hash} />}
           {route.page === 'diagnostics' && <DiagnosticsPage />}
         </div>

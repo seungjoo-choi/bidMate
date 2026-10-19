@@ -2,6 +2,7 @@ import type { ComposeDetect, ComposeSelectorConfig, MsgType, PayloadOf, Response
 import { BusError, listen, sendToTab } from '../messaging/bus';
 import { getJob, isOffscreenSender, setComposeTab } from './job-coordinator';
 import { getSettingsCache } from './site-registry';
+import { injectSendWatch, rememberSendWatch } from './send-signal';
 
 const LOAD_WAIT_MS = 20_000;
 const CS_FILE = 'naverworks-compose.js';
@@ -63,8 +64,10 @@ async function open(p: PayloadOf<'compose/open'>): Promise<{ tabId: number }> {
   const tab = await chrome.tabs.create({ windowId: win.id, url: p.url, active: true });
   const tabId = tab.id as number;
   await setComposeTab(p.jobId, { composeTabId: tabId });
-  if (!p.selector) {   // 주소 방식: 셀렉터 저장과 주입 없이 로딩만 기다린다
+  if (p.sendWatch) rememberSendWatch(p.jobId, p.sendWatch);
+  if (!p.selector) {   // 주소 방식: 셀렉터 저장과 CS 주입 없이 로딩만 기다린다
     await waitComplete(tabId, LOAD_WAIT_MS);
+    try { await injectSendWatch(tabId, p.jobId, p.sendWatch); } catch { /* 발송 관찰 실패는 작성 흐름에 영향 없음 */ }
     return { tabId };
   }
   const maxFileMB = (await getSettingsCache())?.download.maxFileMB;
@@ -72,6 +75,7 @@ async function open(p: PayloadOf<'compose/open'>): Promise<{ tabId: number }> {
   selectors.set(p.jobId, cfg);
   await waitComplete(tabId, LOAD_WAIT_MS);
   try { await inject(tabId, cfg); } catch { /* 주입 실패는 detect 폴링의 재주입에 맡긴다 */ }
+  try { await injectSendWatch(tabId, p.jobId, p.sendWatch); } catch { /* 발송 관찰 실패는 작성 흐름에 영향 없음 */ }
   return { tabId };
 }
 

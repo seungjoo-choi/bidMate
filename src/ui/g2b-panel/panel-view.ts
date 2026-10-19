@@ -1,6 +1,7 @@
 import { refsConflict } from '../../core/model/job-conflict';
 import type { CollectResult, Job, StepState } from '../../core/types/job';
 import type { FixTarget, NoticeLookup } from '../../messaging/protocol';
+import { formatDDay } from '../review/format';
 import { handoffView, type HandoffView } from '../handoff-view';
 
 /** 잡 → 패널 표시 상태. 순수 함수(UI는 이 결과만 그린다). */
@@ -8,35 +9,55 @@ export type ErrorAction = 'grant' | 'settings' | 'retry' | 'none';
 export interface FailedFile { name: string; reason: string }
 
 export type PanelView =
-  | { kind: 'idle'; buttonLabel: string; chip?: string }
+  | { kind: 'idle'; buttonLabel: string; collected?: CollectedView }
   | {
       kind: 'progress'; title?: string; foreignLabel?: string; label: string; ratio: number; attach?: { done: number; total: number };
       errorCount: number; cancelling: boolean; pillText: string;
     }
-  | { kind: 'completed'; headline: string; folder?: string; chip: string; title?: string; foreign: boolean; extractionLine?: string; reviewNoticeId?: string; handoff?: HandoffView }
+  | { kind: 'completed'; headline: string; folder?: string; chip: CollectedView; title?: string; foreign: boolean; extractionLine?: string; reviewNoticeId?: string; handoff?: HandoffView }
   | { kind: 'partial'; headline: string; failures: FailedFile[]; moreCount: number; folder?: string; title?: string; foreign: boolean; canRetry: boolean; retryLabel: string; extractionLine?: string; reviewNoticeId?: string; handoff?: HandoffView }
   | { kind: 'error'; message: string; detail?: string; action: ErrorAction; actionLabel?: string; fix?: FixTarget; title?: string; foreign: boolean; hint?: string; handoff?: HandoffView };
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-/** "수집됨, 10/17 13:40" (로컬 시각) */
-export function collectedChip(iso: string): string {
-  const d = new Date(iso);
-  return `수집됨, ${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+/** 수집된 공고의 상태 칩. dday는 마감일이 없으면 null */
+export interface CollectedView { tone: 'ok' | 'warn'; text: string; dday: string | null }
+
+export function collectedView(lookup: NoticeLookup, now: Date = new Date()): CollectedView | undefined {
+  if (!lookup.found || !lookup.collectStatus) return undefined;
+  const ok = lookup.collectStatus === 'collected';
+  return { tone: ok ? 'ok' : 'warn', text: ok ? '수집 완료' : '일부 실패', dday: formatDDay(lookup.bidCloseAt, now) };
 }
 
-/** 완료 step 수 + 다운로드 step 내부 비율을 전체 step 수로 나눈다. */
+/**
+ * 막대에서 step이 차지하는 무게(체감 소요 시간 기준). 없는 step은 1.
+ * 상세화면 읽기는 오래 걸리고 첨부 다운로드는 금방 끝나서, 같은 몫이면 막대가 멈췄다가 훅 넘어간다.
+ */
+const STEP_WEIGHT: Partial<Record<string, number>> = { fetch_basic: 1, download_attachments: 1.5, fetch_html: 4, extract: 1.5 };
+const weightOf = (s: StepState): number => STEP_WEIGHT[s.id] ?? 1;
+
+/** 완료 step 무게 + 다운로드 step 내부 비율을 전체 무게로 나눈다. */
 export function progressRatio(steps: StepState[]): number {
   if (steps.length === 0) return 0;
   let sum = 0;
+  let total = 0;
   for (const s of steps) {
-    if (s.status === 'done' || s.status === 'skipped' || s.status === 'failed') sum += 1;
+    const w = weightOf(s);
+    total += w;
+    if (s.status === 'done' || s.status === 'skipped' || s.status === 'failed') sum += w;
     else if (s.status === 'running' && s.id === 'download_attachments' && s.progress && s.progress.total > 0) {
       const cur = s.bytes && s.bytes.total ? Math.min(1, s.bytes.received / s.bytes.total) : 0;
-      sum += Math.min(1, (s.progress.done + cur) / s.progress.total);
+      sum += w * Math.min(1, (s.progress.done + cur) / s.progress.total);
     }
   }
-  return Math.max(0, Math.min(1, sum / steps.length));
+  return Math.max(0, Math.min(1, sum / total));
+}
+
+/** 진행 중 step이 막대에서 차지하는 몫(0~1). 진행 중 step이 없으면 undefined */
+export function runningStepSpan(steps: StepState[]): number | undefined {
+  const cur = steps.find((s) => s.status === 'running');
+  if (!cur) return undefined;
+  return weightOf(cur) / steps.reduce((t, s) => t + weightOf(s), 0);
 }
 
 export const COLLECT_STEP_LABEL: Record<string, string> = {
@@ -79,8 +100,9 @@ export interface PanelViewOpts {
 /** 잡 → 표시 상태. 제목/결과/재시도 대상은 잡 기준으로 정한다. */
 export function panelView(job: Job | null, lookup: NoticeLookup, opts: PanelViewOpts = {}): PanelView {
   if (!job || job.status === 'cancelled') {
+    const collected = collectedView(lookup);
     return lookup.found && lookup.collectedAt
-      ? { kind: 'idle', buttonLabel: '다시 수집', chip: collectedChip(lookup.collectedAt) }
+      ? { kind: 'idle', buttonLabel: '다시 수집', ...(collected ? { collected } : {}) }
       : { kind: 'idle', buttonLabel: '공고 수집' };
   }
   const result = job.result as CollectResult | undefined;
@@ -111,7 +133,7 @@ export function panelView(job: Job | null, lookup: NoticeLookup, opts: PanelView
       return {
         kind: 'completed', headline: `수집 완료, 첨부 ${saved}/${att.length}`, folder: result?.folder, title: jobTitle, foreign,
         extractionLine: extractionLineOf(result), reviewNoticeId: extractionLineOf(result) ? result?.noticeId : undefined,
-        chip: lookup.collectedAt ? collectedChip(lookup.collectedAt) : collectedChip(job.updatedAt), ...ho,
+        chip: collectedView(lookup) ?? { tone: 'ok', text: '수집 완료', dday: null }, ...ho,
       };
     case 'partial': {
       const failed = att.filter((a) => a.status === 'failed' || a.status === 'size_mismatch');

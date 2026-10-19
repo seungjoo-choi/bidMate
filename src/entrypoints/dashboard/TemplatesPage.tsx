@@ -10,6 +10,7 @@ import { send } from '../../messaging/bus';
 import { ConfirmDeleteButton } from './recipients/shared';
 import { useTemplates } from '../../ui/hooks/useConfig';
 import { FsErrorAlert } from './FsErrorAlert';
+import { PageTitle } from './menu';
 
 export function templateErrorText(code: string, message: string): string {
   if (code === 'LAST_TEMPLATE') return '마지막 템플릿은 삭제할 수 없습니다.';
@@ -100,7 +101,7 @@ export function TemplatesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="title-mark text-2xl font-bold tracking-tight">템플릿</h1>
+        <PageTitle page="templates" />
         <div className="flex items-center gap-2">
           <Select className="w-32 shrink-0" aria-label="새 템플릿 종류" value={newKind} options={KIND_OPTIONS} onChange={(v) => setNewKind(v as NoticeKind)} />
           <Button variant="secondary" disabled={busy || !data} onClick={() => void create(builtinOf(newKind), `기본 템플릿 (새 양식)${newKind === 'prespec' ? ` - ${kindLabel}` : ''}`, newKind)}>기본 양식으로 새로 만들기</Button>

@@ -42,6 +42,15 @@ function decideOne(cands: Candidate[], rules: RuleSet): ExtractedItem<unknown> {
   return { value: null, status: 'needs_review', reason: 'conflict', candidates };
 }
 
+/** 가감점 표만 있고 합계 배점이 없는 경우, 신인도를 not_found 대신 no_total로 바꾼다(숫자는 만들지 않는다). */
+export const BONUS_TABLE_EXTRA = 'bonusTable';
+function applyBonusTable(items: Record<ExtractionKey, ExtractedItem<unknown>>, extras: Record<string, ExtractedItem<unknown>>): void {
+  const cur = items.credibilityScore;
+  const bt = extras[BONUS_TABLE_EXTRA];
+  if (cur.status !== 'needs_review' || cur.reason !== 'not_found' || !bt || bt.value === null) return;
+  items.credibilityScore = { value: null, status: 'needs_review', reason: 'no_total', raw: String(bt.raw ?? bt.value), evidence: bt.evidence };
+}
+
 export function decide(cands: Candidate[], rules: RuleSet): Decision {
   const by = new Map<string, Candidate[]>();
   for (const c of cands) {
@@ -56,6 +65,7 @@ export function decide(cands: Candidate[], rules: RuleSet): Decision {
   for (const r of rules.rules) {
     if (r.target.startsWith('extras.') && !(r.target.slice(7) in extras)) extras[r.target.slice(7)] = decideOne([], rules);
   }
+  applyBonusTable(items, extras);
   return { items, extras };
 }
 

@@ -127,6 +127,7 @@ export function GroupDetail({ group, recipients, error, busy, onSave, onDelete, 
                     <div className="min-w-0 flex-1">
                       <div className={`truncate text-[15px] font-semibold ${r ? 'text-ink' : 'text-faint'}`}>
                         {r ? r.name : '(삭제된 수신자)'}
+                        {r?.memo && <span className="ml-1.5 font-normal text-muted">({r.memo})</span>}
                         {r?.dept && <span className="ml-2 text-xs font-normal text-muted">{r.dept}</span>}
                       </div>
                       {r && <div className="mt-0.5 truncate font-mono text-xs text-muted">{r.email}</div>}

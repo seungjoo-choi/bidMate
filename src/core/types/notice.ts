@@ -38,13 +38,13 @@ export interface Attachment {
   status: AttachmentStatus; attempts: number; lastError?: string; note?: string; savedAt?: ISODate;
 }
 export type CollectStatus = 'collected' | 'partial' | 'failed';
-export type MailStatus = 'none' | 'drafting' | 'ready_for_review' | 'delivered';   // delivered는 사용자 수동만
+export type MailStatus = 'none' | 'drafting' | 'ready_for_review' | 'delivered';   // delivered는 mail-sent.json에서 파생(자동/수동)
 export interface Notice {
   schemaVersion: 1; id: string; ref: NoticeRef; folder: string;
   basic: NoticeBasic; schedule: NoticeSchedule; evaluation: NoticeEvaluation; prespec: NoticePrespec;
   customFields: Record<string, FieldValue<string>>; sourceUrl: FieldValue<string>;
   isCorrection: boolean; previousNoticeId?: string; attachments: Attachment[];
   collect: { status: CollectStatus; collectedAt: ISODate; lastJobId: string; errors: JobError[] };
-  mail: { status: MailStatus; groupId?: string; templateId?: string; lastComposedAt?: ISODate; deliveredAt?: ISODate };
+  mail: { status: MailStatus; groupId?: string; templateId?: string; lastComposedAt?: ISODate; deliveredAt?: ISODate; sentCount?: number };
   updatedAt: ISODate;
 }

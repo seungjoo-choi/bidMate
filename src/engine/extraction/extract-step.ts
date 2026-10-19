@@ -2,14 +2,15 @@ import type { DocModel } from '../../core/doc/model';
 import { renderText } from '../../core/doc/render-text';
 import { classifyName, extOf, planFiles, twinKey, type DocKind } from '../../core/extraction/classify';
 import { computeStatus, decide } from '../../core/extraction/decide';
+import { conflictCountOf, reviewCountOf } from '../../core/extraction/review-count';
 import { runRules, type RuleDocInput } from '../../core/extraction/run-rules';
 import type { RuleSet } from '../../core/extraction/rules/schema';
 import { mergeDocumentLayer } from '../../core/model/merge';
 import { EVALUATION_KEYS, setFields, type FieldMap } from '../../core/model/notice-fields';
 import { sanitizeSegment } from '../../core/model/sanitize';
 import type { FieldValue } from '../../core/types/common';
-import { EXTRACTION_KEYS, EXTRACTION_SCHEMA_VERSION, type Extraction, type ExtractionFile, type ExtractionFileStatus, type ExtractedItem, type ExtractionKey } from '../../core/types/extraction';
-import type { Job, JobError, JobProgress } from '../../core/types/job';
+import { EXTRACTION_KEYS, EXTRACTION_SCHEMA_VERSION, type Extraction, type ExtractionFile, type ExtractionFileStatus, type ExtractedItem, type ExtractionKey, type EvidenceRef } from '../../core/types/extraction';
+import type { Job, JobError, JobProgress, ProgressEvent } from '../../core/types/job';
 import type { Attachment, Notice } from '../../core/types/notice';
 import type { Settings } from '../../core/types/settings';
 import type { IFileStore } from '../file-store/types';
@@ -34,18 +35,7 @@ const FAIL_STATUS: Record<string, ExtractionFileStatus> = {
   unsupported: 'unsupported', encrypted: 'encrypted', drm: 'drm', scanned: 'scanned', corrupt: 'corrupt', timeout: 'timeout', cancelled: 'cancelled',
 };
 
-/** needs_review이면서 사용자가 수정하지 않은 항목 수. */
-export function reviewCountOf(x: Extraction): number {
-  return EXTRACTION_KEYS.filter((k) => x.items[k].status === 'needs_review' && x.items[k].userEdited === undefined).length;
-}
-
-/** needs_review이고 reason이 conflict/low_confidence이며 사용자가 수정하지 않은 항목 수. */
-export function conflictCountOf(x: Extraction): number {
-  return EXTRACTION_KEYS.filter((k) => {
-    const it = x.items[k];
-    return it.status === 'needs_review' && (it.reason === 'conflict' || it.reason === 'low_confidence') && it.userEdited === undefined;
-  }).length;
-}
+export { conflictCountOf, reviewCountOf };
 
 /** 2MB(UTF-8)를 넘으면 잘라서 돌려준다. */
 function capText(text: string): string {
@@ -73,31 +63,68 @@ function transplantEdits(items: Record<ExtractionKey, ExtractedItem<unknown>>, p
   return out;
 }
 
+type FieldSourceDoc = NonNullable<FieldValue<unknown>['source']>;
+const docSourceOf = (ev: EvidenceRef, fetchedAt: string): FieldSourceDoc =>
+  ({ kind: 'document', ref: `${ev.attachmentId}#${ev.location}`, evidence: ev.evidence, page: ev.page, fetchedAt });
+
+/** 추출 항목 하나를 FieldValue로 바꾼다. not_found 등 반영할 것이 없으면 undefined. */
+function fieldOfItem(it: ExtractedItem<unknown>, fetchedAt: string, conflictValue: boolean): FieldValue<unknown> | undefined {
+  const ev = it.evidence;
+  const source = ev ? docSourceOf(ev, fetchedAt) : undefined;
+  if (it.status === 'verified' && it.value !== null && source) {
+    return { value: it.value, raw: it.raw, status: 'verified', source } as FieldValue<unknown>;
+  }
+  if (it.status === 'needs_review' && it.reason === 'conflict' && it.candidates?.length) {
+    // raw가 비면 mergeFields가 값 없는 레이어를 무시해 충돌이 notice에 드러나지 않는다. 후보 원문을 raw로 남긴다.
+    const raw = it.candidates.map((c) => c.raw ?? String(c.value)).join(' / ').slice(0, 200);
+    // 대표값을 쓸 때는 출처도 남긴다. 없으면 다음 추출에서 문서 값으로 인식되지 않아 갱신이 막힌다.
+    const top = source ?? docSourceOf(it.candidates[0]!.evidence, fetchedAt);
+    return {
+      value: conflictValue ? it.value : null, raw, status: 'needs_review', note: '문서 간 값이 서로 다름',
+      ...(conflictValue ? { source: top } : {}),
+      candidates: it.candidates.map((c) => ({ value: c.value, source: docSourceOf(c.evidence, fetchedAt) })),
+    } as FieldValue<unknown>;
+  }
+  if (it.status === 'needs_review' && it.reason === 'low_confidence' && it.value !== null && source) {
+    return { value: it.value, raw: it.raw, status: 'needs_review', note: '질의답변 문서에만 있는 값', source } as FieldValue<unknown>;
+  }
+  if (it.status === 'needs_review' && it.reason === 'no_total' && source && it.raw) {
+    return { value: null, raw: it.raw, status: 'needs_review', note: '가감점 표만 있음, 합계 배점 없음', source } as FieldValue<unknown>;
+  }
+  return undefined;
+}
+
 export function docFieldsOf(items: Record<ExtractionKey, ExtractedItem<unknown>>, fetchedAt: string): FieldMap {
   const out: FieldMap = {};
   for (const k of EXTRACTION_KEYS) {
     const it = items[k];
     if (it.userEdited) continue; // 사용자 수정은 notice의 user_edited 필드가 보존한다
-    const ev = it.evidence;
-    const source = ev ? { kind: 'document' as const, ref: `${ev.attachmentId}#${ev.location}`, evidence: ev.evidence, page: ev.page, fetchedAt } : undefined;
-    if (it.status === 'verified' && it.value !== null && source) {
-      out[k] = { value: it.value, raw: it.raw, status: 'verified', source } as FieldValue<unknown>;
-    } else if (it.status === 'needs_review' && it.reason === 'conflict' && it.candidates?.length) {
-      // raw가 비면 mergeFields가 값 없는 레이어를 무시해 충돌이 notice에 드러나지 않는다. 후보 원문을 raw로 남긴다.
-      const raw = it.candidates.map((c) => c.raw ?? String(c.value)).join(' / ').slice(0, 200);
-      out[k] = {
-        value: null, raw, status: 'needs_review', note: '문서 간 값이 서로 다름',
-        candidates: it.candidates.map((c) => ({
-          value: c.value,
-          source: { kind: 'document' as const, ref: `${c.evidence.attachmentId}#${c.evidence.location}`, evidence: c.evidence.evidence, page: c.evidence.page, fetchedAt },
-        })),
-      } as FieldValue<unknown>;
-    } else if (it.status === 'needs_review' && it.reason === 'low_confidence' && it.value !== null && source) {
-      out[k] = { value: it.value, raw: it.raw, status: 'needs_review', note: '질의답변 문서에만 있는 값', source } as FieldValue<unknown>;
-    }
+    const f = fieldOfItem(it, fetchedAt, false);
+    if (f) out[k] = f;
     // not_found는 키를 넣지 않는다
   }
   return out;
+}
+
+/** 문서에서 찾은 사업기간을 basic 필드로 바꾼다. not_found면 키가 없다. */
+export function basicFieldsOf(extras: Record<string, ExtractedItem<unknown>>, fetchedAt: string): Partial<Pick<FieldMap, 'projectPeriod'>> {
+  const it = extras.projectPeriod;
+  const f = it && it.reason !== 'no_total' ? fieldOfItem(it, fetchedAt, true) : undefined;
+  return f ? { projectPeriod: f } : {};
+}
+
+/** 상세화면/API에 값이 없을 때만 문서 사업기간을 채운다. mergeFields는 쓰지 않는다(HTML 덮어쓰기와 상시 충돌 방지). */
+export function fillBasicFromDocs(notice: Notice, fields: Partial<Pick<FieldMap, 'projectPeriod'>>): void {
+  for (const key of ['projectPeriod'] as const) {
+    const prev = notice.basic[key] as FieldValue<unknown> | undefined;
+    if (prev?.status === 'user_edited') continue;
+    if (prev && prev.value != null && prev.source?.kind !== 'document') continue;
+    const next = fields[key];
+    if (next) (notice.basic as unknown as Record<string, FieldValue<unknown>>)[key] = next;
+    else if (prev && prev.source?.kind === 'document' && prev.value != null) {
+      (notice.basic as unknown as Record<string, FieldValue<unknown>>)[key] = { ...prev, status: 'needs_review', note: '최근 추출에서 값이 확인되지 않음' };
+    }
+  }
 }
 
 export async function runExtractStep(job: Job, notice: Notice, prior: Extraction | null, deps: ExtractDeps): Promise<ExtractStepOutcome> {
@@ -119,8 +146,18 @@ export async function runExtractStep(job: Job, notice: Notice, prior: Extraction
   const usedText = new Set<string>();
   let attempted = 0;
 
-  const step = (status: JobProgress['status'], label: string, progress?: JobProgress['progress']) =>
-    deps.emit({ jobId: job.id, attempt: job.attempt, step: 'extract', status, label, progress });
+  const step = (status: JobProgress['status'], label: string, progress?: JobProgress['progress'], event?: ProgressEvent) =>
+    deps.emit({ jobId: job.id, attempt: job.attempt, step: 'extract', status, label, progress, ...(event ? { event } : {}) });
+  const fileInfo = (a: Attachment) => ({ id: a.id, name: a.originalName, size: a.savedSize });
+  /** 첨부 하나의 결과를 file end 이벤트로 낸다(zip 내부 엔트리별 이벤트는 없다). */
+  const fileEnd = (a: Attachment, rows: ExtractionFile[], label: string, progress: JobProgress['progress']) => {
+    const first = rows.find((r) => r.error);
+    const ms = rows.reduce((sum, r) => sum + (r.ms ?? 0), 0);
+    step('running', label, progress, {
+      kind: 'file', step: 'extract', phase: 'end', file: fileInfo(a),
+      status: rows.some((r) => r.status === 'parsed') ? 'parsed' : rows[0]?.status, ms, ...(first?.error ? { error: first.error } : {}),
+    });
+  };
   const baseRow = (att: Attachment, kind: DocKind, priority: number, innerPath?: string): ExtractionFile => {
     const r: ExtractionFile = { attachmentId: att.id, name: att.originalName, docKind: kind, priority, status: 'skipped' };
     if (innerPath !== undefined) r.innerPath = innerPath;
@@ -235,12 +272,14 @@ export async function runExtractStep(job: Job, notice: Notice, prior: Extraction
     done++;
     const att = p.attachment;
     if (overBudget()) { slots[i] = [{ ...baseRow(att, p.classified.kind, p.classified.priority), skipReason: 'budget' }]; continue; }
-    step('running', `평가정보 추출 중 (${done}/${total}), ${att.originalName}`, { done: done - 1, total });
+    const runLabel = `평가정보 추출 중 (${done}/${total}), ${att.originalName}`;
+    step('running', runLabel, { done: done - 1, total }, { kind: 'file', step: 'extract', phase: 'start', file: fileInfo(att) });
     attempted++;
     await yieldToLoop();
     const rows = await processAttachment(att, p.classified.kind, p.classified.priority);
     if (rows === 'cancelled' || signal?.aborted) return cancelledOutcome();
     slots[i] = rows;
+    fileEnd(att, rows, runLabel, { done: done - 1, total });
     // 쌍둥이 폴백: 저장된 hwp/hwpx가 파싱되지 않았으면 같은 이름의 pdf(duplicate로 건너뛴 것)를 대신 파싱한다.
     const ext = extOf(att.originalName);
     if ((ext === 'hwp' || ext === 'hwpx') && !rows.some((r) => r.status === 'parsed')) {
@@ -248,9 +287,11 @@ export async function runExtractStep(job: Job, notice: Notice, prior: Extraction
       const j = plan.findIndex((q) => q.skipReason === 'duplicate' && twinKey(q.attachment.originalName) === key);
       if (j >= 0 && !overBudget()) {
         const q = plan[j]!;
+        step('running', runLabel, { done: done - 1, total }, { kind: 'file', step: 'extract', phase: 'start', file: fileInfo(q.attachment) });
         const fr = await processAttachment(q.attachment, q.classified.kind, q.classified.priority);
         if (fr === 'cancelled' || signal?.aborted) return cancelledOutcome();
         slots[j] = fr;
+        fileEnd(q.attachment, fr, runLabel, { done: done - 1, total });
       }
     }
   }
@@ -283,6 +324,7 @@ export async function runExtractStep(job: Job, notice: Notice, prior: Extraction
   const evalOnly: FieldMap = {};
   for (const k of EVALUATION_KEYS) if (merged[k]) evalOnly[k] = merged[k];
   setFields(notice, evalOnly);
+  fillBasicFromDocs(notice, basicFieldsOf(extras, nowIso));
 
   step('done', `평가정보 추출 완료, 확인 필요 ${reviewCountOf(extraction)}건`, { done: total, total });
   return { status: 'done', extraction };

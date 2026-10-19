@@ -150,6 +150,7 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
     emit('open_compose', 'running', '웹메일 작성 탭을 여는 중');
     const { tabId } = await rpc('compose/open', {
       jobId: job.id, url: plan.url, selector: plan.selector?.config,
+      ...(plan.sendWatch ? { sendWatch: plan.sendWatch } : {}),
       ...(plan.prefilled.includes('subject') ? { anchor: { subject: fill.subject } } : {}),
     }, T.open);
     opened = true;

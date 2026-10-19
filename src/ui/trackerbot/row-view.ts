@@ -13,7 +13,7 @@ export interface RowEntry {
 }
 
 /** 행 보조 버튼 동작 */
-export type RowSubAction = 'open-mail' | 'open-review' | 'settings';
+export type RowSubAction = 'open-mail' | 'open-review' | 'settings' | 'sidepanel';
 
 export type RowView =
   | { kind: 'idle'; label: string; chip?: string; tone: 'primary' | 'secondary'; detail?: string }
@@ -29,6 +29,14 @@ export type RowView =
   | { kind: 'disabled'; label: string; reason: string };
 
 /** 엔트리 -> 행 버튼 표시 상태. 순수 함수. */
+/** 툴팁용 마감 줄. 칩 문구(수집 완료)는 라벨과 겹치므로 넣지 않는다 */
+/** 사전규격은 bidCloseAt 자리에 의견등록마감을 담는다. 지난 마감은 "마감됨"으로 쓴다 */
+const ddayLine = (c: { dday: string | null }, ref: NoticeRef): string => {
+  if (!c.dday) return '';
+  const label = kindOf(ref) === 'prespec' ? '의견등록마감' : '입찰마감';
+  return c.dday === '마감' ? `${label}됨` : `${label} ${c.dday}`;
+};
+
 export function rowView(entry: RowEntry, opts: { orphaned: boolean }): RowView {
   if (opts.orphaned) return { kind: 'disabled', label: '새로고침 필요', reason: '확장 프로그램이 갱신되었습니다. 페이지를 새로고침하세요' };
   if (entry.starting) return { kind: 'busy', label: '시작 중', canCancel: false, cancelling: false, cancelTarget: 'collect' };
@@ -47,7 +55,7 @@ export function rowView(entry: RowEntry, opts: { orphaned: boolean }): RowView {
   };
   if (h && (v.kind === 'completed' || v.kind === 'partial')) {
     // 셀이 좁아 라벨은 짧게, 상세는 툴팁
-    const tip = withError([v.kind === 'completed' ? [v.headline, v.chip].join('\n') : [v.headline, ...v.failures.map((f) => `${f.name}: ${f.reason}`)].join('\n'), h.text].join('\n'));
+    const tip = withError([v.kind === 'completed' ? [v.headline, ddayLine(v.chip, entry.ref)].filter(Boolean).join('\n') : [v.headline, ...v.failures.map((f) => `${f.name}: ${f.reason}`)].join('\n'), h.text].join('\n'));
     const act = hAction ? { action: hAction, actionLabel: h.actionLabel, ...hFix } : {};
     switch (h.kind) {
       case 'composing':
@@ -86,7 +94,7 @@ export function rowView(entry: RowEntry, opts: { orphaned: boolean }): RowView {
       const found = v.buttonLabel === '다시 수집';
       const detail = entry.otherTab ? '다른 탭에서 수집 중' : entry.error ?? undefined;
       const label = v.buttonLabel === '공고 수집' && kindOf(entry.ref) === 'prespec' ? '사전규격 수집' : v.buttonLabel;
-      return { kind: 'idle', label, chip: v.chip, tone: found ? 'secondary' : 'primary', ...(detail ? { detail } : {}) };
+      return { kind: 'idle', label, chip: v.collected?.text, tone: found ? 'secondary' : 'primary', ...(detail ? { detail } : {}) };
     }
     case 'progress':
       return {
@@ -94,7 +102,7 @@ export function rowView(entry: RowEntry, opts: { orphaned: boolean }): RowView {
         canCancel: !v.cancelling, cancelling: v.cancelling, cancelTarget: 'collect',
       };
     case 'completed':
-      return { kind: 'done', label: '수집 완료', tone: 'ok', detail: withError([v.headline, v.chip].filter(Boolean).join('\n')), canRetry: false }; // 셀이 좁아 라벨은 짧게, 나머지는 툴팁
+      return { kind: 'done', label: '수집 완료', tone: 'ok', detail: withError([v.headline, ddayLine(v.chip, entry.ref)].filter(Boolean).join('\n')), canRetry: false }; // 셀이 좁아 라벨은 짧게, 나머지는 툴팁
     case 'partial':
       return {
         kind: 'done', label: '일부 실패', tone: 'warn', canRetry: v.canRetry,

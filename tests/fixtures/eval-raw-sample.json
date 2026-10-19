@@ -1,0 +1,3137 @@
+{
+ "capturedAt": "2026-10-19T13:44:00.000Z",
+ "open": {
+  "evlNo": "R26EA00017340",
+  "epropoEvalYn": "Y",
+  "isNego": true
+ },
+ "base": {
+  "evlNm": "전자출하시스템 활성화 및 유지보수 사업",
+  "dmstUntyGrpNm": "축산물품질평가원",
+  "evlSeNm": "제안서평가",
+  "techEvlMthdNm": "차등보정평가",
+  "techEvlAlptRt": 90,
+  "evlPgstNm": "확정",
+  "evlEndDt": "2026-08-18 10:51:08",
+  "bestLwstScr2ExclYn": "N",
+  "evlUseEvstCnt": 2
+ },
+ "targets": [
+  {
+   "evlTrgtSqno": 1,
+   "bzmnRegNo": "5978600662",
+   "etpsNm": "주식회사 엑스코어시스템",
+   "prsntnOdr": 1,
+   "evlExclYn": "N"
+  },
+  {
+   "evlTrgtSqno": 2,
+   "bzmnRegNo": "1198633696",
+   "etpsNm": "주식회사 웹프라자",
+   "prsntnOdr": 2,
+   "evlExclYn": "N"
+  }
+ ],
+ "members": [
+  {
+   "elmbHashVal": "H01",
+   "elmbNo": "J001",
+   "evlExclYn": "N",
+   "evlCmptnYn": "Y"
+  },
+  {
+   "elmbHashVal": "H02",
+   "elmbNo": "J002",
+   "evlExclYn": "N",
+   "evlCmptnYn": "Y"
+  },
+  {
+   "elmbHashVal": "H03",
+   "elmbNo": "J003",
+   "evlExclYn": "N",
+   "evlCmptnYn": "Y"
+  },
+  {
+   "elmbHashVal": "H04",
+   "elmbNo": "J004",
+   "evlExclYn": "N",
+   "evlCmptnYn": "Y"
+  },
+  {
+   "elmbHashVal": "H05",
+   "elmbNo": "J005",
+   "evlExclYn": "N",
+   "evlCmptnYn": "Y"
+  },
+  {
+   "elmbHashVal": "H06",
+   "elmbNo": "J006",
+   "evlExclYn": "N",
+   "evlCmptnYn": "Y"
+  },
+  {
+   "elmbHashVal": "H07",
+   "elmbNo": "J007",
+   "evlExclYn": "N",
+   "evlCmptnYn": "Y"
+  },
+  {
+   "elmbHashVal": "H08",
+   "elmbNo": "J008",
+   "evlExclYn": "N",
+   "evlCmptnYn": "Y"
+  }
+ ],
+ "items": [
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00002",
+   "upEvlPritmNo": "00001",
+   "evlPritmNoDepth1": "00001",
+   "evlPritmNoDepth2": "00002",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "전략 및 방법론",
+   "evlPritmNmDepth2": "사업이해도",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 6,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00003",
+   "upEvlPritmNo": "00001",
+   "evlPritmNoDepth1": "00001",
+   "evlPritmNoDepth2": "00003",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "전략 및 방법론",
+   "evlPritmNmDepth2": "추진 전략",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 6,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00004",
+   "upEvlPritmNo": "00001",
+   "evlPritmNoDepth1": "00001",
+   "evlPritmNoDepth2": "00004",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "전략 및 방법론",
+   "evlPritmNmDepth2": "적용 기술",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 6,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00005",
+   "upEvlPritmNo": "00001",
+   "evlPritmNoDepth1": "00001",
+   "evlPritmNoDepth2": "00005",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "전략 및 방법론",
+   "evlPritmNmDepth2": "표준 프레임워크 적용",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 6,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00006",
+   "upEvlPritmNo": "00001",
+   "evlPritmNoDepth1": "00001",
+   "evlPritmNoDepth2": "00006",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "전략 및 방법론",
+   "evlPritmNmDepth2": "개발 방법론",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 6,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00008",
+   "upEvlPritmNo": "00007",
+   "evlPritmNoDepth1": "00007",
+   "evlPritmNoDepth2": "00008",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "기술 및 기능",
+   "evlPritmNmDepth2": "시스템 요구사항",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 5,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00009",
+   "upEvlPritmNo": "00007",
+   "evlPritmNoDepth1": "00007",
+   "evlPritmNoDepth2": "00009",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "기술 및 기능",
+   "evlPritmNmDepth2": "기능 요구사항",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 5,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00010",
+   "upEvlPritmNo": "00007",
+   "evlPritmNoDepth1": "00007",
+   "evlPritmNoDepth2": "00010",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "기술 및 기능",
+   "evlPritmNmDepth2": "보안 요구사항",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 5,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00011",
+   "upEvlPritmNo": "00007",
+   "evlPritmNoDepth1": "00007",
+   "evlPritmNoDepth2": "00011",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "기술 및 기능",
+   "evlPritmNmDepth2": "데이터 요구사항",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 5,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00012",
+   "upEvlPritmNo": "00007",
+   "evlPritmNoDepth1": "00007",
+   "evlPritmNoDepth2": "00012",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "기술 및 기능",
+   "evlPritmNmDepth2": "시스템운영요구 사항",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 5,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00013",
+   "upEvlPritmNo": "00007",
+   "evlPritmNoDepth1": "00007",
+   "evlPritmNoDepth2": "00013",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "기술 및 기능",
+   "evlPritmNmDepth2": "제약 사항",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 5,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00015",
+   "upEvlPritmNo": "00014",
+   "evlPritmNoDepth1": "00014",
+   "evlPritmNoDepth2": "00015",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "성능 및 품질",
+   "evlPritmNmDepth2": "성능 요구사항",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 5,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00016",
+   "upEvlPritmNo": "00014",
+   "evlPritmNoDepth1": "00014",
+   "evlPritmNoDepth2": "00016",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "성능 및 품질",
+   "evlPritmNmDepth2": "품질 요구사항",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 5,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00017",
+   "upEvlPritmNo": "00014",
+   "evlPritmNoDepth1": "00014",
+   "evlPritmNoDepth2": "00017",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "성능 및 품질",
+   "evlPritmNmDepth2": "인터 페이스요구 사항",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 5,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00019",
+   "upEvlPritmNo": "00018",
+   "evlPritmNoDepth1": "00018",
+   "evlPritmNoDepth2": "00019",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "프로젝트 관리",
+   "evlPritmNmDepth2": "관리방법론",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 2,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00020",
+   "upEvlPritmNo": "00018",
+   "evlPritmNoDepth1": "00018",
+   "evlPritmNoDepth2": "00020",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "프로젝트 관리",
+   "evlPritmNmDepth2": "일정 계획",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 2,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00021",
+   "upEvlPritmNo": "00018",
+   "evlPritmNoDepth1": "00018",
+   "evlPritmNoDepth2": "00021",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "프로젝트 관리",
+   "evlPritmNmDepth2": "개발 장비",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 1,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00023",
+   "upEvlPritmNo": "00022",
+   "evlPritmNoDepth1": "00022",
+   "evlPritmNoDepth2": "00023",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "프로젝트 지원",
+   "evlPritmNmDepth2": "품질 보증",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 2,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00024",
+   "upEvlPritmNo": "00022",
+   "evlPritmNoDepth1": "00022",
+   "evlPritmNoDepth2": "00024",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "프로젝트 지원",
+   "evlPritmNmDepth2": "시험 운영",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 1,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00025",
+   "upEvlPritmNo": "00022",
+   "evlPritmNoDepth1": "00022",
+   "evlPritmNoDepth2": "00025",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "프로젝트 지원",
+   "evlPritmNmDepth2": "교육 훈련",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 1,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00026",
+   "upEvlPritmNo": "00022",
+   "evlPritmNoDepth1": "00022",
+   "evlPritmNoDepth2": "00026",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "프로젝트 지원",
+   "evlPritmNmDepth2": "유지 관리",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 2,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00027",
+   "upEvlPritmNo": "00022",
+   "evlPritmNoDepth1": "00022",
+   "evlPritmNoDepth2": "00027",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "프로젝트 지원",
+   "evlPritmNmDepth2": "하자 보수 계획",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 2,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00028",
+   "upEvlPritmNo": "00022",
+   "evlPritmNoDepth1": "00022",
+   "evlPritmNoDepth2": "00028",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "프로젝트 지원",
+   "evlPritmNmDepth2": "기밀 보안",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 1,
+   "evlPritmRsltApprMthdNm": "등급"
+  },
+  {
+   "evstNo": "R26EB00034938",
+   "evlPritmNo": "00029",
+   "upEvlPritmNo": "00022",
+   "evlPritmNoDepth1": "00022",
+   "evlPritmNoDepth2": "00029",
+   "evlPritmNoDepth3": null,
+   "evlPritmNoDepth4": null,
+   "evlPritmNmDepth1": "프로젝트 지원",
+   "evlPritmNmDepth2": "비상 대책",
+   "evlPritmNmDepth3": null,
+   "evlPritmNmDepth4": null,
+   "alptScr": 1,
+   "evlPritmRsltApprMthdNm": "등급"
+  }
+ ],
+ "scores": [
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00002",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00029",
+   "evlScr": 0.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00029",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00029",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00029",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00029",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00029",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00029",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00029",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00028",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00028",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00028",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00028",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00028",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00028",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00028",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00028",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00027",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00027",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00027",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00027",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00027",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00027",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00027",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00027",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00026",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00026",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00026",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00026",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00026",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00026",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00026",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00026",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00025",
+   "evlScr": 0.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00025",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00025",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00025",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00025",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00025",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00025",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00025",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00024",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00024",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00024",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00024",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00024",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00024",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00024",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00024",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00023",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00023",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00023",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00023",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00023",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00023",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00023",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00023",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00021",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00021",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00021",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00021",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00021",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00021",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00021",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00021",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00020",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00020",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00020",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00020",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00020",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00020",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00020",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00020",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00019",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00019",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00019",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00019",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00019",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00019",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00019",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00019",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00017",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00017",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00017",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00017",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00017",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00017",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00017",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00017",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00016",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00016",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00016",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00016",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00016",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00016",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00016",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00016",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00015",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00015",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00015",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00015",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00015",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00015",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00015",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00015",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00013",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00013",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00013",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00013",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00013",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00013",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00013",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00013",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00012",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00012",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00012",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00012",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00012",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00012",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00012",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00012",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00011",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00011",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00011",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00011",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00011",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00011",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00011",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00011",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00010",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00010",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00010",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00010",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00010",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00010",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00010",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00010",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00009",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00009",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00009",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00009",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00009",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00009",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00009",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00009",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00008",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00008",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00008",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00008",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00008",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00008",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00008",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00008",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00006",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00006",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00006",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00006",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00006",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00006",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00006",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00006",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00005",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00005",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00005",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00005",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00005",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00005",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00005",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00005",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00004",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00004",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00004",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00004",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00004",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00004",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00004",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00004",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00003",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00003",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00003",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00003",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00003",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00003",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00003",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00003",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00002",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00002",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00002",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00002",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00002",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00002",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 1,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00002",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00002",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00002",
+   "evlScr": 4.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00002",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00002",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00002",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00002",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00002",
+   "evlScr": 4.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00002",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00003",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00003",
+   "evlScr": 4.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00003",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00003",
+   "evlScr": 4.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00003",
+   "evlScr": 4.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00003",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00003",
+   "evlScr": 4.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00003",
+   "evlScr": 4.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00004",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00004",
+   "evlScr": 4.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00004",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00004",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00004",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00004",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00004",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00004",
+   "evlScr": 4.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00005",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00005",
+   "evlScr": 4.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00005",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00005",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00005",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00005",
+   "evlScr": 6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00005",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00005",
+   "evlScr": 4.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00006",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00006",
+   "evlScr": 4.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00006",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00006",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00006",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00006",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00006",
+   "evlScr": 5.4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00006",
+   "evlScr": 4.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00008",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00008",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00008",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00008",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00008",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00008",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00008",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00008",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00009",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00009",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00009",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00009",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00009",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00009",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00009",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00009",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00010",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00010",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00010",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00010",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00010",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00010",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00010",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00010",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00011",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00011",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00011",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00011",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00011",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00011",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00011",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00011",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00012",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00012",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00012",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00012",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00012",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00012",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00012",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00012",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00013",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00013",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00013",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00013",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00013",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00013",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00013",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00013",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00015",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00015",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00015",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00015",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00015",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00015",
+   "evlScr": 5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00015",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00015",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00016",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00016",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00016",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00016",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00016",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00016",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00016",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00016",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00017",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00017",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00017",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00017",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00017",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00017",
+   "evlScr": 4.5,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00017",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00017",
+   "evlScr": 4,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00019",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00019",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00019",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00019",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00019",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00019",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00019",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00019",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00020",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00020",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00020",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00020",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00020",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00020",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00020",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00020",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00021",
+   "evlScr": 0.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00021",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00021",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00021",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00021",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00021",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00021",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00021",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00023",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00023",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00023",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00023",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00023",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00023",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00023",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00023",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00024",
+   "evlScr": 0.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00024",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00024",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00024",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00024",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00024",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00024",
+   "evlScr": 0.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00024",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00025",
+   "evlScr": 0.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00025",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00025",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00025",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00025",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00025",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00025",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00025",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00026",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00026",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00026",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00026",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00026",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00026",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00026",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00026",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00027",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00027",
+   "evlScr": 2,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00027",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00027",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00027",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00027",
+   "evlScr": 1.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00027",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00027",
+   "evlScr": 1.6,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00028",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00028",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00028",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00028",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00028",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00028",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00028",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00028",
+   "evlScr": 0.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H04",
+   "evlPritmNo": "00029",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H08",
+   "evlPritmNo": "00029",
+   "evlScr": 1,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H06",
+   "evlPritmNo": "00029",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H01",
+   "evlPritmNo": "00029",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H02",
+   "evlPritmNo": "00029",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H07",
+   "evlPritmNo": "00029",
+   "evlScr": 0.9,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H03",
+   "evlPritmNo": "00029",
+   "evlScr": 0.8,
+   "rvsoEvlHistScr": null
+  },
+  {
+   "evlTrgtSqno": 2,
+   "elmbHashVal": "H05",
+   "evlPritmNo": "00029",
+   "evlScr": 0.8,
+   "rvsoEvlHistScr": null
+  }
+ ]
+}

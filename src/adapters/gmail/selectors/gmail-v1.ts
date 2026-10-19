@@ -16,4 +16,5 @@ export const gmailV1: ComposeSelectorSet = {
   body: { kind: 'contenteditable', editable: '', insert: [] },
   attach: { item: '', itemName: '', methods: [] },
   forbidden: { send: [], textPatterns: ['보내기', '전송', 'Send', '발송'] },
+  sendWatch: { buttons: ['[aria-label^="보내기"]', '[data-tooltip^="보내기"]'], textPatterns: ['보내기'], hotkey: true },
 };

@@ -3,7 +3,9 @@ import type { SettingsSection } from '../../messaging/protocol';
 import { StorageFolderCard } from './StorageFolderCard';
 import { MailServiceCard } from './MailServiceCard';
 import { G2bCard } from './G2bCard';
+import { CompanyCard } from './CompanyCard';
 import { AutoComposeCard } from './AutoComposeCard';
+import { PageTitle } from './menu';
 
 const HIGHLIGHT_MS = 2400;
 
@@ -29,11 +31,12 @@ export function SettingsPage({ section, nonce }: { section?: SettingsSection; no
 
   return (
     <>
-      <h1 className="title-mark text-2xl font-bold tracking-tight">설정</h1>
+      <PageTitle page="settings" />
       {slot('storage', <StorageFolderCard />)}
       {slot('mail-service', <MailServiceCard />)}
       {slot('auto-compose', <AutoComposeCard />)}
       {slot('g2b', <G2bCard />)}
+      {slot('company', <CompanyCard />)}
     </>
   );
 }

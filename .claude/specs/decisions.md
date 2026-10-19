@@ -372,3 +372,71 @@
 | 동시 1개 FIFO, 항목당 45초 상한(큐 대기 제외) | 탭 폭주·창 포커스 경합 방지 | 병렬 탭 |
 | 탭 배치: `active:false`, originTabId가 있으면 그 창(+openerTabId), 없으면 마지막 포커스 창. 사용자가 연 g2b 탭은 재사용·닫지 않음 | 사용자 작업 방해 최소화, 경합 회피 | 사용자 탭 재사용 |
 | 렌더 판정: match 이후 연속 2회 fields 동일 + 첫 match 후 1.5초 경과 시 성공. 45초까지 못 안정되면 마지막 스냅샷, match가 없었으면 DETAIL_TIMEOUT | WebSquare 비동기 렌더로 일부 값이 늦게 채워짐 | 로드 완료 즉시 읽기 |
+
+## 2026-10-19 사이드 패널 공고 요약과 수집 기록
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 수집 기록은 storage.session 별도 키 `jobLog.<jobId>` 이벤트 배열, Job 객체는 변경 없음 | Job은 CS로 그대로 나가므로 커지면 안 됨, 기존 비교 로직 유지 | Job에 events 필드, 공고 폴더 파일 기록(SW→offscreen 쓰기 경로 신설 필요) |
+| 단계 이벤트는 SW가 status 전이에서 파생, 파일 start/end와 값 요약만 엔진이 JobProgress.event로 보냄. 바이트 진행은 이벤트 아님. 잡당 400건 상한 | 잦은 신호로 기록이 불어나지 않게, compose 잡까지 엔진 수정 없이 단계 시각 확보 | 모든 progress 기록 |
+| 기록은 세션 한정, 재시작 후에는 notice.json/extraction.json에서 정적 기록 복원(선택) | 사용자 동기가 현재 세션의 지나가는 문구 | 영구 로그 파일 |
+| 요약 값은 `core/model/notice-summary.ts` 허용 목록 함수 하나로 생성(수집 중 facts와 완료 후 notice/get 공통). 담당자 이름/전화, customFields는 읽지 않음 | 값 불일치 방지, 개인정보 제외 지점 단일화 | 화면에서 notice 직접 렌더, 새 요약 메시지 |
+| 화면 칩 클릭은 `ui/open {page:'sidepanel'}` → SW가 첫 문장으로 `sidePanel.open({tabId})`. 제스처 전파는 S0 실험으로 확정 | tabId로 열어야 그 탭에 고정되고 사이드 패널이 바로 그 공고를 감지 | 칩에서 공고 id 전달, windowId로 열기 |
+
+## 2026-10-19 조달평가 점수 분석 (Fable 설계, 사용자 승인, 명세 .claude/specs/eval-analysis.md)
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 평가위원별 세부 점수는 나라장터 내부 API(비공식)로 가져온다. 공개 API(낙찰정보)는 업체별 합계만 준다 | 사용자 핵심 요구가 업체 × 위원 × 세부항목 분석. 내부 API 한 번에 전 업체 점수(샘플 384줄), 재계산값이 화면 팝업과 일치 | 팝업 DOM 파싱, 엑셀다운로드 파싱 |
+| 내부 API는 g2b 탭 CS(ISOLATED)의 같은 출처 fetch, 대시보드 트리거는 SW가 g2b 탭 재사용/비활성 생성 | 쿠키 Origin Referer 동일, 네이버웍스 연락처 결정과 동일 원칙, detail-reader 수단 재사용 | offscreen/SW fetch, MAIN world, 사용자가 탭 열기 |
+| 잡이 아닌 요청/응답 `eval/collect`(90초), SW FIFO 1개 | 수 초, 단계 재개 무의미, JobType 추가 파급 회피 | eval_collect JobType |
+| 저장 `evaluations/<noticeId>.json` + 파생 `evaluations/index.json`, 공고 폴더와 분리 | 미수집 공고도 분석, 락 분리, 스캔 한 곳. 단일 사용자(사용자 결정)라 로컬 폴더로 충분 | notices 폴더 안, index.json 열 추가, IndexedDB, 서버 DB |
+| 원문 미보관, 허용 목록은 CS 안에서 적용. 위원은 elmbNo만, 업체는 사업자번호와 상호만 | 위원 목록 응답에 실명(elmbNm 평문, 화면은 elmbNmRlsYn N으로 비공개), 업체 담당자 연락처, 대표자명 포함 | source/*.json 원문 보관 |
+| 우리 회사 = Settings.company(bizNo, name), 보기 전환(우리 회사 기준/전체)은 localStorage | 사용자가 두 보기 모두 요구. 비밀 아님, 설정 추가만, 보기는 데이터가 아님 | secrets, Settings에 보기 저장 |
+| 지표는 core 순수 함수, 대시보드 계산, 누적은 eval/get-many(상한 500) | 상호작용 왕복 없음, 레코드 소형 | offscreen 집계 메시지 |
+| 공개 API 낙찰정보는 별도 절, 자동 대조 금지 | techEvlNaturVal(85.245)과 위원 평균(84.725) 차이 원인 미확인 | 보정 |
+| 재수집은 덮어쓰기(firstCollectedAt 유지), 미확정은 provisional | 확정 결과 불변 | 이력 보관 |
+| 차트 라이브러리 없음, 표와 CSS 막대/히트맵 | 기존 결정 유지 | recharts 등 |
+| 미검증: 로그인 필요 여부, 비참여 공고 접근(evlRsltRlsYn N인데 조회됨), 헤더 필요 여부, prcmBsneSeCd 업무구분, evlUseEvstCnt 2인데 evstNo는 1종인 의미, elmbNo 공고 간 동일성. S1 실측 뒤 기록 | 코드로 확인 불가 | — |
+
+## 2026-10-19 공고 상세 화면(탭)
+Fable 설계, 사용자 승인. 명세 `.claude/specs/notice-detail.md`.
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 라우트 `#/notices/<id>/<tab>`, 탭은 경로 세그먼트, URL이 탭 상태의 단일 원천, key는 noticeId만 | id가 encode돼 split 안전, 뒤로가기와 북마크 단위가 탭, 탭 전환에 재조회 없음 | `?tab=` 쿼리, useState 탭, 탭마다 remount |
+| `#/review/<id>?handoff=`는 파서 별칭(tab=review)으로 유지. SW, auto-compose, 패널, 트래커봇, 사이드패널 무변경 | 진입 경로 여러 곳이 SW 문자열에 의존, 외부 생성 URL 호환 | 전 경로 일괄 치환, `ui/open` page 값 추가 |
+| 검토 화면은 ReviewTab으로 이동만, 편집은 그 탭에서만. 개요의 "평가 기준(공고정보 기준)"은 읽기 전용 | 사용자 결정(조회 전용), 추출값과 공고정보값의 출처 구분 | 개요에서 인라인 편집 |
+| 정정공고 연결은 `notice/list`에서 같은 noticeNo 다른 차수를 클라이언트가 계산 | `previousNoticeId`는 어디서도 채워지지 않고 `supersededBy`도 복사만 됨 | 수집 시 previousNoticeId 기록(스키마 변경), 새 메시지 |
+| 첨부 열기는 대시보드 탭이 IDB 루트 핸들로 읽기 전용 접근, pdf/이미지/txt만 새 탭, 나머지는 경로 복사 | 메시지로 Blob 전달 비효율, 확장은 OS 앱 실행 불가, 읽기 1회는 "offscreen 단일 작성자"(쓰기 정합성) 결정의 이유에 해당하지 않음. Grant/FsErrorAlert가 이미 대시보드에서 핸들 사용 | `attachment/read` 메시지(base64), 모든 형식 복사본 다운로드, `downloads.open`(권한 추가) |
+| 수집/메일 이력은 notice.collect, notice.mail, mail/draft-get, storage.session 잡만. 영구 이력 없음 | 사이드패널 결정(세션 한정 기록)과 일치, 백엔드 변경 없음 | 폴더에 이력 파일, 그룹/템플릿 이름 조회 |
+| 평가 점수 탭은 NOTICE_TABS 항목 + 탭 컴포넌트 추가로 연결 예정, 이번 범위 제외 | eval S4 진행 중(사용자 보류 지시) | 지금 `#/evaluations/<id>` 링크 탭 선삽입 |
+| (2026-10-20 추가) 단일 공고 화면 맨 위에 "승부 분해"(기술/가격 분해, 교환비, 역전 거리)와 등급 분포를 두고 위원 성향은 아래로 | 사용자 요구는 다음 입찰에서 이길 지표. 위원은 공고마다 무작위라 재사용성이 낮음 | 위원 성향 중심 배치 |
+| (2026-10-20 추가) 점수 공식 의존 지표는 공고마다 공개 API 값으로 자기 검증(가격 = 가격배점 × 최저가 ÷ 투찰가, 차등보정 = 기술 원점수 + (기술배점 − 최대 원점수)), 실패 시 해당 지표 숨김 | 샘플 1건으로 역산한 공식이라 공고별로 다를 수 있음. AI 없이 규칙만으로 틀린 조언을 막음 | 공식 고정 적용 |
+| (2026-10-20 Fable) 승부 분해의 각 칸은 자기 기준만 말한다. 역전 거리(위원 점수, 선택한 위원)는 behind/tie/ahead 3상태이고 "종합", "가격" 언급 금지. 공식 분해와 교환비는 pickDuel basis가 official일 때만 표시. pickDuel은 judges basis에서만 위원 제외 반영. 위원 제외나 공식 기술점수/위원 합계 방향 불일치는 안내 한 줄(basisNotes) | 위원 기준 칸이 공식 결과의 결론을 대신 말해 동점, 공식 결과 없음, 위원 제외 시 모순 발생 | 공식 값과 위원 값을 한 함수에서 섞는 duelVerdict, 위원 제외 시 공식 값 숨김/흐림, judges basis 쌍 고정, totalDiff 가드만 추가 |
+
+## 2026-10-20 메일 발송 이력
+Fable 설계, 사용자 승인. 명세 `.claude/specs/mail-sent.md`.
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 발송 기록은 `<folder>/mail-sent.json`(SendRecord[]) 진실 + 루트 `mail-sent-index.json` 파생 인덱스. mail.json 무변경 | 공고 폴더 단위 보존, 전체 이력은 파일 1개로 조회, 손상 시 index.json 순회로 재생성(EvalStore 전례) | mail.json outcome 'sent', 전역 단일 파일 진실, IndexEntry 열 추가 |
+| notice.mail.status delivered/deliveredAt은 mail-sent.json에서 파생(자동/수동). 옛 delivered는 읽을 때 legacy 레코드 합성, 첫 쓰기 때 물질화 | 홈 통계/인덱스 무변경, 일괄 변환 금지 원칙 | deliveredAt 단일 필드 유지, 일괄 마이그레이션 |
+| 취소는 voidedAt 소프트 처리, 삭제 없음 | 늦게 오는 자동 신호가 레코드를 되살리는 것 방지 | 삭제 |
+| composeRecordId당 auto 1개, 같은 id에 유효 레코드가 있으면 auto 신호 폐기, 수동은 항상 허용 | 자동+수동 중복을 귀속 키로 해소 | 시간 창 기반 중복 판정 |
+| 감지는 별도 unlisted script send-watch.ts(관찰 전용, dom-actions 미사용, isTrusted만), 셀렉터셋 검증 여부와 무관하게 compose/open에서 항상 주입 | 전송 가드 결정 유지, Gmail(unverified)에서도 감지, 오류 비용이 누락뿐 | naverworks-compose.ts 확장, forbidden 셀렉터 재사용 |
+| 1차 신호(클릭/Ctrl+Enter)로 즉시 기록(confirmed=false), 2차(ui_gone/toast/unload)로 확인 갱신 | 팝업이 발송 직후 닫히면 2차가 못 옴, 사용자가 취소로 교정 가능 | 2차 확인 뒤에만 기록 |
+| SW는 sender.tab.id === ledger composeTabId인 compose 잡의 jobId만 수용, noticeId/recordId는 ledger에서 추출, 호스트 미검사 | 작성 호스트와 수신 호스트가 다를 수 있음, CS 페이로드 위조 차단 | senderKind 'webmail' 호스트 검사, CS가 noticeId 전달 |
+| ledger 소실(20개 초과, 재시작)로 못 잡은 발송은 수동 보완, 별도 영속 매핑 없음 | 단순함, 수동 경로가 이미 요구사항 | 탭→공고 매핑 영속화 |
+| `mail/set-status` 폐기, sent-add/sent-void로 대체 | 상태 덮어쓰기와 이력이 이중 진실이 됨 | 병행 유지 |
+| 2026-10-19 공고 상세 결정 "영구 이력 없음"을 메일 발송에 한해 대체 | 사용자 요청 | 없음 |
+
+## 2026-10-20 가감점 표 인식과 사업기간 문서 보충
+Fable 설계, 사용자 승인(신인도는 표 위치 안내 + 직접 입력). 명세 `.claude/specs/bonus-period-extract.md`.
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 가감점 표(1열 가점/감점 라벨 + 배점 열, 점수 칸에 숫자)를 `bonus-table` 전략으로 찾아 `extras.bonusTable`에 두고, 신인도가 not_found일 때만 `reason: 'no_total'`(값 null, raw "가점 n항목, 감점 m항목", 근거 표)로 바꾼다 | KOICA 양식은 총 배점이 없고 행별 최댓값 합도 택일 여부가 문서에 없어 추정이 된다. 자동 확정 금지 결정 유지. 사용자는 근거로 표를 열어 직접 입력 | 가점/감점을 credibility 동의어로 추가(table-score가 0.5를 verified로 냄), 가점 최대 합 자동 산출, 값 타입을 문자열로 변경(6곳 파급, 모호성 그대로) |
+| "(미해당)" 행은 해석하지 않고 항목 수에 포함. 합산을 도입하면 라벨이 (미해당)으로 시작하는 행 제외 | 값을 만들지 않으므로 영향 없음 | 없음 |
+| 사업기간은 `extras.projectPeriod`(window-regex, valueType text, prefer_priority)로 뽑고 extract-step이 basic.projectPeriod가 비었을 때만 채운다. HTML/API 값과 user_edited는 건드리지 않고 충돌도 기록하지 않는다 | items 키 = 평가 키 결정과 computeStatus 유지. HTML과 문서 표현이 달라 문자열 충돌이 무의미 | ExtractionKey 추가, mergeDocumentLayer 경유(HTML 덮어쓰기 또는 상시 충돌), mergeFields 한 키 레이어(다른 문서 값이 needs_review로 떨어짐) |
+| window-regex `valueType: 'text'`는 d 플래그 indices로 원문 띄어쓰기를 복원 | compact 값은 메일에 못 쓴다 | 새 label-value 전략 |
+| 기존 공고는 "다시 추출"로 적용, 마이그레이션 없음 | 규칙 재실행이 그대로 갱신 | 일괄 변환 |
+| 보류: 조달청식 신인도 범위 표기("±2", "+1~-2"), 두 칸 표 "사업기간 / 값", "해당 없음" 확정 UI | 로컬 표본 없음, HTML이 보통 채움, 기존 결정상 범위 밖 | 없음 |

@@ -36,6 +36,8 @@ export interface Settings {
   /** provider = 메일 작성 서비스 */
   mail: { provider: MailProvider; defaultGroupId?: string; defaultTemplateId?: string };
   customFields: FieldMapping[];
+  /** 우리 회사. 평가 분석의 우리 회사 기준 보기에서 쓴다. bizNo는 숫자 10자리 */
+  company: { bizNo: string; name?: string };
   updatedAt: ISODate;
 }
 // chrome.storage.local: { secrets: { g2bServiceKey?: string }, settingsCache: Settings, registeredSites }

@@ -10,11 +10,11 @@ import { ensureOffscreen } from '../../src/background/offscreen-manager';
 import { openDashboard } from '../../src/background/dashboard-tabs';
 
 describe('라우터 등록', () => {
-  it('수신자/그룹/템플릿/메일/config 메시지 14종을 SW에 등록한다', () => {
+  it('수신자/그룹/템플릿/메일/config 메시지 17종을 SW에 등록한다', () => {
     registerRouter();
     const registered = vi.mocked(listen).mock.calls.filter((c) => c[2] === 'sw').map((c) => c[0] as string);
     const added = ['recipients/list', 'recipients/save', 'recipients/delete', 'groups/save', 'groups/delete', 'groups/set-default',
-      'templates/list', 'templates/save', 'templates/delete', 'templates/set-default', 'mail/prepare', 'mail/draft-get', 'mail/set-status', 'config/repair'];
+      'templates/list', 'templates/save', 'templates/delete', 'templates/set-default', 'mail/prepare', 'mail/draft-get', 'mail/sent-list', 'mail/sent-get', 'mail/sent-add', 'mail/sent-void', 'config/repair'];
     for (const t of added) {
       expect(registered).toContain(t);
       expect(EXTENSION_ONLY_TYPES as readonly string[]).toContain(t);

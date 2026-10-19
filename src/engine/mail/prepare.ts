@@ -21,7 +21,7 @@ export interface MailOpts { now?: () => Date; isBusy?: (noticeId: string) => boo
 export const draftPath = (folder: string): string => `${folder}/mail-draft.json`;
 
 /** 초안을 읽는다. 없거나 손상되면 null. 권한 오류만 던진다. */
-async function readDraft(store: IFileStore, folder: string): Promise<MailDraft | null> {
+export async function readDraft(store: IFileStore, folder: string): Promise<MailDraft | null> {
   try {
     const d = await readJson<MailDraft>(store, draftPath(folder));
     if (d && typeof d === 'object' && d.schemaVersion === 1 && Array.isArray(d.to) && Array.isArray(d.cc)
@@ -186,30 +186,6 @@ export async function prepareMail(
     notice.updatedAt = nowIso;
     await ns.saveNotice(notice);
     return { draft, notice };
-  });
-}
-
-/** 전달 완료 표시/해제. none이면 초안 파일 유무로 drafting/none을 정한다. */
-export async function setMailStatus(
-  store: IFileStore, p: { noticeId: string; status: 'delivered' | 'none' }, opts: MailOpts = {},
-): Promise<{ notice: Notice }> {
-  if (p.status !== 'delivered' && p.status !== 'none') throw err('INVALID_VALUE', '상태 값이 올바르지 않습니다.');
-  const now = opts.now ?? (() => new Date());
-  const ns = new NoticeStore(store);
-  return store.withLock(editLockKey(p.noticeId), async () => {
-    if (opts.isBusy?.(p.noticeId)) throw err('JOB_ALREADY_RUNNING', '같은 공고의 수집/추출 잡이 실행 중입니다.');
-    const notice = await ns.loadNotice(p.noticeId);
-    if (!notice) throw err('NOT_FOUND', '공고를 찾을 수 없습니다.');
-    const nowIso = now().toISOString();
-    if (p.status === 'delivered') {
-      notice.mail = { ...notice.mail, status: 'delivered', deliveredAt: nowIso };
-    } else {
-      const { deliveredAt: _removed, ...rest } = notice.mail;
-      notice.mail = { ...rest, status: (await readDraft(store, notice.folder)) ? 'drafting' : 'none' };
-    }
-    notice.updatedAt = nowIso;
-    await ns.saveNotice(notice);
-    return { notice };
   });
 }
 

@@ -1,7 +1,7 @@
 import { noticeLabel } from '../../core/model/ids';
 import type { Job } from '../../core/types/job';
 import { COMPOSE_STEP_LABEL } from '../compose-view';
-import { COLLECT_STEP_LABEL, progressRatio } from '../g2b-panel/panel-view';
+import { COLLECT_STEP_LABEL, progressRatio, runningStepSpan } from '../g2b-panel/panel-view';
 import { handoffAsk, handoffQueued, isActive, type PopupChoiceAction } from './controller';
 import { rowView, type RowEntry, type RowSubAction } from './row-view';
 
@@ -23,9 +23,13 @@ export interface ProgressItem {
   phase: 'collect' | 'compose';
   state: ProgressState;
   stepLabel: string;
+  /** active에서만. 진행 중 단계 id(COLLECT_STEP_LABEL, COMPOSE_STEP_LABEL의 키). 카드가 단계 아이콘을 고르는 데 쓴다 */
+  stepId?: string;
   detail?: string;
   /** active에서만 0..1 */
   ratio?: number;
+  /** active에서만. 진행 중 단계가 ratio에서 차지하는 몫(단계 무게 기준). 진행률이 없는 단계 동안 카드가 막대를 조금씩 채우는 데 쓴다 */
+  stepSpan?: number;
   cancel?: { target: 'collect' | 'compose'; cancelling: boolean };
   /** 끝났지만 사용자의 완료 후 선택을 기다리는 항목(자동 소멸 제외) */
   awaiting?: true;
@@ -56,8 +60,8 @@ function activeItem(key: string, title: string, a: Job): ProgressItem {
     detail = rem || undefined;
   }
   return {
-    key, title, phase, state: 'active', stepLabel, detail,
-    ratio: progressRatio(a.steps), cancel: { target: phase, cancelling: a.status === 'cancelling' },
+    key, title, phase, state: 'active', stepLabel, stepId: a.currentStep, detail,
+    ratio: progressRatio(a.steps), stepSpan: runningStepSpan(a.steps), cancel: { target: phase, cancelling: a.status === 'cancelling' },
   };
 }
 

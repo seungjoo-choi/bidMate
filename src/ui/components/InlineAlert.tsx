@@ -10,11 +10,11 @@ const tones = {
   error: { cls: 'border border-danger/20 bg-danger-wash', icon: 'text-danger', Icon: AlertCircle },
 } as const;
 
-export function InlineAlert({ tone = 'info', children }: { tone?: AlertTone; children: ReactNode }) {
+export function InlineAlert({ tone = 'info', leading, children }: { tone?: AlertTone; leading?: ReactNode; children: ReactNode }) {
   const { cls, icon, Icon } = tones[tone];
   return (
     <div className={`flex items-start gap-2.5 rounded-ctl px-4 py-3 text-sm text-ink ${cls}`}>
-      <Icon className={`mt-[3px] size-4 shrink-0 ${icon}`} />
+      {leading ?? <Icon className={`mt-[3px] size-4 shrink-0 ${icon}`} />}
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );

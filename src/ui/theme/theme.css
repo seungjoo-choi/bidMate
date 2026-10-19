@@ -126,3 +126,11 @@
   button:disabled { cursor: not-allowed; }
   :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 }
+
+/* 마스코트: 다크 모드에서 흰 몸통이 떠 보이지 않게 밝기와 채도를 낮춘다.
+   확장 페이지 전용 규칙이다(웹메일 진행 카드, 나라장터 패널은 다크에서도 흰 카드라 이 파일을 읽지 않는다).
+   :root를 붙여 런타임에 주입되는 MASCOT_CSS의 갸웃(huh) 필터보다 우선한다. */
+@media (prefers-color-scheme: dark) {
+  :root .bm-mascot { filter: brightness(.82) saturate(.88); }
+  :root .bm-mascot[data-mood="huh"] { filter: brightness(.82) saturate(.55); }
+}

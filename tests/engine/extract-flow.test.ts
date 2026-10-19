@@ -22,7 +22,7 @@ describe('실문서 수집 흐름', () => {
     const x = readJsonFile<Extraction>(store, '/extraction.json');
     const it = x.items;
     expect(it.managementScore).toMatchObject({ value: 4, status: 'verified' });
-    expect(it.credibilityScore).toMatchObject({ value: null, status: 'needs_review', reason: 'not_found' });
+    expect(it.credibilityScore).toMatchObject({ value: null, status: 'needs_review', reason: 'no_total' });
     expect(it.performanceScore).toMatchObject({ value: 6, status: 'verified' });
     expect(it.performancePeriod).toMatchObject({ value: '5년', status: 'verified' });
     expect(it.performanceMinAmount).toMatchObject({ value: 500000000, status: 'verified' });
@@ -42,6 +42,8 @@ describe('실문서 수집 흐름', () => {
       expect(notice.evaluation[k].source?.kind).toBe('document');
     }
     expect(notice.evaluation.performanceCondition.status).toBe('verified');
+    expect(notice.evaluation.credibilityScore).toMatchObject({ value: null, status: 'needs_review', raw: '가점 6항목, 감점 2항목' });
+    expect(notice.basic.projectPeriod).toMatchObject({ value: '계약체결일로부터 2028.02.28.까지', status: 'verified', source: { kind: 'document' } });
     expect(notice.attachments.every((a) => a.docKind !== undefined)).toBe(true);
     // index
     const idx = JSON.parse(store.files.get('index.json') as string) as IndexFile;

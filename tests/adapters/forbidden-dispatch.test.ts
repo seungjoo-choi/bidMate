@@ -9,7 +9,8 @@ const csSrc = (import.meta as unknown as Meta).glob('../../src/entrypoints/naver
 const trackerAdapterSrc = (import.meta as unknown as Meta).glob('../../src/adapters/trackerbot/**/*.ts', { query: '?raw', import: 'default', eager: true });
 const trackerUiSrc = (import.meta as unknown as Meta).glob('../../src/ui/trackerbot/**/*.ts', { query: '?raw', import: 'default', eager: true });
 const trackerCsSrc = (import.meta as unknown as Meta).glob('../../src/entrypoints/trackerbot-mail.ts', { query: '?raw', import: 'default', eager: true });
-const all = { ...adapterSrc, ...gmailSrc, ...csSrc, ...trackerAdapterSrc, ...trackerUiSrc, ...trackerCsSrc };
+const watchSrc = (import.meta as unknown as Meta).glob('../../src/entrypoints/send-watch.ts', { query: '?raw', import: 'default', eager: true });
+const all = { ...adapterSrc, ...gmailSrc, ...csSrc, ...trackerAdapterSrc, ...trackerUiSrc, ...trackerCsSrc, ...watchSrc };
 const isDomActions = (p: string): boolean => p.endsWith('/dom-actions.ts');
 
 describe('금지된 디스패치 소스 스캔', () => {
@@ -21,6 +22,12 @@ describe('금지된 디스패치 소스 스캔', () => {
     const hits: string[] = [];
     for (const [p, src] of targets) for (const re of banned) if (re.test(src)) hits.push(`${p}: ${re}`);
     expect(hits).toEqual([]);
+  });
+
+  it('send-watch.ts는 포함돼 있고 dom-actions를 import하지 않는다', () => {
+    const entry = Object.entries(watchSrc);
+    expect(entry).toHaveLength(1);
+    expect(entry[0]![1]).not.toMatch(/dom-actions/);
   });
 
   it('dom-actions.ts에 modifier 키가 없다', () => {

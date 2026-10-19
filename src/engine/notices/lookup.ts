@@ -7,5 +7,5 @@ import type { NoticeLookup } from '../../messaging/protocol';
 export function lookupInIndex(idx: IndexFile, ref: { kind?: NoticeKind; noticeNo: string; round?: string }): NoticeLookup {
   const hits = idx.notices.filter((e) => kindOf(e) === kindOf(ref) && e.noticeNo === ref.noticeNo && (!ref.round || e.round === ref.round));
   const found = [...hits].sort((a, b) => b.collectedAt.localeCompare(a.collectedAt))[0];
-  return found ? { found: true, collectedAt: found.collectedAt, collectStatus: found.collectStatus } : { found: false };
+  return found ? { found: true, collectedAt: found.collectedAt, collectStatus: found.collectStatus, noticeId: found.noticeId, bidCloseAt: found.bidCloseAt, title: found.title } : { found: false };
 }

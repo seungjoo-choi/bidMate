@@ -36,3 +36,6 @@ Thumbs.db
 # Claude Code 개인 설정 (specs 는 커밋 대상)
 .claude/settings.local.json
 CLAUDE.local.md
+
+# 네트워크 캡처 (업체 담당자 개인정보 포함)
+*.har

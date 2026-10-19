@@ -7,7 +7,7 @@ const monthLabel = (key: string): string => `${Number(key.slice(5))}월`;
 
 /**
  * 월별 수집 세로 막대. 정상 수집(먹색) 위에 실패(붉은색)를 2px 틈을 두고 쌓는다.
- * 막대 위는 합계, 아래는 월과 전달 수. 마우스를 올리거나 포커스하면 세부 숫자를 띄운다.
+ * 막대 위는 합계, 아래는 월과 발송 수. 마우스를 올리거나 포커스하면 세부 숫자를 띄운다.
  */
 export function MonthlyBars({ monthly }: { monthly: HomeStats['monthly'] }) {
   const max = Math.max(1, ...monthly.map((m) => m.collected));
@@ -32,7 +32,7 @@ export function MonthlyBars({ monthly }: { monthly: HomeStats['monthly'] }) {
             <li
               key={m.month}
               tabIndex={0}
-              aria-label={`${monthLabel(m.month)} 수집 ${m.collected}건, 실패 ${m.failed}건, 전달 ${m.delivered}건`}
+              aria-label={`${monthLabel(m.month)} 수집 ${m.collected}건, 실패 ${m.failed}건, 발송 ${m.delivered}건`}
               className="group relative flex flex-col items-center justify-end rounded-ctl pt-6 outline-offset-0 hover:bg-sunken focus-visible:bg-sunken"
               style={{ height: PLOT + 24 }}
             >
@@ -52,7 +52,7 @@ export function MonthlyBars({ monthly }: { monthly: HomeStats['monthly'] }) {
               >
                 <div className="font-semibold">{m.month.replace('-', '년 ')}월</div>
                 <div className="font-mono tabular-nums">
-                  수집 {m.collected}, 실패 {m.failed}, 전달 {m.delivered}
+                  수집 {m.collected}, 실패 {m.failed}, 발송 {m.delivered}
                 </div>
               </div>
             </li>
@@ -63,7 +63,7 @@ export function MonthlyBars({ monthly }: { monthly: HomeStats['monthly'] }) {
         {monthly.map((m) => (
           <li key={m.month} className="leading-tight">
             <div className="text-sm font-medium">{monthLabel(m.month)}</div>
-            <div className="font-mono text-xs text-faint tabular-nums">전달 {m.delivered}</div>
+            <div className="font-mono text-xs text-faint tabular-nums">발송 {m.delivered}</div>
           </li>
         ))}
       </ul>
