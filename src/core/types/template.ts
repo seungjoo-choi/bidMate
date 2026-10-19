@@ -1,5 +1,5 @@
 import type { ISODate } from './common';
-import type { NoticeFieldKey } from './notice';
+import type { NoticeFieldKey, NoticeKind } from './notice';
 
 export type TemplateFieldKey = NoticeFieldKey | 'sourceUrl' | 'attachmentList' | 'attachmentCount' | 'collectedAt' | 'isCorrection' | 'today' | `custom.${string}`;
 export type TemplateLayout = 'table' | 'list';
@@ -15,6 +15,7 @@ export interface Template {
   id: string; name: string; isDefault: boolean;
   subject: string; greeting: string; closing: string;
   layout: TemplateLayout;
+  kind?: NoticeKind;   // 없음 = bid
   sections: TemplateSection[];
   updatedAt: ISODate;
 }

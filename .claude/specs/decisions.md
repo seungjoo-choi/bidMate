@@ -280,3 +280,95 @@
 | pendingSelector(scope 범위) 신설 | 진행 표시가 항목 바깥에 있을 가능성(실측상 컨테이너 다름) | itemProgress만 |
 | Gmail 감지 타임아웃 30초 | 사용자 조작 없음, 120초는 실패만 늦춤 | 120초 유지 |
 - 셀렉터 확정 근거: docs/probe/bidmate-probe-mail.google.com-20261019-002623.json
+
+## 2026-10-19, 사전규격 수집과 메일 발송 (Fable, 사용자 승인, 명세 .claude/specs/prespec-mail.md)
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| `NoticeRef.kind?`(없음=bid), `NoticeKind = bid/prespec/orderplan`(orderplan 예약) | 저장본/잡/테스트 무변환, 종류 추가가 유니언 1개 | 종류별 Ref 타입, 지금 orderplan까지 지원 |
+| 차수 없는 종류의 noticeId는 번호만 | normalizeNoticeKey 무수정, bid id와 문자열 충돌 없음, 폴더명 자연스러움 | `prespec_` 접두사, `-PS` 접미사, 별도 폴더 |
+| `Notice.prespec` 그룹 항상 존재, 읽을 때 채움, 표시용 basic 중복 채움 | 경영상태 분리와 같은 무마이그레이션 방식, 인덱스/목록 무수정 | 선택 그룹, customFields에 저장, entryOf/화면 kind 분기 |
+| 수집은 `NoticeSource` 어댑터로 fetch_basic만 분기, 다운로드/저장 공유, 사전규격 extract 항상 skipped, 단독 extract 거부 | 발주계획 추가가 source 1개로 끝남. 규격서 초안 평가항목이 검수/자동작성을 오염하지 않게 | collect-job 복제, extract 허용 |
+| 사전규격 데이터 출처는 OpenAPI 사전규격정보서비스 단건 조회. 엔드포인트/필드는 실측으로 확정, 매핑은 단일 상수 표 | 입찰정보와 같은 방식, 로그인 불필요(추정) | PRVA004_02 화면 CS 읽기 |
+| 중복 판정은 kind를 둘 다 알 때만 비교, lookup은 kind 필터 | compose/extract 잡은 noticeId만 가져 kind 미상 | id 문자열에 kind 인코딩 |
+| `Template.kind?`(없음=bid), isDefault는 종류별 하나, 변수 레지스트리 `kinds` 필터, 별칭 금지, 내장 사전규격 템플릿 | 종류별 변수 집합이 다름. VARIABLE_BY_KEY가 Map | 템플릿 하나에 두 변수 집합, 변수 별칭 |
+| `Settings.autoCompose.prespecTemplateId` | templateId와 이중 출처 방지, 발주계획은 필드 1개 추가 | `templateIds` 맵 |
+| `IndexEntry.bidCloseAt`에 사전규격은 의견등록마감 | 마감 임박/마감 예정 로직 재사용 | `deadlineAt` 신설 |
+| 트래커봇 사전규격 표 제목 머리글 후보에 품명/규격명 추가(실측 후 조정) | 머리글 미확인 | 고정 열 번호 |
+
+- 2026-10-18 트래커봇 결정의 "사전규격은 파서만 인식", "지금 NoticeRef 스키마 확장 기각", trackerbot-mail.md 27행 제약, "기본 템플릿은 isDefault 하나"는 이 결정으로 대체.
+
+## 2026-10-19, 트래커봇 웹메일 우측 하단 진행 팝업 (Fable, 사용자 승인, 명세 .claude/specs/progress-popup.md)
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 우측 하단 카드, 행 버튼은 짧게 유지 | 사용자 선택. 페이지를 떠나지 않고 보임 | 크롬 사이드패널 |
+| TrackerbotController 상태 구독 재사용(subscribe/getEntries) | stale 판정·compose 연결·폴링·orphan 처리가 이미 컨트롤러에 있음 | 팝업이 job/progress 직접 구독·자체 폴링 |
+| 프로토콜·스키마 변경 없음(label·currentStep·progress·bytes만 사용) | 단계·파일명·바이트가 이미 ledger에 있음 | JobProgress에 파일 목록 추가(완료 파일 목록은 보류) |
+| 한 공고 = 한 항목, 수집→메일 작성은 phase 전환 | 행 버튼과 같은 묶음, 소멸 규칙 단순 | collect/compose 별도 항목 |
+| 끝난 상태 문구는 rowView 위임 | 행 버튼과 문구·톤 일치 | 팝업 전용 매핑 |
+| 팝업 동작은 취소·닫기·행으로 이동만 | 재시도 등 상태 변경 동작 중복·경합 방지 | 재시도·설정도 팝업에 |
+| seen(이 페이지에서 진행 중을 본 잡)만 종료 항목 노출, dismissed는 key→jobId | 재진입 시 옛 결과가 튀어나오지 않게, 같은 행 새 잡은 다시 보이게 | 끝난 잡 전부 표시 / key만으로 dismiss |
+| ok 8초 자동 소멸(hover 중 보류), warn/error 수동 닫기, 접힘 유지 | 실패는 놓치면 안 되고 성공은 치움. 웹메일은 다른 일 하는 화면 | 전부 자동/수동, 새 잡 시 자동 전개 |
+| vanilla shadow DOM + 인라인 style, 키 이벤트까지 stopPropagation | unlisted script라 CSS 산출물 주입 경로 없음, Gmail 단축키 | React+Tailwind, Panel.tsx 재사용 |
+
+## 2026-10-19, 공고별 메일 편집과 수집 후 동작 선택 (Fable, 사용자 승인, 명세 .claude/specs/mail-edit.md)
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 공고별 편집은 `notices/<folder>/mail-edits.json`에 템플릿 복사본 + 수신자 이메일 + 제외 첨부 id로 저장 | 렌더 무변경, 섹션/항목 추가 삭제가 자연스럽게 표현됨, 원본 삭제에도 동작, 다음 공고로 이어 쓰지 않으므로(사용자 결정) 병합 불필요 | sectionId/itemKey diff 패치(필드 항목에 id 없음, 3-way 병합 필요), mail-draft.json 안에 저장, 숨은 템플릿을 templates.json에 저장 |
+| 필드 항목 값 고치기 = 문구 항목으로 전환 | 공고 값 수정은 검수 화면 영역, 템플릿 모델에 새 종류 추가 회피 | `valueOverride` 필드, 공고 값 자체 수정 |
+| 제목 수정 = 복사본 `template.subject` 수정 | 렌더 지점 단일화 | `subjectOverride` |
+| 편집 파일이 있으면 요청 templateId보다 우선(경고만) | 공고별 수작업이 설정값보다 명시적 | templateId 우선 + 편집 폐기, 오류로 거부 |
+| 적용 지점은 prepareMail 한 곳, compose-job 무변경 | 대시보드 저장과 compose 잡이 같은 초안을 봄 | compose-job에서 재적용 |
+| 등록 안 된 이메일 직접 입력 허용(공고별 저장) | 사용자 결정. 일회성이라 수신자 저장소 오염 없음. 설정에 이메일 저장 금지 결정은 오래 가는 설정 대상이라 해당 없음 | 등록 수신자만 |
+| `AutoComposeSettings.afterCollect: 'dashboard' \| 'compose'`를 enabled와 분리, 기본 'compose' | enabled 의존 코드 유지, 얕은 병합 호환, 기본값은 기존 동작 유지(사용자 결정) | 3값 enum, 기본 dashboard |
+| 이번 건 선택은 `Job.afterCollect` 스냅샷(SW가 시작 시 기록) + `auto-compose/choose` | CS가 storage를 읽지 않는 결정 유지, 팝업이 ledger에서 읽음 | CS가 설정 읽기, job/start payload 전달 |
+| Handoff `edit` 신설(대시보드 `#/mail/<id>?from=collect`) | review와 의미가 다름 | review 재사용, handoff 없이 열기만 |
+| edit 경로는 already_composed 무시, 권한 검사 없음 | 사용자 결정. 화면을 여는 것은 중복 발송 위험 없음 | compose와 동일 생략 |
+| 나라장터 플로팅 패널에는 선택 UI 넣지 않음 | 사용자 결정 | 패널에도 추가 |
+
+- 2026-10-18 Phase 5 "메일 준비 화면 범위: 초안 저장, 복사, 전달 완료 표시까지"와 2026-10-19 진행 팝업 "팝업 동작은 취소·닫기·행으로 이동만"은 이 결정으로 대체(팝업에 완료 후 동작 선택 추가).
+
+## 2026-10-19, 네이버웍스 사내 연락처 불러오기 (Fable, 사용자 승인, 명세 .claude/specs/naverworks-import.md)
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 연락처 API(`POST contact.worksmobile.com/v2/api/search`, 비공식)는 contact 탭에 `executeScript`로 함수를 주입해 같은 출처 fetch로 호출 | 쿠키·Origin·Referer·XSRF가 실제 웹앱과 동일, cookies 권한 불필요, 로그인 여부·domainId를 탭 URL로 판단 | SW/대시보드 `fetch(credentials:'include')`(Origin이 확장 출처, cookies 권한 필요, SameSite 미확인) |
+| 호스트 권한은 optional 런타임 요청, 매니페스트 불변 | 고정 host_permissions 추가는 업데이트 시 비활성화 | host_permissions 추가 |
+| domainId: 설정값 → 탭 URL 추출 → 수동 입력, 획득값은 대시보드가 `settings.sites.naverworks.contactDomainId`에 저장 | 첫 실행은 버튼 한 번, 이후 고정. SW는 설정을 쓰지 않음 | 항상 사용자 입력 / domainId 없이 호출 |
+| diff는 core 순수 함수, 대시보드에서 실행. 키는 정규화 이메일, 대표 `email`만 사용 | 스냅샷이 이미 UI에 있고 테스트 가능. emails[]의 개인·별칭 메일 배제 | offscreen에서 비교 |
+| 반영은 새 메시지 `recipients/import`(한 잠금, 파일 1회 기록). 수정은 name·dept만, 끄기는 enabled만, 그룹 파일 불변 | save 반복은 N회 재기록·부분 실패·'전체' 자동 편입 함정 | `recipients/save` 반복 |
+| 새 사람은 그룹 없이(전체 자동 편입·기본 그룹 생성 없음), enabled true, defaultRole 'to' | 사용자 결정 | '전체' 편입 |
+| 목록에 없는 사람은 발송 끄기 제안만(기본 해제), 삭제·자동 재활성화·주기 동기화·캐시 없음 | 되돌릴 수 없는 변경 회피, 사용자 결정 | 삭제, 자동 켜기, 주기 동기화 |
+| 부서는 orgUnits를 ' / '로 결합. 휴직·협력사·계약직은 정확 일치로 판정해 미리보기 기본 해제(체크하면 enabled true) | 사용자 결정, 부분 일치는 오탐 | 팀 이름만, 부분 일치 |
+
+## 2026-10-19, 수집 완료 후 동작을 팝업에서 고르기 (Fable, 사용자 승인, 명세 .claude/specs/after-collect-ask.md)
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| `AfterCollect`에 `'ask'` 추가, 기본값 `'ask'`. 기존 dashboard/compose 자동 모드 유지 | 사용자 요청 "수집 끝난 뒤 버튼을 눌러야 진행". 추가만 해서 얕은 병합 호환 유지(저장본 변환 없음, 사용자가 설정에서 변경) | 수집 중 선택 UI만 제거하고 자동 진행 유지, dashboard/compose 모드 삭제, 저장본 자동 변환 |
+| Handoff `{ action: 'ask' }`. 수집이 끝나면 SW가 대기만 기록하고, 팝업 [대시보드 편집][바로 작성]은 기존 `auto-compose/choose`로 해소(ACTIVE=스냅샷 변경, ask 대기=즉시 적용) | 신뢰 경계 유지: CS는 고르기만 하고 compose 시작은 SW `applyVerdict`. 메시지 하나로 충분 | 새 메시지 auto-compose/resume, 대시보드 편집을 ui/open으로만 처리(handoff가 ask로 남아 상태 불일치) |
+| 팝업의 수집 중 '완료 후' 선택 UI는 모든 모드에서 제거. ask 항목은 자동으로 닫지 않고 새로고침 뒤에도 다시 보여 줌 | 사용자 명시 거부 / 응답 대기 상태 | warn 톤으로 자동 소멸 회피 |
+| 나라장터 패널·대시보드에서 수집한 건도 ask면 조용히 멈추고 대시보드 메일 준비 화면에서 이어 감 | "누를 때만 진행" 원칙 일관(사용자 확인) | 패널에 선택 UI 추가 |
+| ask 선택 뒤 compose 파라미터도 `paramsOf(settings, kindOf(ref))`를 거침 | 사전규격 공고에 bid 템플릿이 넘어가지 않게 함 | — |
+- 대체 범위: 323행의 "기본 'compose'", 324행의 "수집 중 선택", 329행의 "팝업에 완료 후 동작 선택 추가"를 "완료 후 선택"으로 바꾼다. 210행(CS의 compose 시작 금지)은 유지한다.
+- 같은 날 "진행 팝업 끝난 항목은 '행으로 이동' 대신 행 버튼과 같은 동작(actions)"으로 바꿨다(사용자 요청, 메인).
+
+## 2026-10-19, 네이버웍스 작성 주소와 주소 채움 (메인, 사용자 실측)
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 기본 composePath = `/write/popup?srvid=mail&to=&orderType=new&memo=false` | 사용자 실측: [메일쓰기] 클릭 시 주소. 이전 기본 `/`는 받은메일함이 열림 | 사용자 설정 입력 |
+| `/write/popup` 경로면 to/cc(쉼표 구분)/subject를 주소로 채우고 prefilled 처리(mode url). 본문, 첨부는 붙여 넣기/직접 | 사용자 실측: to 2명, cc, 한글 제목 모두 채워짐. 본문 파라미터는 미확인 | 셀렉터 실측까지 수동 모드 유지 |
+| naverworks-v1 셀렉터셋 verified 1.0.0: 제목 `input[name=subject]`, 본문 iframe 안 `.workseditor-content`, 수신자는 주소 채움이라 비움 | probe(20261019-170832) + 콘솔 확인 | 수신자 칩 입력 자동화 |
+| 본문은 서명 블록(`[data-workseditor="sign-content"]`, `body.keep`) 앞만 교체, 서명이 사라지면 KEEP_LOST 불일치 | 작성 화면 기본 서명 유지 필요 | 전체 선택 후 교체 |
+| 비 scope detect에서 to.input은 있을 때만 요구 | 수신자를 주소로 채우는 서비스는 수신자 셀렉터 없음 | 네이버웍스용 위치 기반 to 셀렉터 추가 |
+| 첨부 자동화는 첨부 목록 실측 전까지 끔(fileInput `#fileContent`만 기록) | 업로드 완료 판정 근거 없음 | 파일 칸 주입 후 성공 가정 |
+| naverworks-v1 1.1.0: 첨부 자동 입력 켬. `#fileContent`(바깥 문서)에 파일 주입, 본문 iframe 안 `li.attachment_item`에 나타나면 첨부 완료(`attach.inBodyFrame`), 이름은 `.file_name_cover`를 공백, 점 제거 후 대조 | 실측: 상태가 보낼 때까지 '대기 중'이고 보내기 시점에 업로드됨(사용자 확인) | 업로드 진행률로 완료 판정 |
+| 다시 수집한 공고도 이미 작성/전달 여부와 무관하게 메일 작성을 진행(already_composed 생략 폐지). 동시 실행 방지(compose_running)는 유지 | 사용자 결정 2026-10-19 | 중복 발송 방지를 위한 생략(2026-10-18 자동 작성 결정 대체) |
+
+## 2026-10-19 트래커봇/대시보드 수집의 상세화면 읽기
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 확보 방식: SW가 비활성 탭(`active:false`)으로 상세 페이지를 열고 기존 g2b 콘텐츠 스크립트(`g2b/read-html`, readHtmlFields)를 폴링해 값을 받는다 | 화면 전용 필드(proposalPeriod 등)는 렌더된 DOM에서만 읽힘. 기존 파서·isVisible 그대로 재사용 | offscreen 내부 JSON fetch(엔드포인트 미확인), offscreen iframe(XFO·가시성 미확인), 최소화 창(포커스 깜빡임), executeScript func(import 직렬화 불가) |
+| 책임 계층: collect-job의 `fetch_html` step이 요청(`readDetail` 의존성 주입 → offscreen이 `g2b/read-detail`로 SW에 요청), SW `detail-reader`가 탭을 연다 | offscreen은 chrome.tabs 사용 불가. API+html은 단일 mergeFields로 병합해야 하므로 병합 전에 확보 | startJob 선처리(serial 블로킹), html을 나중에 별도 mergeFields |
+| 실패는 잡을 partial로 올리고 `DETAIL_*` 에러(retryable)를 기록. 취소(DETAIL_CANCELLED)는 cancelled. handoff는 `detail_failed` 사유로 검수 | 첨부/API 결과는 유효하므로 completed로 숨기거나 failed로 올리지 않음 | 실패를 completed로 은폐, failed 처리 |
+| 동시 1개 FIFO, 항목당 45초 상한(큐 대기 제외) | 탭 폭주·창 포커스 경합 방지 | 병렬 탭 |
+| 탭 배치: `active:false`, originTabId가 있으면 그 창(+openerTabId), 없으면 마지막 포커스 창. 사용자가 연 g2b 탭은 재사용·닫지 않음 | 사용자 작업 방해 최소화, 경합 회피 | 사용자 탭 재사용 |
+| 렌더 판정: match 이후 연속 2회 fields 동일 + 첫 match 후 1.5초 경과 시 성공. 45초까지 못 안정되면 마지막 스냅샷, match가 없었으면 DETAIL_TIMEOUT | WebSquare 비동기 렌더로 일부 값이 늦게 채워짐 | 로드 완료 즉시 읽기 |

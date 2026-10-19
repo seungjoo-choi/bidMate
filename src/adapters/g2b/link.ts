@@ -4,8 +4,8 @@ export type G2bLinkKind = 'bid' | 'prespec' | 'orderplan';
 export interface G2bLink { kind: G2bLinkKind; id: string; round?: string; url: string } // url = 정규화 URL
 
 export const G2B_ORIGIN = 'https://www.g2b.go.kr';
-/** 버튼을 만들 수 있는 종류. 사전규격/발주계획은 파서가 인식만 한다. */
-export const COLLECTIBLE_KINDS: ReadonlySet<G2bLinkKind> = new Set<G2bLinkKind>(['bid']);
+/** 버튼을 만들 수 있는 종류. 발주계획은 파서가 인식만 한다. */
+export const COLLECTIBLE_KINDS: ReadonlySet<G2bLinkKind> = new Set<G2bLinkKind>(['bid', 'prespec']);
 
 const PARAMS: Array<{ kind: G2bLinkKind; id: string; round?: string }> = [
   { kind: 'bid', id: 'bidPbancNo', round: 'bidPbancOrd' },
@@ -33,7 +33,24 @@ export function parseG2bLink(href: string): G2bLink | null {
   return null;
 }
 
+/** 상세화면을 열 URL. 입찰공고(bid)만 대상이며, 검증을 통과한 g2b URL만 반환한다. */
+export function detailUrlOf(ref: Pick<NoticeRef, 'kind' | 'noticeNo' | 'round' | 'detailUrl'>): string | null {
+  if (ref.kind && ref.kind !== 'bid') return null;
+  if (ref.detailUrl) {
+    const l = parseG2bLink(ref.detailUrl);
+    if (l?.kind === 'bid' && l.id === ref.noticeNo) return l.url;
+  }
+  const q = new URLSearchParams({ bidPbancNo: ref.noticeNo });
+  if (ref.round) q.set('bidPbancOrd', ref.round);
+  const l = parseG2bLink(`${G2B_ORIGIN}/link/PNPE027_01/single/?${q.toString()}`);
+  return l && l.kind === 'bid' ? l.url : null;
+}
+
+/** 회차는 "1"/"001"처럼 자릿수가 다를 수 있어 앞의 0을 떼고 비교한다. */
+export const sameRound = (a: string, b: string): boolean => a.trim().replace(/^0+/, '') === b.trim().replace(/^0+/, '');
+
 export function linkToNoticeRef(link: G2bLink, origin: NoticeRef['origin']): NoticeRef | null {
-  if (link.kind !== 'bid') return null;
+  if (link.kind === 'prespec') return { kind: 'prespec', noticeNo: link.id, detailUrl: link.url, origin };
+  if (link.kind !== 'bid') return null; // 발주계획은 버튼을 만들지 않는다
   return { noticeNo: link.id, ...(link.round ? { round: link.round } : {}), detailUrl: link.url, origin };
 }

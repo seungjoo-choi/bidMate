@@ -10,7 +10,9 @@ import { readFileSync } from 'node:fs';
 import type { Extraction } from '../../src/core/types/extraction';
 import { conflictCountOf } from '../../src/engine/extraction/extract-step';
 import { createParserRegistry } from '../../src/engine/parsers/registry';
-import { readJsonFile, runCollect } from '../helpers/extract-harness';
+import { docOf, fakeParsers, readJsonFile, runCollect } from '../helpers/extract-harness';
+import { PRESPEC_MAP } from '../../src/adapters/g2b/prespec-api';
+import { loadRules } from '../../src/core/extraction/rules/load';
 
 const baseItem = servcFx.response.body.items[0] as Record<string, string>;
 const apiBody = (item: Record<string, string>) =>
@@ -112,6 +114,53 @@ describe('runCollectJob 재시도 html 병합', () => {
   });
 });
 
+describe('runCollectJob prespec (추정 매핑)', () => {
+  const col = (key: string) => PRESPEC_MAP.fields.find((f) => f.key === key)!.api;
+  const specItem: Record<string, string> = {
+    [col('specRegNo')]: 'R26BD00273952', [col('specName')]: '통합 시스템', [col('registeredAt')]: '2026-10-10 09:00:00',
+    [col('opinionCloseAt')]: '2026-10-17 18:00:00', [col('orderingOrg')]: '발주기관',
+    [`${PRESPEC_MAP.attachUrl}1`]: 'https://dl.test/1', [`${PRESPEC_MAP.attachName}1`]: '규격서.hwp',
+  };
+  const specJob = (): Job => ({
+    id: 'j2', type: 'collect', noticeId: 'R26BD00273952', ref: { kind: 'prespec', noticeNo: 'R26BD00273952', origin: 'g2b' }, status: 'running',
+    steps: ['fetch_basic', 'download_attachments', 'extract', 'fetch_html'].map((id) => ({ id: id as never, status: 'pending' as const })),
+    attempt: 1, createdAt: 't', updatedAt: 't', errors: [],
+  });
+
+  it('id=번호, 필드 채움, extract skipped, html 무시, 폴더는 <번호>_<제목>', async () => {
+    const store = new MemoryStore();
+    const f = vi.fn(async (url: string) => (url.includes('apis.data.go.kr')
+      ? new Response(apiBody(specItem))
+      : new Response('x', { headers: { 'content-length': '1' } })));
+    const { d, emitted } = deps(store, f, { extract: { parsers: fakeParsers(async () => docOf('a')), rules: loadRules() } });
+    const html = { capturedAt: '2026-10-19T00:00:00Z', fields: { projectPeriod: { raw: '90일', ref: 'r' } } };
+    const out = await runCollectJob({ job: specJob(), html, secrets: { g2bServiceKey: 'K' }, settings: defaultSettings() }, d);
+    expect(out.status).toBe('completed');
+    expect(out.result?.noticeId).toBe('R26BD00273952');
+    const key = [...store.files.keys()].find((k) => k.endsWith('/notice.json'))!;
+    expect(key).toMatch(/^notices\/2026\/R26BD00273952_통합 시스템\/notice\.json$/);
+    const saved = JSON.parse(await store.readText(key));
+    expect(saved.ref.kind).toBe('prespec');
+    expect(saved.prespec.specName.value).toBe('통합 시스템');
+    expect(saved.prespec.opinionCloseAt.value).toBeTruthy();
+    expect(saved.basic.title.value).toBe('통합 시스템');
+    expect(saved.basic.projectPeriod.value).toBeNull(); // html 무시
+    expect(saved.isCorrection).toBe(false);
+    expect(saved.attachments).toHaveLength(1);
+    expect(emitted.find((p) => p.step === 'fetch_html')).toMatchObject({ status: 'done', label: '화면값 전달됨' });
+    expect(emitted.find((p) => p.step === 'extract')).toMatchObject({ status: 'skipped', label: '평가정보 추출 대상 아님' });
+  });
+
+  it('orderplan은 KIND_UNSUPPORTED로 실패', async () => {
+    const job = { ...specJob(), ref: { kind: 'orderplan' as const, noticeNo: 'X', origin: 'g2b' as const } };
+    const { d } = deps(new MemoryStore(), vi.fn());
+    const out = await runCollectJob({ job, secrets: { g2bServiceKey: 'K' }, settings: defaultSettings() }, d);
+    expect(out.status).toBe('failed');
+    expect(out.error?.code).toBe('KIND_UNSUPPORTED');
+    expect(out.error?.retryable).toBe(false);
+  });
+});
+
 describe('runCollectJob result 필드', () => {
   it('extraction.conflictCount와 mailStatus를 기록한다', async () => {
     const DIR = 'tests/fixtures/docs/R26BK01722175';
@@ -125,4 +174,112 @@ describe('runCollectJob result 필드', () => {
     expect(r.extraction?.conflictCount).toBeLessThanOrEqual(r.extraction!.reviewCount);
   });
 });
+});
+
+describe('runCollectJob 상세화면 읽기(readDetail)', () => {
+  const detailHtml = { capturedAt: '2026-10-19T00:00:00Z', fields: { projectPeriod: { raw: '계약일로부터 90일', ref: 'title=사업기간' } } };
+  const apiFetch = () => vi.fn(async (url: string) => (url.includes('apis.data.go.kr')
+    ? new Response(apiBody(baseItem))
+    : new Response('x', { headers: { 'content-length': '1' } })));
+  const readNotice = (store: MemoryStore) => {
+    const key = [...store.files.keys()].find((k) => k.endsWith('/notice.json'))!;
+    return store.readText(key).then((t) => JSON.parse(t));
+  };
+  const stepOf = (emitted: JobProgress[], status: string) => emitted.find((p) => p.step === 'fetch_html' && p.status === status);
+  const detailErr = (code: string) => Object.assign(new Error(`${code} 실패`), { code });
+
+  it('html 없음+bid+readDetail → 호출하고 병합 결과에 반영', async () => {
+    const store = new MemoryStore();
+    const readDetail = vi.fn(async () => detailHtml);
+    const { d, emitted } = deps(store, apiFetch(), { readDetail });
+    const out = await runCollectJob(input(), d);
+    expect(out.status).toBe('completed');
+    expect(readDetail).toHaveBeenCalledWith('j1');
+    expect((await readNotice(store)).basic.projectPeriod.value).toBe('계약일로부터 90일');
+    expect(stepOf(emitted, 'done')).toMatchObject({ label: '상세화면 읽기 완료' });
+  });
+
+  it('DETAIL_TIMEOUT → partial, collect.errors 기록, fetch_html failed, 나머지 step 정상', async () => {
+    const store = new MemoryStore();
+    const { d, emitted } = deps(store, apiFetch(), { readDetail: vi.fn(async () => { throw detailErr('DETAIL_TIMEOUT'); }) });
+    const out = await runCollectJob(input(), d);
+    expect(out.status).toBe('partial');
+    expect(out.error?.code).toBe('DETAIL_TIMEOUT');
+    const saved = await readNotice(store);
+    expect(saved.collect.status).toBe('partial');
+    expect(saved.collect.errors[0].code).toBe('DETAIL_TIMEOUT');
+    expect(stepOf(emitted, 'failed')).toBeTruthy();
+    expect(emitted.find((p) => p.step === 'fetch_basic' && p.status === 'done')).toBeTruthy();
+    expect(emitted.find((p) => p.step === 'download_attachments' && p.status === 'done')).toBeTruthy();
+  });
+
+  it('DETAIL_CANCELLED → cancelled', async () => {
+    const { d } = deps(new MemoryStore(), apiFetch(), { readDetail: vi.fn(async () => { throw detailErr('DETAIL_CANCELLED'); }) });
+    const out = await runCollectJob(input(), d);
+    expect(out.status).toBe('cancelled');
+    expect(out.error).toBeUndefined();
+  });
+
+  it('html 제공 → readDetail 미호출, done', async () => {
+    const readDetail = vi.fn(async () => detailHtml);
+    const { d, emitted } = deps(new MemoryStore(), apiFetch(), { readDetail });
+    const out = await runCollectJob({ ...input(), html: detailHtml }, d);
+    expect(out.status).toBe('completed');
+    expect(readDetail).not.toHaveBeenCalled();
+    expect(stepOf(emitted, 'done')).toMatchObject({ label: '화면값 전달됨' });
+  });
+
+  it('prespec → 미호출, skipped', async () => {
+    const col = (key: string) => PRESPEC_MAP.fields.find((f) => f.key === key)!.api;
+    const specItem: Record<string, string> = {
+      [col('specRegNo')]: 'R26BD00273952', [col('specName')]: '통합 시스템', [col('registeredAt')]: '2026-10-10 09:00:00',
+      [col('opinionCloseAt')]: '2026-10-17 18:00:00', [col('orderingOrg')]: '발주기관',
+    };
+    const job: Job = { ...mkJob(), id: 'j3', noticeId: 'R26BD00273952', ref: { kind: 'prespec', noticeNo: 'R26BD00273952', origin: 'g2b' } };
+    const readDetail = vi.fn(async () => detailHtml);
+    const { d, emitted } = deps(new MemoryStore(), vi.fn(async () => new Response(apiBody(specItem))), { readDetail });
+    await runCollectJob({ job, secrets: { g2bServiceKey: 'K' }, settings: defaultSettings() }, d);
+    expect(readDetail).not.toHaveBeenCalled();
+    expect(stepOf(emitted, 'skipped')).toMatchObject({ label: '상세화면 대상 아님' });
+  });
+
+  it('readDetail 미주입 → skipped', async () => {
+    const { d, emitted } = deps(new MemoryStore(), apiFetch());
+    const out = await runCollectJob(input(), d);
+    expect(out.status).toBe('completed');
+    expect(stepOf(emitted, 'skipped')).toMatchObject({ label: '상세화면 읽기 건너뜀' });
+  });
+
+  const retryJob = (fetchHtmlDone: boolean): Job => {
+    const job = mkJob();
+    job.noticeId = 'R1-000';
+    job.attempt = 2;
+    job.ref = { noticeNo: 'R1', round: '000', origin: 'g2b' };
+    job.steps = job.steps.map((s) => (s.id === 'fetch_html' && !fetchHtmlDone ? s : { ...s, status: 'done' as const }));
+    return job;
+  };
+  const seed = async (store: MemoryStore) => {
+    await new NoticeStore(store).saveNotice(emptyNotice('R1-000', { noticeNo: 'R1', round: '000', origin: 'g2b' }, 'notices/2026/R1-000_t', '2026-10-17T00:00:00Z'));
+  };
+
+  it('재시도: fetch_basic done·fetch_html pending → 호출·병합', async () => {
+    const store = new MemoryStore();
+    await seed(store);
+    const readDetail = vi.fn(async () => detailHtml);
+    const { d } = deps(store, vi.fn(), { readDetail });
+    const out = await runCollectJob({ job: retryJob(false), secrets: {}, settings: defaultSettings() }, d);
+    expect(out.status).toBe('completed');
+    expect(readDetail).toHaveBeenCalledTimes(1);
+    expect((await readNotice(store)).basic.projectPeriod.value).toBe('계약일로부터 90일');
+  });
+
+  it('재시도: fetch_html done → 미호출', async () => {
+    const store = new MemoryStore();
+    await seed(store);
+    const readDetail = vi.fn(async () => detailHtml);
+    const { d } = deps(store, vi.fn(), { readDetail });
+    const out = await runCollectJob({ job: retryJob(true), secrets: {}, settings: defaultSettings() }, d);
+    expect(out.status).toBe('completed');
+    expect(readDetail).not.toHaveBeenCalled();
+  });
 });

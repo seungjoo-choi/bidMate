@@ -9,11 +9,14 @@ import type { Job, JobProgress } from '../../src/core/types/job';
 import { saveGroup, saveRecipient, setDefaultGroup } from '../../src/engine/config/recipients-api';
 import { runComposeJob, type ComposeJobDeps } from '../../src/engine/jobs/compose-job';
 import { NoticeStore } from '../../src/engine/notices/notice-store';
-import { getDraft } from '../../src/engine/mail/prepare';
+import { createMailEdits } from '../../src/core/mail/edits';
+import { listTemplates } from '../../src/engine/config/templates-api';
+import { getDraft, prepareMail } from '../../src/engine/mail/prepare';
 import { MemoryStore } from '../helpers/memory-store';
 
 const FOLDER = 'notices/2026/R1-000_가';
-const verifiedSet: ComposeSelectorSet = { ...naverworksV1, status: 'verified' };
+// 첨부 전송 경로를 검증하는 테스트용 셋(실제 naverworks-v1은 자동 첨부가 꺼져 있다)
+const verifiedSet: ComposeSelectorSet = { ...naverworksV1, status: 'verified', attach: { ...naverworksV1.attach, item: '.att', itemName: '.nm', methods: ['input'] } };
 
 async function setup(opts: { group?: boolean; attachSize?: number } = {}) {
   const mem = new MemoryStore();
@@ -29,6 +32,9 @@ async function setup(opts: { group?: boolean; attachSize?: number } = {}) {
   }
   return mem;
 }
+
+/** 주소 채움 경로가 아닌 naverworks 자동 입력 경로(/mail/) 설정. */
+const autoSettings = () => { const s = defaultSettings(); s.sites.naverworks.composePath = '/mail/'; return s; };
 
 const job: Job = { id: 'j1', type: 'compose', noticeId: 'R1-000', status: 'running', steps: [], attempt: 1, createdAt: '', updatedAt: '', errors: [] };
 
@@ -73,17 +79,22 @@ function autoHandlers(mem: MemoryStore): Record<string, Handler> {
 }
 
 describe('runComposeJob', () => {
-  it('수동 모드: 셀렉터셋이 unverified면 partial/manual, 기록, focus', async () => {
+  it('수동 모드: 셀렉터셋이 unverified면 partial/url, 기록, focus (받는 사람/참조/제목은 주소로 전달)', async () => {
     const mem = await setup();
-    const h = harness(mem, { 'compose/open': () => ({ tabId: 7 }) }, { selectorSets: { 'naverworks-v1': naverworksV1 } });
+    const h = harness(mem, { 'compose/open': () => ({ tabId: 7 }) }, { selectorSets: { 'naverworks-v1': { ...naverworksV1, status: 'unverified' } } });
     const r = await h.run();
     expect(r.status).toBe('partial');
-    expect(r.result?.mode).toBe('manual');
+    expect(r.result?.mode).toBe('url');
     expect(r.result?.outcome).toBe('partial');
-    expect(r.result?.fields.every((f) => f.status === 'unsupported' && f.error === 'SELECTOR_UNVERIFIED')).toBe(true);
-    expect(r.result?.attachments.every((a) => a.status === 'skipped')).toBe(true);
+    for (const f of r.result!.fields) {
+      if (f.field === 'body') expect(f).toMatchObject({ status: 'unsupported', error: 'SELECTOR_UNVERIFIED' });
+      else expect(f.status).toBe('prefilled');
+    }
+    expect(r.result?.fields.map((f) => f.field).sort()).toEqual(['body', 'cc', 'subject', 'to']);
+    expect(r.result?.attachments.every((a) => a.status === 'skipped' && a.error === 'ATTACH_MANUAL')).toBe(true);
     expect(h.calls).toEqual(['compose/open', 'compose/focus']);
     expect(h.progress.filter((p) => p.status === 'skipped').map((p) => p.step)).toEqual(['fill_fields', 'attach_files', 'verify']);
+    expect(h.progress.find((p) => p.step === 'fill_fields' && p.status === 'skipped')?.label).toBe('주소로 전달(받는 사람, 참조, 제목), 본문은 붙여 넣기');
     expect(JSON.parse(await mem.readText(`${FOLDER}/mail.json`))).toHaveLength(1);
     expect((await new NoticeStore(mem).loadNotice('R1-000'))?.mail.status).toBe('ready_for_review');
     expect(JSON.stringify(r.result)).not.toContain('<');
@@ -91,7 +102,7 @@ describe('runComposeJob', () => {
 
   it('정상 경로: 호출 순서와 completed', async () => {
     const mem = await setup();
-    const h = harness(mem, autoHandlers(mem));
+    const h = harness(mem, autoHandlers(mem), {}, autoSettings());
     const r = await h.run();
     expect(h.calls).toEqual(['compose/open', 'compose/detect', 'compose/bind', 'compose/fill', 'compose/attach-begin',
       'file/chunk', 'file/end', 'compose/attach-status', 'compose/verify', 'compose/focus']);
@@ -210,6 +221,21 @@ describe('runComposeJob', () => {
     expect(d.to).toEqual([]);
     expect(d.recipientSource).toBe('custom');
     expect(d.groupId).toBeUndefined();
+  });
+
+  it('편집이 있는 공고는 params.templateId가 달라도 복사본 제목이 fill.subject에 들어간다', async () => {
+    const mem = await setup();
+    const tpl = (await listTemplates(mem)).templates.find((t) => t.id === 'tpl_default')!;
+    const edits = createMailEdits('R1-000', tpl, new Date('2026-10-18T08:00:00.000Z'));
+    edits.template.subject = '편집된 제목';
+    await prepareMail(mem, { noticeId: 'R1-000', edits });
+    let fillPayload: any;
+    const handlers = autoHandlers(mem);
+    handlers['compose/fill'] = (p) => { fillPayload = p; return okFields(p); };
+    const h = harness(mem, handlers);
+    job.params = { templateId: 'tpl_prespec_default' };
+    try { await h.run(); } finally { delete job.params; }
+    expect(fillPayload.subject).toBe('편집된 제목');
   });
 });
 
@@ -354,7 +380,7 @@ describe('runComposeJob naverworks 페이로드 불변', () => {
       const orig = hs[t]!;
       hs[t] = (p) => { payloads[t] = p; return orig(p); };
     }
-    const r = await harness(mem, hs).run();
+    const r = await harness(mem, hs, {}, autoSettings()).run();
     expect(r.status).toBe('completed');
     expect('anchor' in payloads['compose/open']).toBe(false);
     expect('fields' in payloads['compose/fill']).toBe(false);
@@ -378,5 +404,36 @@ describe('runComposeJob url 본문 길이 비교', () => {
     };
     const r = await harness(mem, hs, { selectorSets: { 'gmail-v1': set } }, s).run();
     expect(r.result?.fields.find((f) => f.field === 'body')?.status).toBe('ok');
+  });
+});
+
+describe('runComposeJob naverworks 자동 첨부 꺼진 셋과 서명 유지', () => {
+  it('attach.methods가 비면 첨부를 전송하지 않고 ATTACH_MANUAL로 skipped, 단계는 첨부는 직접', async () => {
+    const mem = await setup();
+    const noAttach: ComposeSelectorSet = { ...naverworksV1, attach: { ...naverworksV1.attach, methods: [] } };
+    const h = harness(mem, autoHandlers(mem), { selectorSets: { 'naverworks-v1': noAttach } });
+    const r = await h.run();
+    for (const c of ['compose/attach-begin', 'file/chunk', 'file/end', 'compose/attach-status']) expect(h.calls).not.toContain(c);
+    expect(r.result?.attachments.length).toBeGreaterThan(0);
+    expect(r.result?.attachments.every((a) => a.status === 'skipped' && a.error === 'ATTACH_MANUAL')).toBe(true);
+    expect(h.progress.find((p) => p.step === 'attach_files' && p.status === 'skipped')?.label).toBe('첨부는 직접');
+    expect(r.result?.mode).toBe('url');
+  });
+  it('attach.methods가 있는 셋은 기존처럼 전송한다', async () => {
+    const mem = await setup();
+    const h = harness(mem, autoHandlers(mem));
+    const r = await h.run();
+    expect(h.calls).toContain('compose/attach-begin');
+    expect(h.calls).toContain('file/chunk');
+    expect(r.result?.attachments[0]?.status).toBe('uploaded');
+  });
+  it('setBody가 mismatch/KEEP_LOST면 verify 상태가 본문을 담고 있어도 유지된다', async () => {
+    const mem = await setup();
+    const hs = autoHandlers(mem);
+    hs['compose/fill'] = (p) => okFields(p).map((f) => f.field === 'body' ? { ...f, status: 'mismatch' as const, error: 'KEEP_LOST' } : f);
+    const r = await harness(mem, hs).run();
+    const body = r.result?.fields.find((f) => f.field === 'body');
+    expect(body).toMatchObject({ status: 'mismatch', error: 'KEEP_LOST' });
+    expect(r.status).toBe('partial');
   });
 });

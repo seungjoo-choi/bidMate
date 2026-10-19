@@ -8,6 +8,25 @@ export interface EngineTiming { settleMs?: number; stableMs?: number; pollMs?: n
 
 const EMAIL_RE = /[^\s<>;,"'()]+@[^\s<>;,"'()]+/;
 const norm = (s: string): string => s.replace(/\s+/g, '');
+/** 파일 이름 대조용: 공백과 점을 빼고 소문자로. */
+const flatName = (s: string): string => s.replace(/\s+/g, '').toLowerCase();
+/** 화면 이름이 파일 이름과 같은지. 이름과 확장자가 나뉘어 점이 빠진 화면("보고서"+"pdf")도 같다고 본다. */
+function sameFileName(shown: string, name: string): boolean {
+  const d = flatName(shown);
+  const n = flatName(name);
+  return d === n || d === n.replace(/\.(?=[^.]*$)/, '');
+}
+/** keep 요소(서명 등)를 뺀 본문 복제본. */
+function withoutKeep(el: HTMLElement, keep: string | undefined): HTMLElement {
+  if (!keep) return el;
+  const c = el.cloneNode(true) as HTMLElement;
+  c.querySelectorAll(keep).forEach((k) => k.remove());
+  return c;
+}
+/** keep 요소(서명 등)를 뺀 본문 텍스트. */
+function textWithoutKeep(el: HTMLElement, keep: string | undefined): string {
+  return withoutKeep(el, keep).textContent ?? '';
+}
 
 export class GenericComposeAdapter implements ComposeAdapter {
   readonly id: string;
@@ -111,8 +130,9 @@ export class GenericComposeAdapter implements ComposeAdapter {
     if (!s.compose.readySelector) return { isCompose: false, ready: false, reason: 'SELECTOR_MISSING' };
     const isCompose = this.q(s.compose.readySelector) !== null;
     if (!isCompose) return { isCompose: false, ready: false, reason: 'NOT_COMPOSE' };
-    if (!s.to.input || !s.subject.input || !s.body.editable) return { isCompose, ready: false, reason: 'SELECTOR_MISSING' };
-    const ready = !!this.q(s.to.input) && !!this.q(s.subject.input) && !!this.bodyEditable();
+    // 받는 사람은 주소로 채우는 서비스(네이버웍스)가 있어 셀렉터가 있을 때만 요구한다
+    if (!s.subject.input || !s.body.editable) return { isCompose, ready: false, reason: 'SELECTOR_MISSING' };
+    const ready = (!s.to.input || !!this.q(s.to.input)) && !!this.q(s.subject.input) && !!this.bodyEditable();
     return { isCompose, ready, reason: ready ? undefined : 'FIELDS_NOT_FOUND' };
   }
 
@@ -198,6 +218,7 @@ export class GenericComposeAdapter implements ComposeAdapter {
     }
     const el = this.bodyEditable();
     if (!el) return { ...base, rendered: null, status: 'failed', error: 'EDITABLE_NOT_FOUND' };
+    const hadKeep = !!b.keep && b.kind !== 'textarea' && !!el.querySelector(b.keep);
     try {
       const tpl = this.root.createElement('template');
       tpl.innerHTML = html;
@@ -207,11 +228,13 @@ export class GenericComposeAdapter implements ComposeAdapter {
         setNativeValue(el as unknown as HTMLTextAreaElement, wantText);
         method = 'setNativeValue';
       } else {
-        method = insertHtml(el, html, b.insert);
+        method = insertHtml(el, html, b.insert, b.keep);
       }
       await settle(this.settleMs);
       if (!method) return { ...base, rendered: null, status: 'failed', error: 'INSERT_FAILED' };
-      const got = b.kind === 'textarea' ? (el as unknown as HTMLTextAreaElement).value : (el.textContent ?? '');
+      const got = b.kind === 'textarea' ? (el as unknown as HTMLTextAreaElement).value : textWithoutKeep(el, b.keep);
+      // 서명 등 keep 요소가 삽입 중 사라졌으면 불일치로 본다
+      if (hadKeep && !el.querySelector(b.keep!)) return { ...base, method, rendered: got, status: 'mismatch', error: 'KEEP_LOST' };
       return { ...base, method, rendered: got, status: norm(got) === norm(wantText) ? 'ok' : 'mismatch' };
     } catch (e) {
       return { ...base, rendered: null, status: 'failed', error: e instanceof Error ? e.message : String(e) };
@@ -219,11 +242,21 @@ export class GenericComposeAdapter implements ComposeAdapter {
   }
 
   // ---------- 첨부 ----------
-  private findItem(name: string): HTMLElement | null {
+  /** 첨부 목록을 찾을 기준. inBodyFrame이면 본문 iframe 문서(접근 불가면 null). */
+  private attachBase(): ParentNode | null {
+    return this.selectorSet.attach.inBodyFrame ? this.resolveRoot() : this.resolveScope().el;
+  }
+  private attachItems(): HTMLElement[] {
+    const base = this.attachBase();
+    return base ? this.qaIn(base, this.selectorSet.attach.item) : [];
+  }
+  /** 이름이 같은 첨부 항목. existing(주입 전부터 있던 항목)은 새 첨부로 보지 않는다. */
+  private findItem(name: string, existing?: Set<HTMLElement>): HTMLElement | null {
     const a = this.selectorSet.attach;
-    for (const item of this.qa(a.item)) {
+    for (const item of this.attachItems()) {
+      if (existing?.has(item)) continue;
       const nameEl = a.itemName ? (item.matches(a.itemName) ? item : item.querySelector<HTMLElement>(a.itemName)) : item;
-      if ((nameEl?.textContent ?? '').trim().includes(name)) return item;
+      if (sameFileName(nameEl?.textContent ?? '', name)) return item;
     }
     return null;
   }
@@ -232,7 +265,7 @@ export class GenericComposeAdapter implements ComposeAdapter {
     if (a.itemProgress && item.querySelector(a.itemProgress)) return true;
     if (a.uploadingClass && item.classList.contains(a.uploadingClass)) return true;
     if (a.pendingSelector) {
-      const base = this.resolveScope().el;
+      const base = this.attachBase();
       if (base && this.qIn(base, a.pendingSelector) !== null) return true;
     }
     return false;
@@ -261,6 +294,8 @@ export class GenericComposeAdapter implements ComposeAdapter {
 
     if (!this.resolveScope().el) return res('failed', 'none', { error: this.scopeError() });
 
+    // 주입 전부터 있던 항목(같은 이름 재첨부, 이전 실행분)을 새 첨부로 오인하지 않게 기억한다
+    const existing = new Set(this.attachItems());
     opts.onPhase('injecting');
     let used: AttachResult['method'] | null = null;
     for (const m of a.methods) {
@@ -283,7 +318,7 @@ export class GenericComposeAdapter implements ComposeAdapter {
       used = m;
       await settle(this.settleMs);
       if (this.dialogShown()) return res('failed', used, { error: 'DIALOG_SHOWN' });
-      if (await waitFor(() => opts.signal.aborted || this.dialogShown() || this.findItem(file.name), this.itemAppearMs, this.pollMs)) {
+      if (await waitFor(() => opts.signal.aborted || this.dialogShown() || this.findItem(file.name, existing), this.itemAppearMs, this.pollMs)) {
         if (this.dialogShown()) return res('failed', used, { error: 'DIALOG_SHOWN' });
         break;
       }
@@ -299,7 +334,7 @@ export class GenericComposeAdapter implements ComposeAdapter {
       if (opts.signal.aborted) return res('failed', used, { error: 'ABORTED' });
       if (this.dialogShown()) return res('failed', used, { error: 'DIALOG_SHOWN' });
       if (!this.resolveScope().el) return res('failed', used, { error: this.scopeError() });
-      const item = this.findItem(file.name);
+      const item = this.findItem(file.name, existing);
       last = item;
       if (item && this.itemError(item)) return res('failed', used, { error: 'UPLOAD_ERROR' });
       if (item && !this.itemUploading(item)) {
@@ -328,14 +363,16 @@ export class GenericComposeAdapter implements ComposeAdapter {
     }
     const subj = this.q<HTMLInputElement>(s.subject.input);
     const body = this.bodyEditable();
-    const bodyText = body ? (body instanceof HTMLTextAreaElement ? body.value : body.textContent ?? '') : '';
+    // 서명 등 keep 요소는 대조에서 뺀다(서명 표 때문에 길이 검사가 늘 통과하지 않게)
+    const bodyEl = body && !(body instanceof HTMLTextAreaElement) ? withoutKeep(body, s.body.keep) : null;
+    const bodyText = body ? (body instanceof HTMLTextAreaElement ? body.value : bodyEl!.textContent ?? '') : '';
     return {
       to: this.readChips(s.to),
       cc: this.readChips(s.cc),
       subject: subj?.value ?? '',
       bodyText,
-      bodyHtml: body && !(body instanceof HTMLTextAreaElement) ? body.innerHTML : bodyText,
-      attachments: this.qa(s.attach.item).map((item) => {
+      bodyHtml: bodyEl ? bodyEl.innerHTML : bodyText,
+      attachments: this.attachItems().map((item) => {
         const nameEl = s.attach.itemName ? item.matches(s.attach.itemName) ? item : item.querySelector<HTMLElement>(s.attach.itemName) : item;
         const size = s.attach.itemSize ? item.querySelector<HTMLElement>(s.attach.itemSize)?.textContent?.trim() : undefined;
         return { name: (nameEl?.textContent ?? '').trim(), ...(size ? { size } : {}), uploading: this.itemUploading(item) };

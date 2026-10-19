@@ -93,15 +93,40 @@ function htmlToText(html: string): string {
 }
 
 /** 전략을 순서대로 시도하고 DOM이 실제로 바뀐 첫 전략 이름을 반환한다. 모두 실패하면 null. */
-export function insertHtml(editable: HTMLElement, html: string, strategies: InsertStrategy[]): InsertStrategy | null {
+/** keep에 맞는 요소를 품은 editable의 직계 자식. 없으면 null. */
+function keptChild(editable: HTMLElement, keep: string | undefined): ChildNode | null {
+  if (!keep) return null;
+  let el: Element | null = editable.querySelector(keep);
+  while (el && el.parentElement !== editable) el = el.parentElement;
+  return el;
+}
+
+/**
+ * 본문을 html로 바꾼다. keep이 있으면 그 요소(서명 등) 앞부분만 바꾸고 keep은 남긴다.
+ * 성공한 전략을 돌려주고, 모두 실패하면 null.
+ */
+export function insertHtml(editable: HTMLElement, html: string, strategies: InsertStrategy[], keep?: string): InsertStrategy | null {
   const doc = editable.ownerDocument;
+  // 바꿀 범위를 선택한다: keep이 없으면 전체, 있으면 처음부터 keep 바로 앞까지.
+  const selectTarget = () => {
+    const kept = keptChild(editable, keep);
+    if (!kept) { doc.execCommand('selectAll', false); return; }
+    const r = doc.createRange();
+    r.setStart(editable, 0);
+    r.setEndBefore(kept);
+    const sel = doc.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(r);
+  };
+  const keepText = () => (keep ? editable.querySelector(keep)?.textContent ?? null : null);
+  const keepBefore = keepText();
   for (const s of strategies) {
     const before = editable.innerHTML;
     try {
       if (s === 'execCommand') {
         if (typeof doc.execCommand !== 'function') continue;
         editable.focus();
-        doc.execCommand('selectAll', false);
+        selectTarget();
         doc.execCommand('insertHTML', false, html);
       } else if (s === 'paste') {
         if (typeof ClipboardEvent === 'undefined' || typeof DataTransfer === 'undefined') continue;
@@ -109,13 +134,28 @@ export function insertHtml(editable: HTMLElement, html: string, strategies: Inse
         dt.setData('text/html', html);
         dt.setData('text/plain', htmlToText(html));
         editable.focus();
+        selectTarget();
         editable.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
       } else {
-        editable.innerHTML = html;
+        const kept = keptChild(editable, keep);
+        if (kept) {
+          while (editable.firstChild && editable.firstChild !== kept) editable.removeChild(editable.firstChild);
+          const tpl = doc.createElement('template');
+          tpl.innerHTML = html;
+          editable.insertBefore(tpl.content, kept);
+        } else {
+          editable.innerHTML = html;
+        }
         editable.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste' }));
       }
     } catch { continue; }
-    if (editable.innerHTML !== before) return s;
+    if (editable.innerHTML === before) continue;
+    // keep(서명)이 사라졌거나 그 안에 내용이 들어갔으면 되돌리고 다음 전략으로 넘어간다
+    if (keepBefore !== null && (!keptChild(editable, keep) || keepText() !== keepBefore)) {
+      editable.innerHTML = before;
+      continue;
+    }
+    return s;
   }
   return null;
 }

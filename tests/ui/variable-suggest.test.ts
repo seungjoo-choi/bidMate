@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { VARIABLES } from '../../src/core/templates/variables';
+import { VARIABLES, variablesFor } from '../../src/core/templates/variables';
 import { findVariableQuery, matchVariables } from '../../src/entrypoints/dashboard/templates/variable-suggest';
 
 describe('findVariableQuery', () => {
@@ -18,8 +18,20 @@ describe('findVariableQuery', () => {
 });
 
 describe('matchVariables', () => {
-  it('빈 입력어면 전체', () => {
-    expect(matchVariables('')).toHaveLength(VARIABLES.length);
+  it('빈 입력어면 해당 종류 전체', () => {
+    expect(matchVariables('', 'bid')).toHaveLength(variablesFor('bid').length);
+  });
+  it('bid에서는 사전규격 변수가 나오지 않는다', () => {
+    const names = matchVariables('', 'bid').map((d) => d.name);
+    const prespecOnly = VARIABLES.filter((d) => !d.kinds.includes('bid')).map((d) => d.name);
+    expect(prespecOnly.length).toBeGreaterThan(0);
+    for (const n of prespecOnly) expect(names).not.toContain(n);
+  });
+  it('prespec에서는 공용 변수와 사전규격 변수만 나온다', () => {
+    const got = matchVariables('', 'prespec');
+    expect(got.length).toBeGreaterThan(0);
+    expect(got.every((d) => d.kinds.includes('prespec'))).toBe(true);
+    expect(got.map((d) => d.name)).toEqual(variablesFor('prespec').map((d) => d.name));
   });
   it('시작 일치를 포함 일치보다 앞에 둔다', () => {
     const names = matchVariables('입찰').map((d) => d.name);

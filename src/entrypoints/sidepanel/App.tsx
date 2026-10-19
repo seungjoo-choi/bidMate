@@ -224,7 +224,7 @@ export function App() {
         {view.action !== 'none' && !(view.action === 'retry' && otherTabJob) && (
           <Button className="w-full" loading={busy} disabled={view.action === 'retry' && g2bTabId === null} onClick={() => {
             if (view.action === 'grant') openUi('grant');
-            else if (view.action === 'settings') openUi('settings');
+            else if (view.action === 'settings') void send('ui/open', view.fix ?? { page: 'settings' }).catch(() => undefined);
             else retry();
           }}>{view.actionLabel}</Button>
         )}

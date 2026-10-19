@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { renderMail } from '../../src/core/templates/render';
-import { sampleNotice } from '../../src/core/templates/sample-notice';
+import { sampleNotice, samplePrespecNotice } from '../../src/core/templates/sample-notice';
 import type { Notice } from '../../src/core/types/notice';
 import { saveGroup, saveRecipient, setDefaultGroup } from '../../src/engine/config/recipients-api';
-import { listTemplates } from '../../src/engine/config/templates-api';
-import { draftPath, draftToComposeFill, getDraft, prepareMail, setMailStatus } from '../../src/engine/mail/prepare';
+import { createMailEdits } from '../../src/core/mail/edits';
+import type { MailEdits } from '../../src/core/types/mail';
+import { deleteTemplate, listTemplates, saveTemplate } from '../../src/engine/config/templates-api';
+import { draftPath, draftToComposeFill, getDraft, getEdits, prepareMail, setMailStatus } from '../../src/engine/mail/prepare';
 import { NoticeStore } from '../../src/engine/notices/notice-store';
 import { MemoryStore } from '../helpers/memory-store';
 
@@ -179,5 +181,170 @@ describe('draftToComposeFill', () => {
     const { fill, files } = draftToComposeFill(draft);
     expect(fill).toEqual({ to: draft.to, cc: draft.cc, subject: draft.subject, html: draft.html });
     expect(files).toEqual([{ fileId: 'a1', name: '공고문.hwp', size: 12 }]);
+  });
+});
+
+describe('prepareMail 공고별 편집(edits)', () => {
+  const EDITS_FILE = `${FOLDER}/mail-edits.json`;
+  async function baseEdits(mem: MemoryStore, tplId = 'tpl_default') {
+    const tpl = (await listTemplates(mem, opts)).templates.find((t) => t.id === tplId)!;
+    return createMailEdits('R1-000', tpl, NOW);
+  }
+  function setPm(e: MailEdits, text: string) {
+    const item = e.template.sections.flatMap((s) => s.items).find((i) => i.kind === 'text' && i.id === 'txt_pm');
+    if (!item || item.kind !== 'text') throw new Error('txt_pm 없음');
+    item.text = text;
+  }
+  async function customTemplate(mem: MemoryStore) {
+    const t = (await saveTemplate(mem, { name: '내 양식', kind: 'bid', subject: '원본 제목', greeting: '', closing: '', layout: 'list', sections: [] }, opts)).templates.find((x) => x.name === '내 양식')!;
+    return t;
+  }
+
+  it('복사본으로 렌더하고 draft.edited를 남긴다', async () => {
+    const { mem } = await setup();
+    const e = await baseEdits(mem);
+    setPm(e, '홍길동PM');
+    const { draft } = await prepareMail(mem, { noticeId: 'R1-000', edits: e }, opts);
+    expect(draft.html).toContain('홍길동PM');
+    expect(draft.edited).toEqual({ at: e.updatedAt });
+    expect(draft.templateId).toBe('tpl_default');
+    expect(mem.files.has(EDITS_FILE)).toBe(true);
+    expect((await getEdits(mem, 'R1-000'))?.noticeId).toBe('R1-000');
+    // edits 없이 다시 준비해도 저장된 편집을 쓴다
+    expect((await prepareMail(mem, { noticeId: 'R1-000' }, opts)).draft.html).toContain('홍길동PM');
+  });
+  it('요청 templateId가 다르면 편집 우선 warning', async () => {
+    const { mem } = await setup();
+    const e = await baseEdits(mem);
+    e.template.subject = '복사본 제목';
+    await prepareMail(mem, { noticeId: 'R1-000', edits: e }, opts);
+    const { draft } = await prepareMail(mem, { noticeId: 'R1-000', templateId: 'tpl_prespec_default' }, opts);
+    expect(draft.subject).toBe('복사본 제목');
+    expect(draft.templateId).toBe('tpl_default');
+    expect(draft.warnings).toContain(`이 공고 전용 양식(템플릿 '${e.base.templateName}' 기준)을 사용했습니다. 요청한 템플릿은 적용하지 않았습니다`);
+  });
+  it('edits:null이면 파일을 삭제하고 기존 규칙으로 렌더한다', async () => {
+    const { mem } = await setup();
+    const e = await baseEdits(mem);
+    setPm(e, '홍길동PM');
+    await prepareMail(mem, { noticeId: 'R1-000', edits: e }, opts);
+    const { draft } = await prepareMail(mem, { noticeId: 'R1-000', edits: null }, opts);
+    expect(mem.files.has(EDITS_FILE)).toBe(false);
+    expect(draft.html).not.toContain('홍길동PM');
+    expect(draft.edited).toBeUndefined();
+    expect(await getEdits(mem, 'R1-000')).toBeNull();
+    // 파일이 없어도 null은 무시된다
+    await prepareMail(mem, { noticeId: 'R1-000', edits: null }, opts);
+  });
+  it('수신자 덮어쓰기: 그룹이 없어도 성공하고 edited, 0명이면 NO_RECIPIENTS', async () => {
+    const { mem } = await setup(false);
+    const e = await baseEdits(mem);
+    e.recipients = { to: [' X@x.com ', 'y@x.com'], cc: ['x@x.com', 'z@x.com'] };
+    const { draft } = await prepareMail(mem, { noticeId: 'R1-000', edits: e }, opts);
+    expect(draft.to).toEqual(['x@x.com', 'y@x.com']);
+    expect(draft.cc).toEqual(['z@x.com']);
+    expect(draft.recipientSource).toBe('edited');
+    expect(draft.groupId).toBeUndefined();
+    e.recipients = { to: ['', '  '], cc: [] };
+    expect(await codeOf(prepareMail(mem, { noticeId: 'R1-000', edits: e }, opts))).toBe('NO_RECIPIENTS');
+  });
+  it('첨부 제외는 excludedAttachments에 기록하고 모르는 id는 무시', async () => {
+    const { mem } = await setup();
+    const e = await baseEdits(mem);
+    e.excludedAttachmentIds = ['a1', 'zzz'];
+    const { draft } = await prepareMail(mem, { noticeId: 'R1-000', edits: e }, opts);
+    expect(draft.attachments).toEqual([]);
+    expect(draft.excludedAttachments).toEqual([{ attachmentId: 'a1', name: '공고문.hwp' }]);
+    expect(draft.skippedAttachments).toEqual([{ attachmentId: 'a2', name: '실패.pdf', status: 'failed' }]);
+    e.excludedAttachmentIds = ['zzz'];
+    const d2 = (await prepareMail(mem, { noticeId: 'R1-000', edits: e }, opts)).draft;
+    expect(d2.attachments).toHaveLength(1);
+    expect(d2.excludedAttachments).toBeUndefined();
+  });
+  it('원본 템플릿이 변경되면 warning, 삭제되면 복사본으로 계속 동작하며 warning', async () => {
+    const { mem } = await setup();
+    const mine = await customTemplate(mem);
+    const e = await baseEdits(mem, mine.id);
+    await prepareMail(mem, { noticeId: 'R1-000', edits: e }, opts);
+    await saveTemplate(mem, { id: mine.id, name: '내 양식', subject: '바뀐 제목', greeting: '', closing: '', layout: 'list', sections: [] }, { now: () => new Date('2026-10-19T00:00:00.000Z') });
+    const changed = (await prepareMail(mem, { noticeId: 'R1-000' }, opts)).draft;
+    expect(changed.warnings).toContain('원본 템플릿이 변경되었습니다. 이 공고 양식은 저장 당시 복사본입니다');
+    expect(changed.subject).toBe('원본 제목');
+    await deleteTemplate(mem, mine.id, opts);
+    const gone = (await prepareMail(mem, { noticeId: 'R1-000' }, opts)).draft;
+    expect(gone.warnings).toContain('원본 템플릿이 삭제되었습니다');
+    expect(gone.subject).toBe('원본 제목');
+  });
+  it('손상된 편집 파일은 무시하고 warning, 삭제하지 않는다', async () => {
+    const { mem } = await setup();
+    await mem.writeText(EDITS_FILE, '{broken');
+    const { draft } = await prepareMail(mem, { noticeId: 'R1-000' }, opts);
+    expect(draft.warnings).toContain('편집 파일이 손상되어 무시했습니다');
+    expect(draft.edited).toBeUndefined();
+    expect(draft.templateId).toBe('tpl_default');
+    expect(mem.files.has(EDITS_FILE)).toBe(true);
+  });
+  it('edits:null에서 remove가 NotFoundError를 던져도 성공한다', async () => {
+    const { mem } = await setup();
+    mem.remove = async () => { throw Object.assign(new Error('nf'), { name: 'NotFoundError' }); };
+    const { draft } = await prepareMail(mem, { noticeId: 'R1-000', edits: null }, opts);
+    expect(draft.edited).toBeUndefined();
+  });
+  it('검사 실패 시 편집 파일은 이전 상태 그대로다', async () => {
+    const { mem } = await setup();
+    const e = await baseEdits(mem);
+    setPm(e, '홍길동PM');
+    await prepareMail(mem, { noticeId: 'R1-000', edits: e }, opts);
+    const before = await mem.readText(EDITS_FILE);
+    const bad = await baseEdits(mem);
+    bad.recipients = { to: [], cc: [] };
+    expect(await codeOf(prepareMail(mem, { noticeId: 'R1-000', edits: bad }, opts))).toBe('NO_RECIPIENTS');
+    expect(await mem.readText(EDITS_FILE)).toBe(before);
+    expect((await getEdits(mem, 'R1-000'))?.recipients).toBeUndefined();
+    // edits:null 요청이 다른 이유로 실패하면 삭제되지 않는다
+    expect(await codeOf(prepareMail(mem, { noticeId: 'R1-000', edits: null, groupId: 'nope' }, opts))).toBe('GROUP_NOT_FOUND');
+    expect(await mem.readText(EDITS_FILE)).toBe(before);
+  });
+  it('edits.noticeId가 다르거나 형식이 틀리면 INVALID_VALUE이고 저장하지 않는다', async () => {
+    const { mem } = await setup();
+    const e = await baseEdits(mem);
+    expect(await codeOf(prepareMail(mem, { noticeId: 'R1-000', edits: { ...e, noticeId: 'other' } }, opts))).toBe('INVALID_VALUE');
+    expect(await codeOf(prepareMail(mem, { noticeId: 'R1-000', edits: { schemaVersion: 2 } as unknown as MailEdits }, opts))).toBe('INVALID_VALUE');
+    expect(mem.files.has(EDITS_FILE)).toBe(false);
+  });
+});
+
+describe('prepareMail 템플릿 종류', () => {
+  async function setupPrespec() {
+    const { mem } = await setup();
+    const n = samplePrespecNotice();
+    n.id = 'R26BD00273952'; n.folder = 'notices/2026/R26BD00273952_가';
+    await new NoticeStore(mem).saveNotice(n);
+    return mem;
+  }
+  it('사전규격 공고는 사전규격 기본 템플릿을 고르고 warning이 없다', async () => {
+    const mem = await setupPrespec();
+    const { draft } = await prepareMail(mem, { noticeId: 'R26BD00273952' }, opts);
+    expect(draft.templateId).toBe('tpl_prespec_default');
+    expect(draft.warnings.some((w) => w.includes('템플릿 종류'))).toBe(false);
+  });
+  it('bid 공고는 여전히 bid 기본 템플릿을 고른다', async () => {
+    const { mem } = await setup();
+    expect((await prepareMail(mem, { noticeId: 'R1-000' }, opts)).draft.templateId).toBe('tpl_default');
+  });
+  it('종류가 다른 템플릿을 지정하면 warning을 남기고 진행한다', async () => {
+    const mem = await setupPrespec();
+    const { draft } = await prepareMail(mem, { noticeId: 'R26BD00273952', templateId: 'tpl_default' }, opts);
+    expect(draft.templateId).toBe('tpl_default');
+    expect(draft.warnings).toContain('템플릿 종류(입찰공고)가 공고 종류(사전규격)와 다릅니다');
+    const { mem: m2 } = await setup();
+    const { draft: d2 } = await prepareMail(m2, { noticeId: 'R1-000', templateId: 'tpl_prespec_default' }, opts);
+    expect(d2.warnings).toContain('템플릿 종류(사전규격)가 공고 종류(입찰공고)와 다릅니다');
+  });
+  it('notice.mail.templateId가 종류 기본보다 우선한다', async () => {
+    const mem = await setupPrespec();
+    const mine = (await saveTemplate(mem, { name: '내 사전규격', kind: 'prespec', subject: 's', greeting: '', closing: '', layout: 'list', sections: [] }, opts)).templates.find((t) => t.name === '내 사전규격')!;
+    await prepareMail(mem, { noticeId: 'R26BD00273952', templateId: mine.id }, opts);
+    expect((await prepareMail(mem, { noticeId: 'R26BD00273952' }, opts)).draft.templateId).toBe(mine.id);
   });
 });

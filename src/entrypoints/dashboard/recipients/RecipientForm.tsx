@@ -4,6 +4,7 @@ import type { RecipientInput } from '../../../core/types/config-file';
 import type { Group, Recipient } from '../../../core/types/recipient';
 import { Button, Field, inputClass } from '../../../ui/components';
 import { matchesQuery } from '../../../ui/components/select-filter';
+import { EmailDomainInput } from './EmailDomainInput';
 import { Switch, errorText, type OpError } from './shared';
 
 /** 그룹이 이 개수 이상이면 칩 위에 검색 칸을 둔다 */
@@ -21,7 +22,7 @@ interface Props {
   onCancel: () => void;
 }
 
-/** 사람 등록/수정 폼. 등록은 팝업, 수정은 서랍 패널 안에 들어간다. 받는 방식(TO/CC)은 그룹에서 정하므로 여기에는 없다. */
+/** 사람 등록/수정 폼. 등록·수정 모두 팝업 안에 들어간다. 받는 방식(TO/CC)은 그룹에서 정하므로 여기에는 없다. */
 export function RecipientForm({ recipient, groups, initialGroupIds, error, busy, onSubmit, onCancel }: Props) {
   const [name, setName] = useState(recipient?.name ?? '');
   const [email, setEmail] = useState(recipient?.email ?? '');
@@ -50,9 +51,9 @@ export function RecipientForm({ recipient, groups, initialGroupIds, error, busy,
   return (
     <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); submit(); }}>
       <Field label="이름" htmlFor="rc-name"><input id="rc-name" className={inputClass} value={name} autoFocus onChange={(e) => setName(e.target.value)} /></Field>
-      <Field label="이메일" htmlFor="rc-email" error={emailErr}><input id="rc-email" type="email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
+      <Field label="이메일" htmlFor="rc-email" error={emailErr}><EmailDomainInput id="rc-email" value={email} onChange={setEmail} /></Field>
       <Field label="부서 (선택)" htmlFor="rc-dept"><input id="rc-dept" className={inputClass} value={dept} onChange={(e) => setDept(e.target.value)} /></Field>
-      <Field label="메모 (선택)" htmlFor="rc-memo"><input id="rc-memo" className={inputClass} value={memo} onChange={(e) => setMemo(e.target.value)} /></Field>
+      <Field label="닉네임 (선택)" htmlFor="rc-memo"><input id="rc-memo" className={inputClass} value={memo} onChange={(e) => setMemo(e.target.value)} /></Field>
       <Field label="소속 그룹" help={noDefault ? "저장하면 '전체' 그룹이 만들어지고 메일 기본 선택으로 지정됩니다." : '메일은 그룹 단위로 보냅니다. 그룹에 넣어야 메일을 받습니다.'}>
         {groups.length === 0 ? <p className="text-sm text-muted">아직 그룹이 없습니다.</p> : (
           <div className="space-y-2">

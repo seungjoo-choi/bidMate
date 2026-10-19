@@ -16,9 +16,10 @@ describe('mergeSelectorSet', () => {
     expect(m.forbidden.send).toEqual(base.forbidden.send);
   });
   it('overrides가 없으면 원본 값을 유지하고 원본을 변경하지 않는다', () => {
+    const orig = base.subject.input;
     const m = mergeSelectorSet(base, undefined);
     expect(m).toEqual(base);
     mergeSelectorSet(base, { subject: { input: '#z' } });
-    expect(base.subject.input).toBe('');
+    expect(base.subject.input).toBe(orig);
   });
 });

@@ -1,6 +1,6 @@
 import { refsConflict } from '../../core/model/job-conflict';
 import type { CollectResult, Job, StepState } from '../../core/types/job';
-import type { NoticeLookup } from '../../messaging/protocol';
+import type { FixTarget, NoticeLookup } from '../../messaging/protocol';
 import { handoffView, type HandoffView } from '../handoff-view';
 
 /** 잡 → 패널 표시 상태. 순수 함수(UI는 이 결과만 그린다). */
@@ -15,7 +15,7 @@ export type PanelView =
     }
   | { kind: 'completed'; headline: string; folder?: string; chip: string; title?: string; foreign: boolean; extractionLine?: string; reviewNoticeId?: string; handoff?: HandoffView }
   | { kind: 'partial'; headline: string; failures: FailedFile[]; moreCount: number; folder?: string; title?: string; foreign: boolean; canRetry: boolean; retryLabel: string; extractionLine?: string; reviewNoticeId?: string; handoff?: HandoffView }
-  | { kind: 'error'; message: string; detail?: string; action: ErrorAction; actionLabel?: string; title?: string; foreign: boolean; hint?: string; handoff?: HandoffView };
+  | { kind: 'error'; message: string; detail?: string; action: ErrorAction; actionLabel?: string; fix?: FixTarget; title?: string; foreign: boolean; hint?: string; handoff?: HandoffView };
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -39,8 +39,8 @@ export function progressRatio(steps: StepState[]): number {
   return Math.max(0, Math.min(1, sum / steps.length));
 }
 
-const DEFAULT_LABEL: Record<string, string> = {
-  fetch_basic: '공고정보 조회 중', download_attachments: '첨부파일 다운로드 중', fetch_html: '화면정보 병합 중',
+export const COLLECT_STEP_LABEL: Record<string, string> = {
+  fetch_basic: '공고정보 조회 중', download_attachments: '첨부파일 다운로드 중', fetch_html: '상세화면 읽는 중',
   extract: '평가정보 추출 중',
 };
 
@@ -56,10 +56,10 @@ type ErrBase = Omit<Extract<PanelView, { kind: 'error' }>, 'title' | 'foreign' |
 function errorView(code: string | undefined, message: string | undefined): ErrBase {
   switch (code) {
     case 'NEEDS_FS_PERMISSION':
-      return { kind: 'error', message: '저장 폴더 접근을 다시 허용해야 합니다', action: 'grant', actionLabel: '폴더 접근 허용' };
+      return { kind: 'error', message: '저장 폴더 접근을 다시 허용해야 합니다', action: 'grant', actionLabel: '폴더 접근 허용', fix: { page: 'settings', section: 'storage' } };
     case 'G2B_KEY_MISSING':
     case 'G2B_KEY_INVALID':
-      return { kind: 'error', message: '나라장터 서비스키를 확인해 주세요', action: 'settings', actionLabel: '설정 열기' };
+      return { kind: 'error', message: '나라장터 서비스키를 확인해 주세요', action: 'settings', actionLabel: '설정 열기', fix: { page: 'settings', section: 'g2b' } };
     case 'G2B_NOT_FOUND':
       return { kind: 'error', message: 'API에서 이 공고를 찾지 못했습니다', action: 'none' };
     default:
@@ -101,7 +101,7 @@ export function panelView(job: Job | null, lookup: NoticeLookup, opts: PanelView
       return {
         kind: 'progress', title: jobTitle ?? (foreign ? job.ref?.noticeNo : undefined),
         foreignLabel: foreign ? `다른 공고 수집 중: ${jobTitle ?? job.ref?.noticeNo}` : undefined,
-        label: job.label ?? (cur ? DEFAULT_LABEL[cur] ?? '수집 중' : '준비 중…'),
+        label: job.label ?? (cur ? COLLECT_STEP_LABEL[cur] ?? '수집 중' : '준비 중…'),
         ratio: progressRatio(job.steps), attach, errorCount: job.errors.length,
         cancelling: job.status === 'cancelling',
         pillText: attach ? `수집 중 ${attach.done}/${attach.total}` : '수집 중',

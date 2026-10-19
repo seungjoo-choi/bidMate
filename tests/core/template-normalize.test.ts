@@ -33,3 +33,16 @@ describe('normalizeTemplate', () => {
     expect(template.isDefault).toBe(false);
   });
 });
+
+describe('normalizeTemplate kind', () => {
+  it('prespec/orderplan은 보존한다', () => {
+    expect(normalizeTemplate({ id: 't', kind: 'prespec' }, NOW).template.kind).toBe('prespec');
+    expect(normalizeTemplate({ id: 't', kind: 'orderplan' }, NOW).template.kind).toBe('orderplan');
+  });
+  it('bid/없음/잘못된 값은 kind 속성을 생략한다', () => {
+    for (const kind of ['bid', undefined, 'x', 1]) {
+      const { template } = normalizeTemplate({ id: 't', kind }, NOW);
+      expect('kind' in template).toBe(false);
+    }
+  });
+});

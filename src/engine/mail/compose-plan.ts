@@ -1,6 +1,7 @@
 import { mergeSelectorSet } from '../../adapters/naverworks/selectors';
 import type { ComposeSelectorSet } from '../../adapters/naverworks/types';
 import { buildGmailComposeUrl } from '../../adapters/gmail/compose-url';
+import { buildNaverworksComposeUrl } from '../../adapters/naverworks/compose-url';
 import { composeProvider, providerHost } from '../../core/model/mail-provider';
 import type { MailDraft } from '../../core/types/mail';
 import type { MailProvider, Settings } from '../../core/types/settings';
@@ -38,6 +39,8 @@ export function planCompose(settings: Settings, draft: MailDraft, selectorSets: 
     else if (draft.text) omitted.push({ field: 'body', reason: 'URL_TOO_LONG' });
   } else {
     url = `https://${host}${settings.sites.naverworks.composePath ?? '/'}`;
+    const n = buildNaverworksComposeUrl(url, { to: draft.to, cc: draft.cc, subject: draft.subject });
+    if (n) { url = n; prefilled = ['to', 'cc', 'subject']; }
   }
 
   const base = selectorSets[site.selectorSetId];

@@ -1,13 +1,19 @@
 import { Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { composeHost, originOf } from '../../core/model/mail-provider';
-import type { AutoComposeSettings, ReviewGate } from '../../core/types/settings';
+import { kindOf } from '../../core/model/ids';
+import { composeHost,originOf } from '../../core/model/mail-provider';
+import type { AfterCollect, AutoComposeSettings, ReviewGate } from '../../core/types/settings';
 import { Button, Card, Field, InlineAlert, Select, StatusBadge } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useRecipients, useTemplates } from '../../ui/hooks/useConfig';
 import { useSettings } from '../../ui/hooks/useSettings';
 import { countRoles, findBroken, requestToEnable, sanitizeForSave } from './auto-compose-logic';
 
+const AFTER: Array<{ id: AfterCollect; label: string }> = [
+  { id: 'ask', label: '수집이 끝나면 진행 팝업에서 고르기(대시보드 편집 / 바로 작성)' },
+  { id: 'dashboard', label: '대시보드에서 내용 확인 후 작성' },
+  { id: 'compose', label: '바로 웹메일 작성 화면 열기' },
+];
 const GATES: Array<{ id: ReviewGate; label: string }> = [
   { id: 'conflicts', label: '충돌/저신뢰 항목이 있을 때(권장)' },
   { id: 'any_review', label: '확인 필요 항목이 하나라도 있을 때' },
@@ -33,7 +39,7 @@ export function AutoComposeCard() {
 
   if (!settings || !draft) return <Card title="자동 메일 작성" />;
 
-  const broken = loaded ? findBroken(draft, groups, recipients, templates) : { groupMissing: false, templateMissing: false, memberIds: [] as string[] };
+  const broken = loaded ? findBroken(draft, groups, recipients, templates) : { groupMissing: false, templateMissing: false, prespecTemplateMissing: false, memberIds: [] as string[] };
   const members = draft.recipients.mode === 'custom' ? draft.recipients.members : [];
   const roles = countRoles(members, recipients);
   const update = (patch: Partial<AutoComposeSettings>) => { setDraft({ ...draft, ...patch }); setNote(null); };
@@ -77,11 +83,22 @@ export function AutoComposeCard() {
   };
 
   return (
-    <Card title="자동 메일 작성" description="수집이 끝나면 지정한 수신자와 템플릿으로 웹메일 작성 화면을 자동으로 엽니다. 끄면 자동 작성과 검수 화면 이동이 모두 꺼집니다.">
+    <Card title="자동 메일 작성" description="수집이 끝나면 고른 동작(팝업에서 고르기 / 대시보드 편집 / 바로 작성)을 합니다. 끄면 자동 작성과 검수 화면 이동이 모두 꺼집니다.">
       <label className="flex items-center gap-2 text-sm font-semibold text-ink">
         <input type="checkbox" className="accent-current" checked={draft.enabled} onChange={(e) => void toggle(e.target.checked)} />
-        수집 완료 후 메일 작성 자동 시작
+        수집 완료 후 메일 작성으로 이어가기
       </label>
+
+      <Field label="완료 후 동작" help="'고르기'면 웹메일 화면 오른쪽 아래 진행 팝업에 [대시보드 편집] [바로 작성] 버튼이 나옵니다. 나라장터 패널이나 대시보드에서 수집한 건은 대시보드 메일 준비 화면에서 이어 갑니다.">
+        <div className="space-y-1.5">
+          {AFTER.map((a) => (
+            <label key={a.id} className={`flex items-center gap-2 text-sm ${draft.enabled ? '' : 'opacity-50'}`}>
+              <input type="radio" name="ac-after" className="accent-current" disabled={!draft.enabled} checked={draft.afterCollect === a.id} onChange={() => update({ afterCollect: a.id })} />
+              {a.label}
+            </label>
+          ))}
+        </div>
+      </Field>
 
       <Field label="검수 기준" help="기준에 걸리면 자동 작성 대신 검수 화면을 엽니다.">
         <div className="space-y-1.5">
@@ -165,10 +182,28 @@ export function AutoComposeCard() {
             options={[
               { value: '', label: '(기본 템플릿)' },
               ...(broken.templateMissing && draft.templateId ? [{ value: draft.templateId, label: '(삭제됨)' }] : []),
-              ...templates.map((t) => ({ value: t.id, label: t.name, hint: t.isDefault ? '기본' : undefined })),
+              ...templates.filter((t) => kindOf(t) === 'bid').map((t) => ({ value: t.id, label: t.name, hint: t.isDefault ? '기본' : undefined })),
+              ...templates.filter((t) => t.id === draft.templateId && kindOf(t) !== 'bid').map((t) => ({ value: t.id, label: t.name, group: '(다른 종류)' })),
             ]}
           />
           {broken.templateMissing && <StatusBadge status="error">삭제됨</StatusBadge>}
+        </div>
+      </Field>
+
+      <Field label="사전규격 템플릿" htmlFor="ac-tpl-prespec" help="비우면 사전규격 기본 템플릿을 사용합니다.">
+        <div className="flex items-center gap-2">
+          <Select
+            id="ac-tpl-prespec"
+            value={draft.prespecTemplateId ?? ''}
+            onChange={(v) => update({ prespecTemplateId: v || undefined })}
+            options={[
+              { value: '', label: '(기본 템플릿)' },
+              ...(broken.prespecTemplateMissing && draft.prespecTemplateId ? [{ value: draft.prespecTemplateId, label: '(삭제됨)' }] : []),
+              ...templates.filter((t) => kindOf(t) === 'prespec').map((t) => ({ value: t.id, label: t.name, hint: t.isDefault ? '기본' : undefined })),
+              ...templates.filter((t) => t.id === draft.prespecTemplateId && kindOf(t) !== 'prespec').map((t) => ({ value: t.id, label: t.name, group: '(다른 종류)' })),
+            ]}
+          />
+          {broken.prespecTemplateMissing && <StatusBadge status="error">삭제됨</StatusBadge>}
         </div>
       </Field>
 

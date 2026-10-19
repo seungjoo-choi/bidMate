@@ -67,6 +67,16 @@ describe('readHtmlFields', () => {
     document.querySelector<HTMLInputElement>('input[title="최종제안서  제출마감일시"]')!.value = '';
     expect(r().fields.proposalPeriod!.raw).toBe('2026/10/22 09:00:00');
   });
+  it('proposalPeriod: 입력칸이 숨겨져 있으면 gridList1 제출 행', () => {
+    document.querySelectorAll('input[title^="최종제안서"]').forEach((el) => el.closest('div')!.setAttribute('style', 'display:none'));
+    document.querySelector('#mf_wfm_container_mainWframe_gridList1_body_table tbody')!
+      .insertAdjacentHTML('beforeend', '<tr><td>3</td><td>제안서 제출</td><td></td><td>2026/10/15 10:00:00</td><td>2026/10/22 14:00:00</td><td>나라장터</td></tr>');
+    expect(r().fields.proposalPeriod).toEqual({ raw: '2026/10/15 10:00:00 ~ 2026/10/22 14:00:00', ref: 'grid:gridList1' });
+  });
+  it('proposalPeriod: 입력칸도 제출 행도 없으면 생략', () => {
+    document.querySelectorAll('input[title^="최종제안서"]').forEach((el) => el.closest('div')!.setAttribute('style', 'display:none'));
+    expect(r().fields.proposalPeriod).toBeUndefined();
+  });
   it('proposalEvalAt: 제안서발표 셀 경로', () => {
     expect(r().fields.proposalEvalAt).toEqual({ raw: '2026/11/05 14:00:00', ref: 'cell:제안서발표' });
   });
@@ -88,5 +98,10 @@ describe('readHtmlFields', () => {
     document.querySelector('#mf_wfm_container_mainWframe_wq_uuid_4178 tbody')!
       .insertAdjacentHTML('beforeend', '<tr><th>사업기간</th><td>계약일로부터 90일</td></tr>');
     expect(r().fields.projectPeriod).toEqual({ raw: '계약일로부터 90일', ref: 'cell:사업기간' });
+  });
+  it('projectPeriod: 용역기간 라벨도 읽는다', () => {
+    document.querySelector('#mf_wfm_container_mainWframe_wq_uuid_4178 tbody')!
+      .insertAdjacentHTML('beforeend', '<tr><th>용역기간</th><td>계약일로부터 60일</td></tr>');
+    expect(r().fields.projectPeriod).toEqual({ raw: '계약일로부터 60일', ref: 'cell:용역기간' });
   });
 });

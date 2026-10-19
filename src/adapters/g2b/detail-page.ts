@@ -152,7 +152,13 @@ export function readHtmlFields(doc: Document, opts: ReadOpts = {}): HtmlFields {
   // 제안서 제출기간
   const start = inputValue(root, '최종제안서 제출시작일시', vis);
   const end = inputValue(root, '최종제안서 제출마감일시', vis);
-  put('proposalPeriod', start && end ? `${start} ~ ${end}` : start || end, 'title=최종제안서 제출시작일시|마감일시');
+  if (start || end) put('proposalPeriod', start && end ? `${start} ~ ${end}` : start || end, 'title=최종제안서 제출시작일시|마감일시');
+  else {
+    // 입력칸 표가 숨겨진 공고는 진행일정 그리드의 제출 행을 쓴다.
+    const row = readGrid(doc, GRID_PROGRESS, ['진행명', '시작일시', '종료일시'], vis)
+      .find(([name]) => name!.includes('제안서') && name!.includes('제출'));
+    if (row) put('proposalPeriod', row[1] && row[2] ? `${row[1]} ~ ${row[2]}` : row[1] || row[2]!, 'grid:gridList1');
+  }
 
   // 제안서 평가(발표)일시
   const cellVal = labelValue(root, '제안서발표', vis);
@@ -166,7 +172,7 @@ export function readHtmlFields(doc: Document, opts: ReadOpts = {}): HtmlFields {
   put('differentialScoring', inputValue(root, '차등점수제 순위간 점수차', vis), 'title=차등점수제 순위간 점수차');
 
   // 사업기간/계약기간
-  const periodRe = /사업기간|계약기간/;
+  const periodRe = /사업기간|계약기간|용역기간/;
   const pInput = Array.from(root.querySelectorAll<Field>(FIELD_SEL))
     .find((el) => periodRe.test(norm(el.getAttribute('title'))) && vis(el) && norm(el.value));
   if (pInput) put('projectPeriod', pInput.value, `title=${norm(pInput.getAttribute('title'))}`);

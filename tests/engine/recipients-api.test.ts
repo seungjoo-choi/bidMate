@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG_PATHS } from '../../src/engine/config/config-store';
 import {
-  ALL_GROUP_ID, deleteGroup, deleteRecipient, listRecipients, saveGroup, saveRecipient, setDefaultGroup,
+  ALL_GROUP_ID, deleteGroup, deleteRecipient, importRecipients, listRecipients, saveGroup, saveRecipient, setDefaultGroup,
 } from '../../src/engine/config/recipients-api';
 import type { RecipientInput } from '../../src/core/types/config-file';
 import { MemoryStore } from '../helpers/memory-store';
@@ -175,6 +175,114 @@ describe('recipients-api', () => {
       expect(all.isDefault).toBeFalsy();
       expect(user.memberIds).toEqual([]);
       expect(user.isDefault).toBe(true);
+    });
+  });
+
+  describe('importRecipients', () => {
+    const seed = async (mem: MemoryStore) => {
+      await saveRecipient(mem, rcp({ name: '가', email: 'a@x.com', dept: '영업', memo: '메모', defaultRole: 'cc' }));
+      await saveRecipient(mem, rcp({ name: '나', email: 'b@x.com' }));
+      await saveRecipient(mem, rcp({ name: '다', email: 'c@x.com' }));
+      const snap = await listRecipients(mem);
+      const gid = (await saveGroup(mem, grp('A', snap.recipients.map((r) => r.id)))).groups.find((g) => g.name === 'A')!.id;
+      return { ids: snap.recipients.map((r) => r.id), gid };
+    };
+    const countWrites = (mem: MemoryStore) => {
+      const writes: string[] = [];
+      const orig = mem.writeText.bind(mem);
+      mem.writeText = async (p: string, t: string) => { writes.push(p); return orig(p, t); };
+      return writes;
+    };
+
+    it('add2+update1+disable1은 recipients 파일을 1회만 쓰고 그룹 파일은 쓰지 않는다', async () => {
+      const mem = new MemoryStore();
+      const { ids } = await seed(mem);
+      const groupsBefore = await mem.readText(CONFIG_PATHS.groups);
+      const writes = countWrites(mem);
+      const res = await importRecipients(mem, {
+        add: [{ name: '신1', email: 'N1@x.com', dept: '개발' }, { name: '신2', email: 'n2@x.com' }],
+        update: [{ id: ids[0]!, name: '가가', dept: '기획' }],
+        disable: [ids[1]!],
+      });
+      expect(res.summary).toMatchObject({ added: 2, updated: 1, disabled: 1, skipped: [] });
+      expect(writes.filter((p) => p === CONFIG_PATHS.recipients)).toHaveLength(1);
+      expect(writes.filter((p) => p === CONFIG_PATHS.groups)).toHaveLength(0);
+      expect(await mem.readText(CONFIG_PATHS.groups)).toBe(groupsBefore);
+      expect(res.recipients).toHaveLength(5);
+      const added = res.recipients.find((r) => r.email === 'n1@x.com')!;
+      expect(added).toMatchObject({ name: '신1', dept: '개발', enabled: true, defaultRole: 'to' });
+      expect(added.id).toMatch(/^rcp_/);
+    });
+    it('새 사람은 그룹에 들어가지 않고 전체 그룹도 만들어지지 않는다', async () => {
+      const mem = new MemoryStore();
+      const res = await importRecipients(mem, { add: [{ name: '신', email: 'n@x.com' }], update: [], disable: [] });
+      expect(res.recipients).toHaveLength(1);
+      expect(res.groups).toEqual([]);
+      expect(mem.files.has(CONFIG_PATHS.groups)).toBe(false);
+    });
+    it('update는 name/dept/updatedAt만 바꾸고 memo·defaultRole·enabled·그룹 소속은 유지한다', async () => {
+      const mem = new MemoryStore();
+      const { ids, gid } = await seed(mem);
+      const res = await importRecipients(mem, { add: [], update: [{ id: ids[0]!, name: '새이름', dept: '기획' }], disable: [] });
+      const r = res.recipients.find((x) => x.id === ids[0])!;
+      expect(r).toMatchObject({ name: '새이름', dept: '기획', memo: '메모', defaultRole: 'cc', enabled: true, email: 'a@x.com' });
+      expect(res.groups.find((g) => g.id === gid)!.memberIds).toContain(ids[0]);
+    });
+    it('update에서 dept를 생략하면 부서가 제거된다', async () => {
+      const mem = new MemoryStore();
+      const { ids } = await seed(mem);
+      const res = await importRecipients(mem, { add: [], update: [{ id: ids[0]!, name: '가' }], disable: [] });
+      expect(res.recipients.find((x) => x.id === ids[0])!.dept).toBeUndefined();
+      expect(JSON.parse(await mem.readText(CONFIG_PATHS.recipients)).items[0]).not.toHaveProperty('dept');
+    });
+    it('기존 이메일 형식이 이상해도 update는 반영된다', async () => {
+      const mem = new MemoryStore();
+      await mem.writeText(CONFIG_PATHS.recipients, JSON.stringify({ schemaVersion: 1, updatedAt: 'x', items: [
+        { id: 'r1', name: '가', email: 'bad@email', enabled: true, defaultRole: 'to', updatedAt: 'x' },
+      ] }));
+      const res = await importRecipients(mem, { add: [], update: [{ id: 'r1', name: '새이름', dept: '기획' }], disable: [] });
+      expect(res.summary).toMatchObject({ updated: 1, skipped: [] });
+      expect(res.recipients[0]).toMatchObject({ name: '새이름', dept: '기획', email: 'bad@email' });
+    });
+    it('add의 중복 이메일(기존/이번 추가분)은 skipped, 나머지는 정상 처리된다', async () => {
+      const mem = new MemoryStore();
+      await seed(mem);
+      const res = await importRecipients(mem, {
+        add: [{ name: '중복', email: 'A@x.com' }, { name: '신', email: 'n@x.com' }, { name: '신중복', email: 'N@x.com' }],
+        update: [], disable: [],
+      });
+      expect(res.summary.added).toBe(1);
+      expect(res.summary.skipped.map((s) => s.key)).toEqual(['A@x.com', 'N@x.com']);
+      expect(res.recipients).toHaveLength(4);
+    });
+    it('update의 id가 없으면 skipped', async () => {
+      const mem = new MemoryStore();
+      await seed(mem);
+      const res = await importRecipients(mem, { add: [], update: [{ id: 'nope', name: 'x' }], disable: [] });
+      expect(res.summary.updated).toBe(0);
+      expect(res.summary.skipped).toEqual([{ key: 'nope', reason: expect.any(String) }]);
+    });
+    it('이미 발송 끈 사람을 disable하면 카운트 없이 통과하고 기록하지 않는다', async () => {
+      const mem = new MemoryStore();
+      const { ids } = await seed(mem);
+      await importRecipients(mem, { add: [], update: [], disable: [ids[1]!] });
+      const writes = countWrites(mem);
+      const res = await importRecipients(mem, { add: [], update: [], disable: [ids[1]!] });
+      expect(res.summary).toEqual({ added: 0, updated: 0, disabled: 0, skipped: [] });
+      expect(writes).toHaveLength(0);
+    });
+    it('빈 plan은 파일을 기록하지 않는다', async () => {
+      const mem = new MemoryStore();
+      await seed(mem);
+      const writes = countWrites(mem);
+      const res = await importRecipients(mem, { add: [], update: [], disable: [] });
+      expect(writes).toHaveLength(0);
+      expect(res.recipients).toHaveLength(3);
+    });
+    it('plan 형식 오류는 INVALID_VALUE', async () => {
+      const mem = new MemoryStore();
+      expect(await codeOf(importRecipients(mem, { add: [], update: [] } as never))).toBe('INVALID_VALUE');
+      expect(await codeOf(importRecipients(mem, { add: 'x', update: [], disable: [] } as never))).toBe('INVALID_VALUE');
     });
   });
 });

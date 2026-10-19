@@ -1,14 +1,15 @@
 import type { CollectResult, HandoffReason, HandoffSkip, Job } from '../types/job';
 import type { AutoComposeSettings } from '../types/settings';
 
-export type Verdict = { kind: 'compose' } | { kind: 'review'; reasons: HandoffReason[] } | { kind: 'skip'; reason: HandoffSkip };
+export type Verdict = { kind: 'compose' } | { kind: 'edit' } | { kind: 'ask' } | { kind: 'review'; reasons: HandoffReason[] } | { kind: 'skip'; reason: HandoffSkip };
 
-const REASONS: HandoffReason[] = ['collect_failed', 'attachments_failed', 'extract_failed', 'needs_review'];
+const REASONS: HandoffReason[] = ['collect_failed', 'attachments_failed', 'extract_failed', 'needs_review', 'detail_failed'];
 const LABELS: Record<HandoffReason, string> = {
   attachments_failed: '첨부 실패',
   extract_failed: '평가정보 추출 실패',
   needs_review: '평가정보 확인 필요',
   collect_failed: '수집 오류',
+  detail_failed: '상세화면 읽기 실패',
 };
 
 function gated(x: CollectResult['extraction'], gate: AutoComposeSettings['reviewGate']): boolean {
@@ -31,11 +32,16 @@ export function decideHandoff(job: Job, s: AutoComposeSettings): Verdict | null 
     const reasons: HandoffReason[] = [];
     if (result?.attachments?.some((a) => a.status === 'failed' || a.status === 'size_mismatch')) reasons.push('attachments_failed');
     if (job.errors.some((e) => e.code === 'EXTRACT_FAILED')) reasons.push('extract_failed');
+    if (job.errors.some((e) => e.code.startsWith('DETAIL_'))) reasons.push('detail_failed');
     if (reasons.length === 0) reasons.push('collect_failed');
     return { kind: 'review', reasons };
   }
-  if (result?.mailStatus === 'ready_for_review' || result?.mailStatus === 'delivered') return { kind: 'skip', reason: 'already_composed' };
-  if (gated(result?.extraction, s.reviewGate)) return { kind: 'review', reasons: ['needs_review'] };
+  const needsReview = gated(result?.extraction, s.reviewGate);
+  // 이미 작성/전달한 공고도 다시 작성한다(사용자 결정 2026-10-19). already_composed 생략은 쓰지 않는다.
+  const mode = job.afterCollect ?? s.afterCollect;
+  if (mode === 'dashboard') return needsReview ? { kind: 'review', reasons: ['needs_review'] } : { kind: 'edit' };
+  if (mode === 'ask') return needsReview ? { kind: 'review', reasons: ['needs_review'] } : { kind: 'ask' };
+  if (needsReview) return { kind: 'review', reasons: ['needs_review'] };
   return { kind: 'compose' };
 }
 

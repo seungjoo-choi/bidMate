@@ -6,8 +6,12 @@ export interface ComposeSelectorSet {
   compose: { url?: string; openButton?: string; readySelector: string; inFrame?: string; scope?: string };
   to: RecipientSel; cc: RecipientSel & { revealButton?: string };
   subject: { input: string };
-  body: { kind: 'contenteditable' | 'iframe' | 'textarea'; editable: string; iframe?: string; insert: Array<'execCommand' | 'paste' | 'innerHTML'> };
-  attach: { fileInput?: string; dropZone?: string; item: string; itemName: string; itemSize?: string; itemProgress?: string; itemError?: string; uploadingClass?: string; pendingSelector?: string; blockingDialog?: string; limits?: { perFileBytes?: number; totalBytes?: number }; methods: Array<'input' | 'drop' | 'paste'> };
+  body: {
+    kind: 'contenteditable' | 'iframe' | 'textarea'; editable: string; iframe?: string; insert: Array<'execCommand' | 'paste' | 'innerHTML'>;
+    /** 본문 칸 안에서 지우지 않을 요소(예: 서명). 있으면 그 앞부분만 바꾼다 */
+    keep?: string;
+  };
+  attach: { /** 첨부 목록이 본문 iframe 문서 안에 있다(파일 칸은 바깥 문서) */ inBodyFrame?: boolean; fileInput?: string; dropZone?: string; item: string; itemName: string; itemSize?: string; itemProgress?: string; itemError?: string; uploadingClass?: string; pendingSelector?: string; blockingDialog?: string; limits?: { perFileBytes?: number; totalBytes?: number }; methods: Array<'input' | 'drop' | 'paste'> };
   draft?: { button: string; savedIndicator?: string };
   forbidden: { send: string[]; textPatterns: string[] /* 기본 ["보내기","전송","Send"] */ };
 }

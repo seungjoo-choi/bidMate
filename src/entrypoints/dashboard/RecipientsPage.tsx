@@ -1,15 +1,18 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { send } from '../../messaging/bus';
-import type { RecipientInput } from '../../core/types/config-file';
+import { NW_CONTACT_ORIGIN } from '../../core/recipients/naverworks-contacts';
+import type { RecipientImportSummary, RecipientInput } from '../../core/types/config-file';
 import { ALL_GROUP_ID, type Recipient } from '../../core/types/recipient';
 import { Button, InlineAlert, useToast } from '../../ui/components';
 import { useRecipients } from '../../ui/hooks/useConfig';
+import { useSettings } from '../../ui/hooks/useSettings';
 import { FsErrorAlert } from './FsErrorAlert';
 import { GroupDetail } from './recipients/GroupDetail';
 import { GroupList, type View } from './recipients/GroupList';
+import { NaverworksImportModal } from './recipients/NaverworksImportModal';
 import { RecipientForm } from './recipients/RecipientForm';
 import { RecipientTable } from './recipients/RecipientTable';
-import { Drawer, Modal, type OpError } from './recipients/shared';
+import { Modal, type OpError } from './recipients/shared';
 
 /** 사람 등록 팝업/수정 서랍. recipient가 null이면 새 사람(팝업), groupIds는 새 사람일 때 미리 체크할 그룹 */
 type FormState = null | { recipient: Recipient | null; groupIds: string[] };
@@ -26,6 +29,12 @@ export function RecipientsPage() {
   const [opError, setOpError] = useState<(OpError & { area: Area }) | null>(null);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  const { settings, save: saveSettings } = useSettings();
+  // 모달의 첫 불러오기가 잡아 둔 콜백도 최신 설정을 보도록 ref로 읽는다.
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  // null이면 닫힘, 'ok'면 열림, 그 외는 권한 거부 등으로 오류 상태에서 열림
+  const [importOpen, setImportOpen] = useState<null | { errorCode?: string }>(null);
 
   const error: OpError | null = opError ?? (loadError ? { code: loadError.code ?? 'INTERNAL', message: loadError.message, path: loadError.path } : null);
   const isConfigErr = error?.code === 'CONFIG_CORRUPT' || error?.code === 'CONFIG_NEWER';
@@ -43,6 +52,21 @@ export function RecipientsPage() {
     }
     setOpError({ ...res.error, area, path: (res.error as { path?: string }).path });
     return false;
+  };
+
+  // 사용자 클릭 안에서 첫 await로 permissions.request를 호출한다(앞에 다른 await 금지).
+  const openImport = async () => {
+    const ok = await chrome.permissions.request({ origins: [NW_CONTACT_ORIGIN] }).catch(() => false);
+    setImportOpen(ok ? {} : { errorCode: 'NEEDS_SITE_PERMISSION' });
+  };
+  const onDomainIdDetected = (domainId: string) => {
+    const cur = settingsRef.current;
+    if (!cur) return;
+    void saveSettings({ ...cur, sites: { ...cur.sites, naverworks: { ...cur.sites.naverworks, contactDomainId: domainId } } });
+  };
+  const onApplied = (s: RecipientImportSummary) => {
+    void reload();
+    toast.show(`${s.added}명 추가, ${s.updated}명 수정, ${s.disabled}명 발송 끔${s.skipped.length > 0 ? ` / ${s.skipped.length}건 건너뜀` : ''}`);
   };
 
   const retry = async () => { await reload(); setOpError(null); };
@@ -168,6 +192,7 @@ export function RecipientsPage() {
               groups={groups}
               busy={busy}
               onAdd={() => openNew()}
+              onImport={() => void openImport()}
               onEdit={(r) => { setOpError(null); setForm({ recipient: r, groupIds: [] }); }}
               onToggle={toggleEnabled}
               onDelete={(id) => void exec('other', () => run('recipients/delete', { id }), '삭제했습니다.')}
@@ -175,12 +200,19 @@ export function RecipientsPage() {
           )}
         </div>
       </div>
-      <Drawer open={form?.recipient != null} title="수신자 정보 수정" onClose={closeForm}>
-        {form?.recipient && recipientForm(form.recipient, form.groupIds)}
-      </Drawer>
-      <Modal open={form !== null && !form.recipient} title="수신자 추가" onClose={closeForm}>
-        {form && !form.recipient && recipientForm(null, form.groupIds)}
+      <Modal open={form !== null} title={form?.recipient ? '수신자 정보 수정' : '수신자 추가'} onClose={closeForm}>
+        {form && recipientForm(form.recipient, form.groupIds)}
       </Modal>
+      {importOpen && (
+        <NaverworksImportModal
+          recipients={recipients}
+          domainId={settings?.sites.naverworks.contactDomainId}
+          initialErrorCode={importOpen.errorCode}
+          onClose={() => setImportOpen(null)}
+          onDomainIdDetected={onDomainIdDetected}
+          onApplied={onApplied}
+        />
+      )}
       {toast.node}
     </div>
   );

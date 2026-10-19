@@ -62,7 +62,14 @@ afterEach(() => { delete (globalThis as Record<string, unknown>).DataTransfer; }
 
 describe('GenericComposeAdapter', () => {
   it('빈 셀렉터 필드는 unsupported(SELECTOR_MISSING)', async () => {
-    const a = new GenericComposeAdapter(SELECTOR_SETS['naverworks-v1']!, document, TIMING);
+    const v1 = SELECTOR_SETS['naverworks-v1']!;
+    const empty: ComposeSelectorSet = {
+      ...v1, status: 'unverified', compose: { readySelector: '' },
+      to: { input: '', chip: '', chipEmail: '', commit: [] }, cc: { input: '', chip: '', chipEmail: '', commit: [] },
+      subject: { input: '' }, body: { kind: 'contenteditable', editable: '', insert: [] },
+      attach: { fileInput: '', item: '', itemName: '', methods: [] },
+    };
+    const a = new GenericComposeAdapter(empty, document, TIMING);
     for (const r of [await a.setRecipients('to', ['a@b.com']), await a.setRecipients('cc', []), await a.setSubject('x'), await a.setBody('<p>x</p>')]) {
       expect(r.status).toBe('unsupported');
       expect(r.error).toBe('SELECTOR_MISSING');
@@ -361,5 +368,179 @@ describe('GenericComposeAdapter scope 본문과 재해석', () => {
     const noChip = { ...SCOPED, to: { ...SCOPED.to, chip: '' }, cc: { ...SCOPED.cc, chip: '' } };
     expect(new GenericComposeAdapter(noChip, document, TIMING).readState().supported).toMatchObject({ to: false, cc: false });
     expect(new GenericComposeAdapter(SCOPED, document, TIMING).readState().supported).toMatchObject({ to: true, cc: true });
+  });
+});
+
+describe('naverworks-v1 iframe 본문과 서명 유지', () => {
+  const V1 = SELECTOR_SETS['naverworks-v1']!;
+  const SIGN = '<div data-workseditor="sign-content"><table><tbody><tr><td>서명 홍길동</td></tr></tbody></table></div>';
+  const setup = (insert: Array<'execCommand' | 'paste' | 'innerHTML'> = ['innerHTML'], sign = true) => {
+    document.body.innerHTML = '<div id="cont_flex_area"><input name="subject"><iframe></iframe></div>';
+    const idoc = document.querySelector('iframe')!.contentDocument!;
+    idoc.body.innerHTML = `<div class="workseditor-content" contenteditable="true"><div>옛 내용</div>${sign ? SIGN : ''}</div>`;
+    const set: ComposeSelectorSet = { ...V1, body: { ...V1.body, insert } };
+    return { idoc, a: new GenericComposeAdapter(set, document, TIMING), ed: idoc.querySelector<HTMLElement>('.workseditor-content')! };
+  };
+
+  it('setBody: ok, rendered에 서명 텍스트 없음, 서명 유지', async () => {
+    const { a, ed } = setup();
+    const r = await a.setBody('<p>새 본문</p>');
+    expect(r.status).toBe('ok');
+    expect(r.rendered).toBe('새 본문');
+    expect(r.rendered).not.toContain('서명');
+    expect(ed.querySelector('[data-workseditor="sign-content"]')?.textContent).toContain('서명 홍길동');
+    expect(ed.textContent).not.toContain('옛 내용');
+  });
+  it('삽입 중 서명이 사라지면 insertHtml이 되돌리고 모든 전략 실패로 INSERT_FAILED, 서명은 복원', async () => {
+    const { a, ed } = setup();
+    ed.addEventListener('input', () => ed.querySelector('[data-workseditor="sign-content"]')?.remove());
+    const r = await a.setBody('<p>새 본문</p>');
+    expect(r.status).toBe('failed');
+    expect(r.error).toBe('INSERT_FAILED');
+    expect(ed.querySelector('[data-workseditor="sign-content"]')?.textContent).toContain('서명 홍길동');
+  });
+  it('삽입 직후 settle 동안 서명이 사라지면 mismatch/KEEP_LOST', async () => {
+    const { a, ed } = setup();
+    setTimeout(() => ed.querySelector('[data-workseditor="sign-content"]')?.remove(), 0);
+    const r = await a.setBody('<p>새 본문</p>');
+    expect(r.status).toBe('mismatch');
+    expect(r.error).toBe('KEEP_LOST');
+  });
+  it('readState: bodyText/bodyHtml에 서명이 없다', async () => {
+    const { a } = setup();
+    await a.setBody('<p>새 본문</p>');
+    const st = a.readState();
+    expect(st.bodyText).toBe('새 본문');
+    expect(st.bodyText).not.toContain('서명');
+    expect(st.bodyHtml).not.toContain('서명');
+    expect(st.bodyHtml).not.toContain('<table');
+    expect(st.bodyHtml).toContain('새 본문');
+  });
+  it('서명이 처음부터 없으면 KEEP_LOST가 아니다', async () => {
+    const { a } = setup(['innerHTML'], false);
+    const r = await a.setBody('<p>새 본문</p>');
+    expect(r.status).toBe('ok');
+    expect(r.error).toBeUndefined();
+  });
+  it('detect: to.input이 비어도 제목과 iframe 본문이 있으면 ready', () => {
+    const { a } = setup();
+    expect(V1.to.input).toBe('');
+    expect(a.detect()).toMatchObject({ isCompose: true, ready: true });
+  });
+  it('detect: iframe 본문이 없으면 ready 아님', () => {
+    const { a, idoc } = setup();
+    idoc.body.innerHTML = '';
+    expect(a.detect()).toMatchObject({ isCompose: true, ready: false, reason: 'FIELDS_NOT_FOUND' });
+  });
+});
+
+describe('naverworks-v1 iframe 안 첨부 목록(inBodyFrame)', () => {
+  const V1 = SELECTOR_SETS['naverworks-v1']!;
+  const LIST = '<ul class="attachment_list"></ul>';
+  const rowHtml = (name: string, ext: string) =>
+    `<button class="btn_attachment_remove">x</button><span class="lw_file lw_file_png"></span><span class="file_name_cover"><span class="file_name">${name}</span><span class="file_extension">${ext}</span></span><span class="file_status">대기 중</span><span class="file_size">17.2  MB</span>`;
+  const setup = (opts: { listIn: 'frame' | 'outer'; split?: [string, string] }) => {
+    document.body.innerHTML = `<div id="cont_flex_area"><input name="subject"><iframe></iframe></div><input type="file" id="fileContent">${opts.listIn === 'outer' ? LIST : ''}`;
+    const idoc = document.querySelector('iframe')!.contentDocument!;
+    idoc.body.innerHTML = `<div class="workseditor-content" contenteditable="true"><div>x</div></div>${opts.listIn === 'frame' ? LIST : ''}`;
+    const listDoc = opts.listIn === 'frame' ? idoc : document;
+    document.getElementById('fileContent')!.addEventListener('change', (e) => {
+      const f = (e.target as unknown as { files: File[] }).files[0]!;
+      const li = listDoc.createElement('li');
+      li.className = 'attachment_item';
+      const [n, ext] = opts.split ?? [f.name, ''];
+      li.innerHTML = rowHtml(n, ext);
+      listDoc.querySelector('ul')!.appendChild(li);
+    });
+    return { idoc, a: new GenericComposeAdapter(V1, document, TIMING) };
+  };
+  const sig = () => ({ signal: new AbortController().signal, onPhase: () => {} });
+
+  it('iframe 목록에 나타나면 uploaded(input), renderedName은 file_name_cover 텍스트', async () => {
+    const { a } = setup({ listIn: 'frame', split: ['erd-full', 'png'] });
+    const r = await a.attachFile(new File(['x'], 'erd-full.png'), sig());
+    expect(r.status).toBe('uploaded');
+    expect(r.method).toBe('input');
+    expect(r.renderedName).toBe('erd-fullpng');
+    expect(r.renderedSize).toBe('17.2  MB');
+  });
+  it('이름 "보고서.pdf"가 화면에서 "보고서"+"pdf"로 나뉘어도 매칭', async () => {
+    const { a } = setup({ listIn: 'frame', split: ['보고서', 'pdf'] });
+    const r = await a.attachFile(new File(['x'], '보고서.pdf'), sig());
+    expect(r.status).toBe('uploaded');
+  });
+  it('목록이 바깥 문서에만 있으면 찾지 못한다(readState에도 안 잡힘)', async () => {
+    const { a } = setup({ listIn: 'outer' });
+    const ac = new AbortController();
+    setTimeout(() => ac.abort(), 300);
+    const r = await a.attachFile(new File(['x'], 'a.png'), { signal: ac.signal, onPhase: () => {} });
+    expect(r.status).not.toBe('uploaded');
+    expect(document.querySelectorAll('li.attachment_item').length).toBe(1);
+    expect(a.readState().attachments).toEqual([]);
+  });
+  it('readState().attachments가 iframe 목록을 읽는다', async () => {
+    const { a, idoc } = setup({ listIn: 'frame' });
+    const li = idoc.createElement('li');
+    li.className = 'attachment_item';
+    li.innerHTML = rowHtml('a', 'png');
+    idoc.querySelector('ul')!.appendChild(li);
+    const st = a.readState();
+    expect(st.attachments).toHaveLength(1);
+    expect(st.attachments[0]).toMatchObject({ name: 'apng' });
+    expect(st.supported.attachments).toBe(true);
+  });
+});
+
+describe('naverworks-v1 첨부 이름 대조(정확 일치, 기존 항목 제외)', () => {
+  const V1 = SELECTOR_SETS['naverworks-v1']!;
+  const row = (name: string, ext: string) =>
+    `<span class="file_name_cover"><span class="file_name">${name}</span><span class="file_extension">${ext}</span></span><span class="file_size">1 KB</span>`;
+  /** existing: 미리 있는 항목[이름, 확장자]. added: 파일 주입 시 추가할 항목(없으면 추가 안 함). */
+  const setup = (existing: Array<[string, string]>, added: [string, string] | null) => {
+    document.body.innerHTML = '<div id="cont_flex_area"><input name="subject"><iframe></iframe></div><input type="file" id="fileContent">';
+    const idoc = document.querySelector('iframe')!.contentDocument!;
+    idoc.body.innerHTML = '<div class="workseditor-content" contenteditable="true"><div>x</div></div><ul class="attachment_list"></ul>';
+    const add = (n: string, e: string) => {
+      const li = idoc.createElement('li');
+      li.className = 'attachment_item';
+      li.innerHTML = row(n, e);
+      idoc.querySelector('ul')!.appendChild(li);
+    };
+    for (const [n, e] of existing) add(n, e);
+    document.getElementById('fileContent')!.addEventListener('change', () => { if (added) add(...added); });
+    return new GenericComposeAdapter(V1, document, { ...TIMING, itemAppearMs: 150 });
+  };
+  const run = (a: GenericComposeAdapter, name: string, abortMs?: number) => {
+    const ac = new AbortController();
+    if (abortMs) setTimeout(() => ac.abort(), abortMs);
+    return a.attachFile(new File(['x'], name), { signal: ac.signal, onPhase: () => {} });
+  };
+
+  it('"입찰공고서.hwp"가 있어도 "공고서.hwp"는 새 항목이 안 나타나면 uploaded가 아니다', async () => {
+    const a = setup([['입찰공고서', 'hwp']], null);
+    const r = await run(a, '공고서.hwp', 400);
+    expect(r.status).not.toBe('uploaded');
+  });
+  it('"공고서.hwp" 주입 후 새 항목이 나타나면 그 항목으로 uploaded', async () => {
+    const a = setup([['입찰공고서', 'hwp']], ['공고서', 'hwp']);
+    const r = await run(a, '공고서.hwp');
+    expect(r.status).toBe('uploaded');
+    expect(r.renderedName).toBe('공고서hwp');
+  });
+  it('같은 이름이 이미 있으면 기존 항목은 무시하고 새 li가 있어야 uploaded', async () => {
+    const none = await run(setup([['보고서', 'pdf']], null), '보고서.pdf', 400);
+    expect(none.status).not.toBe('uploaded');
+    const a = setup([['보고서', 'pdf']], ['보고서', 'pdf']);
+    const r = await run(a, '보고서.pdf');
+    expect(r.status).toBe('uploaded');
+    expect(document.querySelector('iframe')!.contentDocument!.querySelectorAll('li.attachment_item')).toHaveLength(2);
+  });
+  it('"a.b.pdf"는 화면 "a.b"+"pdf"와 매칭, "ab.pdf"와는 불일치', async () => {
+    expect((await run(setup([], ['a.b', 'pdf']), 'a.b.pdf')).status).toBe('uploaded');
+    expect((await run(setup([], ['ab', 'pdf']), 'a.b.pdf', 400)).status).not.toBe('uploaded');
+  });
+  it('화면이 "보고서.pdf" 전체로 표시돼도 매칭', async () => {
+    const r = await run(setup([], ['보고서.pdf', '']), '보고서.pdf');
+    expect(r.status).toBe('uploaded');
   });
 });

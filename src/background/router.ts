@@ -23,11 +23,11 @@ function relayToOffscreen<T extends Extract<MsgType, `fs/${string}`>>(type: T): 
 function relayG2bTest(): void {
   listen(
     'g2b/test',
-    async (_, sender) => {
+    async (payload, sender) => {
       assertExtensionSender(sender);
       const { secrets } = await chrome.storage.local.get('secrets');
       await ensureOffscreen();
-      return send('g2b/test', { serviceKey: (secrets as { g2bServiceKey?: string } | undefined)?.g2bServiceKey }, { target: 'offscreen', timeoutMs: 25_000 });
+      return send('g2b/test', { serviceKey: (secrets as { g2bServiceKey?: string } | undefined)?.g2bServiceKey, ...(payload?.kind ? { kind: payload.kind } : {}) },{ target: 'offscreen', timeoutMs: 25_000 });
     },
     'sw',
   );
@@ -68,9 +68,9 @@ function relayNoticeLookupBatch(): void {
 
 export const EXTENSION_ONLY_TYPES = [
   'notice/list', 'notice/get', 'extraction/edit', 'extraction/text',
-  'recipients/list', 'recipients/save', 'recipients/delete', 'groups/save', 'groups/delete', 'groups/set-default',
+  'recipients/list', 'recipients/save', 'recipients/import', 'recipients/delete', 'groups/save', 'groups/delete', 'groups/set-default',
   'templates/list', 'templates/save', 'templates/delete', 'templates/set-default',
-  'mail/prepare', 'mail/draft-get', 'mail/set-status', 'config/repair',
+  'mail/prepare', 'mail/draft-get', 'mail/edits-get', 'mail/set-status', 'config/repair',
 ] as const;
 type ExtensionOnlyType = (typeof EXTENSION_ONLY_TYPES)[number];
 
@@ -90,7 +90,7 @@ function relayExtensionOnly<T extends ExtensionOnlyType>(type: T): void {
 function registerUiMessages(): void {
   listen(
     'ui/open',
-    async ({ page, noticeId }, sender) => {
+    async ({ page, noticeId, section }, sender) => {
       const near = sender.tab?.id;
       const enc = noticeId ? encodeURIComponent(noticeId) : undefined;
       if (page === 'grant') {
@@ -99,8 +99,12 @@ function registerUiMessages(): void {
         await openDashboard(`#/review/${enc}`, { nearTabId: near });
       } else if (page === 'mail' && enc) {
         await openDashboard(`#/mail/${enc}`, { nearTabId: near });
+      } else if (page === 'recipients') {
+        await openDashboard('#/recipients', { nearTabId: near });
       } else {
-        await openDashboard('#/settings', { nearTabId: near });
+        // 같은 카드로 다시 보내도 hashchange가 나도록 시각을 붙인다
+        const known = section === 'storage' || section === 'mail-service' || section === 'auto-compose' || section === 'g2b';
+        await openDashboard(known ? `#/settings?section=${section}&t=${Date.now()}` : '#/settings', { nearTabId: near });
       }
     },
     'sw',

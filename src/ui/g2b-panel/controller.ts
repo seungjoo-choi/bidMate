@@ -2,7 +2,7 @@ import { refsConflict } from '../../core/model/job-conflict';
 import { defaultIsVisible, detectDetail, peekNoticeValue, readHtmlFields, readPageTitle, type DetectedDetail } from '../../adapters/g2b/detail-page';
 import type { Job } from '../../core/types/job';
 import { send } from '../../messaging/bus';
-import type { G2bDetected, NoticeLookup } from '../../messaging/protocol';
+import type { FixTarget, G2bDetected, NoticeLookup } from '../../messaging/protocol';
 import { handoffView, type HandoffAction } from '../handoff-view';
 
 const ACTIVE = new Set(['queued', 'running', 'cancelling']);
@@ -260,7 +260,7 @@ export class PanelController {
     switch (a) {
       case 'open-mail': this.openUi('mail', v?.noticeId); return;
       case 'open-review': this.openUi('review', v?.noticeId); return;
-      case 'settings': this.openUi('settings'); return;
+      case 'settings': this.openFix(v?.fix); return;
       case 'dequeue':
         try { await send('auto-compose/dequeue', { collectJobId: job.id }); } catch { /* 다음 갱신에서 반영 */ }
         await this.fetchJob();
@@ -340,4 +340,6 @@ export class PanelController {
     this.ensurePoll();
   }
   openUi(page: 'settings' | 'grant' | 'review' | 'mail', noticeId?: string): void { void send('ui/open', { page, noticeId }).catch(() => undefined); }
+  /** 오류를 고칠 화면을 연다. 정해진 화면이 없으면 설정 첫 화면 */
+  openFix(fix: FixTarget | undefined): void { void send('ui/open', fix ?? { page: 'settings' }).catch(() => undefined); }
 }

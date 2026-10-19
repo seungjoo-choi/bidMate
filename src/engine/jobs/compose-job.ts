@@ -52,6 +52,7 @@ function reverify(fields: FieldResult[], state: ComposeState, draft: MailDraft, 
   const label = firstSectionLabel(draft);
   return fields.map((f) => {
     if (f.status === 'unsupported' || f.status === 'failed') return f;
+    if (f.error === 'KEEP_LOST') return f;   // 서명 유실은 화면 대조로 덮지 않는다
     if (state.supported[f.field] === false) return f;   // 대조할 셀렉터가 없으면 현 상태 유지
     if (f.field === 'to' || f.field === 'cc') {
       const want = norm(f.requested as string[]);
@@ -160,6 +161,10 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
         emit('fill_fields', 'skipped', '주소로 전달(받는 사람, 참조, 제목, 본문)');
         emit('attach_files', 'skipped', '첨부는 직접');
         emit('verify', 'skipped', '주소 방식은 확인 생략');
+      } else if (plan.prefilled.length > 0) {
+        emit('fill_fields', 'skipped', '주소로 전달(받는 사람, 참조, 제목), 본문은 붙여 넣기');
+        emit('attach_files', 'skipped', '첨부는 직접');
+        emit('verify', 'skipped', '주소 방식은 확인 생략');
       } else {
         for (const s of ['fill_fields', 'attach_files', 'verify'] as const) emit(s, 'skipped', '수동 모드: 셀렉터 미검증');
       }
@@ -168,7 +173,7 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
         if (plan.omitted.some((o) => o.field === f.field)) return { ...f, error: 'URL_TOO_LONG' };
         return f;
       });
-      const attachError = isGmail ? 'ATTACH_MANUAL' : 'SELECTOR_UNVERIFIED';
+      const attachError = isGmail || plan.prefilled.length > 0 ? 'ATTACH_MANUAL' : 'SELECTOR_UNVERIFIED';
       const attachments = files.map((f): ComposeResult['attachments'][number] => ({ fileId: f.fileId, name: f.name, size: f.size, status: 'skipped', method: 'none', elapsedMs: 0, error: attachError }));
       return await finish(plan.prefilled.length > 0 ? 'url' : 'manual', fields, attachments, tabId);
     }
@@ -241,11 +246,16 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
     // 6. attach_files
     const attachments: ComposeResult['attachments'] = [];
     const maxBytes = settings.download.maxFileMB * MB;
-    const { targets, skipped } = selectAttachTargets(files, maxBytes, plan.attachLimits);
+    // 셀렉터셋이 자동 첨부를 지원하지 않으면(첨부 목록 미실측) 파일을 보내지 않고 직접 첨부로 안내한다.
+    const attachSupported = (plan.selector?.set.attach.methods.length ?? 0) > 0;
+    const { targets, skipped } = attachSupported
+      ? selectAttachTargets(files, maxBytes, plan.attachLimits)
+      : { targets: [], skipped: files.map((file) => ({ file, error: 'ATTACH_MANUAL' })) };
     for (const { file: f, error } of skipped) {
       attachments.push({ fileId: f.fileId, name: f.name, size: f.size, status: 'skipped', method: 'none', elapsedMs: 0, error });
     }
-    emit('attach_files', files.length === 0 ? 'skipped' : 'running', files.length === 0 ? '첨부 없음' : '첨부 파일을 올리는 중', { progress: { done: 0, total: files.length } });
+    if (files.length > 0 && !attachSupported) emit('attach_files', 'skipped', '첨부는 직접');
+    else emit('attach_files', files.length === 0 ? 'skipped' : 'running', files.length === 0 ? '첨부 없음' : '첨부 파일을 올리는 중', { progress: { done: 0, total: files.length } });
     if (targets.length > 0) {
       const pathOf = new Map(draft.attachments.map((a) => [a.attachmentId, a.path]));
       const failedResult = (f: (typeof targets)[number], error: string, started = now().getTime()): ComposeResult['attachments'][number] => ({
@@ -306,7 +316,7 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
         }
       }
     }
-    if (files.length > 0) emit('attach_files', 'done', '첨부 처리 완료', { progress: { done: attachments.length, total: files.length } });
+    if (files.length > 0 && attachSupported) emit('attach_files', 'done', '첨부 처리 완료', { progress: { done: attachments.length, total: files.length } });
 
     // 7. verify
     emit('verify', 'running', '입력 결과를 확인하는 중');

@@ -20,6 +20,13 @@ describe('라우터 등록', () => {
       expect(EXTENSION_ONLY_TYPES as readonly string[]).toContain(t);
     }
   });
+  it('recipients/import를 SW에 등록하고 EXTENSION_ONLY로 처리한다', () => {
+    registerRouter();
+    const registered = vi.mocked(listen).mock.calls.filter((c) => c[2] === 'sw').map((c) => c[0] as string);
+    expect(registered).toContain('recipients/import');
+    expect(EXTENSION_ONLY_TYPES as readonly string[]).toContain('recipients/import');
+    expect(EXTENSION_ONLY_TYPES as readonly string[]).not.toContain('contacts/naverworks-fetch');
+  });
 });
 
 describe('SW 릴레이 발신자 검사', () => {
@@ -45,6 +52,15 @@ describe('SW 릴레이 발신자 검사', () => {
 
   it.each(['g2b/test', 'fs/permission-granted'])('%s도 탭 발신을 거부한다', async (type) => {
     await expect(handlerOf(type)(undefined, tabSender)).rejects.toMatchObject({ code: 'SENDER_FORBIDDEN' });
+  });
+
+  it('g2b/test는 payload의 kind를 offscreen으로 전달한다', async () => {
+    const ext = { id: RID, url: `chrome-extension://${RID}/dashboard.html` };
+    vi.mocked(send).mockResolvedValue({ ok: true } as never);
+    await handlerOf('g2b/test')({ kind: 'prespec' }, ext);
+    expect(vi.mocked(send)).toHaveBeenLastCalledWith('g2b/test', expect.objectContaining({ kind: 'prespec' }), expect.objectContaining({ target: 'offscreen' }));
+    await handlerOf('g2b/test')({}, ext);
+    expect(vi.mocked(send).mock.calls.at(-1)![1]).not.toHaveProperty('kind');
   });
 
   it('fs/permission-granted는 수신 서비스(inbox) 호스트 탭에 알린다', async () => {
@@ -98,5 +114,13 @@ describe('ui/open', () => {
     expect(openDashboard).toHaveBeenCalledWith('#/review/N-000', { nearTabId: undefined });
     await open({ page: 'settings' });
     expect(openDashboard).toHaveBeenLastCalledWith('#/settings', { nearTabId: 4 });
+  });
+  it('settings section과 recipients는 고칠 화면으로 바로 연다', async () => {
+    await open({ page: 'settings', section: 'auto-compose' });
+    expect(openDashboard).toHaveBeenLastCalledWith(expect.stringMatching(/^#\/settings\?section=auto-compose&t=\d+$/), { nearTabId: 4 });
+    await open({ page: 'settings', section: 'evil"' });
+    expect(openDashboard).toHaveBeenLastCalledWith('#/settings', { nearTabId: 4 });
+    await open({ page: 'recipients' });
+    expect(openDashboard).toHaveBeenLastCalledWith('#/recipients', { nearTabId: 4 });
   });
 });

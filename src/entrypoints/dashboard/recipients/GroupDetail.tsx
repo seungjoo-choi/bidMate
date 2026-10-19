@@ -117,7 +117,7 @@ export function GroupDetail({ group, recipients, error, busy, onSave, onDelete, 
         ) : (
           <>
             <RecipientFilterBar q={q} onQ={setQ} sort={sort} onSort={setSort} total={members.length} matched={matched.length} />
-            <ul className="divide-y divide-line rounded-ctl border border-line">
+            <ul className="max-h-[max(16rem,calc(100vh-26rem))] divide-y divide-line overflow-y-auto rounded-ctl border border-line">
               {shownIds.length === 0 && <li className="px-4 py-4 text-center text-sm text-muted">찾는 수신자가 없습니다.</li>}
               {shownIds.map((id, i) => {
                 const r = byId.get(id);

@@ -5,9 +5,10 @@ import { handoffReasonLabel } from '../../core/model/handoff';
 import type { HandoffReason } from '../../core/types/job';
 import type { Notice } from '../../core/types/notice';
 import { send } from '../../messaging/bus';
-import { Button, InlineAlert, StatusBadge, useToast } from '../../ui/components';
+import { kindOf, noticeLabel } from '../../core/model/ids';
+import { Button, Card, InlineAlert, StatusBadge, useToast } from '../../ui/components';
 import { useJobs } from '../../ui/hooks/useJobs';
-import { dDayLevel, formatDDay, formatDateTime } from '../../ui/review/format';
+import { dDayLevel, formatAmountFull, formatDDay, formatDateTime } from '../../ui/review/format';
 import {
   DOC_KIND_LABEL, FILE_STATUS_LABEL, buildCards, fileDisplayName, filePagesTables, fileRemark, findTextPath, summarize,
 } from '../../ui/review/view';
@@ -110,8 +111,24 @@ export function ReviewPage({ noticeId, handoff }: { noticeId: string; handoff?: 
   const sourceUrl = notice.sourceUrl.value;
   const safeUrl = sourceUrl && /^https?:\/\//i.test(sourceUrl) ? sourceUrl : null;
   const title = notice.basic.title.value ?? notice.id;
-  const noticeNo = `${notice.basic.noticeNo.value ?? notice.ref.noticeNo}-${notice.basic.round.value ?? notice.ref.round ?? '000'}`;
-  const closeAt = notice.schedule.bidCloseAt.value;
+  const isPrespec = kindOf(notice.ref) === 'prespec';
+  const noticeNo = isPrespec
+    ? noticeLabel(notice.ref)
+    : `${notice.basic.noticeNo.value ?? notice.ref.noticeNo}-${notice.basic.round.value ?? notice.ref.round ?? '000'}`;
+  const closeAt = isPrespec ? notice.prespec.opinionCloseAt.value : notice.schedule.bidCloseAt.value;
+  const prespecRows: [string, string][] = isPrespec ? [
+    ['사전규격 등록번호', notice.prespec.specRegNo.value ?? '—'],
+    ['사전규격명', notice.prespec.specName.value ?? '—'],
+    ['업무구분', notice.prespec.bizDivision.value ?? '—'],
+    ['배정예산', typeof notice.prespec.assignedBudget.value === 'number' ? formatAmountFull(notice.prespec.assignedBudget.value) : '—'],
+    ['공개일시', formatDateTime(notice.prespec.registeredAt.value)],
+    ['의견등록 마감일시', formatDateTime(notice.prespec.opinionCloseAt.value)],
+    ['담당자', notice.prespec.officerName.value ?? '—'],
+    ['담당자 연락처', notice.prespec.officerTel.value ?? '—'],
+    ['연계 입찰공고번호', notice.prespec.relatedBidNo.value ?? '—'],
+    ['발주기관', notice.basic.orderingOrg.value ?? '—'],
+    ['수요기관', notice.basic.demandOrg.value ?? '—'],
+  ] : [];
   const dday = formatDDay(closeAt);
   const cards = extraction ? buildCards(extraction) : [];
   const counts = extraction ? summarize(extraction) : null;
@@ -124,9 +141,10 @@ export function ReviewPage({ noticeId, handoff }: { noticeId: string; handoff?: 
           <h1 className="title-mark text-2xl leading-snug font-bold tracking-tight text-balance">{title}</h1>
           <div className="mt-2 flex flex-wrap items-baseline gap-x-6 pl-[calc(3px+0.75rem)] gap-y-1 text-sm text-muted">
             <span className="font-mono text-sm">{noticeNo}</span>
+            {isPrespec && <StatusBadge status="idle">사전규격</StatusBadge>}
             {notice.basic.orderingOrg.value && <span>{notice.basic.orderingOrg.value}</span>}
             <span>
-              입찰마감 <b className="font-mono text-sm font-semibold text-ink tabular-nums">{formatDateTime(closeAt)}</b>
+              {isPrespec ? '의견등록마감' : '입찰마감'}{' '}<b className="font-mono text-sm font-semibold text-ink tabular-nums">{formatDateTime(closeAt)}</b>
               {dday && dday !== '마감' && <b className={`ml-2 font-mono text-sm ${dDayLevel(dday) === 'urgent' ? 'text-danger' : dDayLevel(dday) === 'soon' ? 'text-warn' : 'text-muted'}`}>{dday}</b>}
               {dday === '마감' && <span className="ml-1.5 text-faint">마감됨</span>}
             </span>
@@ -138,9 +156,11 @@ export function ReviewPage({ noticeId, handoff }: { noticeId: string; handoff?: 
           <Button icon={<Mail />} onClick={() => { window.location.hash = `#/mail/${encodeURIComponent(noticeId)}`; }}>
             {notice.mail.status !== 'none' ? '메일 초안 보기' : '메일 작성 준비'}
           </Button>
-          <Button variant="secondary" loading={busy} icon={<RefreshCw />} onClick={() => void extract()}>
-            {running ? (running.label ?? '진행 중') : '다시 추출'}
-          </Button>
+          {!isPrespec && (
+            <Button variant="secondary" loading={busy} icon={<RefreshCw />} onClick={() => void extract()}>
+              {running ? (running.label ?? '진행 중') : '다시 추출'}
+            </Button>
+          )}
         </div>
       </header>
       {handoff && handoff.length > 0 && (
@@ -154,7 +174,18 @@ export function ReviewPage({ noticeId, handoff }: { noticeId: string; handoff?: 
       {alert && <InlineAlert tone="error">{alert}</InlineAlert>}
       {loadError && <InlineAlert tone="error">{loadError}</InlineAlert>}
 
-      {!extraction ? (
+      {isPrespec ? (
+        <Card title="사전규격 정보">
+          <dl className="grid grid-cols-[10rem_minmax(0,1fr)] gap-x-4 gap-y-2.5 text-sm">
+            {prespecRows.map(([label, value]) => (
+              <div key={label} className="contents">
+                <dt className="text-muted">{label}</dt>
+                <dd className="min-w-0 break-words">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
+      ) : !extraction ? (
         <div className="flex flex-col items-center gap-3 rounded-card border border-dashed border-line-strong py-20 text-muted">
           <FileSearch className="size-9 text-faint" strokeWidth={1.5} />
           <p className="font-semibold text-ink">아직 평가정보를 분석하지 않았습니다</p>

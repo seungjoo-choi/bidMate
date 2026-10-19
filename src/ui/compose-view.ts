@@ -1,6 +1,7 @@
 import type { AttachResult, FieldResult } from '../core/types/compose';
 import type { ComposeResult, Job } from '../core/types/job';
 import type { MailProvider } from '../core/types/settings';
+import type { FixTarget } from '../messaging/protocol';
 import { progressRatio } from './g2b-panel/panel-view';
 
 /** compose 잡 → 표시 상태. 순수 함수(UI는 이 결과만 그린다). */
@@ -19,9 +20,9 @@ export type ComposeView =
       kind: 'url'; provider: MailProvider; prefilled: FieldResult[]; pending: FieldResult[];
       attachments: Array<AttachResult & { error?: string }>; copies: CopyKind[]; attachDir?: string; canFocus: boolean;
     }
-  | { kind: 'error'; message: string; detail?: string; action: ComposeAction; actionLabel?: string };
+  | { kind: 'error'; message: string; detail?: string; action: ComposeAction; actionLabel?: string; /** 고칠 수 있는 화면 */ fix?: FixTarget };
 
-const STEP_LABEL: Record<string, string> = {
+export const COMPOSE_STEP_LABEL: Record<string, string> = {
   render_mail: '메일 내용 준비 중',
   open_compose: '웹메일 여는 중',
   fill_fields: '수신자/제목/본문 입력 중',
@@ -34,17 +35,17 @@ const ALL_COPIES: CopyKind[] = ['to', 'cc', 'subject', 'body', 'attach'];
 function errorOf(code: string | undefined, message: string | undefined): Extract<ComposeView, { kind: 'error' }> {
   switch (code) {
     case 'NEEDS_SITE_PERMISSION':
-      return { kind: 'error', message: '웹메일 사이트 접근을 허용해야 합니다', action: 'grant-site', actionLabel: '웹메일 접근 허용' };
+      return { kind: 'error', message: '웹메일 사이트 접근을 허용해야 합니다', action: 'grant-site', actionLabel: '웹메일 접근 허용', fix: { page: 'settings', section: 'mail-service' } };
     case 'NEEDS_FS_PERMISSION':
-      return { kind: 'error', message: '저장 폴더 접근을 다시 허용해야 합니다', action: 'grant-fs', actionLabel: '폴더 접근 허용' };
+      return { kind: 'error', message: '저장 폴더 접근을 다시 허용해야 합니다', action: 'grant-fs', actionLabel: '폴더 접근 허용', fix: { page: 'settings', section: 'storage' } };
     case 'NO_GROUP':
-      return { kind: 'error', message: '수신 그룹이 없습니다. 기본 그룹을 지정하거나 자동 작성 설정에서 수신자를 고르세요', action: 'recipients', actionLabel: '수신자 관리 열기' };
+      return { kind: 'error', message: '수신 그룹이 없습니다. 기본 그룹을 지정하거나 자동 작성 설정에서 수신자를 고르세요', action: 'recipients', actionLabel: '수신자 관리 열기', fix: { page: 'recipients' } };
     case 'NO_RECIPIENTS':
-      return { kind: 'error', message: '받을 수신자가 없습니다. 선택한 수신자가 사용 안 함이거나 삭제되었는지 확인하세요', action: 'recipients', actionLabel: '수신자 관리 열기' };
+      return { kind: 'error', message: '받을 수신자가 없습니다. 선택한 수신자가 사용 안 함이거나 삭제되었는지 확인하세요', action: 'recipients', actionLabel: '수신자 관리 열기', fix: { page: 'recipients' } };
     case 'GROUP_NOT_FOUND':
-      return { kind: 'error', message: '자동 작성 설정의 그룹이 삭제되었습니다', action: 'settings', actionLabel: '설정 열기' };
+      return { kind: 'error', message: '자동 작성 설정의 그룹이 삭제되었습니다', action: 'settings', actionLabel: '수신자 설정', fix: { page: 'settings', section: 'auto-compose' } };
     case 'TEMPLATE_NOT_FOUND':
-      return { kind: 'error', message: '자동 작성 설정의 템플릿이 삭제되었습니다', action: 'settings', actionLabel: '설정 열기' };
+      return { kind: 'error', message: '자동 작성 설정의 템플릿이 삭제되었습니다', action: 'settings', actionLabel: '템플릿 설정', fix: { page: 'settings', section: 'auto-compose' } };
     case 'JOB_ALREADY_RUNNING':
       return { kind: 'error', message: '이 공고의 수집/추출이 끝난 뒤 다시 시도하세요', action: 'none' };
     case 'COMPOSE_NOT_DETECTED':
@@ -77,7 +78,7 @@ export function composeView(job: Job | null): ComposeView | null {
       const attach = at?.status === 'running' && at.progress ? { done: at.progress.done, total: at.progress.total } : undefined;
       const cur = job.currentStep;
       return {
-        kind: 'progress', label: job.label ?? (cur ? STEP_LABEL[cur] ?? '메일 작성 중' : '준비 중…'),
+        kind: 'progress', label: job.label ?? (cur ? COMPOSE_STEP_LABEL[cur] ?? '메일 작성 중' : '준비 중…'),
         ratio: progressRatio(job.steps), attach, cancelling: job.status === 'cancelling', canFocus,
       };
     }

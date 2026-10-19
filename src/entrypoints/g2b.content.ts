@@ -1,5 +1,7 @@
 import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
 import { defineContentScript } from 'wxt/utils/define-content-script';
+import { defaultIsVisible, detectDetail, readHtmlFields } from '../adapters/g2b/detail-page';
+import { sameRound } from '../adapters/g2b/link';
 import { listen } from '../messaging/bus';
 import { PanelController } from '../ui/g2b-panel/controller';
 import { mountPanel } from '../ui/g2b-panel/mount';
@@ -17,6 +19,12 @@ export default defineContentScript({
     listen('job/update', ({ job }) => { controller.onJobUpdate(job); }, 'content');
     listen('fs/permission-granted', () => { controller.onPermissionGranted(); }, 'content');
     listen('g2b/detect', () => controller.detected(), 'content');
+    listen('g2b/read-html', ({ noticeNo, round }) => {
+      const detected = detectDetail(document, { url: location.href });
+      const match = !!detected && detected.noticeNo === noticeNo && (!round || !detected.round || sameRound(detected.round, round));
+      const html = match ? readHtmlFields(document, { isVisible: defaultIsVisible }) : null;
+      return { detected, match, html, readyState: document.readyState };
+    }, 'content');
     listen('g2b/collect', () => controller.collect(), 'content');
     listen('g2b/retry', ({ jobId }) => controller.collect(jobId), 'content');
 

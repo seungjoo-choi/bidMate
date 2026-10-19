@@ -294,3 +294,5 @@ compose 상태 판정은 `src/ui/compose-view.ts`의 composeView를 재사용한
 
 ## 보고 형식
 결론, 변경 파일 경로, 테스트 결과, 명세와 다르게 한 점과 이유, 실패 항목. 한국어로 작성.
+
+> 2026-10-19 갱신: 판정 마지막 행은 `(job.afterCollect ?? settings.afterCollect) === "dashboard"`면 `edit`(대시보드 `#/mail/<id>?from=collect` 열기, already_composed 무시), 아니면 `compose`. 상세는 `.claude/specs/mail-edit.md`.

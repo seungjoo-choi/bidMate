@@ -1,5 +1,6 @@
 import { sanitizeSegment } from '../../core/model/sanitize';
 import { normalizeExtraction } from '../../core/model/extraction-compat';
+import { kindOf } from '../../core/model/ids';
 import { fillMissingFields } from '../../core/model/notice-fields';
 import { computeStatus } from '../../core/extraction/decide';
 import { EXTRACTION_KEYS, type Extraction, type ExtractionStatus } from '../../core/types/extraction';
@@ -14,7 +15,9 @@ const NOTICES_DIR = 'notices';
 export function entryOf(n: Notice, prev?: IndexEntry, extractionStatus?: ExtractionStatus): IndexEntry {
   const att = n.attachments;
   const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+  const isPrespec = kindOf(n.ref) === 'prespec';
   return {
+    ...(kindOf(n.ref) !== 'bid' ? { kind: kindOf(n.ref) } : {}),
     noticeId: n.id,
     noticeNo: str(n.basic.noticeNo.value) || n.ref.noticeNo,
     round: str(n.basic.round.value) || n.ref.round || '',
@@ -22,7 +25,8 @@ export function entryOf(n: Notice, prev?: IndexEntry, extractionStatus?: Extract
     orderingOrg: str(n.basic.orderingOrg.value),
     folder: n.folder,
     collectedAt: n.collect.collectedAt,
-    bidCloseAt: n.schedule.bidCloseAt.value ?? undefined,
+    // 사전규격은 의견등록마감일시를 bidCloseAt 자리에 의도적으로 재사용한다(목록의 '마감' 열).
+    bidCloseAt: (isPrespec ? n.prespec.opinionCloseAt.value : n.schedule.bidCloseAt.value) ?? undefined,
     collectStatus: n.collect.status,
     attachments: {
       total: att.length,

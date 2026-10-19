@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { click, ForbiddenActionError, isForbidden, pressKey, setNativeValue } from '../../src/adapters/naverworks/dom-actions';
+import { click, ForbiddenActionError, insertHtml, isForbidden, pressKey, setNativeValue } from '../../src/adapters/naverworks/dom-actions';
 import { FileBuffer } from '../../src/adapters/naverworks/file-buffer';
 import type { ComposeSelectorSet } from '../../src/adapters/naverworks/types';
 import { SELECTOR_SETS } from '../../src/adapters/naverworks/selectors';
@@ -129,5 +129,77 @@ describe('FileBuffer', () => {
     expect(() => fb.begin({ fileId: 'b', name: 'b', size: 1024 * 1024 })).toThrow(/상한/);
     fb.release('a');
     expect(() => fb.begin({ fileId: 'b', name: 'b', size: 1024 * 1024 })).not.toThrow();
+  });
+});
+
+describe('insertHtml keep', () => {
+  const KEEP = '[data-workseditor="sign-content"]';
+  const mk = (inner: string) => {
+    document.body.innerHTML = `<div id="ed" contenteditable="true">${inner}</div>`;
+    return document.getElementById('ed') as HTMLElement;
+  };
+  it('innerHTML: 서명 유지, 앞에 새 html, 옛 내용 제거', () => {
+    const ed = mk('<div>옛</div><div data-workseditor="sign-content"><table><tbody><tr><td>서명</td></tr></tbody></table></div>');
+    expect(insertHtml(ed, '<p>새</p>', ['innerHTML'], KEEP)).toBe('innerHTML');
+    expect(ed.textContent).toBe('새서명');
+    expect(ed.innerHTML.indexOf('<p>새</p>')).toBeLessThan(ed.innerHTML.indexOf('data-workseditor'));
+    expect(ed.querySelector(KEEP)?.textContent).toBe('서명');
+  });
+  it('keep이 직계 자식의 자손이어도 그 직계 자식 앞에 들어간다', () => {
+    const ed = mk('<div>옛</div><div class="wrap"><section><div data-workseditor="sign-content">서명</div></section></div>');
+    insertHtml(ed, '<p>새</p>', ['innerHTML'], KEEP);
+    expect(ed.firstElementChild?.outerHTML).toBe('<p>새</p>');
+    expect(ed.children[1]?.className).toBe('wrap');
+    expect(ed.textContent).toBe('새서명');
+  });
+  it('keep을 못 찾으면 전체 교체', () => {
+    const ed = mk('<div>옛</div>');
+    insertHtml(ed, '<p>새</p>', ['innerHTML'], KEEP);
+    expect(ed.innerHTML).toBe('<p>새</p>');
+  });
+  it('keep 인자가 없으면 전체 교체', () => {
+    const ed = mk('<div>옛</div><div data-workseditor="sign-content">서명</div>');
+    insertHtml(ed, '<p>새</p>', ['innerHTML']);
+    expect(ed.innerHTML).toBe('<p>새</p>');
+  });
+  it('execCommand: 선택 범위가 처음부터 서명 직계 자식 앞까지', () => {
+    const ed = mk('<div>옛</div><div class="wrap"><div data-workseditor="sign-content">서명</div></div>');
+    let range: { sc: Node; so: number; ec: Node; eo: number } | undefined;
+    const doc = ed.ownerDocument as Document & { execCommand: unknown };
+    doc.execCommand = vi.fn((cmd: string) => {
+      if (cmd === 'insertHTML') { const r = document.getSelection()!.getRangeAt(0); range = { sc: r.startContainer, so: r.startOffset, ec: r.endContainer, eo: r.endOffset }; }
+      return true;
+    });
+    // execCommand는 DOM을 바꾸지 않으므로 mock에서 변경을 흉내 낸다
+    const orig = doc.execCommand as (c: string) => boolean;
+    doc.execCommand = (c: string, ...r: unknown[]) => { const v = orig(c); if (c === 'insertHTML') ed.insertAdjacentHTML('afterbegin', '<i></i>'); void r; return v; };
+    expect(insertHtml(ed, '<p>새</p>', ['execCommand'], KEEP)).toBe('execCommand');
+    expect(range).toBeDefined();
+    expect(range!.sc).toBe(ed);
+    expect(range!.so).toBe(0);
+    expect(range!.ec).toBe(ed);
+    expect(range!.eo).toBe(1);
+    expect(ed.children[2]?.className).toBe('wrap');
+    delete (doc as { execCommand?: unknown }).execCommand;
+  });
+  it('execCommand가 서명 안에 텍스트를 넣으면 되돌리고 innerHTML 전략을 쓴다', () => {
+    const SIGN = '<div data-workseditor="sign-content"><table><tbody><tr><td>서명</td></tr></tbody></table></div>';
+    const ed = mk(`<div>옛</div>${SIGN}`);
+    const doc = ed.ownerDocument as Document & { execCommand?: unknown };
+    doc.execCommand = (c: string) => { if (c === 'insertHTML') ed.querySelector('td')!.textContent += '망가짐'; return true; };
+    expect(insertHtml(ed, '<p>새</p>', ['execCommand', 'innerHTML'], KEEP)).toBe('innerHTML');
+    delete (doc as { execCommand?: unknown }).execCommand;
+    expect(ed.querySelector('td')?.textContent).toBe('서명');
+    expect(ed.innerHTML).toBe(`<p>새</p>${SIGN}`);
+  });
+  it('모든 전략이 서명을 망가뜨리면 null, 원문 복원', () => {
+    const SIGN = '<div data-workseditor="sign-content">서명</div>';
+    const ed = mk(`<div>옛</div>${SIGN}`);
+    const doc = ed.ownerDocument as Document & { execCommand?: unknown };
+    doc.execCommand = (c: string) => { if (c === 'insertHTML') ed.querySelector(KEEP)!.textContent += 'x'; return true; };
+    ed.addEventListener('input', () => ed.querySelector(KEEP)?.remove());
+    expect(insertHtml(ed, '<p>새</p>', ['execCommand', 'innerHTML'], KEEP)).toBeNull();
+    delete (doc as { execCommand?: unknown }).execCommand;
+    expect(ed.innerHTML).toBe(`<div>옛</div>${SIGN}`);
   });
 });

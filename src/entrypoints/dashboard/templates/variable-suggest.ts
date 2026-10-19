@@ -1,4 +1,5 @@
-import { VARIABLES, type VariableDef } from '../../../core/templates/variables';
+import { variablesFor, type VariableDef } from '../../../core/templates/variables';
+import type { NoticeKind } from '../../../core/types/notice';
 
 export type FocusEl = HTMLInputElement | HTMLTextAreaElement;
 
@@ -13,11 +14,12 @@ export function findVariableQuery(value: string, caret: number): { start: number
 }
 
 /** 입력어로 시작하는 변수를 먼저, 입력어를 포함하는 변수를 뒤에 둔다. 빈 입력어면 전체. */
-export function matchVariables(query: string): VariableDef[] {
+export function matchVariables(query: string, kind: NoticeKind = 'bid'): VariableDef[] {
   const q = query.toLowerCase();
-  if (!q) return VARIABLES;
+  const pool = variablesFor(kind);
+  if (!q) return pool;
   const name = (d: VariableDef) => d.name.toLowerCase();
-  return [...VARIABLES.filter((d) => name(d).startsWith(q)), ...VARIABLES.filter((d) => !name(d).startsWith(q) && name(d).includes(q))];
+  return [...pool.filter((d) => name(d).startsWith(q)), ...pool.filter((d) => !name(d).startsWith(q) && name(d).includes(q))];
 }
 
 /** 입력의 [start, end) 를 text 로 바꾸고 React onChange가 돌도록 input 이벤트를 발생시킨 뒤 커서를 끝에 둔다. */

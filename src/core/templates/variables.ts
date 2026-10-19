@@ -1,11 +1,15 @@
+import type { NoticeKind } from '../types/notice';
 import type { TemplateFieldKey } from '../types/template';
 
 export type { TemplateFieldKey };
 export type VariableKind = 'text' | 'amount' | 'amount_short' | 'datetime' | 'date' | 'bool_joint' | 'bool_apply' | 'score' | 'period' | 'url' | 'list' | 'number';
-export interface VariableDef { name: string; fieldKey: TemplateFieldKey; label: string; group: '기본' | '일정' | '평가' | '기타'; kind: VariableKind; }
+export interface VariableDef { name: string; fieldKey: TemplateFieldKey; label: string; group: '기본' | '일정' | '평가' | '사전규격' | '기타'; kind: VariableKind; kinds: NoticeKind[]; }
 
-const v = (name: string, fieldKey: TemplateFieldKey, group: VariableDef['group'], kind: VariableKind): VariableDef =>
-  ({ name, fieldKey, label: name, group, kind });
+const BID: NoticeKind[] = ['bid'];
+const BOTH: NoticeKind[] = ['bid', 'prespec'];
+const PRESPEC: NoticeKind[] = ['prespec'];
+const v = (name: string, fieldKey: TemplateFieldKey, group: VariableDef['group'], kind: VariableKind, kinds: NoticeKind[] = BID): VariableDef =>
+  ({ name, fieldKey, label: name, group, kind, kinds });
 
 export const VARIABLES: VariableDef[] = [
   v('공고번호', 'noticeNo', '기본', 'text'),
@@ -13,8 +17,8 @@ export const VARIABLES: VariableDef[] = [
   v('공고명', 'title', '기본', 'text'),
   v('게시일시', 'postedAt', '기본', 'datetime'),
   v('공고구분', 'noticeType', '기본', 'text'),
-  v('발주기관', 'orderingOrg', '기본', 'text'),
-  v('수요기관', 'demandOrg', '기본', 'text'),
+  v('발주기관', 'orderingOrg', '기본', 'text', BOTH),
+  v('수요기관', 'demandOrg', '기본', 'text', BOTH),
   v('사업금액', 'budgetAmount', '기본', 'amount'),
   v('추정가격', 'estimatedPrice', '기본', 'amount'),
   v('사업기간', 'projectPeriod', '기본', 'text'),
@@ -37,16 +41,29 @@ export const VARIABLES: VariableDef[] = [
   v('실적인정기간', 'performancePeriod', '평가', 'period'),
   v('실적인정금액', 'performanceMinAmount', '평가', 'amount_short'),
   v('실적인정조건', 'performanceCondition', '평가', 'text'),
-  v('공고URL', 'sourceUrl', '기타', 'url'),
-  v('첨부파일목록', 'attachmentList', '기타', 'list'),
-  v('첨부파일수', 'attachmentCount', '기타', 'number'),
-  v('수집일시', 'collectedAt', '기타', 'datetime'),
+  v('공고URL', 'sourceUrl', '기타', 'url', BOTH),
+  v('첨부파일목록', 'attachmentList', '기타', 'list', BOTH),
+  v('첨부파일수', 'attachmentCount', '기타', 'number', BOTH),
+  v('수집일시', 'collectedAt', '기타', 'datetime', BOTH),
   v('정정공고', 'isCorrection', '기타', 'text'),
-  v('오늘', 'today', '기타', 'text'),
+  v('오늘', 'today', '기타', 'text', BOTH),
+  // 사전규격 전용
+  v('사전규격등록번호', 'specRegNo', '사전규격', 'text', PRESPEC),
+  v('사전규격명', 'specName', '사전규격', 'text', PRESPEC),
+  v('업무구분', 'bizDivision', '사전규격', 'text', PRESPEC),
+  v('배정예산', 'assignedBudget', '사전규격', 'amount', PRESPEC),
+  v('공개일시', 'registeredAt', '사전규격', 'datetime', PRESPEC),
+  v('의견등록마감일시', 'opinionCloseAt', '사전규격', 'datetime', PRESPEC),
+  v('담당자', 'officerName', '사전규격', 'text', PRESPEC),
+  v('담당자연락처', 'officerTel', '사전규격', 'text', PRESPEC),
+  v('연계입찰공고번호', 'relatedBidNo', '사전규격', 'text', PRESPEC),
 ];
 
 export const VARIABLE_BY_NAME = new Map<string, VariableDef>(VARIABLES.map((d) => [d.name, d]));
 export const VARIABLE_BY_KEY = new Map<TemplateFieldKey, VariableDef>(VARIABLES.map((d) => [d.fieldKey, d]));
+
+/** 해당 종류에서 쓸 수 있는 변수. */
+export const variablesFor = (kind: NoticeKind): VariableDef[] => VARIABLES.filter((d) => d.kinds.includes(kind));
 
 /** 레지스트리에 있는 키이거나 `custom.<key>` 접두사면 true. */
 export function isTemplateFieldKey(k: unknown): k is TemplateFieldKey {

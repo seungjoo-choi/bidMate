@@ -5,6 +5,7 @@ import type { ExtractionStatus } from '../../core/types/extraction';
 import type { IndexEntry } from '../../core/types/index-file';
 import { send } from '../../messaging/bus';
 import { FsErrorAlert } from './FsErrorAlert';
+import { kindOf, noticeLabel } from '../../core/model/ids';
 import { Button, StatusBadge } from '../../ui/components';
 import type { BadgeStatus } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
@@ -103,7 +104,7 @@ export function NoticesPage() {
           </div>
           <div className="overflow-hidden rounded-card border border-line bg-surface shadow-card">
             <div className={`${GRID} bg-sunken py-3 text-sm text-muted`}>
-              <div>공고명</div><div>입찰마감</div><div>수집</div><div>평가정보</div><div>수집일</div>
+              <div>공고명</div><div>마감</div><div>수집</div><div>평가정보</div><div>수집일</div>
             </div>
             {rows.length === 0 && <div className="border-t border-line px-4 py-10 text-center text-muted">조건에 맞는 공고가 없습니다.</div>}
             {rows.map((n) => {
@@ -125,7 +126,8 @@ export function NoticesPage() {
                   <div className="min-w-0">
                     <div className="truncate text-base font-semibold">{n.title}</div>
                     <div className={`mt-0.5 truncate text-sm ${past ? '' : 'text-muted'}`}>
-                      <span className="font-mono">{n.noticeNo}-{n.round}</span>, {n.orderingOrg}
+                      <span className="font-mono">{noticeLabel(n)}</span>, {n.orderingOrg}
+                      {kindOf(n) === 'prespec' &&<span className="ml-2 align-middle"><StatusBadge status="idle">사전규격</StatusBadge></span>}
                     </div>
                   </div>
                   <div className="flex items-baseline gap-2.5 font-mono text-sm tabular-nums">
@@ -135,7 +137,7 @@ export function NoticesPage() {
                     <span className={past ? '' : 'text-muted'}>{formatDateTime(n.bidCloseAt)}</span>
                   </div>
                   <div><StatusBadge status={cb.tone}>{cb.text}</StatusBadge></div>
-                  <div><StatusBadge status={eb.tone}>{eb.text}</StatusBadge></div>
+                  <div>{kindOf(n) === 'prespec' ? <span className="text-sm text-muted">해당 없음</span> : <StatusBadge status={eb.tone}>{eb.text}</StatusBadge>}</div>
                   <div className={`font-mono text-sm tabular-nums ${past ? '' : 'text-muted'}`}>{formatDate(n.collectedAt)}</div>
                 </div>
               );

@@ -1,14 +1,15 @@
 import { withDefaults } from '../core/model/default-settings';
-import { decideHandoff } from '../core/model/handoff';
+import { decideHandoff, type Verdict } from '../core/model/handoff';
 import type { ISODate } from '../core/types/common';
 import type { ComposeParams, Handoff, HandoffSkip, Job } from '../core/types/job';
-import type { NoticeRef } from '../core/types/notice';
-import type { AutoComposeSettings, Settings } from '../core/types/settings';
+import { kindOf } from '../core/model/ids';
+import type { NoticeKind, NoticeRef } from '../core/types/notice';
+import type { AfterCollect, AutoComposeSettings, Settings } from '../core/types/settings';
 import { listen } from '../messaging/bus';
 import type { JobRequest } from '../messaging/protocol';
 import { openDashboard } from './dashboard-tabs';
 import {
-  ACTIVE, addFinalListener, getJob, getJobForSender, listJobs, senderKind, setHandoff, startJob, type KV, type StartResult,
+  ACTIVE, addFinalListener, getJob, getJobForSender, listJobs, senderKind, setAfterCollect, setHandoff, startJob, type KV, type StartResult,
 } from './job-coordinator';
 import { getComposeHost } from './site-registry';
 
@@ -22,6 +23,7 @@ export interface AutoComposeDeps {
   listJobs: () => Promise<Job[]>;
   getJob: (id: string) => Promise<Job | undefined>;
   setHandoff: (jobId: string, handoff: Handoff) => Promise<void>;
+  setAfterCollect: (jobId: string, afterCollect: AfterCollect) => Promise<boolean>;
   permissions: Pick<typeof chrome.permissions, 'contains'>;
   openDashboard: typeof openDashboard;
   getComposeHost: () => Promise<string>;
@@ -42,6 +44,7 @@ const deps = (): AutoComposeDeps => {
     listJobs: injected.listJobs ?? listJobs,
     getJob: injected.getJob ?? getJob,
     setHandoff: injected.setHandoff ?? setHandoff,
+    setAfterCollect: injected.setAfterCollect ?? setAfterCollect,
     permissions: injected.permissions ?? chrome.permissions,
     openDashboard: injected.openDashboard ?? openDashboard,
     getComposeHost: injected.getComposeHost ?? getComposeHost,
@@ -68,11 +71,12 @@ async function writeQueue(list: QueueEntry[]): Promise<void> {
 const none = (reason: HandoffSkip): Handoff => ({ action: 'none', reason, at: deps().now() });
 const activeCompose = async (): Promise<Job[]> => (await deps().listJobs()).filter((j) => j.type === 'compose' && ACTIVE.has(j.status));
 
-function paramsOf(s: AutoComposeSettings): ComposeParams {
+function paramsOf(s: AutoComposeSettings, kind: NoticeKind): ComposeParams {
   const p: ComposeParams = {};
   if (s.recipients.mode === 'group') p.groupId = s.recipients.groupId;
   else if (s.recipients.mode === 'custom') p.recipients = s.recipients.members.map((m) => ({ ...m }));
-  if (s.templateId) p.templateId = s.templateId;
+  const tplId = kind === 'prespec' ? s.prespecTemplateId : s.templateId;
+  if (tplId) p.templateId = tplId;
   return p;
 }
 
@@ -98,7 +102,7 @@ async function pumpInner(): Promise<void> {
     try {
       const r = await d.startJob({
         type: 'compose', noticeId: head.noticeId, ref: head.ref, originTabId: head.originTabId,
-        params: paramsOf(settings), auto: { collectJobId: head.collectJobId },
+        params: paramsOf(settings, kindOf(head.ref)), auto: { collectJobId: head.collectJobId },
       });
       if (r.code === 'JOB_ALREADY_RUNNING') busy = true;
       else await d.setHandoff(head.collectJobId, { action: 'compose', state: 'started', jobId: r.jobId, at: d.now() });
@@ -129,11 +133,9 @@ async function recoverInner(): Promise<void> {
   }
 }
 
-async function handleCollect(job: Job): Promise<void> {
+/** 판정을 적용한다. 호출자가 이미 q() 안에 있어야 하며, 여기서 q()를 부르지 않는다. */
+async function applyVerdict(job: Job, verdict: Verdict): Promise<void> {
   const d = deps();
-  if (job.handoff) return; // 멱등
-  const verdict = decideHandoff(job, (await d.getSettings()).autoCompose);
-  if (!verdict) return;
   if (verdict.kind === 'skip') return d.setHandoff(job.id, none(verdict.reason));
   const noticeId = job.noticeId ?? (job.result as { noticeId?: string } | undefined)?.noticeId;
   if (!noticeId) return d.setHandoff(job.id, none('no_notice'));
@@ -141,18 +143,41 @@ async function handleCollect(job: Job): Promise<void> {
     const opened = await d.openDashboard(`#/review/${encodeURIComponent(noticeId)}?handoff=${verdict.reasons.join(',')}`, { nearTabId: job.originTabId });
     return d.setHandoff(job.id, { action: 'review', reasons: verdict.reasons, opened: opened !== undefined, at: d.now() });
   }
-  // compose: 큐 직렬화 구간에서 중복 확인, 적재, pump
-  await q(async () => {
-    let granted = false;
-    try { granted = await d.permissions.contains({ origins: [`https://${await d.getComposeHost()}/*`] }); } catch { /* 권한 확인 실패는 없음으로 본다 */ }
-    if (!granted) return d.setHandoff(job.id, none('needs_site_permission'));
-    const queue = await readQueue();
-    if (queue.some((e) => e.noticeId === noticeId) || (await activeCompose()).some((j) => j.noticeId === noticeId)) {
-      return d.setHandoff(job.id, none('compose_running'));
-    }
-    await writeQueue([...queue, { collectJobId: job.id, noticeId, ref: job.ref, originTabId: job.originTabId, enqueuedAt: d.now() }]);
-    await d.setHandoff(job.id, { action: 'compose', state: 'queued', at: d.now() });
-    await pumpInner();
+  if (verdict.kind === 'ask') return d.setHandoff(job.id, { action: 'ask', at: d.now() });
+  if (verdict.kind === 'edit') {
+    const opened = await d.openDashboard(`#/mail/${encodeURIComponent(noticeId)}?from=collect`, { nearTabId: job.originTabId });
+    return d.setHandoff(job.id, { action: 'edit', opened: opened !== undefined, at: d.now() });
+  }
+  // compose: 중복 확인, 적재, pump (호출자의 q() 직렬화 구간 안)
+  let granted = false;
+  try { granted = await d.permissions.contains({ origins: [`https://${await d.getComposeHost()}/*`] }); } catch { /* 권한 확인 실패는 없음으로 본다 */ }
+  if (!granted) return d.setHandoff(job.id, none('needs_site_permission'));
+  const queue = await readQueue();
+  if (queue.some((e) => e.noticeId === noticeId) || (await activeCompose()).some((j) => j.noticeId === noticeId)) {
+    return d.setHandoff(job.id, none('compose_running'));
+  }
+  await writeQueue([...queue, { collectJobId: job.id, noticeId, ref: job.ref, originTabId: job.originTabId, enqueuedAt: d.now() }]);
+  await d.setHandoff(job.id, { action: 'compose', state: 'queued', at: d.now() });
+  await pumpInner();
+}
+
+async function handleCollect(job: Job): Promise<void> {
+  if (job.handoff) return; // 멱등
+  const verdict = decideHandoff(job, (await deps().getSettings()).autoCompose);
+  if (!verdict) return;
+  await q(() => applyVerdict(job, verdict));
+}
+
+/** handoff ask 대기 중인 수집 잡에 사용자의 선택을 적용한다. 적용했으면 true. */
+export function resolveChoice(collectJobId: string, value: 'dashboard' | 'compose'): Promise<boolean> {
+  return q(async () => {
+    const d = deps();
+    const job = await d.getJob(collectJobId);
+    if (!job || job.type !== 'collect' || job.handoff?.action !== 'ask') return false;
+    const verdict = decideHandoff({ ...job, afterCollect: value }, (await d.getSettings()).autoCompose);
+    if (!verdict) return false;
+    await applyVerdict(job, verdict);
+    return true;
   });
 }
 
@@ -177,6 +202,12 @@ export function registerAutoCompose(): void {
   listen('auto-compose/dequeue', async ({ collectJobId }, sender) => {
     if (senderKind(sender) !== 'extension' && !(await getJobForSender(collectJobId, sender))) return { removed: false };
     return { removed: await dequeue(collectJobId) };
+  }, 'sw');
+  listen('auto-compose/choose', async ({ collectJobId, afterCollect }, sender) => {
+    if (senderKind(sender) !== 'extension' && !(await getJobForSender(collectJobId, sender))) return { applied: false };
+    if (await deps().setAfterCollect(collectJobId, afterCollect)) return { applied: true }; // ACTIVE면 종전 동작
+    if (afterCollect === 'ask') return { applied: false };
+    return { applied: await resolveChoice(collectJobId, afterCollect) };
   }, 'sw');
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && 'settingsCache' in changes) void pump().catch(() => undefined);

@@ -2,11 +2,14 @@ import type { AttachResult, FieldResult } from '../core/types/compose';
 import type { ComposeParams, HtmlFields, Job, JobError, JobProgress, JobStatus } from '../core/types/job';
 import type { Extraction, ExtractionKey } from '../core/types/extraction';
 import type { IndexEntry } from '../core/types/index-file';
-import type { GroupInput, RecipientInput, RecipientsSnapshot, TemplateInput, TemplatesSnapshot } from '../core/types/config-file';
-import type { MailDraft } from '../core/types/mail';
-import type { Settings } from '../core/types/settings';
+import type { NoticeKind } from '../core/types/notice';
+import type { GroupInput, RecipientImportPlan, RecipientImportResult, RecipientInput, RecipientsSnapshot, TemplateInput, TemplatesSnapshot } from '../core/types/config-file';
+import type { NwRawUser } from '../adapters/naverworks/contacts-types';
+import type { MailDraft, MailEdits } from '../core/types/mail';
+import type { AfterCollect, Settings } from '../core/types/settings';
 import type { Notice, NoticeRef } from '../core/types/notice';
 import type { CollectStatus } from '../core/types/notice';
+import type { DetectedDetail } from '../adapters/g2b/detail-page';
 import type { ComposeSelectorSet, ComposeState } from '../adapters/naverworks/types';
 
 /** 'content'는 SW/팝업이 content script로 보내는 메시지의 대상. */
@@ -33,6 +36,10 @@ export type AttachStatus =
   | { done: false; phase: 'buffering' | 'injecting' | 'uploading'; elapsedMs: number }
   | { done: true; result: AttachResult };
 export interface FileMeta { fileId: string; name: string; size: number; mime?: string; }
+/** 설정 화면에서 바로 보여 줄 카드 */
+export type SettingsSection = 'storage' | 'mail-service' | 'auto-compose' | 'g2b';
+/** 오류를 고칠 수 있는 화면. ui/open 페이로드로 그대로 보낸다 */
+export type FixTarget = { page: 'recipients' } | { page: 'settings'; section: SettingsSection };
 export interface NoticeLookup { found: boolean; collectedAt?: string; collectStatus?: CollectStatus }
 export interface G2bDetected { noticeNo: string; round?: string; title?: string }
 export interface ProbeReport { [key: string]: unknown; }
@@ -69,22 +76,25 @@ export type Msg =
   | { type: 'fs/status'; payload: void; response: FsStatus }
   | { type: 'fs/root-updated'; payload: void; response: void }
   | { type: 'fs/smoke-test'; payload: void; response: SmokeTestResult }
-  | { type: 'g2b/test'; payload: { serviceKey?: string }; response: G2bTestResult }
+  | { type: 'g2b/test'; payload: { serviceKey?: string; kind?: NoticeKind }; response: G2bTestResult }
   | { type: 'job/get'; payload: { jobId: string }; response: Job | null }  // CS→SW. ledger 조회(서비스키 미포함)
-  | { type: 'job/latest-for-tab'; payload: { noticeNo: string; round?: string }; response: Job | null }  // CS→SW
+  | { type: 'job/latest-for-tab'; payload: { kind?: NoticeKind; noticeNo: string; round?: string }; response: Job | null }  // CS→SW
   | { type: 'job/list-for-tab'; payload: void; response: Job[] }  // CS→SW: 이 탭이 시작한 collect 잡
   | { type: 'job/update'; payload: { job: Job }; response: void }  // SW→CS(target content): 종료 스냅샷
-  | { type: 'notice/lookup'; payload: { noticeNo: string; round?: string }; response: NoticeLookup }  // CS→SW→offscreen
-  | { type: 'notice/lookup-batch'; payload: { refs: Array<{ noticeNo: string; round?: string }> }; response: NoticeLookup[] }  // CS→SW→offscreen, 입력 순서 보존
+  | { type: 'notice/lookup'; payload: { kind?: NoticeKind; noticeNo: string; round?: string }; response: NoticeLookup }  // CS→SW→offscreen
+  | { type: 'notice/lookup-batch'; payload: { refs: Array<{ kind?: NoticeKind; noticeNo: string; round?: string }> }; response: NoticeLookup[] }  // CS→SW→offscreen, 입력 순서 보존
   | { type: 'fs/permission-granted'; payload: void; response: void }  // grant 창→SW, SW→CS(target content)
+  | { type: 'auto-compose/choose'; payload: { collectJobId: string; afterCollect: AfterCollect }; response: { applied: boolean } }  // ACTIVE collect면 스냅샷 변경, handoff ask 대기 중이면 즉시 해소
   | { type: 'auto-compose/dequeue'; payload: { collectJobId: string }; response: { removed: boolean } }
-  | { type: 'ui/open'; payload: { page: 'settings' | 'grant' | 'review' | 'mail'; noticeId?: string }; response: void }  // CS→SW: 확장 페이지 열기
+  | { type: 'ui/open'; payload: { page: 'settings' | 'grant' | 'review' | 'mail' | 'recipients'; noticeId?: string; section?: SettingsSection }; response: void }  // CS→SW: 확장 페이지 열기
   | { type: 'notice/list'; payload: void; response: IndexEntry[] }  // 확장 페이지→SW→offscreen
   | { type: 'notice/get'; payload: { noticeId: string }; response: { notice: Notice; extraction: Extraction | null } | null }
   | { type: 'extraction/edit'; payload: { noticeId: string; key: ExtractionKey; value: unknown | null; note?: string }; response: { notice: Notice; extraction: Extraction } }
   | { type: 'extraction/text'; payload: { noticeId: string; textPath: string }; response: { text: string } }
   | { type: 'recipients/list'; payload: void; response: RecipientsSnapshot }
   | { type: 'recipients/save'; payload: { recipient: RecipientInput }; response: RecipientsSnapshot }
+  | { type: 'recipients/import'; payload: { plan: RecipientImportPlan }; response: RecipientImportResult }  // 대시보드→SW→offscreen
+  | { type: 'contacts/naverworks-fetch'; payload: { domainId?: string }; response: { domainId: string; users: NwRawUser[]; totalCount: number; tabReused: boolean } }  // 대시보드→SW
   | { type: 'recipients/delete'; payload: { id: string }; response: RecipientsSnapshot }
   | { type: 'groups/save'; payload: { group: GroupInput }; response: RecipientsSnapshot }
   | { type: 'groups/delete'; payload: { id: string }; response: RecipientsSnapshot }
@@ -93,11 +103,16 @@ export type Msg =
   | { type: 'templates/save'; payload: { template: TemplateInput }; response: TemplatesSnapshot }
   | { type: 'templates/delete'; payload: { id: string }; response: TemplatesSnapshot }
   | { type: 'templates/set-default'; payload: { id: string }; response: TemplatesSnapshot }
-  | { type: 'mail/prepare'; payload: { noticeId: string; groupId?: string; templateId?: string; recipients?: Array<{ recipientId: string; role: 'to' | 'cc' }> }; response: { draft: MailDraft; notice: Notice } }
+  | { type: 'mail/prepare'; payload: { noticeId: string; groupId?: string; templateId?: string; recipients?: Array<{ recipientId: string; role: 'to' | 'cc' }>; edits?: MailEdits | null }; response: { draft: MailDraft; notice: Notice } }
+  | { type: 'mail/edits-get'; payload: { noticeId: string }; response: MailEdits | null }
   | { type: 'mail/draft-get'; payload: { noticeId: string }; response: MailDraft | null }
   | { type: 'mail/set-status'; payload: { noticeId: string; status: 'delivered' | 'none' }; response: { notice: Notice } }
   | { type: 'config/repair'; payload: { file: 'recipients' | 'groups' | 'templates' }; response: { backupPath: string } }
   | { type: 'g2b/detect'; payload: void; response: G2bDetected | null }  // popup→CS
+  | { type: 'g2b/read-html'; payload: { noticeNo: string; round?: string };
+      response: { detected: DetectedDetail | null; match: boolean; html: HtmlFields | null; readyState: DocumentReadyState } }  // SW→g2b 탭 CS(target content)
+  | { type: 'g2b/read-detail'; payload: { jobId: string };
+      response: { html: HtmlFields; elapsedMs: { detect: number; stable: number } } }  // offscreen→SW. 실패는 DETAIL_* code
   | { type: 'g2b/collect'; payload: void; response: { started: boolean; jobId?: string; code?: string } }  // popup→CS
   | { type: 'g2b/retry'; payload: { jobId: string }; response: { started: boolean; jobId?: string; code?: string } };  // sidepanel→CS: 이 탭 공고의 잡 재시도(SW가 공고/탭 일치 검사)
 

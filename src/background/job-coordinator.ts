@@ -2,9 +2,10 @@ import { redactKey } from '../adapters/g2b/openapi';
 import { DEFAULT_WEBMAIL_HOST, withDefaults } from '../core/model/default-settings';
 import { inboxHost } from '../core/model/mail-provider';
 import { refsConflict } from '../core/model/job-conflict';
-import { noticeId as makeNoticeId } from '../core/model/ids';
+import { kindOf, noticeIdOf } from '../core/model/ids';
+import { COLLECTIBLE_NOTICE_KINDS, type NoticeKind } from '../core/types/notice';
 import type { CollectResult, Handoff, Job, JobError, JobProgress, JobStatus, StepId, StepState } from '../core/types/job';
-import type { Settings } from '../core/types/settings';
+import type { AfterCollect, Settings } from '../core/types/settings';
 import { listen, send as busSend } from '../messaging/bus';
 import type { ActiveJob, Envelope, JobRequest, JobRunPayload } from '../messaging/protocol';
 import { ensureOffscreen, hasOffscreen } from './offscreen-manager';
@@ -212,7 +213,7 @@ export async function getJobForSender(jobId: string, sender: Sender): Promise<Jo
   return j;
 }
 
-export async function latestJobForSender(ref: { noticeNo: string; round?: string }, sender: Sender): Promise<Job | null> {
+export async function latestJobForSender(ref: { kind?: NoticeKind; noticeNo: string; round?: string }, sender: Sender): Promise<Job | null> {
   if (!isSiteKind(await kindOrThrow(sender))) return null;
   const jobs = (await listJobs()).filter((j) => j.type !== 'compose' && j.originTabId === sender.tab?.id && j.ref && refsConflict(j.ref, ref));
   jobs.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
@@ -278,6 +279,18 @@ export function setHandoff(jobId: string, handoff: Handoff): Promise<void> {
   });
 }
 
+/** collect 잡의 수집 후 동작을 바꾼다. collect이고 ACTIVE일 때만 적용하고 적용 여부를 반환한다. */
+export function setAfterCollect(jobId: string, afterCollect: AfterCollect): Promise<boolean> {
+  return serial(async () => {
+    const cur = await getJob(jobId);
+    if (!cur || cur.type !== 'collect' || !ACTIVE.has(cur.status)) return false;
+    const next: Job = { ...cur, afterCollect };
+    await putJob(next);
+    notifyUpdate(next);
+    return true;
+  });
+}
+
 export type StartResult = { jobId: string; code?: 'JOB_ALREADY_RUNNING' };
 
 /** ensureOffscreen → ledger queued → job/run 왕복 → ledger 확정 → 정합까지 한 serial 구간. */
@@ -301,7 +314,19 @@ export function startJob(req: JobRequest): Promise<StartResult> {
     } else {
       // extract/compose 잡은 ref 없이 noticeId만으로 시작한다.
       if (!req.ref && !((req.type === 'extract' || req.type === 'compose') && req.noticeId)) throw Object.assign(new Error('공고 참조(ref)가 필요합니다.'), { code: 'INVALID_REQUEST' });
-      job = newJob(req, req.noticeId ?? makeNoticeId(req.ref!.noticeNo, req.ref!.round));
+      if (req.ref && !COLLECTIBLE_NOTICE_KINDS.has(kindOf(req.ref))) throw Object.assign(new Error('수집할 수 없는 공고 종류입니다.'), { code: 'INVALID_REQUEST' });
+      // 정규화: bid는 kind 생략, 그 외 종류는 round 제거(noticeIdOf는 round를 무시하므로 충돌 비교와 맞춘다). 원본은 바꾸지 않는다.
+      const ref = req.ref && (() => {
+        const { kind, round, ...rest } = req.ref;
+        return kind && kind !== 'bid' ? { ...rest, kind } : { ...rest, ...(round !== undefined ? { round } : {}) };
+      })();
+      const nreq: JobRequest = ref ? { ...req, ref } : req;
+      job = newJob(nreq, req.noticeId ?? noticeIdOf(nreq.ref!));
+      // collect 잡은 시작 시점의 수집 후 동작을 스냅샷한다(자동 작성이 꺼져 있으면 기록하지 않는다). 재시도는 이전 값을 승계한다.
+      if (job.type === 'collect') {
+        const ac = (await getSettings()).autoCompose;
+        if (ac.enabled) job.afterCollect = ac.afterCollect;
+      }
     }
     try {
       await deps().offscreen.ensure();

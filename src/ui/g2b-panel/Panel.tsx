@@ -190,7 +190,7 @@ export function PanelApp({ controller: ctl }: { controller: PanelController }) {
           <div className="mt-2 flex justify-end">
             <Btn tone="primary" onClick={() => {
               if (view.action === 'grant') ctl.openUi('grant');
-              else if (view.action === 'settings') ctl.openUi('settings');
+              else if (view.action === 'settings') ctl.openFix(view.fix);
               else void ctl.retry();
             }}>{view.actionLabel}</Btn>
           </div>

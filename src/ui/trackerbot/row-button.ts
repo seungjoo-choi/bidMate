@@ -1,12 +1,14 @@
 import type { RowSubAction, RowView } from './row-view';
 
-export interface RowButtonHandle { host: HTMLElement; render(view: RowView): void; dispose(): void }
+export interface RowButtonHandle { host: HTMLElement; render(view: RowView): void; flash(): void; dispose(): void }
 
 const STYLE = `
-:host { all: initial; display: block; margin-top: 4px; max-width: 100%; }
+:host { all: initial; display: block; margin-top: 4px; max-width: 100%; text-align: inherit; }
 .wrap { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; max-width: 100%; font-family: -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif; font-size: 12px; line-height: 16px; }
 button { font: inherit; padding: 2px 8px; border-radius: 4px; border: 1px solid transparent; background: #fff; color: #374151; cursor: pointer; white-space: nowrap; }
 button[disabled] { cursor: default; opacity: 0.7; }
+.wrap.flash { border-radius: 6px; animation: bm-flash 1.8s ease-out; }
+@keyframes bm-flash { 0%, 35% { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.55); } 100% { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0); } }
 button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
 button.secondary { background: #fff; border-color: #9ca3af; color: #374151; }
 button.ok { background: #16a34a; border-color: #16a34a; color: #fff; }
@@ -15,6 +17,7 @@ button.danger { background: #dc2626; border-color: #dc2626; color: #fff; }
 button.busy { background: #fff; border-color: #2563eb; color: #2563eb; }
 button.cancel { background: #fff; border-color: #9ca3af; color: #374151; }
 .chip { color: #6b7280; font-size: 11px; }
+.msg { flex-basis: 100%; color: #b91c1c; font-size: 11px; line-height: 15px; white-space: pre-line; word-break: keep-all; overflow-wrap: anywhere; }
 `;
 
 export function createRowButton(
@@ -31,6 +34,8 @@ export function createRowButton(
   root.append(style, wrap);
   for (const t of ['click', 'pointerdown', 'mousedown']) host.addEventListener(t, (e) => e.stopPropagation());
   anchor.insertAdjacentElement('afterend', host);
+  // 메일 HTML은 링크 자체에 정렬을 거는 경우가 있어(셀은 왼쪽, 링크만 가운데) 링크의 계산값을 따른다
+  host.style.textAlign = getComputedStyle(anchor).textAlign;
 
   const mkBtn = (text: string, cls: string, title: string | undefined, handler: (() => void) | null): HTMLButtonElement => {
     const b = document.createElement('button');
@@ -63,6 +68,7 @@ export function createRowButton(
         const act = view.action === 'none' ? null : view.action;
         items.push(mkBtn(act ? (view.actionLabel ?? view.label) : view.label, 'danger', act ? `${view.label}${view.detail ? `\n${view.detail}` : ''}` : view.detail, act ? () => on.action(act) : null));
         if (view.subAction) { const a = view.subAction; items.push(mkBtn(view.subActionLabel ?? '열기', 'cancel', undefined, () => on.action(a))); }
+        if (view.message) { const m = document.createElement('div'); m.className = 'msg'; m.setAttribute('role', 'alert'); m.textContent = view.message; items.push(m); }
         break;
       }
       case 'disabled':
@@ -72,5 +78,13 @@ export function createRowButton(
     wrap.replaceChildren(...items);
   };
 
-  return { host, render, dispose: () => host.remove() };
+  // 진행 팝업의 [행으로 이동]: 이미 화면 안이면 스크롤이 없으므로 어느 행인지 잠깐 강조한다
+  const flash = (): void => {
+    wrap.classList.remove('flash');
+    void wrap.offsetWidth; // 연속 클릭에도 애니메이션을 다시 시작한다
+    wrap.classList.add('flash');
+  };
+  wrap.addEventListener('animationend', () => wrap.classList.remove('flash'));
+
+  return { host, render, flash, dispose: () => host.remove() };
 }

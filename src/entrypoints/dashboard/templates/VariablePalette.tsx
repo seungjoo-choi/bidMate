@@ -1,16 +1,20 @@
 import { Braces, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { VARIABLES } from '../../../core/templates/variables';
+import { variablesFor } from '../../../core/templates/variables';
+import type { NoticeKind } from '../../../core/types/notice';
 import { Button } from '../../../ui/components';
 
-const GROUPS = ['기본', '일정', '평가', '기타'] as const;
+const GROUPS = ['기본', '일정', '평가', '사전규격', '기타'] as const;
 
 export interface VariablePaletteProps {
   onInsert: (name: string) => void;
+  /** 템플릿 종류. 생략하면 입찰공고. */
+  kind?: NoticeKind;
 }
 
 /** 변수 목록 버튼과 팝업. 팝업 바깥을 누르거나 Esc를 누르면 닫힌다. */
-export function VariablePalette({ onInsert }: VariablePaletteProps) {
+export function VariablePalette({ onInsert, kind = 'bid' }: VariablePaletteProps) {
+  const defs = variablesFor(kind);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -33,11 +37,11 @@ export function VariablePalette({ onInsert }: VariablePaletteProps) {
             <button type="button" aria-label="닫기" onClick={() => setOpen(false)} className="-m-1 shrink-0 rounded-ctl p-1 text-muted hover:bg-sunken hover:text-ink [&_svg]:size-4"><X /></button>
           </div>
           <div className="divide-y divide-line">
-            {GROUPS.map((g) => (
+            {GROUPS.filter((g) => defs.some((d) => d.group === g)).map((g) => (
               <div key={g} className="grid grid-cols-[3rem_1fr] items-start gap-3 py-2.5">
                 <span className="pt-1 text-xs font-semibold text-faint">{g}</span>
                 <div className="flex flex-wrap gap-1">
-                  {VARIABLES.filter((d) => d.group === g).map((d) => (
+                  {defs.filter((d) => d.group === g).map((d) => (
                     <button
                       key={d.name}
                       type="button"

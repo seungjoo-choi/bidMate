@@ -1,12 +1,13 @@
 import { ArrowLeft, Plus, Save } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { renderMail } from '../../core/templates/render';
-import { sampleNotice } from '../../core/templates/sample-notice';
+import { kindOf } from '../../core/model/ids';
+import { sampleNotice, samplePrespecNotice } from '../../core/templates/sample-notice';
 import type { RenderedMail } from '../../core/types/mail';
-import type { Notice } from '../../core/types/notice';
+import type { Notice, NoticeKind } from '../../core/types/notice';
 import type { Template, TemplateFieldKey } from '../../core/types/template';
 import { send } from '../../messaging/bus';
-import { Button, Card, Field, InlineAlert, inputClass, useToast } from '../../ui/components';
+import { Button, Card, Field, InlineAlert, inputClass, StatusBadge, useToast } from '../../ui/components';
 import { useTemplates } from '../../ui/hooks/useConfig';
 import { FsErrorAlert } from './FsErrorAlert';
 import { templateErrorText } from './TemplatesPage';
@@ -34,6 +35,9 @@ export function TemplateEditor({ id }: { id: string }) {
   const [opError, setOpError] = useState<{ code: string; message: string } | null>(null);
   const [repairing, setRepairing] = useState(false);
   const [notice, setNotice] = useState<Notice>(() => sampleNotice());
+  // 종류는 생성 시 정해지고 편집기에서 바꾸지 못한다.
+  const kind = kindOf(data?.templates.find((t) => t.id === id));
+  const sampleOf = (k: NoticeKind) => (k === 'prespec' ? samplePrespecNotice() : sampleNotice());
   const [rendered, setRendered] = useState<RenderedMail | null>(null);
   const lastFocus = useRef<FocusEl | null>(null);
   const toast = useToast();
@@ -47,12 +51,15 @@ export function TemplateEditor({ id }: { id: string }) {
     if (found && !draft) { setDraft(found); setSavedSnap(snapshotOf(found)); }
   }, [found, draft]);
 
-  // 미리보기 표본: 최신 공고 1건, 없으면 표본 공고.
+  // 미리보기 표본: 같은 종류의 최신 공고 1건, 없으면 그 종류의 표본 공고.
+  const loaded = data !== undefined && data !== null;
   useEffect(() => {
+    if (!loaded) return;
     let alive = true;
+    setNotice(sampleOf(kind));
     (async () => {
       try {
-        const list = await send('notice/list', undefined);
+        const list = (await send('notice/list', undefined)).filter((e) => kindOf(e) === kind);
         if (list.length === 0) return;
         const latest = list.reduce((a, b) => (b.collectedAt > a.collectedAt ? b : a));
         const got = await send('notice/get', { noticeId: latest.noticeId });
@@ -60,7 +67,7 @@ export function TemplateEditor({ id }: { id: string }) {
       } catch { /* 표본 공고로 대체 */ }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [loaded, kind]);
 
   // 300ms 디바운스 렌더.
   useEffect(() => {
@@ -89,7 +96,7 @@ export function TemplateEditor({ id }: { id: string }) {
     const start = el.selectionStart ?? el.value.length;
     replaceRange(el, start, el.selectionEnd ?? start, text);
   };
-  const suggest = useVariableSuggest((t): t is FocusEl => t === lastFocus.current && (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement));
+  const suggest = useVariableSuggest((t): t is FocusEl => t === lastFocus.current && (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement), kind);
 
   const patch = (p: Partial<Template>) => setDraft((d) => (d ? { ...d, ...p } : d));
 
@@ -98,7 +105,7 @@ export function TemplateEditor({ id }: { id: string }) {
     setSaving(true);
     setOpError(null);
     const r = await run('templates/save', {
-      template: { id: draft.id, name: draft.name, layout: draft.layout, subject: draft.subject, greeting: draft.greeting, closing: draft.closing, sections: draft.sections },
+      template: { id: draft.id, name: draft.name, ...(kind !== 'bid' ? { kind } : {}), layout: draft.layout, subject: draft.subject, greeting: draft.greeting, closing: draft.closing, sections: draft.sections },
     });
     setSaving(false);
     if (!r.ok) { setOpError(r.error); return; }
@@ -161,7 +168,7 @@ export function TemplateEditor({ id }: { id: string }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">{back}<h1 className="title-mark text-2xl font-bold tracking-tight">템플릿 편집</h1></div>
+        <div className="flex items-center gap-3">{back}<h1 className="title-mark text-2xl font-bold tracking-tight">템플릿 편집</h1>{kind === 'prespec' && <StatusBadge status="idle">사전규격</StatusBadge>}</div>
         <Button icon={<Save />} disabled={!dirty} loading={saving} onClick={() => void save()}>저장</Button>
       </div>
       {opError && <InlineAlert tone="error">{templateErrorText(opError.code, opError.message)}</InlineAlert>}
@@ -169,7 +176,7 @@ export function TemplateEditor({ id }: { id: string }) {
       {draft && (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_720px]">
           <div className="min-w-0 space-y-6" {...suggest.handlers}>
-            <Card title="기본 정보" action={<VariablePalette onInsert={insertVariable} />}>
+            <Card title="기본 정보" action={<VariablePalette onInsert={insertVariable} kind={kind} />}>
               <Field label="이름" htmlFor="tpl-name">
                 <input id="tpl-name" className={inputClass} value={draft.name} onFocus={trackFocus} onChange={(e) => patch({ name: e.target.value })} />
               </Field>
@@ -200,6 +207,7 @@ export function TemplateEditor({ id }: { id: string }) {
                   section={s}
                   index={i}
                   usedKeys={usedKeys}
+                  kind={kind}
                   onChange={(next) => patch({ sections: draft.sections.map((x) => (x.id === s.id ? next : x)) })}
                   onRemove={() => patch({ sections: draft.sections.filter((x) => x.id !== s.id) })}
                   onMoveUp={i > 0 ? () => patch({ sections: swap(draft.sections, i, i - 1) }) : undefined}
@@ -215,7 +223,7 @@ export function TemplateEditor({ id }: { id: string }) {
           </div>
 
           <div className="min-w-0 space-y-4 xl:sticky xl:top-6 xl:self-start">
-            <Card title="미리보기" description={notice.id === sampleNotice().id ? '표본 공고로 보여 줍니다.' : `최근 공고: ${notice.basic.title.value ?? ""}`}>
+            <Card title="미리보기" description={notice.id === sampleOf(kind).id ? '표본 공고로 보여 줍니다.' : `최근 공고: ${notice.basic.title.value ?? ""}`}>
               {rendered ? <MailPreviewFrame html={rendered.html} subject={rendered.subject} /> : <p className="text-sm text-muted">미리보기를 만드는 중입니다.</p>}
               {rendered && rendered.unresolved.length > 0 && (
                 <InlineAlert tone="warn">

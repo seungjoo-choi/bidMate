@@ -2,7 +2,7 @@ import type { Group, Recipient } from '../../core/types/recipient';
 import type { Template } from '../../core/types/template';
 import type { AutoComposeSettings } from '../../core/types/settings';
 
-export type BrokenReport = { groupMissing: boolean; templateMissing: boolean; memberIds: string[] };
+export type BrokenReport = { groupMissing: boolean; templateMissing: boolean; prespecTemplateMissing: boolean; memberIds: string[] };
 
 /** 설정이 참조하는 id 중 목록에 없는 것을 찾는다. */
 export function findBroken(s: AutoComposeSettings, groups: Group[], recipients: Recipient[], templates: Template[]): BrokenReport {
@@ -10,6 +10,7 @@ export function findBroken(s: AutoComposeSettings, groups: Group[], recipients: 
   return {
     groupMissing: r.mode === 'group' && !groups.some((g) => g.id === r.groupId),
     templateMissing: !!s.templateId && !templates.some((t) => t.id === s.templateId),
+    prespecTemplateMissing: !!s.prespecTemplateId && !templates.some((t) => t.id === s.prespecTemplateId),
     memberIds: r.mode === 'custom' ? r.members.filter((m) => !recipients.some((x) => x.id === m.recipientId)).map((m) => m.recipientId) : [],
   };
 }
@@ -23,6 +24,7 @@ export function sanitizeForSave(s: AutoComposeSettings, groups: Group[], recipie
   const b = findBroken(s, groups, recipients, templates);
   if (b.groupMissing) return { ok: false, message: '선택한 수신 그룹이 삭제되었습니다. 다른 그룹을 선택해 주세요.' };
   if (b.templateMissing) return { ok: false, message: '선택한 템플릿이 삭제되었습니다. 다른 템플릿을 선택하거나 비워 주세요.' };
+  if (b.prespecTemplateMissing) return { ok: false, message: '선택한 사전규격 템플릿이 삭제되었습니다. 다른 템플릿을 선택하거나 비워 주세요.' };
   if (s.recipients.mode === 'custom') {
     const members = s.recipients.members.filter((m) => !b.memberIds.includes(m.recipientId));
     return { ok: true, value: { ...s, recipients: { mode: 'custom', members } }, removedMembers: s.recipients.members.length - members.length };

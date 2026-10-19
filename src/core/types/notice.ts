@@ -2,7 +2,10 @@ import type { FieldValue, ISODate } from './common';
 import type { JobError } from './job';
 import type { DocKind } from '../extraction/classify';
 
-export interface NoticeRef { noticeNo: string; round?: string; detailUrl?: string; origin: 'trackerbot' | 'g2b' | 'manual'; }
+export type NoticeKind = 'bid' | 'prespec' | 'orderplan';
+/** 수집 가능한 종류. orderplan은 유니언 예약만. */
+export const COLLECTIBLE_NOTICE_KINDS: ReadonlySet<NoticeKind> = new Set<NoticeKind>(['bid', 'prespec']);
+export interface NoticeRef { kind?: NoticeKind; noticeNo: string; round?: string; detailUrl?: string; origin: 'trackerbot' | 'g2b' | 'manual'; }
 export interface NoticeBasic {
   noticeNo: FieldValue<string>; round: FieldValue<string>; title: FieldValue<string>;
   postedAt: FieldValue<ISODate>; noticeType: FieldValue<string>;
@@ -21,7 +24,12 @@ export interface NoticeEvaluation {
   credibilityScore: FieldValue<number>; managementScore: FieldValue<number>; performanceScore: FieldValue<number>;
   performancePeriod: FieldValue<string>; performanceMinAmount: FieldValue<number>; performanceCondition: FieldValue<string>;
 }
-export type NoticeFieldKey = keyof NoticeBasic | keyof NoticeSchedule | keyof NoticeEvaluation;
+export interface NoticePrespec {
+  specRegNo: FieldValue<string>; specName: FieldValue<string>; bizDivision: FieldValue<string>;
+  assignedBudget: FieldValue<number>; registeredAt: FieldValue<ISODate>; opinionCloseAt: FieldValue<ISODate>;
+  officerName: FieldValue<string>; officerTel: FieldValue<string>; relatedBidNo: FieldValue<string>;
+}
+export type NoticeFieldKey = keyof NoticeBasic | keyof NoticeSchedule | keyof NoticeEvaluation | keyof NoticePrespec;
 export type AttachmentStatus = 'pending' | 'downloading' | 'saved' | 'failed' | 'skipped' | 'size_mismatch';
 export interface Attachment {
   id: string; index: number; originalName: string; savedName: string | null;
@@ -33,7 +41,7 @@ export type CollectStatus = 'collected' | 'partial' | 'failed';
 export type MailStatus = 'none' | 'drafting' | 'ready_for_review' | 'delivered';   // delivered는 사용자 수동만
 export interface Notice {
   schemaVersion: 1; id: string; ref: NoticeRef; folder: string;
-  basic: NoticeBasic; schedule: NoticeSchedule; evaluation: NoticeEvaluation;
+  basic: NoticeBasic; schedule: NoticeSchedule; evaluation: NoticeEvaluation; prespec: NoticePrespec;
   customFields: Record<string, FieldValue<string>>; sourceUrl: FieldValue<string>;
   isCorrection: boolean; previousNoticeId?: string; attachments: Attachment[];
   collect: { status: CollectStatus; collectedAt: ISODate; lastJobId: string; errors: JobError[] };

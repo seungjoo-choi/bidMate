@@ -2,18 +2,21 @@ import type { AttachResult, FieldResult } from './compose';
 import type { ISODate } from './common';
 import type { Extraction, ExtractionStatus } from './extraction';
 import type { AttachmentStatus, MailStatus, NoticeFieldKey, NoticeRef } from './notice';
-import type { MailProvider } from './settings';
+import type { AfterCollect, MailProvider } from './settings';
 
 export type JobType = 'collect' | 'compose' | 'extract' | 'download_retry';
 export type JobStatus = 'queued' | 'running' | 'cancelling' | 'completed' | 'partial' | 'failed' | 'cancelled' | 'interrupted';
 export type StepId = 'fetch_basic' | 'fetch_html' | 'download_attachments' | 'extract' | 'render_mail' | 'open_compose' | 'fill_fields' | 'attach_files' | 'verify';
 export interface StepState { id: StepId; status: 'pending' | 'running' | 'done' | 'failed' | 'skipped'; progress?: { done: number; total: number }; bytes?: { received: number; total: number | null; name?: string }; startedAt?: ISODate; endedAt?: ISODate; error?: JobError; }
 export interface JobError { code: string; message: string; step?: StepId; retryable: boolean; detail?: unknown; }
-export type HandoffReason = 'collect_failed' | 'attachments_failed' | 'extract_failed' | 'needs_review';
+export type HandoffReason = 'collect_failed' | 'attachments_failed' | 'extract_failed' | 'needs_review' | 'detail_failed';
 export type HandoffSkip = 'disabled' | 'already_composed' | 'compose_running' | 'needs_site_permission' | 'no_notice' | 'start_failed' | 'dequeued';
 export type Handoff =
   | { action: 'compose'; state: 'queued' | 'started'; jobId?: string; at: ISODate }
   | { action: 'review'; reasons: HandoffReason[]; opened: boolean; at: ISODate }
+  | { action: 'edit'; opened: boolean; at: ISODate }
+  // 수집 완료, 사용자가 팝업에서 편집/작성을 고르기 전
+  | { action: 'ask'; at: ISODate }
   | { action: 'none'; reason: HandoffSkip; at: ISODate };
 export type ComposeParams = { groupId?: string; templateId?: string; recipients?: Array<{ recipientId: string; role: 'to' | 'cc' }> };
 export interface Job {
@@ -24,6 +27,8 @@ export interface Job {
   params?: ComposeParams; composeFrameId?: number;
   /** collect만: 수집 완료 후 자동 작성/검수 처리 결과 */
   handoff?: Handoff;
+  /** collect만: 수집 완료 후 동작 스냅샷(자동 작성이 켜져 있을 때만). 없으면 선택 UI 없음 */
+  afterCollect?: AfterCollect;
   /** compose만: 자동 시작된 잡이면 원인 collect 잡 */
   auto?: { collectJobId: string };
   createdAt: ISODate; updatedAt: ISODate; result?: unknown; errors: JobError[];

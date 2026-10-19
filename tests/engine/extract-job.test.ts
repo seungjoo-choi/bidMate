@@ -22,6 +22,19 @@ const extractJob = (noticeId: string): Job => ({
 const reExtract = (store: MemoryStore, noticeId: string) =>
   runExtractJob({ job: extractJob(noticeId), settings: defaultSettings() }, { store, checkPermission: async () => undefined, parsers, rules: loadRules(), emit: () => undefined });
 
+describe('사전규격 추출 거부', () => {
+  it('prespec notice는 EXTRACT_NOT_APPLICABLE로 실패(재시도 불가)', async () => {
+    const { store } = await runCollect({ files, parsers });
+    const key = [...store.files.keys()].find((k) => k.endsWith('/notice.json'))!;
+    const n = JSON.parse(await store.readText(key)) as Notice;
+    n.ref = { ...n.ref, kind: 'prespec' };
+    await store.writeText(key, JSON.stringify(n));
+    const r = await reExtract(store, n.id);
+    expect(r.status).toBe('failed');
+    expect(r.error).toMatchObject({ code: 'EXTRACT_NOT_APPLICABLE', retryable: false });
+  });
+});
+
 describe('수정 보존', () => {
   it('user_edited 필드와 userEdited item이 재추출 뒤에도 유지된다', async () => {
     const { store } = await runCollect({ files, parsers });

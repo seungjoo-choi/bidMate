@@ -63,4 +63,13 @@ describe('createRowButton', () => {
     btns(h)[1]!.click();
     expect(on.action).toHaveBeenCalledWith('settings');
   });
+
+  it('error 실패 이유는 버튼 아래에 바로 보인다', () => {
+    const h = createRowButton(anchor, cbs());
+    h.render({ kind: 'error', label: '메일 작성 실패', action: 'retry', actionLabel: '다시 시도', message: '받을 수신자가 없습니다' });
+    const msg = h.host.shadowRoot!.querySelector('.msg');
+    expect(msg?.textContent).toBe('받을 수신자가 없습니다');
+    h.render({ kind: 'error', label: '수집 실패', action: 'retry' });
+    expect(h.host.shadowRoot!.querySelector('.msg')).toBeNull();
+  });
 });

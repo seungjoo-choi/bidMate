@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { countRoles, findBroken, requestToEnable, sanitizeForSave } from '../../src/entrypoints/dashboard/auto-compose-logic';
-import { parseRoute } from '../../src/entrypoints/dashboard/route';
+import { parseRoute, settingsSectionOf } from '../../src/entrypoints/dashboard/route';
 import type { Group, Recipient } from '../../src/core/types/recipient';
 import type { Template } from '../../src/core/types/template';
 import type { AutoComposeSettings } from '../../src/core/types/settings';
@@ -8,7 +8,7 @@ import type { AutoComposeSettings } from '../../src/core/types/settings';
 const rc = (id: string, enabled = true): Recipient => ({ id, name: id, email: `${id}@x.kr`, enabled, defaultRole: 'to', updatedAt: '' });
 const grp = { id: 'g1', name: 'g', memberIds: [], isDefault: true, updatedAt: '' } as Group;
 const tpl = { id: 't1' } as Template;
-const base: AutoComposeSettings = { enabled: true, recipients: { mode: 'default' }, reviewGate: 'conflicts' };
+const base: AutoComposeSettings = { enabled: true, afterCollect: 'compose', recipients: { mode: 'default' }, reviewGate: 'conflicts' };
 
 describe('sanitizeForSave', () => {
   it('끊어진 수신자 id를 제거한다', () => {
@@ -25,7 +25,7 @@ describe('sanitizeForSave', () => {
     expect(sanitizeForSave({ ...base, templateId: 't1' }, [grp], [], [tpl]).ok).toBe(true);
   });
   it('findBroken', () => {
-    expect(findBroken(base, [grp], [], [tpl])).toEqual({ groupMissing: false, templateMissing: false, memberIds: [] });
+    expect(findBroken(base, [grp], [], [tpl])).toEqual({ groupMissing: false, templateMissing: false, prespecTemplateMissing: false, memberIds: [] });
   });
 });
 
@@ -56,5 +56,25 @@ describe('parseRoute query', () => {
   });
   it('mail 해시, 쿼리 없음', () => {
     expect(parseRoute('#/mail/n1')).toEqual({ page: 'mail', noticeId: 'n1', query: {} });
+  });
+});
+
+describe('settingsSectionOf', () => {
+  it('설정 해시의 section만 꺼내고 모르는 값은 버린다', () => {
+    expect(parseRoute('#/settings?section=storage')).toEqual({ page: 'settings' });
+    expect(settingsSectionOf('#/settings?section=auto-compose')).toBe('auto-compose');
+    expect(settingsSectionOf('#/settings?section=nope')).toBeUndefined();
+    expect(settingsSectionOf('#/settings')).toBeUndefined();
+  });
+});
+
+describe('prespecTemplateId 끊어짐', () => {
+  it('findBroken이 prespecTemplateMissing을 표시한다', () => {
+    expect(findBroken({ ...base, prespecTemplateId: 'gone' }, [grp], [], [tpl]).prespecTemplateMissing).toBe(true);
+    expect(findBroken({ ...base, prespecTemplateId: 't1' }, [grp], [], [tpl]).prespecTemplateMissing).toBe(false);
+  });
+  it('끊어진 사전규격 템플릿 id는 저장을 막는다', () => {
+    expect(sanitizeForSave({ ...base, prespecTemplateId: 'gone' }, [grp], [], [tpl]).ok).toBe(false);
+    expect(sanitizeForSave({ ...base, prespecTemplateId: 't1' }, [grp], [], [tpl]).ok).toBe(true);
   });
 });

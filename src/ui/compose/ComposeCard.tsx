@@ -1,9 +1,9 @@
-import { AlertTriangle, CheckCircle2, Copy, ExternalLink, Mail, XCircle } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, Copy, ExternalLink, Mail, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Job } from '../../core/types/job';
 import type { NoticeRef } from '../../core/types/notice';
 import type { MailDraft } from '../../core/types/mail';
-import { composeHost, originOf } from '../../core/model/mail-provider';
+import { composeHost, originOf, PROVIDER_LABEL } from '../../core/model/mail-provider';
 import { withDefaults } from '../../core/model/default-settings';
 import type { Settings } from '../../core/types/settings';
 import { send } from '../../messaging/bus';
@@ -12,7 +12,7 @@ import { copyRich, copyText } from '../clipboard';
 import { composeView, type CopyKind } from '../compose-view';
 
 const COPY_LABEL: Record<CopyKind, string> = {
-  to: '수신자 복사', cc: '참조 복사', subject: '제목 복사', body: '본문 복사(서식)', attach: '첨부 폴더 경로 복사',
+  to: '받는사람', cc: '참조', subject: '제목', body: '본문(서식)', attach: '첨부 폴더',
 };
 const FIELD_LABEL: Record<string, string> = { to: '받는사람', cc: '참조', subject: '제목', body: '본문' };
 const FIELD_STATUS: Record<string, string> = { mismatch: '내용 불일치', failed: '실패', unsupported: '자동 입력 불가' };
@@ -52,10 +52,15 @@ function useWebmailPermission(): { origin: string | null; granted: boolean | nul
   return { origin, granted };
 }
 
-/** 수집이 끝난 공고의 메일 작성 진입과 compose 잡 상태. */
-export function ComposeCard({ noticeId, noticeRef, params, jobs }: {
+export interface ComposeProps {
   noticeId: string; noticeRef?: NoticeRef; params?: { groupId?: string; templateId?: string }; jobs: Job[];
-}) {
+  /** 권한 확인 뒤, 잡 시작 직전에 부른다. false면 시작하지 않는다(예: 저장 안 된 편집 저장). */
+  beforeStart?: () => Promise<boolean>;
+}
+export type ComposeController = ReturnType<typeof useComposeController>;
+
+/** compose 잡 상태와 시작·복사·탭 이동 동작. 시작 버튼과 상태 표시를 따로 배치할 때 쓴다. */
+export function useComposeController({ noticeId, noticeRef, params, jobs, beforeStart }: ComposeProps) {
   const { origin, granted } = useWebmailPermission();
   const job = jobs.find((j) => j.type === 'compose' && j.noticeId === noticeId) ?? null;
   const view = composeView(job);
@@ -85,6 +90,7 @@ export function ComposeCard({ noticeId, noticeRef, params, jobs }: {
     }
     setBusy(true);
     try {
+      if (beforeStart && !(await beforeStart())) return;
       await send('job/start', { type: 'compose', noticeId, ...(noticeRef ? { ref: noticeRef } : {}), params: params ?? {}, ...(retryOf ? { retryOf } : {}) });
     } catch (e) {
       setNote(e instanceof Error ? e.message : String(e));
@@ -101,6 +107,21 @@ export function ComposeCard({ noticeId, noticeRef, params, jobs }: {
     } catch { setNote('웹메일 탭을 찾을 수 없습니다'); }
   };
 
+  const attachPath = () => {
+    const dir = view && 'attachDir' in view ? view.attachDir : undefined;
+    return dir ? (rootName ? `${rootName}/${dir}` : dir) : '';
+  };
+
+  /** 복사 행에 보여 줄 값 요약. 비어 있으면 빈 문자열. */
+  const preview = (k: CopyKind): string => {
+    if (k === 'attach') return attachPath();
+    if (!draft) return '';
+    if (k === 'to') return draft.to.join('; ');
+    if (k === 'cc') return draft.cc.join('; ');
+    if (k === 'subject') return draft.subject;
+    return draft.text.replace(/\s+/g, ' ').trim();
+  };
+
   const copy = async (k: CopyKind) => {
     if (!draft && k !== 'attach') return;
     try {
@@ -109,31 +130,69 @@ export function ComposeCard({ noticeId, noticeRef, params, jobs }: {
       else if (k === 'subject') await copyText(draft!.subject);
       else if (k === 'body') await copyRich(draft!.html, draft!.text);
       else {
-        const dir = view && 'attachDir' in view ? view.attachDir : undefined;
-        if (!dir) return;
-        await copyText(rootName ? `${rootName}/${dir}` : dir);
+        const path = attachPath();
+        if (!path) return;
+        await copyText(path);
       }
       setCopied(k);
     } catch { setNote('클립보드에 복사하지 못했습니다'); }
   };
 
+  return { job, view, busy, note, draft, copied, granted, start, focusTab, copy, preview };
+}
+
+/**
+ * 메일 작성 시작 버튼. 진행 중에는 막고, 한 번 작성한 뒤에는 다시 작성으로 바뀐다.
+ * 오류 상태에서는 ComposeStatus의 조치 버튼(다시 시도 등)만 쓰도록 막는다.
+ */
+export function ComposeStartButton({ ctl, label = '메일 작성', className = '' }: { ctl: ComposeController; label?: string; className?: string }) {
+  const { view, busy, granted, start } = ctl;
+  const again = view !== null && view.kind !== 'error';
+  return (
+    <Button className={className} variant={again ? 'secondary' : 'primary'} icon={<Mail />} loading={busy}
+      disabled={granted === null || view?.kind === 'progress' || view?.kind === 'error'} onClick={() => void start()}>
+      {granted === false ? `웹메일 접근 허용 후 ${label}` : again ? '다시 작성' : label}
+    </Button>
+  );
+}
+
+/**
+ * compose 잡 상태 표시. detached면 시작 버튼이 바깥(ComposeStartButton)에 있으므로
+ * 잡이 없을 때 아무것도 그리지 않고 상태별 다시 작성 버튼도 뺀다.
+ */
+export function ComposeStatus({ ctl, detached = false }: { ctl: ComposeController; detached?: boolean }) {
+  const { job, view, busy, note, draft, copied, granted, start, focusTab, copy, preview } = ctl;
+  const retryBtn = !detached && (
+    <Button className="w-full" variant="ghost" loading={busy} onClick={() => void start()}>다시 작성</Button>
+  );
+
   const focusBtn = (canFocus: boolean) => canFocus && (
     <Button className="w-full" variant="secondary" icon={<ExternalLink />} onClick={() => void focusTab()}>작성 탭으로 이동</Button>
   );
+  // 항목마다 값을 보여 주는 복사 행. 누르면 그 값을 복사하고 체크로 바뀐다.
   const copyBtns = (kinds: CopyKind[]) => kinds.length > 0 && (
-    <div className="grid grid-cols-2 gap-2">
-      {kinds.map((k) => (
-        <Button key={k} variant="ghost" icon={<Copy />} disabled={k !== 'attach' && !draft} onClick={() => void copy(k)}
-          className={k === 'attach' ? 'col-span-2' : ''}>
-          {copied === k ? '복사됨' : COPY_LABEL[k]}
-        </Button>
-      ))}
+    <div className="divide-y divide-line overflow-hidden rounded-ctl border border-line">
+      {kinds.map((k) => {
+        const value = preview(k);
+        const done = copied === k;
+        return (
+          <button key={k} type="button" disabled={k !== 'attach' && !draft} title={value || undefined} aria-label={`${COPY_LABEL[k]} 복사`}
+            className="group flex w-full items-center gap-3 bg-sunken px-3 py-2 text-left text-sm transition-colors hover:bg-select disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => void copy(k)}>
+            <span className="w-[4.5rem] shrink-0 text-xs font-semibold text-muted">{COPY_LABEL[k]}</span>
+            <span className={`min-w-0 flex-1 truncate ${value ? 'text-ink' : 'text-faint'}`}>{value || '없음'}</span>
+            {done
+              ? <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-ok"><Check className="size-4" />복사됨</span>
+              : <Copy className="size-4 shrink-0 text-faint transition-colors group-hover:text-ink" />}
+          </button>
+        );
+      })}
     </div>
   );
 
   let body;
   if (!view) {
-    body = (
+    body = detached ? null : (
       <Button className="w-full" icon={<Mail />} loading={busy} disabled={granted === null} onClick={() => void start()}>
         {granted === false ? '웹메일 접근 허용 후 메일 작성' : '메일 작성'}
       </Button>
@@ -166,7 +225,7 @@ export function ComposeCard({ noticeId, noticeRef, params, jobs }: {
           <div className="font-semibold">메일 작성 완료. 웹메일에서 내용을 확인한 뒤 직접 보내 주세요</div>
         </div>
         {focusBtn(view.canFocus)}
-        <Button className="w-full" variant="ghost" loading={busy} onClick={() => void start()}>다시 작성</Button>
+        {retryBtn}
       </div>
     );
   } else if (view.kind === 'manual') {
@@ -175,7 +234,7 @@ export function ComposeCard({ noticeId, noticeRef, params, jobs }: {
         <InlineAlert tone="warn">웹메일 탭을 열었습니다. 자동 입력은 아직 검증되지 않아 직접 붙여 넣어야 합니다</InlineAlert>
         {copyBtns(view.copies)}
         {focusBtn(view.canFocus)}
-        <Button className="w-full" variant="ghost" loading={busy} onClick={() => void start()}>다시 작성</Button>
+        {retryBtn}
       </div>
     );
   } else if (view.kind === 'partial') {
@@ -209,16 +268,20 @@ export function ComposeCard({ noticeId, noticeRef, params, jobs }: {
   } else if (view.kind === 'url') {
     body = (
       <div className="space-y-3">
-        <InlineAlert tone="info">Gmail 작성 창을 열었습니다. 받는 사람, 참조, 제목, 본문(서식 없음)은 주소로 전달했습니다. 화면에서 내용을 확인하세요.</InlineAlert>
+        <InlineAlert tone="info">{PROVIDER_LABEL[view.provider]} 작성 창을 열었습니다. {view.prefilled.map((f) => FIELD_LABEL[f.field]).join(', ')}은(는) 주소로 전달했습니다. 화면에서 내용을 확인하세요.</InlineAlert>
         {view.pending.some((f) => f.field === 'body') && (
-          <InlineAlert tone="warn">본문이 길어 주소로 넣지 못했습니다. [본문 복사(서식)] 후 붙여 넣으세요.</InlineAlert>
+          <InlineAlert tone="warn">
+            {view.pending.some((f) => f.field === 'body' && f.error === 'URL_TOO_LONG')
+              ? '본문이 길어 주소로 넣지 못했습니다. [본문 복사(서식)] 후 붙여 넣으세요.'
+              : '본문은 [본문 복사(서식)] 후 작성 창 본문에 붙여 넣으세요.'}
+          </InlineAlert>
         )}
         {view.attachments.length > 0 && view.attachDir && (
           <p className="text-sm text-muted">첨부: 탐색기에서 <span className="font-mono">{view.attachDir}</span>의 파일을 첨부 영역에 끌어다 놓으세요</p>
         )}
         {copyBtns(view.copies)}
         {focusBtn(view.canFocus)}
-        <Button className="w-full" variant="ghost" loading={busy} onClick={() => void start()}>다시 작성</Button>
+        {retryBtn}
       </div>
     );
   } else {
@@ -233,7 +296,7 @@ export function ComposeCard({ noticeId, noticeRef, params, jobs }: {
         </div>
         {view.action !== 'none' && (
           <Button className="w-full" loading={busy} onClick={() => {
-            if (view.action === 'settings') void send('ui/open', { page: 'settings' }).catch(() => undefined);
+            if (view.action === 'settings') void send('ui/open', view.fix ?? { page: 'settings' }).catch(() => undefined);
             else if (view.action === 'grant-fs') void send('ui/open', { page: 'grant' }).catch(() => undefined);
             else if (view.action === 'recipients') void chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html#/recipients') });
             else void start(job?.id);   // grant-site는 start 안에서 권한부터 요청한다
@@ -243,10 +306,16 @@ export function ComposeCard({ noticeId, noticeRef, params, jobs }: {
     );
   }
 
+  if (!body && !note) return null;
   return (
     <div className="space-y-3">
       {body}
       {note && <InlineAlert tone="error">{note}</InlineAlert>}
     </div>
   );
+}
+
+/** 수집이 끝난 공고의 메일 작성 진입과 compose 잡 상태. */
+export function ComposeCard(props: ComposeProps) {
+  return <ComposeStatus ctl={useComposeController(props)} />;
 }

@@ -81,47 +81,56 @@ export function parseResponse(text: string): Parsed {
 
 const pad3 = (s: string): string => s.padStart(3, '0');
 
+/** operation 1회 호출: fetch + 타임아웃 + 외부 취소 합성 + 응답 해석. 호출자는 items만 다룬다. */
+export async function fetchJsonOp(url: string, operation: string, ctx: G2bContext): Promise<{ ok: true; items: ApiItem[] } | { ok: false; error: JobError }> {
+  const key = ctx.serviceKey?.trim();
+  const cancelled = () => err('JOB_CANCELLED', '작업이 취소되었습니다.', false);
+  // operation별 타이머 abort와 외부 취소 신호를 하나의 컨트롤러로 합친다.
+  const ac = new AbortController();
+  const onExternal = () => ac.abort();
+  ctx.signal?.addEventListener('abort', onExternal);
+  const timer = setTimeout(() => ac.abort(), ctx.timeoutMs ?? 15_000);
+  const aborted = new Promise<never>((_, rej) => ac.signal.addEventListener('abort', () => rej(new Error('요청이 중단되었습니다.'))));
+  aborted.catch(() => undefined);
+  let text: string;
+  let status: number;
+  try {
+    ({ text, status } = await Promise.race([
+      (async () => {
+        const res = await ctx.fetch(url, { signal: ac.signal, credentials: 'omit' });
+        return { text: await res.text(), status: res.status };
+      })(),
+      aborted,
+    ]));
+  } catch (e) {
+    if (ctx.signal?.aborted) return cancelled();
+    return err('G2B_NETWORK', `네트워크 오류 또는 시간 초과 (${operation}): ${e instanceof Error ? e.message : String(e)}`, true, key);
+  } finally {
+    clearTimeout(timer);
+    ctx.signal?.removeEventListener('abort', onExternal);
+  }
+  if (status < 200 || status >= 300) {
+    if (!text.trim().startsWith('{')) {
+      if (/SERVICE_KEY_IS_NOT_REGISTERED_ERROR|SERVICE_KEY_IS_NULL/.test(text)) return err('G2B_KEY_INVALID', '서비스키가 등록되지 않았거나 비어 있습니다.', false, key);
+      return err('G2B_API_ERROR', `HTTP ${status} (${operation})`, status >= 500, key);
+    }
+  }
+  const parsed = parseResponse(text);
+  if (parsed.kind === 'error') return err(parsed.code, parsed.message, false, key);
+  return { ok: true, items: parsed.items };
+}
+
 export async function fetchNotice(noticeNo: string, round: string | undefined, ctx: G2bContext): Promise<FetchNoticeResult> {
   const key = ctx.serviceKey?.trim();
   if (!key) return err('G2B_KEY_MISSING', '나라장터 서비스키가 설정되지 않았습니다.');
   const now = ctx.now ?? (() => new Date());
-  const cancelled = () => err('JOB_CANCELLED', '작업이 취소되었습니다.', false);
   for (const operation of OPERATIONS) {
-    if (ctx.signal?.aborted) return cancelled();
+    if (ctx.signal?.aborted) return err('JOB_CANCELLED', '작업이 취소되었습니다.', false);
     const qs = new URLSearchParams({ serviceKey: key, numOfRows: '10', pageNo: '1', type: 'json', inqryDiv: '2', bidNtceNo: noticeNo });
     const url = `${API_BASE}${operation}?${qs.toString()}`;
-    // operation별 타이머 abort와 외부 취소 신호를 하나의 컨트롤러로 합친다.
-    const ac = new AbortController();
-    const onExternal = () => ac.abort();
-    ctx.signal?.addEventListener('abort', onExternal);
-    const timer = setTimeout(() => ac.abort(), ctx.timeoutMs ?? 15_000);
-    const aborted = new Promise<never>((_, rej) => ac.signal.addEventListener('abort', () => rej(new Error('요청이 중단되었습니다.'))));
-    aborted.catch(() => undefined);
-    let text: string;
-    let status: number;
-    try {
-      ({ text, status } = await Promise.race([
-        (async () => {
-          const res = await ctx.fetch(url, { signal: ac.signal, credentials: 'omit' });
-          return { text: await res.text(), status: res.status };
-        })(),
-        aborted,
-      ]));
-    } catch (e) {
-      if (ctx.signal?.aborted) return cancelled();
-      return err('G2B_NETWORK', `네트워크 오류 또는 시간 초과 (${operation}): ${e instanceof Error ? e.message : String(e)}`, true, key);
-    } finally {
-      clearTimeout(timer);
-      ctx.signal?.removeEventListener('abort', onExternal);
-    }
-    if (status < 200 || status >= 300) {
-      if (!text.trim().startsWith('{')) {
-        if (/SERVICE_KEY_IS_NOT_REGISTERED_ERROR|SERVICE_KEY_IS_NULL/.test(text)) return err('G2B_KEY_INVALID', '서비스키가 등록되지 않았거나 비어 있습니다.', false, key);
-        return err('G2B_API_ERROR', `HTTP ${status} (${operation})`, status >= 500, key);
-      }
-    }
-    const parsed = parseResponse(text);
-    if (parsed.kind === 'error') return err(parsed.code, parsed.message, false, key);
+    const r = await fetchJsonOp(url, operation, ctx);
+    if (!r.ok) return r;
+    const parsed = r;
     if (parsed.items.length === 0) continue;
     let pick: ApiItem | undefined;
     if (round !== undefined) {

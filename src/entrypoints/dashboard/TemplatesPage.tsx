@@ -1,6 +1,8 @@
 import { Copy, FilePlus, Search, Star } from 'lucide-react';
 import { useState } from 'react';
-import { builtinDefaultTemplate } from '../../core/templates/default-template';
+import { kindOf } from '../../core/model/ids';
+import { builtinDefaultTemplate, builtinPrespecTemplate } from '../../core/templates/default-template';
+import type { NoticeKind } from '../../core/types/notice';
 import type { Template } from '../../core/types/template';
 import { Button, Card, InlineAlert, inputClass, Select, StatusBadge, useToast } from '../../ui/components';
 import { matchesQuery } from '../../ui/components/select-filter';
@@ -25,6 +27,11 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'name', label: '이름순' },
 ];
 
+const KIND_OPTIONS: { value: NoticeKind; label: string }[] = [
+  { value: 'bid', label: '입찰공고' },
+  { value: 'prespec', label: '사전규격' },
+];
+
 /** 템플릿 배열 순서가 곧 만든 순서다(새 템플릿은 끝에 붙는다). */
 function sortTemplates(list: Template[], key: SortKey): Template[] {
   if (key === 'added') return list;
@@ -40,7 +47,10 @@ export function TemplatesPage() {
   const [sort, setSort] = useState<SortKey>('recent');
   const [opError, setOpError] = useState<{ code: string; message: string } | null>(null);
   const [repairing, setRepairing] = useState(false);
+  const [newKind, setNewKind] = useState<NoticeKind>('bid');
   const toast = useToast();
+  const builtinOf = (k: NoticeKind) => (k === 'prespec' ? builtinPrespecTemplate(new Date()) : builtinDefaultTemplate(new Date()));
+  const kindLabel = newKind === 'prespec' ? '사전규격' : '입찰공고';
 
   const go = (id: string) => { window.location.hash = `#/templates/${id}`; };
 
@@ -54,12 +64,12 @@ export function TemplatesPage() {
     return r;
   };
 
-  const create = async (base: Template, name: string) => {
+  const create = async (base: Template, name: string, kind: NoticeKind) => {
     setBusy(true);
     setOpError(null);
     try {
       const before = new Set((data?.templates ?? []).map((t) => t.id));
-      const snap = await send('templates/save', { template: { name, layout: 'list', subject: base.subject, greeting: base.greeting, closing: base.closing, sections: base.sections } });
+      const snap = await send('templates/save', { template: { name, ...(kind !== 'bid' ? { kind } : {}), layout: 'list', subject: base.subject, greeting: base.greeting, closing: base.closing, sections: base.sections } });
       await reload();
       const created = snap.templates.find((t) => !before.has(t.id));
       if (created) go(created.id);
@@ -92,8 +102,9 @@ export function TemplatesPage() {
       <div className="flex items-center justify-between gap-4">
         <h1 className="title-mark text-2xl font-bold tracking-tight">템플릿</h1>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" disabled={busy || !data} onClick={() => void create(builtinDefaultTemplate(new Date()), '기본 템플릿 (새 양식)')}>기본 양식으로 새로 만들기</Button>
-          <Button icon={<FilePlus />} disabled={busy || !data} onClick={() => void create(builtinDefaultTemplate(new Date()), '새 템플릿')}>새 템플릿</Button>
+          <Select className="w-32 shrink-0" aria-label="새 템플릿 종류" value={newKind} options={KIND_OPTIONS} onChange={(v) => setNewKind(v as NoticeKind)} />
+          <Button variant="secondary" disabled={busy || !data} onClick={() => void create(builtinOf(newKind), `기본 템플릿 (새 양식)${newKind === 'prespec' ? ` - ${kindLabel}` : ''}`, newKind)}>기본 양식으로 새로 만들기</Button>
+          <Button icon={<FilePlus />} disabled={busy || !data} onClick={() => void create(builtinOf(newKind), newKind === 'prespec' ? '새 사전규격 템플릿' : '새 템플릿', newKind)}>새 템플릿</Button>
         </div>
       </div>
 
@@ -143,6 +154,7 @@ export function TemplatesPage() {
                     <td className="px-3 py-2">
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="truncate text-[15px] font-semibold text-ink">{t.name}</span>
+                        {kindOf(t) === 'prespec' && <StatusBadge status="idle">사전규격</StatusBadge>}
                         {t.isDefault && <StatusBadge status="ok">기본</StatusBadge>}
                       </div>
                     </td>
@@ -150,7 +162,7 @@ export function TemplatesPage() {
                     <td className="px-3 py-2">
                       <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                         {!t.isDefault && <Button variant="ghost" icon={<Star />} disabled={busy} onClick={() => void handle(() => run('templates/set-default', { id: t.id }), '기본 템플릿을 변경했습니다')}>기본으로</Button>}
-                        <Button variant="ghost" icon={<Copy />} disabled={busy} onClick={() => void create(t, `${t.name} 복사`)}>복제</Button>
+                        <Button variant="ghost" icon={<Copy />} disabled={busy} onClick={() => void create(t, `${t.name} 복사`, kindOf(t))}>복제</Button>
                         <ConfirmDeleteButton disabled={busy} title={`'${t.name}' 템플릿을 삭제할까요?`} description="삭제하면 되돌릴 수 없습니다." onConfirm={() => void handle(() => run('templates/delete', { id: t.id }), '템플릿을 삭제했습니다')} />
                       </div>
                     </td>

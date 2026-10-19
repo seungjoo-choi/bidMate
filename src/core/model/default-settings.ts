@@ -1,6 +1,7 @@
 import type { Settings } from '../types/settings';
 
 export const DEFAULT_WEBMAIL_HOST = 'mail.worksmobile.com';
+export const NAVERWORKS_COMPOSE_PATH = '/write/popup?srvid=mail&to=&orderType=new&memo=false';
 /** mail-provider에서 다시 내보낸다(순환 import를 피하려고 여기에 둔다). */
 export const GMAIL_HOST = 'mail.google.com';
 
@@ -10,12 +11,13 @@ export function defaultSettings(): Settings {
     g2b: { apiBaseUrl: '', detailUrlPatterns: [] },
     sites: {
       trackerbot: { urlPatterns: [], provider: 'naverworks' },
-      naverworks: { host: DEFAULT_WEBMAIL_HOST, selectorSetId: 'naverworks-v1' },
+      // 작성 화면 경로는 사용자 실측(2026-10-19): [메일쓰기] 클릭 시 주소
+      naverworks: { host: DEFAULT_WEBMAIL_HOST, composePath: NAVERWORKS_COMPOSE_PATH, selectorSetId: 'naverworks-v1' },
       gmail: { accountIndex: 0, selectorSetId: 'gmail-v1' },
     },
     download: { concurrency: 3, maxRetries: 3, backoffMs: 1000, maxFileMB: 100 },
     extraction: { budgetMs: 90000, fileTimeoutMs: 20000, maxParseMB: 50 },
-    autoCompose: { enabled: false, recipients: { mode: 'default' }, reviewGate: 'conflicts' },
+    autoCompose: { enabled: false, afterCollect: 'ask', recipients: { mode: 'default' }, reviewGate: 'conflicts' },
     mail: { provider: 'naverworks' },
     customFields: [],
     updatedAt: new Date().toISOString(),

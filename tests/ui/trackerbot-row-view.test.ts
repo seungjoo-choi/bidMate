@@ -19,6 +19,11 @@ describe('rowView', () => {
   it('미수집 idle', () => {
     expect(v(entry())).toEqual({ kind: 'idle', label: '공고 수집', chip: undefined, tone: 'primary' });
   });
+  it('prespec 미수집 idle -> 사전규격 수집, found면 다시 수집 유지', () => {
+    const ref = { kind: 'prespec' as const, noticeNo: 'R26BD00273952', origin: 'trackerbot' as const };
+    expect(v(entry({ ref }))).toMatchObject({ kind: 'idle', label: '사전규격 수집', tone: 'primary' });
+    expect(v(entry({ ref, lookup: { found: true, collectedAt: new Date(2026, 9, 17, 13, 40).toISOString() } }))).toMatchObject({ label: '다시 수집' });
+  });
   it('lookup found -> 다시 수집 + 칩', () => {
     const at = new Date(2026, 9, 17, 13, 40).toISOString();
     expect(v(entry({ lookup: { found: true, collectedAt: at } }))).toMatchObject({ kind: 'idle', label: '다시 수집', chip: '수집됨, 10/17 13:40', tone: 'secondary' });
@@ -41,9 +46,14 @@ describe('rowView', () => {
     expect(v(entry({ job: j }))).toMatchObject({ kind: 'done', tone: 'warn', label: '일부 실패', canRetry: true });
   });
   it('error 3종 action', () => {
-    expect(v(entry({ job: job({ status: 'failed', errors: [err('NEEDS_FS_PERMISSION')] }) }))).toMatchObject({ kind: 'error', label: '수집 실패', action: 'grant' });
-    expect(v(entry({ job: job({ status: 'failed', errors: [err('G2B_KEY_MISSING')] }) })))
-      .toMatchObject({ kind: 'error', action: 'retry', actionLabel: '다시 시도', subAction: 'settings', subActionLabel: '설정 열기' });
+    expect(v(entry({ job: job({ status: 'failed', errors: [err('NEEDS_FS_PERMISSION')] }) }))).toMatchObject({
+      kind: 'error', label: '수집 실패', action: 'grant', message: '저장 폴더 접근을 다시 허용해야 합니다',
+      subAction: 'settings', subActionLabel: '폴더 설정', fix: { page: 'settings', section: 'storage' },
+    });
+    expect(v(entry({ job: job({ status: 'failed', errors: [err('G2B_KEY_MISSING')] }) }))).toMatchObject({
+      kind: 'error', action: 'retry', actionLabel: '다시 시도', subAction: 'settings', subActionLabel: '서비스키 설정',
+      message: '나라장터 서비스키를 확인해 주세요', fix: { page: 'settings', section: 'g2b' },
+    });
     expect(v(entry({ job: job({ status: 'failed', errors: [err('G2B_KEY_INVALID')] }) })))
       .toMatchObject({ kind: 'error', action: 'retry', subAction: 'settings' });
     expect(v(entry({ job: job({ status: 'failed', errors: [err('X')] }) }))).toMatchObject({ kind: 'error', action: 'retry' });
@@ -66,6 +76,14 @@ describe('rowView', () => {
       job({ status: 'completed', result, handoff });
     const comp = (p: Partial<Job>): Job => job({ id: 'c1', type: 'compose', ...p });
     const at = '2026-10-18T10:00:00.000Z';
+    it('edit -> 수집 완료 ok + 편집 보조 버튼', () => {
+      const r = v(entry({ job: done({ action: 'edit', opened: true, at }) }));
+      expect(r).toMatchObject({ kind: 'done', label: '수집 완료', tone: 'ok', canRetry: false, action: 'open-mail', actionLabel: '편집' });
+    });
+    it('ask -> 수집 완료 ok + 편집 보조 버튼', () => {
+      const r = v(entry({ job: done({ action: 'ask', at }) }));
+      expect(r).toMatchObject({ kind: 'done', label: '수집 완료', tone: 'ok', canRetry: false, action: 'open-mail', actionLabel: '편집' });
+    });
     it('queued -> 수집 완료, 툴팁에 대기 문구', () => {
       const r = v(entry({ job: done({ action: 'compose', state: 'queued', at }) }));
       expect(r).toMatchObject({ kind: 'done', label: '수집 완료', tone: 'ok' });
@@ -92,7 +110,14 @@ describe('rowView', () => {
     it('compose_failed -> error 메일 작성 실패 + 보조 동작', () => {
       const h = done({ action: 'compose', state: 'started', jobId: 'c1', at });
       expect(v(entry({ job: h, compose: comp({ status: 'failed', errors: [err('GROUP_NOT_FOUND')] }) })))
-        .toMatchObject({ kind: 'error', label: '메일 작성 실패', action: 'none', subAction: 'settings', subActionLabel: '설정 열기' });
+        .toMatchObject({
+          kind: 'error', label: '메일 작성 실패', action: 'retry', actionLabel: '다시 시도', subAction: 'settings', subActionLabel: '수신자 설정',
+          message: '자동 작성 설정의 그룹이 삭제되었습니다', fix: { page: 'settings', section: 'auto-compose' },
+        });
+      expect(v(entry({ job: h, compose: comp({ status: 'failed', errors: [err('NO_RECIPIENTS')] }) })))
+        .toMatchObject({ subAction: 'settings', subActionLabel: '수신자 설정', fix: { page: 'recipients' } });
+      expect(v(entry({ job: h, compose: comp({ status: 'failed', errors: [err('TEMPLATE_NOT_FOUND')] }) })))
+        .toMatchObject({ subActionLabel: '템플릿 설정', fix: { page: 'settings', section: 'auto-compose' } });
       expect(v(entry({ job: h, compose: comp({ status: 'failed', errors: [err('COMPOSE_NOT_DETECTED')] }) })))
         .toMatchObject({ kind: 'error', subAction: 'open-mail' });
     });

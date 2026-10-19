@@ -13,18 +13,27 @@ const draft = (over: Partial<MailDraft> = {}): MailDraft => ({
 });
 
 describe('planCompose', () => {
-  it('naverworks unverified: 수동, selector 없음', () => {
-    const p = planCompose(defaultSettings(), draft(), SELECTOR_SETS);
-    expect(p).toMatchObject({ provider: 'naverworks', host: 'mail.worksmobile.com', url: 'https://mail.worksmobile.com/', prefilled: [], omitted: [], needsUserOpen: true });
-    expect(p.selector).toBeUndefined();
+  it('naverworks 기본: verified selector 포함, 주소에 to/cc/subject', () => {
+    const p = planCompose(defaultSettings(), draft({ cc: ['c@x.com'] }), SELECTOR_SETS);
+    expect(p).toMatchObject({ provider: 'naverworks', host: 'mail.worksmobile.com', url: `https://mail.worksmobile.com/write/popup?srvid=mail&to=a@x.com&cc=c@x.com&subject=${encodeURIComponent('제목')}&orderType=new&memo=false`, prefilled: ['to', 'cc', 'subject'], omitted: [], needsUserOpen: true });
+    expect(p.selector?.config.selectorSetId).toBe('naverworks-v1');
+    expect(p.selector?.set.status).toBe('verified');
   });
-  it('naverworks verified: selector 포함', () => {
+  it('naverworks selectorOverrides로 unverified: selector 없음(주소 채움 경로), prefilled 유지', () => {
+    const s = defaultSettings();
+    s.sites.naverworks.selectorOverrides = { status: 'unverified' };
+    const p = planCompose(s, draft(), SELECTOR_SETS);
+    expect(p.selector).toBeUndefined();
+    expect(p.prefilled).toEqual(['to', 'cc', 'subject']);
+  });
+  it('naverworks verified(/mail/ 경로): selector 포함', () => {
     const s = defaultSettings();
     s.sites.naverworks.composePath = '/mail/';
     const p = planCompose(s, draft(), { 'naverworks-v1': { ...naverworksV1, status: 'verified' } });
     expect(p.url).toBe('https://mail.worksmobile.com/mail/');
     expect(p.selector?.config).toEqual({ selectorSetId: 'naverworks-v1', selectorOverrides: undefined });
     expect(p.selector?.set.status).toBe('verified');
+    expect(p.prefilled).toEqual([]);
   });
   it('gmail unverified: prefilled 4개, needsUserOpen false', () => {
     const s = defaultSettings();
@@ -52,9 +61,9 @@ describe('planCompose', () => {
   });
 
   const gmailVerified = { ...gmailV1, status: 'verified' as const, attach: { ...gmailV1.attach, limits: { perFileBytes: 100, totalBytes: 200 } } };
-  it('fillFields: naverworks는 4필드 전부, detectTimeoutMs 없음', () => {
+  it('fillFields: naverworks는 본문만, detectTimeoutMs 없음', () => {
     const p = planCompose(defaultSettings(), draft(), SELECTOR_SETS);
-    expect(p.fillFields).toEqual(['to', 'cc', 'subject', 'body']);
+    expect(p.fillFields).toEqual(['body']);
     expect(p.detectTimeoutMs).toBeUndefined();
     expect(p.attachLimits).toBeUndefined();
   });

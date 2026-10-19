@@ -4,7 +4,8 @@ import type { IndexEntry } from '../../core/types/index-file';
 import { computeHomeStats } from '../../core/dashboard/stats';
 import { send } from '../../messaging/bus';
 import { FsErrorAlert } from './FsErrorAlert';
-import { Card } from '../../ui/components';
+import { kindOf, noticeLabel } from '../../core/model/ids';
+import { Card, StatusBadge } from '../../ui/components';
 import { dDayLevel, formatDDay, formatDate } from '../../ui/review/format';
 import { StatCard } from './home/StatCard';
 import { MonthlyBars } from './home/MonthlyBars';
@@ -22,7 +23,10 @@ function Row({ n, right }: { n: IndexEntry; right: React.ReactNode }) {
     >
       <div className="min-w-0 flex-1">
         <div className="truncate text-base font-semibold">{n.title}</div>
-        <div className="mt-0.5 truncate text-sm text-muted">{n.orderingOrg}</div>
+        <div className="mt-0.5 truncate text-sm text-muted">
+          <span className="font-mono">{noticeLabel(n)}</span>, {n.orderingOrg}
+          {kindOf(n) === 'prespec' &&<span className="ml-2 align-middle"><StatusBadge status="idle">사전규격</StatusBadge></span>}
+        </div>
       </div>
       {right}
     </div>

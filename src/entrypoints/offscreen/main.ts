@@ -1,4 +1,5 @@
 import { fetchNotice, redactKey } from '../../adapters/g2b/openapi';
+import { fetchPrespec, mapPrespecItem } from '../../adapters/g2b/prespec-api';
 import { loadRules } from '../../core/extraction/rules/load';
 import { SELECTOR_SETS } from '../../adapters/naverworks/selectors';
 import { runCollectJob } from '../../engine/jobs/collect-job';
@@ -8,14 +9,15 @@ import { runExtractJob } from '../../engine/jobs/extract-job';
 import { createParserRegistry } from '../../engine/parsers/registry';
 import { editExtraction, getNotice, listNotices, readExtractionText } from '../../engine/notices/notice-api';
 import { repairConfig } from '../../engine/config/config-store';
-import { deleteGroup, deleteRecipient, listRecipients, saveGroup, saveRecipient, setDefaultGroup } from '../../engine/config/recipients-api';
+import { deleteGroup, deleteRecipient, importRecipients, listRecipients, saveGroup, saveRecipient, setDefaultGroup } from '../../engine/config/recipients-api';
 import { deleteTemplate, listTemplates, saveTemplate, setDefaultTemplate } from '../../engine/config/templates-api';
-import { getDraft, prepareMail, setMailStatus } from '../../engine/mail/prepare';
+import { getDraft, getEdits, prepareMail, setMailStatus } from '../../engine/mail/prepare';
 import { JobRegistry } from '../../engine/jobs/job-registry';
 import { listen, send } from '../../messaging/bus';
 import { fileStore } from '../../engine/file-store/file-store';
 import { lookupInIndex } from '../../engine/notices/lookup';
 import { NoticeStore } from '../../engine/notices/notice-store';
+import type { NoticeKind } from '../../core/types/notice';
 import type { G2bTestResult, NoticeLookup, JobRunPayload, SmokeTestResult } from '../../messaging/protocol';
 
 async function smokeTest(): Promise<SmokeTestResult> {
@@ -67,9 +69,16 @@ listen('notice/lookup-batch', async ({ refs }): Promise<NoticeLookup[]> => {
 }, 'offscreen');
 
 const FIXTURE_NOTICE_NO = 'R26BK01722175';
+const FIXTURE_PRESPEC_NO = 'R26BD00273952'; // 추정: 실측(S0) 전
 
-async function g2bTest(serviceKey?: string): Promise<G2bTestResult> {
-  const r = await fetchNotice(FIXTURE_NOTICE_NO, undefined, { serviceKey, fetch: (...a) => fetch(...a) });
+async function g2bTest(serviceKey?: string, kind?: NoticeKind): Promise<G2bTestResult> {
+  const ctx = { serviceKey, fetch: (...a: Parameters<typeof fetch>) => fetch(...a) };
+  if (kind === 'prespec') {
+    const r = await fetchPrespec(FIXTURE_PRESPEC_NO, ctx);
+    if (!r.ok) return { ok: false, error: { code: r.error.code, message: r.error.message } };
+    return { ok: true, title: (mapPrespecItem(r.item, r.fetchedAt).specName?.value as string | null | undefined) ?? undefined };
+  }
+  const r = await fetchNotice(FIXTURE_NOTICE_NO, undefined, ctx);
   if (!r.ok) return { ok: false, error: { code: r.error.code, message: r.error.message } };
   return { ok: true, title: r.item.bidNtceNm };
 }
@@ -161,10 +170,11 @@ async function runCollect(p: JobRunPayload): Promise<Outcome> {
     fetch: (...a) => fetch(...a),
     emit: emitProgress,
     extract: { parsers, rules: await loadExtractionRules() },
+    readDetail: async (jobId) => (await send('g2b/read-detail', { jobId }, { target: 'sw', timeoutMs: 240_000 })).html,
   });
 }
 
-listen('g2b/test', ({ serviceKey }) => g2bTest(serviceKey), 'offscreen');
+listen('g2b/test', ({ serviceKey, kind }) => g2bTest(serviceKey, kind), 'offscreen');
 // 등록 전 await 금지: 검사와 등록은 한 동기 구간에서 끝낸다. 실행은 응답 후 시작한다.
 listen('job/run', (p) => {
   const reg = registry.tryRegister(p.job);
@@ -180,6 +190,7 @@ listen('extraction/text', (p) => readExtractionText(fileStore, p), 'offscreen');
 const isNoticeBusy = (noticeId: string) => registry.findConflict({ type: 'extract', noticeId }) !== undefined;
 listen('recipients/list', () => listRecipients(fileStore), 'offscreen');
 listen('recipients/save', ({ recipient }) => saveRecipient(fileStore, recipient), 'offscreen');
+listen('recipients/import', ({ plan }) => importRecipients(fileStore, plan), 'offscreen');
 listen('recipients/delete', ({ id }) => deleteRecipient(fileStore, id), 'offscreen');
 listen('groups/save', ({ group }) => saveGroup(fileStore, group), 'offscreen');
 listen('groups/delete', ({ id }) => deleteGroup(fileStore, id), 'offscreen');
@@ -190,6 +201,7 @@ listen('templates/delete', ({ id }) => deleteTemplate(fileStore, id), 'offscreen
 listen('templates/set-default', ({ id }) => setDefaultTemplate(fileStore, id), 'offscreen');
 listen('mail/prepare', (p) => prepareMail(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
 listen('mail/draft-get', ({ noticeId }) => getDraft(fileStore, noticeId), 'offscreen');
+listen('mail/edits-get', ({ noticeId }) => getEdits(fileStore, noticeId), 'offscreen');
 listen('mail/set-status', (p) => setMailStatus(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
 listen('config/repair', ({ file }) => repairConfig(fileStore, file), 'offscreen');
 listen('job/abort', ({ jobId }) => ({ known: registry.abort(jobId) }), 'offscreen');

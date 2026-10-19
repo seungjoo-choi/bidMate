@@ -32,12 +32,12 @@ async function inject(tabId: number, selector: Cfg): Promise<void> {
   }
 }
 
-/** 탭 로드 완료를 최대 timeoutMs 기다린다. 넘어도 에러 없이 진행. */
-function waitComplete(tabId: number, timeoutMs: number): Promise<void> {
-  return new Promise<void>((resolve) => {
-    const done = () => { clearTimeout(timer); chrome.tabs.onUpdated.removeListener(fn); resolve(); };
-    const fn = (id: number, info: { status?: string }) => { if (id === tabId && info.status === 'complete') done(); };
-    const timer = setTimeout(done, timeoutMs);
+/** 탭 로드 완료를 최대 timeoutMs 기다린다. 넘어도 에러 없이 진행(완료=true, 시간 초과=false). */
+export function waitComplete(tabId: number, timeoutMs: number): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const done = (ok: boolean) => { clearTimeout(timer); chrome.tabs.onUpdated.removeListener(fn); resolve(ok); };
+    const fn = (id: number, info: { status?: string }) => { if (id === tabId && info.status === 'complete') done(true); };
+    const timer = setTimeout(() => done(false), timeoutMs);
     chrome.tabs.onUpdated.addListener(fn);
   });
 }

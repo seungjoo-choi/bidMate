@@ -1,7 +1,7 @@
 import { newId } from '../../core/model/ids';
 import { isValidEmail, normalizeEmail } from '../../core/recipients/email';
 import { dedupeDefault, normalizeGroup, normalizeRecipient } from '../../core/recipients/normalize';
-import type { GroupInput, RecipientInput, RecipientsSnapshot } from '../../core/types/config-file';
+import type { GroupInput, RecipientImportPlan, RecipientImportResult, RecipientImportSummary, RecipientInput, RecipientsSnapshot } from '../../core/types/config-file';
 import { ALL_GROUP_ID, type Group, type Recipient } from '../../core/types/recipient';
 import type { IFileStore } from '../file-store/types';
 import { loadList, saveList, withConfigLock } from './config-store';
@@ -69,17 +69,31 @@ function optText(v: unknown, label: string, max: number): string | undefined {
   return t === '' ? undefined : t;
 }
 
+/** 이름·부서·메모 검증과 정규화. */
+function validateNameDeptMemo(input: { name?: unknown; dept?: unknown; memo?: unknown }): {
+  name: string; dept: string | undefined; memo: string | undefined;
+} {
+  const name = typeof input?.name === 'string' ? input.name.trim() : '';
+  if (name.length < 1 || name.length > 100) throw err('INVALID_VALUE', '이름은 1자 이상 100자 이하여야 합니다.');
+  const dept = optText(input.dept, '부서', 200);
+  const memo = optText(input.memo, '메모', 500);
+  return { name, dept, memo };
+}
+
+/** 이메일·이름·부서·메모 검증과 정규화. saveRecipient와 importRecipients(add)가 공용한다. */
+function validateRecipientFields(input: { email?: unknown; name?: unknown; dept?: unknown; memo?: unknown }): {
+  email: string; name: string; dept: string | undefined; memo: string | undefined;
+} {
+  if (typeof input?.email !== 'string') throw err('INVALID_EMAIL', '이메일 형식이 올바르지 않습니다.');
+  if (!isValidEmail(input.email)) throw err('INVALID_EMAIL', '이메일 형식이 올바르지 않습니다.');
+  return { email: normalizeEmail(input.email), ...validateNameDeptMemo(input) };
+}
+
 export function saveRecipient(store: IFileStore, input: RecipientInput, opts: ConfigOpts = {}): Promise<RecipientsSnapshot> {
   return withConfigLock(store, async () => {
     const now = nowOf(opts);
     const nowIso = now.toISOString();
-    if (typeof input?.email !== 'string') throw err('INVALID_EMAIL', '이메일 형식이 올바르지 않습니다.');
-    if (!isValidEmail(input.email)) throw err('INVALID_EMAIL', '이메일 형식이 올바르지 않습니다.');
-    const email = normalizeEmail(input.email);
-    const name = typeof input.name === 'string' ? input.name.trim() : '';
-    if (name.length < 1 || name.length > 100) throw err('INVALID_VALUE', '이름은 1자 이상 100자 이하여야 합니다.');
-    const dept = optText(input.dept, '부서', 200);
-    const memo = optText(input.memo, '메모', 500);
+    const { email, name, dept, memo } = validateRecipientFields(input);
     if (!isRole(input.defaultRole)) throw err('INVALID_VALUE', '기본 역할은 to 또는 cc여야 합니다.');
     if (typeof input.enabled !== 'boolean') throw err('INVALID_VALUE', '사용 여부는 true/false여야 합니다.');
     if (input.groupIds !== undefined && (!Array.isArray(input.groupIds) || input.groupIds.some((x) => typeof x !== 'string'))) {
@@ -126,6 +140,69 @@ export function saveRecipient(store: IFileStore, input: RecipientInput, opts: Co
       await saveList(store, 'groups', s.groups, now);
     }
     return snapshotOf(s);
+  });
+}
+
+/** 네이버웍스 연락처 가져오기 계획을 적용한다. recipients 파일만 1회 기록하며 그룹 파일은 건드리지 않는다. */
+export function importRecipients(store: IFileStore, plan: RecipientImportPlan, opts: ConfigOpts = {}): Promise<RecipientImportResult> {
+  return withConfigLock(store, async () => {
+    const now = nowOf(opts);
+    const nowIso = now.toISOString();
+    if (!plan || !Array.isArray(plan.add) || !Array.isArray(plan.update) || !Array.isArray(plan.disable)) {
+      throw err('INVALID_VALUE', '가져오기 계획 형식이 올바르지 않습니다.');
+    }
+    const s = await loadState(store, now);
+    const summary: RecipientImportSummary = { added: 0, updated: 0, disabled: 0, skipped: [] };
+    const reasonOf = (e: unknown) => (e instanceof Error ? e.message : String(e));
+    const emails = new Set(s.recipients.map((r) => normalizeEmail(r.email)));
+    let changed = false;
+
+    for (const a of plan.add) {
+      const key = typeof a?.email === 'string' ? a.email : '';
+      try {
+        const { email, name, dept } = validateRecipientFields(a);
+        if (emails.has(email)) { summary.skipped.push({ key, reason: '이미 등록된 이메일입니다.' }); continue; }
+        emails.add(email);
+        const rec: Recipient = { id: newId('rcp'), name, email, enabled: true, defaultRole: 'to', updatedAt: nowIso };
+        if (dept !== undefined) rec.dept = dept;
+        s.recipients.push(rec);
+        summary.added++;
+        changed = true;
+      } catch (e) {
+        summary.skipped.push({ key, reason: reasonOf(e) });
+      }
+    }
+
+    for (const u of plan.update) {
+      const key = typeof u?.id === 'string' ? u.id : '';
+      const idx = s.recipients.findIndex((r) => r.id === key);
+      if (idx < 0) { summary.skipped.push({ key, reason: '수신자를 찾을 수 없습니다.' }); continue; }
+      const existing = s.recipients[idx]!;
+      try {
+        const { name, dept } = validateNameDeptMemo({ name: u.name, dept: u.dept });
+        const next: Recipient = { ...existing, name, updatedAt: nowIso };
+        if (dept !== undefined) next.dept = dept;
+        else delete next.dept;
+        s.recipients[idx] = next;
+        summary.updated++;
+        changed = true;
+      } catch (e) {
+        summary.skipped.push({ key, reason: reasonOf(e) });
+      }
+    }
+
+    for (const id of plan.disable) {
+      const idx = typeof id === 'string' ? s.recipients.findIndex((r) => r.id === id) : -1;
+      if (idx < 0) { summary.skipped.push({ key: typeof id === 'string' ? id : '', reason: '수신자를 찾을 수 없습니다.' }); continue; }
+      const existing = s.recipients[idx]!;
+      if (!existing.enabled) continue;
+      s.recipients[idx] = { ...existing, enabled: false, updatedAt: nowIso };
+      summary.disabled++;
+      changed = true;
+    }
+
+    if (changed) await saveList(store, 'recipients', s.recipients, now);
+    return { ...snapshotOf(s), summary };
   });
 }
 

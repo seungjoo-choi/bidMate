@@ -46,3 +46,23 @@ describe('jobsConflict 공고 식별 정규화', () => {
     expect(c('000', '001')).toBe(false);
   });
 });
+
+describe('kind 구분', () => {
+  const pre = { kind: 'prespec' as const, noticeNo: 'R26BD00273952' };
+  it('kind가 다르면 refsConflict 비충돌', () => {
+    expect(refsConflict(pre, { noticeNo: 'R26BD00273952' })).toBe(false);
+    expect(refsConflict(pre, { kind: 'bid', noticeNo: 'R26BD00273952' })).toBe(false);
+  });
+  it('kind가 같으면 기존 규칙(prespec끼리 충돌)', () => {
+    expect(refsConflict(pre, { ...pre })).toBe(true);
+  });
+  it('jobsConflict: 두 키 모두 kind가 있고 다르면 비충돌', () => {
+    const a = { type: 'collect' as const, ref: { kind: 'prespec' as const, noticeNo: 'X', origin: 'g2b' as const } };
+    const b = { type: 'collect' as const, ref: { kind: 'orderplan' as const, noticeNo: 'X', origin: 'g2b' as const } };
+    expect(jobsConflict(a, b)).toBe(false);
+  });
+  it('jobsConflict: 한쪽 kind 없음은 기존 규칙(번호만인 noticeId 문자열과 충돌)', () => {
+    const a = { type: 'collect' as const, ref: { ...pre, origin: 'g2b' as const } };
+    expect(jobsConflict(a, { type: 'collect', noticeId: 'R26BD00273952' })).toBe(true);
+  });
+});

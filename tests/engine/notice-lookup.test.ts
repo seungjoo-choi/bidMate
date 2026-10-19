@@ -27,3 +27,16 @@ describe('lookupInIndex', () => {
     expect(r[0]).toMatchObject({ collectedAt: '2026-03-01T00:00:00Z' });
   });
 });
+
+describe('lookupInIndex kind 필터', () => {
+  const pre = { ...entry('R26BD00273952', '', '2026-04-01T00:00:00Z'), kind: 'prespec' as const };
+  const idx2: IndexFile = { schemaVersion: 1, generatedAt: 'x', notices: [...idx.notices, pre, entry('R26BD00273952', '000', '2026-05-01T00:00:00Z')] };
+  it('prespec ref는 prespec 엔트리만 본다', () => {
+    expect(lookupInIndex(idx2, { kind: 'prespec', noticeNo: 'R26BD00273952' })).toMatchObject({ found: true, collectedAt: '2026-04-01T00:00:00Z' });
+    expect(lookupInIndex(idx2, { kind: 'prespec', noticeNo: 'A' })).toEqual({ found: false });
+  });
+  it('kind 없는 ref와 옛 엔트리는 bid', () => {
+    expect(lookupInIndex(idx2, { noticeNo: 'R26BD00273952' })).toMatchObject({ found: true, collectedAt: '2026-05-01T00:00:00Z' });
+    expect(lookupInIndex(idx2, { noticeNo: 'A', round: '000' })).toMatchObject({ found: true });
+  });
+});

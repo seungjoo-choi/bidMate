@@ -13,6 +13,12 @@ const MESSAGES: Record<string, string> = {
   DUPLICATE_NAME: '같은 이름의 그룹이 이미 있습니다.',
   INVALID_VALUE: '입력값이 올바르지 않습니다. 이름은 필수이며 길이 제한을 확인해 주세요.',
   NOT_FOUND: '대상을 찾을 수 없습니다. 목록을 새로 불러와 주세요.',
+  NEEDS_SITE_PERMISSION: '네이버웍스 연락처(contact.worksmobile.com) 접근이 허용되지 않았습니다.',
+  NW_NOT_LOGGED_IN: '네이버웍스에 로그인되어 있지 않습니다. 열린 탭에서 로그인한 뒤 [다시 시도]를 눌러 주세요.',
+  NW_API_ERROR: '네이버웍스 연락처 방식이 바뀌었을 수 있어 불러오지 못했습니다. (코드: NW_API_ERROR)',
+  NW_BAD_RESPONSE: '네이버웍스 연락처 방식이 바뀌었을 수 있어 불러오지 못했습니다. (코드: NW_BAD_RESPONSE)',
+  NW_INJECT_FAILED: '네이버웍스 연락처 방식이 바뀌었을 수 있어 불러오지 못했습니다. (코드: NW_INJECT_FAILED)',
+  NW_TAB_TIMEOUT: '응답이 늦어 중단했습니다. 네이버웍스 탭을 닫고 다시 시도해 주세요.',
 };
 
 export function errorText(e: OpError): string {
@@ -20,12 +26,12 @@ export function errorText(e: OpError): string {
 }
 
 /** 누르면 확인 팝업을 띄우고, 팝업에서 삭제를 눌러야 onConfirm을 부르는 삭제 버튼. */
-export function ConfirmDeleteButton({ onConfirm, disabled, title = '삭제할까요?', description }: { onConfirm: () => void; disabled?: boolean; title?: string; description?: ReactNode }) {
+export function ConfirmDeleteButton({ onConfirm, disabled, title = '삭제할까요?', description, variant = 'ghost' }: { onConfirm: () => void; disabled?: boolean; title?: string; description?: ReactNode; variant?: 'ghost' | 'secondary' }) {
   const [open, setOpen] = useState(false);
   const cancel = useCallback(() => setOpen(false), []);
   return (
     <>
-      <Button variant="ghost" icon={<Trash2 />} disabled={disabled} onClick={() => setOpen(true)} className="text-danger">삭제</Button>
+      <Button variant={variant} icon={<Trash2 />} disabled={disabled} onClick={() => setOpen(true)} className="text-danger">삭제</Button>
       <ConfirmDialog
         open={open}
         title={title}
@@ -77,31 +83,8 @@ export function RoleToggle({ value, onChange, disabled, label }: { value: Role; 
   );
 }
 
-/** 오른쪽에서 열리는 패널. 바깥을 누르거나 Esc를 누르면 닫힌다. */
-export function Drawer({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: ReactNode }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
-  if (!open) return null;
-  return createPortal(
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-label={title} className="flex h-full w-full max-w-md flex-col border-l border-line bg-surface shadow-overlay">
-        <header className="flex items-center justify-between gap-4 border-b border-line px-6 py-4">
-          <h2 className="title-mark text-lg font-semibold text-ink">{title}</h2>
-          <Button variant="ghost" size="icon" aria-label="닫기" icon={<X />} onClick={onClose} />
-        </header>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
-      </div>
-    </div>,
-    document.body,
-  );
-}
-
 /** 화면 가운데 뜨는 팝업. 바깥을 누르거나 Esc를 누르면 닫힌다. */
-export function Modal({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: ReactNode }) {
+export function Modal({ open, title, onClose, size = 'md', children }: { open: boolean; title: string; onClose: () => void; size?: 'md' | 'xl'; children: ReactNode }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -111,7 +94,7 @@ export function Modal({ open, title, onClose, children }: { open: boolean; title
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-label={title} className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col rounded-card border border-line bg-surface shadow-overlay">
+      <div role="dialog" aria-modal="true" aria-label={title} className={`flex max-h-[calc(100vh-2rem)] w-full ${size === 'xl' ? 'max-w-3xl' : 'max-w-lg'} flex-col rounded-card border border-line bg-surface shadow-overlay`}>
         <header className="flex items-center justify-between gap-4 border-b border-line px-6 py-4">
           <h2 className="title-mark text-lg font-semibold text-ink">{title}</h2>
           <Button variant="ghost" size="icon" aria-label="닫기" icon={<X />} onClick={onClose} />

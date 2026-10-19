@@ -17,6 +17,14 @@ describe('handoffView', () => {
   it('handoff 없음 -> null', () => {
     expect(handoffView(collect(), null)).toBeNull();
   });
+  it('edit -> 대시보드 확인 안내 + 편집', () => {
+    expect(handoffView(collect({ action: 'edit', opened: true, at }), null))
+      .toMatchObject({ kind: 'edit', text: '대시보드에서 메일 내용을 확인한 뒤 작성하세요', tone: 'info', action: 'open-mail', actionLabel: '편집', noticeId: 'n1' });
+  });
+  it('ask -> 선택 안내 + 편집', () => {
+    expect(handoffView(collect({ action: 'ask', at }), null))
+      .toMatchObject({ kind: 'ask', text: '수집 완료. 대시보드에서 편집하거나 바로 작성할 수 있습니다', tone: 'info', action: 'open-mail', actionLabel: '편집', noticeId: 'n1' });
+  });
   it('compose queued -> 대기 취소', () => {
     expect(handoffView(collect({ action: 'compose', state: 'queued', at }), null))
       .toMatchObject({ kind: 'queued', text: '메일 작성 대기 중', action: 'dequeue', actionLabel: '대기 취소', noticeId: 'n1' });
@@ -40,9 +48,17 @@ describe('handoffView', () => {
       .toMatchObject({ kind: 'compose_partial', text, action: 'open-mail' });
   });
   it('compose failed -> 코드별 action', () => {
-    for (const code of ['GROUP_NOT_FOUND', 'TEMPLATE_NOT_FOUND', 'NEEDS_SITE_PERMISSION']) {
+    const cases: Array<[string, string, object]> = [
+      ['GROUP_NOT_FOUND', '수신자 설정', { page: 'settings', section: 'auto-compose' }],
+      ['TEMPLATE_NOT_FOUND', '템플릿 설정', { page: 'settings', section: 'auto-compose' }],
+      ['NEEDS_SITE_PERMISSION', '권한 설정', { page: 'settings', section: 'mail-service' }],
+      ['NEEDS_FS_PERMISSION', '폴더 설정', { page: 'settings', section: 'storage' }],
+      ['NO_GROUP', '수신자 설정', { page: 'recipients' }],
+      ['NO_RECIPIENTS', '수신자 설정', { page: 'recipients' }],
+    ];
+    for (const [code, actionLabel, fix] of cases) {
       expect(handoffView(collect(started), compose({ status: 'failed', errors: [err(code)] })))
-        .toMatchObject({ kind: 'compose_failed', tone: 'error', action: 'settings', actionLabel: '설정 열기' });
+        .toMatchObject({ kind: 'compose_failed', tone: 'error', action: 'settings', actionLabel, fix });
     }
     expect(handoffView(collect(started), compose({ status: 'failed', errors: [err('GROUP_NOT_FOUND')] }))?.text).toBe('자동 작성 설정의 그룹이 삭제되었습니다');
     expect(handoffView(collect(started), compose({ status: 'failed', errors: [err('COMPOSE_TAB_CLOSED')] })))
@@ -60,7 +76,7 @@ describe('handoffView', () => {
   it('none 사유별', () => {
     const n = (reason: Extract<Handoff, { action: 'none' }>['reason']) => handoffView(collect({ action: 'none', reason, at }), null);
     expect(n('already_composed')).toMatchObject({ kind: 'skipped', text: '이미 메일을 작성한 공고입니다', action: 'open-mail', actionLabel: '열기' });
-    expect(n('needs_site_permission')).toMatchObject({ text: '웹메일 접근 권한이 필요합니다', action: 'settings', actionLabel: '설정 열기' });
+    expect(n('needs_site_permission')).toMatchObject({ text: '웹메일 접근 권한이 필요합니다', action: 'settings', actionLabel: '권한 설정', fix: { page: 'settings', section: 'mail-service' } });
     expect(n('compose_running')).toMatchObject({ text: '같은 공고의 메일 작성이 이미 대기 중이거나 진행 중입니다', action: 'none' });
     expect(n('start_failed')).toMatchObject({ text: '메일 작성을 시작하지 못했습니다', action: 'open-mail', actionLabel: '열기' });
     expect(n('dequeued')).toMatchObject({ text: '자동 메일 작성을 취소했습니다', action: 'none' });

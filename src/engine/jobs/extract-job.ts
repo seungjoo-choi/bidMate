@@ -1,3 +1,4 @@
+import { kindOf } from '../../core/model/ids';
 import type { RuleSet } from '../../core/extraction/rules/schema';
 import type { ExtractResult, Job, JobError, JobProgress, JobStatus } from '../../core/types/job';
 import type { Settings } from '../../core/types/settings';
@@ -30,6 +31,7 @@ export async function runExtractJob(input: ExtractJobInput, deps: ExtractJobDeps
     if (!job.noticeId) return fail('EXTRACT_NO_NOTICE', '공고 ID가 없습니다.');
     const notice = await ns.loadNotice(job.noticeId);
     if (!notice) return fail('EXTRACT_NO_NOTICE', '수집된 공고를 찾을 수 없습니다.');
+    if (kindOf(notice.ref) !== 'bid') return fail('EXTRACT_NOT_APPLICABLE', '입찰공고가 아닌 공고는 평가정보 추출 대상이 아닙니다.');
     const prior = await ns.loadExtraction(notice.id);
     const out = await runExtractStep(job, notice, prior, {
       store: deps.store, parsers: deps.parsers, rules: deps.rules, emit: deps.emit, signal: deps.signal, now: deps.now,

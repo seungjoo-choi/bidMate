@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  addFinalListener, assertCancelAllowed, assertRetryAllowed, cancelJob, clearFinalListeners, latestJobForSender, registerCoordinator, setHandoff, getJob, getJobForSender, listJobs, listJobsForTab, originTabIdFor, senderKind, onFinish, onProgress, reconcile, setComposeTab, setCoordinatorDeps, startJob, type KV,
+  addFinalListener, assertCancelAllowed, assertRetryAllowed, cancelJob, clearFinalListeners, latestJobForSender, registerCoordinator, setHandoff, getJob, getJobForSender, listJobs, listJobsForTab, originTabIdFor, senderKind, onFinish, onProgress, reconcile, setAfterCollect, setComposeTab, setCoordinatorDeps, startJob, type KV,
 } from '../../src/background/job-coordinator';
 import type { Job } from '../../src/core/types/job';
 
@@ -87,6 +87,34 @@ describe('startJob', () => {
     expect(r.code).toBeUndefined();
     expect(await status('old')).toBe('interrupted');
     expect(await status(r.jobId)).toBe('running');
+  });
+  it('prespec ref의 noticeId는 번호 그대로', async () => {
+    sendImpl = async () => ({ accepted: true, active: [] });
+    const r = await startJob({ type: 'collect', ref: { kind: 'prespec', noticeNo: 'R26BD00273952', origin: 'trackerbot' } });
+    expect((await getJob(r.jobId))?.noticeId).toBe('R26BD00273952');
+  });
+  it('prespec ref는 round를 제거해 저장한다(round만 다른 두 요청도 같은 noticeId)', async () => {
+    sendImpl = async () => ({ accepted: true, active: [] });
+    const a = { type: 'collect' as const, ref: { kind: 'prespec' as const, noticeNo: 'R26BD00273952', round: '1', origin: 'trackerbot' as const } };
+    const r1 = await startJob(a);
+    const r2 = await startJob({ ...a, ref: { ...a.ref, round: '2' } });
+    const j1 = await getJob(r1.jobId);
+    const j2 = await getJob(r2.jobId);
+    expect(j1?.ref).not.toHaveProperty('round');
+    expect(j2?.ref).not.toHaveProperty('round');
+    expect(j1?.noticeId).toBe(j2?.noticeId);
+    expect(a.ref.round).toBe('1'); // 원본 불변
+  });
+  it("kind:'bid' 명시는 job.ref에서 kind 키를 제거한다", async () => {
+    sendImpl = async () => ({ accepted: true, active: [] });
+    const r = await startJob({ type: 'collect', ref: { kind: 'bid', noticeNo: 'X', round: '000', origin: 'g2b' } });
+    const j = await getJob(r.jobId);
+    expect(j?.ref).not.toHaveProperty('kind');
+    expect(j?.ref?.round).toBe('000');
+  });
+  it('orderplan ref는 INVALID_REQUEST', async () => {
+    await expect(startJob({ type: 'collect', ref: { kind: 'orderplan', noticeNo: 'R26DD20869346', origin: 'trackerbot' } })).rejects.toMatchObject({ code: 'INVALID_REQUEST' });
+    expect(await listJobs()).toHaveLength(0);
   });
   it('job/run 전송 실패 → failed(OFFSCREEN_ERROR)', async () => {
     sendImpl = async () => { throw new Error('boom'); };
@@ -431,5 +459,47 @@ describe('종결 리스너 / setHandoff / auto', () => {
     const j = await getJob('a');
     expect(j?.attempt).toBe(2);
     expect(j?.handoff).toBeUndefined();
+  });
+});
+
+describe('afterCollect 스냅샷 / setAfterCollect', () => {
+  let local: MemKV;
+  const colReq = { type: 'collect' as const, ref: { noticeNo: 'a', origin: 'g2b' as const } };
+  beforeEach(() => {
+    local = new MemKV();
+    setCoordinatorDeps({ storage: { session, local }, send: ((t: string, p: unknown) => sendImpl(t, p)) as never, offscreen });
+    sendImpl = async () => ({ accepted: true, active: [] });
+    vi.stubGlobal('chrome', { runtime: { id: 'extid' }, tabs: { sendMessage: vi.fn(async () => undefined) } });
+  });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('enabled면 설정 값을 스냅샷하고 꺼져 있으면 기록하지 않는다', async () => {
+    await local.set({ settingsCache: { autoCompose: { enabled: true, afterCollect: 'dashboard' } } });
+    expect((await getJob((await startJob(colReq)).jobId))?.afterCollect).toBe('dashboard');
+    await local.set({ settingsCache: { autoCompose: { enabled: false, afterCollect: 'dashboard' } } });
+    expect((await getJob((await startJob({ ...colReq, ref: { noticeNo: 'b', origin: 'g2b' } })).jobId))?.afterCollect).toBeUndefined();
+  });
+  it('compose 잡에는 기록하지 않는다', async () => {
+    await local.set({ settingsCache: { autoCompose: { enabled: true, afterCollect: 'dashboard' } } });
+    expect((await getJob((await startJob({ type: 'compose', noticeId: 'N-000' })).jobId))?.afterCollect).toBeUndefined();
+  });
+  it('재시도는 설정이 바뀌어도 이전 잡 값을 승계한다', async () => {
+    await seed('a', 'failed');
+    await session.set({ 'jobs.a': { ...(await getJob('a')), afterCollect: 'dashboard' } });
+    await local.set({ settingsCache: { autoCompose: { enabled: true, afterCollect: 'compose' } } });
+    await startJob({ ...colReq, retryOf: 'a' });
+    expect((await getJob('a'))?.afterCollect).toBe('dashboard');
+  });
+  it('setAfterCollect: ACTIVE collect만 true, compose/종결 잡/없는 잡은 false', async () => {
+    await seed('a', 'running');
+    expect(await setAfterCollect('a', 'dashboard')).toBe(true);
+    expect((await getJob('a'))?.afterCollect).toBe('dashboard');
+    await seed('done', 'completed');
+    expect(await setAfterCollect('done', 'dashboard')).toBe(false);
+    expect((await getJob('done'))?.afterCollect).toBeUndefined();
+    await seed('c', 'running');
+    await session.set({ 'jobs.c': { ...(await getJob('c')), type: 'compose' } });
+    expect(await setAfterCollect('c', 'dashboard')).toBe(false);
+    expect(await setAfterCollect('nope', 'dashboard')).toBe(false);
   });
 });

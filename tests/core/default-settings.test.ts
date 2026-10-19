@@ -3,7 +3,7 @@ import { DEFAULT_WEBMAIL_HOST, defaultSettings, withDefaults } from '../../src/c
 
 describe('autoCompose 기본값', () => {
   it('defaultSettings', () => {
-    expect(defaultSettings().autoCompose).toEqual({ enabled: false, recipients: { mode: 'default' }, reviewGate: 'conflicts' });
+    expect(defaultSettings().autoCompose).toEqual({ enabled: false, afterCollect: 'ask', recipients: { mode: 'default' }, reviewGate: 'conflicts' });
   });
   it('withDefaults: autoCompose가 없는 저장본은 기본값으로 채운다', () => {
     const { autoCompose: _omit, ...rest } = defaultSettings();
@@ -13,8 +13,8 @@ describe('autoCompose 기본값', () => {
   });
   it('withDefaults: 저장된 값이 기본값을 덮어쓴다', () => {
     const d = defaultSettings();
-    const s = withDefaults({ ...d, autoCompose: { enabled: true, recipients: { mode: 'group', groupId: 'g' }, reviewGate: 'any_review' } });
-    expect(s.autoCompose).toEqual({ enabled: true, recipients: { mode: 'group', groupId: 'g' }, reviewGate: 'any_review' });
+    const s = withDefaults({ ...d, autoCompose: { enabled: true, afterCollect: 'dashboard', recipients: { mode: 'group', groupId: 'g' }, reviewGate: 'any_review' } });
+    expect(s.autoCompose).toEqual({ enabled: true, afterCollect: 'dashboard', recipients: { mode: 'group', groupId: 'g' }, reviewGate: 'any_review' });
   });
 });
 

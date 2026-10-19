@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { builtinDefaultTemplate } from '../../src/core/templates/default-template';
+import { builtinDefaultTemplate, builtinPrespecTemplate } from '../../src/core/templates/default-template';
 import { renderMail } from '../../src/core/templates/render';
-import { sampleNotice } from '../../src/core/templates/sample-notice';
+import { sampleNotice, samplePrespecNotice } from '../../src/core/templates/sample-notice';
+import { variablesFor } from '../../src/core/templates/variables';
 import type { Notice } from '../../src/core/types/notice';
 import type { Template, TemplateFieldKey, TemplateItem, TemplateSection, TemplateStyle } from '../../src/core/types/template';
 
@@ -255,5 +256,28 @@ describe('renderMail', () => {
     expect(i).toBeGreaterThan(0);
     expect(lines[i + 1]).toBe('  1) 부서명 : 넥스트업사업본부');
     expect(lines[i + 2]).toBe('  2) 제안PM : ');
+  });
+});
+
+describe('renderMail 사전규격', () => {
+  it('사전규격 변수를 치환한다', () => {
+    const r = renderMail(builtinPrespecTemplate(NOW), samplePrespecNotice(), { now: NOW });
+    expect(r.subject).toBe('[사전규격 공유] 2027년 정보시스템 고도화 사업');
+    expect(r.text).toContain('R26BD00000000');
+    expect(r.text).toContain('홍길동 (044-000-0000)');
+    expect(r.text).toContain('규격서.hwp');
+    expect(r.unresolved).toEqual([]);
+    expect(r.unknownVars).toEqual([]);
+  });
+  it('bid 공고에서 사전규격 변수는 기존 미확인 표시', () => {
+    const r = renderMail(tpl({ subject: '{사전규격명}' }), sampleNotice());
+    expect(r.subject).toBe('확인 필요');
+    expect(r.unresolved.map((u) => u.name)).toEqual(['사전규격명']);
+  });
+  it('variablesFor는 종류별 변수만 돌려준다', () => {
+    expect(variablesFor('prespec').map((d) => d.name)).toContain('사전규격명');
+    expect(variablesFor('prespec').map((d) => d.name)).not.toContain('공고명');
+    expect(variablesFor('bid').map((d) => d.name)).not.toContain('사전규격명');
+    expect(variablesFor('bid').map((d) => d.name)).toContain('발주기관');
   });
 });

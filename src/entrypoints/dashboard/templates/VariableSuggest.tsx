@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type SyntheticEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { VariableDef } from '../../../core/templates/variables';
+import type { NoticeKind } from '../../../core/types/notice';
 import { caretPoint, findVariableQuery, matchVariables, replaceRange, type FocusEl } from './variable-suggest';
 
 const LIST_ID = 'variable-suggest-list';
@@ -11,7 +12,7 @@ interface SuggestState { el: FocusEl; start: number; query: string; matches: Var
  * 입력칸에서 `{` 를 치면 커서 아래에 변수 목록을 띄운다.
  * 반환한 핸들러를 편집 영역 바깥 div에 capture로 달고, popup을 렌더한다.
  */
-export function useVariableSuggest(isTarget: (el: EventTarget) => el is FocusEl) {
+export function useVariableSuggest(isTarget: (el: EventTarget) => el is FocusEl, kind: NoticeKind = 'bid') {
   const [state, setState] = useState<SuggestState | null>(null);
 
   const refresh = (e: SyntheticEvent) => {
@@ -29,7 +30,7 @@ export function useVariableSuggest(isTarget: (el: EventTarget) => el is FocusEl)
     if (!el.isConnected || document.activeElement !== el) { setState(null); return; }
     const caret = el.selectionStart ?? el.value.length;
     const q = el.selectionEnd === caret ? findVariableQuery(el.value, caret) : null;
-    const matches = q ? matchVariables(q.query) : [];
+    const matches = q ? matchVariables(q.query, kind) : [];
     if (!q || matches.length === 0) { setState(null); return; }
     const p = caretPoint(el, q.start);
     setState((s) => {

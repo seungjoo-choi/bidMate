@@ -1,8 +1,10 @@
 import { newId } from '../model/ids';
+import type { NoticeKind } from '../types/notice';
 import type { Template, TemplateItem, TemplateSection, TemplateStyle } from '../types/template';
 import { VARIABLE_BY_KEY, isTemplateFieldKey } from './variables';
 
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
+const isKind = (x: unknown): x is NoticeKind => x === 'bid' || x === 'prespec' || x === 'orderplan';
 const str = (x: unknown): string => (typeof x === 'string' ? x : '');
 
 /** bold/underline이 true인 키만 남긴다. 둘 다 아니면 undefined(style 속성 생략). */
@@ -57,6 +59,7 @@ export function normalizeTemplate(raw: unknown, now: Date): { template: Template
     id, name, isDefault: r.isDefault === true,
     subject: str(r.subject), greeting: str(r.greeting), closing: str(r.closing),
     layout: r.layout === 'list' ? 'list' : 'table',
+    ...(isKind(r.kind) && r.kind !== 'bid' ? { kind: r.kind } : {}),
     sections,
     updatedAt: typeof r.updatedAt === 'string' && r.updatedAt ? r.updatedAt : now.toISOString(),
   };

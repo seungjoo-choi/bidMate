@@ -14,7 +14,7 @@ import { ReviewPage } from './ReviewPage';
 import { SettingsPage } from './SettingsPage';
 import { TemplateEditor } from './TemplateEditor';
 import { TemplatesPage } from './TemplatesPage';
-import { parseRoute, type Page } from './route';
+import { parseRoute, settingsSectionOf, type Page } from './route';
 
 const MENU: Array<{ id: Page; label: string; Icon: typeof SettingsIcon }> = [
   { id: 'home', label: '홈', Icon: LayoutDashboard },
@@ -91,15 +91,15 @@ export function App() {
         <FolderStatus refreshKey={hash} />
       </aside>
       <main className="min-w-0 flex-1 px-12 pt-10 pb-16">
-        <div className={`mx-auto space-y-6 ${route.page === 'template' ? 'max-w-[1440px]' : wide ? 'max-w-[1120px]' : 'max-w-[800px]'}`}>
+        <div className={`mx-auto space-y-6 ${route.page === 'template' || route.page === 'recipients' ? 'max-w-[1440px]' : wide ? 'max-w-[1120px]' : 'max-w-[800px]'}`}>
           {route.page === 'home' && <HomePage />}
           {route.page === 'notices' && <NoticesPage />}
           {route.page === 'recipients' && <RecipientsPage />}
           {route.page === 'templates' && <TemplatesPage />}
           {route.page === 'template' && <TemplateEditor key={route.id} id={route.id} />}
-          {route.page === 'mail' && <MailPreparePage key={route.noticeId} noticeId={route.noticeId} />}
+          {route.page === 'mail' && <MailPreparePage key={route.noticeId} noticeId={route.noticeId} from={route.query.from} />}
           {route.page === 'review' && <ReviewPage key={route.noticeId} noticeId={route.noticeId} handoff={parseHandoffReasons(route.query.handoff)} />}
-          {route.page === 'settings' && <SettingsPage />}
+          {route.page === 'settings' && <SettingsPage section={settingsSectionOf(hash)} nonce={hash} />}
           {route.page === 'diagnostics' && <DiagnosticsPage />}
         </div>
       </main>

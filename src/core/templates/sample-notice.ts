@@ -33,3 +33,23 @@ export function sampleNotice(): Notice {
   n.collect = { status: 'collected', collectedAt: local(2026, 10, 15, 9), lastJobId: '', errors: [] };
   return n;
 }
+
+/** 사전규격 템플릿 미리보기용 표본. prespec 필드 verified, basic 표시 필드도 채움, 첨부 2개. */
+export function samplePrespecNotice(): Notice {
+  const n = emptyNotice('R26BD00000000', { kind: 'prespec', noticeNo: 'R26BD00000000', origin: 'manual' }, 'notices/2026/R26BD00000000_sample', local(2026, 10, 15, 9));
+  setFields(n, {
+    specRegNo: ok('R26BD00000000'), specName: ok('2027년 정보시스템 고도화 사업'), bizDivision: ok('용역'),
+    assignedBudget: ok(500_000_000), registeredAt: ok(local(2026, 10, 15, 9)), opinionCloseAt: ok(local(2026, 10, 20, 18)),
+    officerName: ok('홍길동'), officerTel: ok('044-000-0000'), relatedBidNo: ok(''),
+    noticeNo: ok('R26BD00000000'), title: ok('2027년 정보시스템 고도화 사업'),
+    orderingOrg: ok('한국정보기관'), demandOrg: ok('한국정보기관'),
+    postedAt: ok(local(2026, 10, 15, 9)), budgetAmount: ok(500_000_000),
+  });
+  n.sourceUrl = ok('https://www.g2b.go.kr/sample-prespec');
+  n.attachments = [
+    { id: 'att1', index: 0, originalName: '규격서.hwp', savedName: '규격서.hwp', url: '', expectedSize: 1000, savedSize: 1000, status: 'saved', attempts: 1 },
+    { id: 'att2', index: 1, originalName: '과업내용서(안).pdf', savedName: '과업내용서(안).pdf', url: '', expectedSize: 2000, savedSize: 2000, status: 'saved', attempts: 1 },
+  ];
+  n.collect = { status: 'collected', collectedAt: local(2026, 10, 15, 9), lastJobId: '', errors: [] };
+  return n;
+}
