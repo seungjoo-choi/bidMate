@@ -1,10 +1,11 @@
 import { ClipboardPaste, FlaskConical, Save } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { AI_RECOMMENDED_MODELS } from '../../core/ai/constants';
 import type { AiMode, AiProvider } from '../../core/types/ai';
 import type { Settings } from '../../core/types/settings';
 import { PROVIDERS } from '../../engine/ai/providers';
 import { send } from '../../messaging/bus';
-import { Button, Card, Field, InlineAlert, Select, StatusBadge } from '../../ui/components';
+import { Button, Card, Field, FormActions, InlineAlert, ProviderIcon, Select, StatusBadge } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useSettings } from '../../ui/hooks/useSettings';
 import { formatChars, keyTails, mergeAiKey, modelOptions, originPattern, type ModelInfo } from './ai-card-logic';
@@ -12,9 +13,10 @@ import { formatChars, keyTails, mergeAiKey, modelOptions, originPattern, type Mo
 type Secrets = { g2bServiceKey?: string; ai?: Partial<Record<AiProvider, string>>; [k: string]: unknown };
 
 const ORDER: AiProvider[] = ['claude', 'openai', 'gemini'];
+const CUSTOM_MODEL = '__custom__';
 const MODES: Array<{ id: AiMode; label: string }> = [
   { id: 'api', label: 'API 호출' },
-  { id: 'manual', label: '반자동 붙여넣기' },
+  { id: 'manual', label: '프롬프트 복사·붙여넣기' },
 ];
 
 const NOTICE: Record<AiProvider, string> = {
@@ -35,6 +37,7 @@ export function AiCard() {
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [modelDraft, setModelDraft] = useState('');
+  const [customModel, setCustomModel] = useState(false);
 
   const load = async () => {
     const { secrets } = await chrome.storage.local.get('secrets');
@@ -49,6 +52,18 @@ export function AiCard() {
 
   const latest = useRef(settings);
   useEffect(() => { latest.current = settings; }, [settings]);
+
+  // 키가 저장돼 있으면 화면 진입·공급자 전환·키 저장 시 모델 목록을 조용히 받아온다(공급자별 세션당 1회)
+  const savedTail = keys[provider] ?? null;
+  const fetched = useRef<Partial<Record<AiProvider, boolean>>>({});
+  useEffect(() => {
+    if (!savedTail || fetched.current[provider]) return;
+    fetched.current[provider] = true;
+    const p = provider;
+    void send('ai/test', { provider: p }, { timeoutMs: 30_000 })
+      .then((r) => { if (r.ok && r.models?.length) setModels((m) => ({ ...m, [p]: r.models })); })
+      .catch(() => { fetched.current[p] = false; });
+  }, [provider, savedTail]);
 
   if (!settings) return <Card title="AI로 다시 찾기" />;
 
@@ -74,6 +89,7 @@ export function AiCard() {
     setTestMsg(null);
     setWarn(null);
     setNote(null);
+    setCustomModel(false);
     void patchAi(() => ({ provider: p }));
   };
   const setModel = (id: string) => {
@@ -100,6 +116,7 @@ export function AiCard() {
       const { secrets } = await chrome.storage.local.get('secrets');
       await chrome.storage.local.set({ secrets: mergeAiKey(secrets as Secrets | undefined, provider, key) });
       setInput('');
+      fetched.current[provider] = false; // 새 키로 목록을 다시 받는다
       await load();
       if (!granted) setWarn('권한 없이는 호출할 수 없습니다. 키는 저장했지만 [저장]을 다시 눌러 접근 권한을 허용해야 AI를 사용할 수 있습니다.');
     } catch (e) {
@@ -146,14 +163,28 @@ export function AiCard() {
   return (
     <Card title="AI로 다시 찾기" description="확인 화면에서 [AI로 다시 찾기]를 누르면 AI가 공고문에서 항목을 다시 찾아 제안합니다. 제안은 [적용]해야 값이 들어갑니다. 키는 이 브라우저에만 저장됩니다.">
       <Field label="공급자">
-        <div className="space-y-1.5">
-          {ORDER.map((p) => (
-            <label key={p} className="flex items-center gap-2 text-sm">
-              <input type="radio" name="ai-provider" className="accent-current" checked={provider === p} onChange={() => pickProvider(p)} />
-              {PROVIDERS[p].label}
-              {p !== provider && (keys[p] ? <StatusBadge status="ok">저장됨</StatusBadge> : <StatusBadge status="idle">미설정</StatusBadge>)}
-            </label>
-          ))}
+        <div role="radiogroup" aria-label="공급자" className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+          {ORDER.map((p) => {
+            const free = p === 'gemini';
+            const m = settings.ai.models[p]?.trim();
+            return (
+              <label
+                key={p}
+                className={`flex cursor-pointer flex-col gap-1.5 rounded-card border bg-surface px-3.5 py-3 ${provider === p ? 'border-primary ring-1 ring-primary' : 'border-line hover:border-line-strong'}`}
+              >
+                <span className="flex items-center gap-2 font-semibold">
+                  <ProviderIcon provider={p} size={20} />
+                  {PROVIDERS[p].label}
+                  <input type="radio" name="ai-provider" className="ml-auto accent-current" checked={provider === p} onChange={() => pickProvider(p)} />
+                </span>
+                <span className="text-xs text-muted">{free ? '무료 등급' : '종량제'} · {m || '모델 선택 필요'}</span>
+                <span className="flex items-center gap-1.5">
+                  <span className={`rounded-full px-1.5 text-[0.6875rem] font-semibold ${free ? 'bg-ok-wash text-ok' : 'bg-sunken text-muted'}`}>{free ? '무료' : '유료'}</span>
+                  {keys[p] ? <StatusBadge status="ok">저장됨</StatusBadge> : <StatusBadge status="idle">미설정</StatusBadge>}
+                </span>
+              </label>
+            );
+          })}
         </div>
       </Field>
 
@@ -168,7 +199,33 @@ export function AiCard() {
         </div>
       </Field>
 
-      <div className="space-y-3">
+      {mode === 'api' && (
+        <Field label="API 실행 시 문서 전달">
+          <div className="space-y-1.5">
+            {([[true, '문서 전체 전송 (정확도↑, 비용↑)'], [false, '관련 구간만 전송']] as const).map(([v, label]) => (
+              <label key={String(v)} className="flex items-center gap-2 text-sm">
+                <input type="radio" name="ai-send-full" className="accent-current" checked={(settings.ai.sendFullText ?? true) === v} onChange={() => void patchAi(() => ({ sendFullText: v }))} />
+                {label}
+              </label>
+            ))}
+          </div>
+        </Field>
+      )}
+
+      {mode === 'manual' && (
+        <div className="space-y-2 text-sm">
+          <p>열릴 사이트: {adapter.webUrl}</p>
+          <p className="text-xs text-muted">프롬프트가 클립보드에 복사되고 위 사이트가 새 탭으로 열립니다. 붙여넣기 상한은 {formatChars(adapter.manualMaxChars)}입니다. 답변(코드 블록)을 복사해 확인 화면에 붙여넣습니다.</p>
+          <Button variant="secondary" icon={<ClipboardPaste />} loading={busy === 'clip'} onClick={() => void allowClipboard()}>클립보드 읽기 권한 허용 (선택)</Button>
+        </div>
+      )}
+
+      {/* 반자동이어도 일괄 실행·회차별 API 전환에는 키·모델이 필요하므로 접어서 둔다 */}
+      <details open={mode === 'api'} key={mode} className="group">
+        {mode === 'manual' && (
+          <summary className="cursor-pointer text-sm font-semibold text-ink">API 키·모델 (일괄 실행용, 선택)</summary>
+        )}
+      <div className={`space-y-3 ${mode === 'manual' ? 'mt-3' : ''}`}>
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-ink">{adapter.label} 키</span>
           {saved ? <StatusBadge status="ok">저장됨 (끝 4자리 {saved})</StatusBadge> : <StatusBadge status="idle">미설정</StatusBadge>}
@@ -176,37 +233,47 @@ export function AiCard() {
         <Field label="API 키" htmlFor="ai-key">
           <input id="ai-key" type="password" autoComplete="off" className={inputClass} value={input} onChange={(e) => setInput(e.target.value)} />
         </Field>
-        <div className="flex flex-wrap gap-2">
-          <Button icon={<Save />} loading={busy === 'save'} disabled={!input.trim()} onClick={saveKey}>저장</Button>
+        <FormActions>
           <Button variant="secondary" icon={<FlaskConical />} loading={busy === 'test'} disabled={!saved} onClick={() => void runTest()}>연결 테스트</Button>
-        </div>
+          <Button icon={<Save />} loading={busy === 'save'} disabled={!input.trim()} onClick={saveKey}>저장</Button>
+        </FormActions>
         {testMsg && <InlineAlert tone={testMsg.ok ? 'ok' : 'error'}>{testMsg.text}</InlineAlert>}
 
-        <Field label="모델" htmlFor="ai-model" help="[연결 테스트]를 하면 사용 가능한 모델 목록이 나옵니다. 목록이 없으면 모델명을 직접 입력하세요.">
-          {list.length > 0 ? (
-            <Select id="ai-model" aria-label="모델" value={model} options={modelOptions(list, model)} onChange={setModel} />
+        <Field
+          label="모델"
+          htmlFor="ai-model"
+          help={list.length > 0 ? '이 키로 사용할 수 있는 모델 목록입니다.' : '키를 저장하면 사용 가능한 모델 목록을 자동으로 불러옵니다. 그 전에는 추천 모델이 보입니다.'}
+        >
+          {customModel ? (
+            <div className="flex gap-2">
+              <input
+                id="ai-model"
+                className={inputClass}
+                autoComplete="off"
+                placeholder="모델 ID"
+                value={modelDraft}
+                onChange={(e) => setModelDraft(e.target.value)}
+                onBlur={() => setModel(modelDraft)}
+              />
+              <Button variant="secondary" onClick={() => { setModel(modelDraft); setCustomModel(false); }}>목록에서 선택</Button>
+            </div>
           ) : (
-            <input
+            <Select
               id="ai-model"
-              className={inputClass}
-              autoComplete="off"
-              value={modelDraft}
-              onChange={(e) => setModelDraft(e.target.value)}
-              onBlur={() => setModel(modelDraft)}
+              aria-label="모델"
+              value={model}
+              options={[
+                ...modelOptions(list.length > 0 ? list : AI_RECOMMENDED_MODELS[provider].map((id) => ({ id })), model),
+                { value: CUSTOM_MODEL, label: '직접 입력…' },
+              ]}
+              onChange={(v) => (v === CUSTOM_MODEL ? setCustomModel(true) : setModel(v))}
             />
           )}
         </Field>
 
         <p className="text-xs text-muted">{NOTICE[provider]} 키는 이 브라우저에만 저장됩니다.</p>
       </div>
-
-      {mode === 'manual' && (
-        <div className="space-y-2 text-sm">
-          <p>열릴 사이트: {adapter.webUrl}</p>
-          <p className="text-xs text-muted">요청문이 클립보드에 복사되고 위 사이트가 새 탭으로 열립니다. 붙여넣기 상한은 {formatChars(adapter.manualMaxChars)}입니다. 답변(코드 블록)을 복사해 확인 화면에 붙여넣습니다.</p>
-          <Button variant="secondary" icon={<ClipboardPaste />} loading={busy === 'clip'} onClick={() => void allowClipboard()}>클립보드 읽기 권한 허용 (선택)</Button>
-        </div>
-      )}
+      </details>
 
       {warn && <InlineAlert tone="warn">{warn}</InlineAlert>}
       {note && <InlineAlert tone="info">{note}</InlineAlert>}

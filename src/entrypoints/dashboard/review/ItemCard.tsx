@@ -1,8 +1,10 @@
 import { Pencil, RotateCcw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import type { AiProvider } from '../../../core/types/ai';
 import type { EvidenceRef } from '../../../core/types/extraction';
-import { Button, InlineAlert, StatusBadge } from '../../../ui/components';
+import { PROVIDERS } from '../../../engine/ai/providers';
+import { Button, FormActions, InlineAlert, ProviderIcon, StatusBadge } from '../../../ui/components';
 import { inputClass } from '../../../ui/components/Field';
 import { formatAmountShort } from '../../../ui/review/format';
 import { evidenceMeta, userEditedBadgeText, type CardModel } from '../../../ui/review/view';
@@ -15,8 +17,16 @@ export interface ItemCardProps {
   onEdit: (value: unknown | null, note?: string) => Promise<EditError | null>;
   onOpenText: (e: EvidenceRef) => void;
   /** AI 제안 [적용]/[이 값으로 확정], [무시] (card.ai가 있을 때만 쓰인다) */
-  onAiApply?: (note?: string) => Promise<AiBlockError | null>;
+  onAiApply?: (note?: string, variantIndex?: number) => Promise<AiBlockError | null>;
   onAiDismiss?: () => Promise<AiBlockError | null>;
+  /** [AI로 찾기](이 항목만). 확인 필요 카드에만 전달된다 */
+  onAiFind?: () => void;
+  /** 실행 중인 AI run이 이 항목을 찾는 중 */
+  aiFinding?: boolean;
+  /** 공고에 AI 실행·대기 중 등으로 AI 버튼 비활성 */
+  aiDisabled?: boolean;
+  /** 버튼·알약 아이콘용 공급자 */
+  aiProvider?: AiProvider;
 }
 
 const compactText = (t: string) => t.replace(/\s+/g, '');
@@ -57,7 +67,7 @@ function ClampText({ text, lines, className = '' }: { text: string; lines: 3 | 4
 
 function Value({ card }: { card: CardModel }) {
   if (card.kind === 'text') return <ClampText text={card.valueText} lines={4} />;
-  return <div className="font-mono text-xl font-bold tracking-tight tabular-nums">{card.valueText}</div>;
+  return <div className="text-xl font-bold tracking-tight tabular-nums">{card.valueText}</div>;
 }
 
 function Editor({ card, onEdit, onCancel }: { card: CardModel; onEdit: ItemCardProps['onEdit']; onCancel: () => void }) {
@@ -125,15 +135,15 @@ function Editor({ card, onEdit, onCancel }: { card: CardModel; onEdit: ItemCardP
       </div>
       <input className={inputClass} placeholder="메모 (선택)" value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
       {alert && <InlineAlert tone="error">{alert}</InlineAlert>}
-      <div className="flex gap-2">
-        <Button loading={saving} onClick={() => void save()}>저장</Button>
+      <FormActions>
         <Button variant="secondary" onClick={onCancel}>취소</Button>
-      </div>
+        <Button loading={saving} onClick={() => void save()}>저장</Button>
+      </FormActions>
     </div>
   );
 }
 
-export function ItemCard({ card, busy, onEdit, onOpenText, onAiApply, onAiDismiss }: ItemCardProps) {
+export function ItemCard({ card, busy, onEdit, onOpenText, onAiApply, onAiDismiss, onAiFind, aiFinding, aiDisabled, aiProvider = 'gemini' }: ItemCardProps) {
   const [editing, setEditing] = useState(false);
   const [picked, setPicked] = useState(0);
   const [alert, setAlert] = useState<string | null>(null);
@@ -155,6 +165,9 @@ export function ItemCard({ card, busy, onEdit, onOpenText, onAiApply, onAiDismis
           {card.badge === 'userEdited'
             ? <EditedMark>{userEditedBadgeText(card)}</EditedMark>
             : <StatusBadge status={badge.tone as 'ok' | 'warn' | 'idle'}>{badge.text}</StatusBadge>}
+          {card.badge === 'verified' && card.ai?.suggestion.verdict === 'match' && (
+            <span data-ai={card.ai.run.provider} className="mt-1.5 flex w-fit items-center rounded-full border border-ai-line bg-ai-wash px-2 text-xs text-ai-ink">AI 확인 일치</span>
+          )}
         </div>
         {card.reason && <p className="text-sm text-muted">{card.reason}</p>}
       </div>
@@ -166,7 +179,15 @@ export function ItemCard({ card, busy, onEdit, onOpenText, onAiApply, onAiDismis
             {card.userEdited && (
               <Button variant="ghost" disabled={busy} icon={<RotateCcw />} onClick={() => void act(null)}>자동 결과로 되돌리기</Button>
             )}
-            {!editing && <Button variant="ghost" disabled={busy} icon={<Pencil />} onClick={() => setEditing(true)}>직접 수정</Button>}
+            {aiFinding ? (
+              <span data-ai={aiProvider} className="inline-flex h-7 items-center gap-1.5 self-center rounded-btn bg-ai-wash px-2.5 text-[0.8125rem] whitespace-nowrap text-ai-ink">
+                <span className="inline-flex animate-spin motion-reduce:animate-none"><ProviderIcon provider={aiProvider} size={14} /></span>
+                {PROVIDERS[aiProvider].label}가 찾는 중…
+              </span>
+            ) : onAiFind && (
+              <Button variant="secondary" className="!h-7 !gap-1.5 !px-2.5 !text-[0.8125rem] [&_svg]:!size-3.5 self-center" disabled={busy || aiDisabled} icon={<ProviderIcon provider={aiProvider} size={14} />} onClick={onAiFind}>AI로 찾기</Button>
+            )}
+            {!editing && <Button variant="ghost" className="!h-7 !gap-1.5 !px-2.5 !text-[0.8125rem] [&_svg]:!size-3.5 self-center" disabled={busy} icon={<Pencil />} onClick={() => setEditing(true)}>직접 수정</Button>}
           </div>
         </div>
         {card.note && <p className="text-sm text-muted">메모: {card.note}</p>}
@@ -194,7 +215,7 @@ export function ItemCard({ card, busy, onEdit, onOpenText, onAiApply, onAiDismis
                   <div className="cursor-pointer" onClick={() => setPicked(i)}>
                     {card.kind === 'text'
                       ? <ClampText text={c.valueText} lines={3} />
-                      : <span className="font-mono text-lg font-bold tabular-nums">{c.valueText}</span>}
+                      : <span className="text-lg font-bold tabular-nums">{c.valueText}</span>}
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-4 text-sm text-muted">
                     <span>{c.sourceText}</span>

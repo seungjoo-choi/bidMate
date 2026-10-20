@@ -201,7 +201,7 @@ export function ComposeStatus({ ctl, detached = false }: { ctl: ComposeControlle
   } else if (view.kind === 'progress') {
     body = (
       <div className="space-y-2.5">
-        <div className="break-all text-sm">{view.label}{view.attach ? ` (${view.attach.done}/${view.attach.total})` : ''}</div>
+        <div className="wrap-anywhere text-sm">{view.label}{view.attach ? ` (${view.attach.done}/${view.attach.total})` : ''}</div>
         <div className="h-1.5 overflow-hidden rounded-full bg-sunken">
           <div className="h-full rounded-full bg-accent" style={{ width: `${Math.round(view.ratio * 100)}%`, transition: 'width 200ms' }} />
         </div>
@@ -292,7 +292,7 @@ export function ComposeStatus({ ctl, detached = false }: { ctl: ComposeControlle
           <XCircle className="mt-0.5 size-5 shrink-0 text-danger" />
           <div className="min-w-0 flex-1">
             <div className="font-semibold">{view.message}</div>
-            {view.detail && <div className="mt-0.5 break-all text-sm text-muted">{view.detail}</div>}
+            {view.detail && <div className="mt-0.5 wrap-anywhere text-sm text-muted">{view.detail}</div>}
           </div>
         </div>
         {view.action !== 'none' && (

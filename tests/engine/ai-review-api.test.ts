@@ -90,6 +90,40 @@ describe('prepareRun', () => {
   });
 });
 
+describe('prepareRun 문서 전달 방식', () => {
+  async function setupLines(lines: string[]) {
+    const { store } = await runCollect({ files, parsers: fakeParsers(async () => docOf(...lines)) });
+    const noticeId = readJsonFile<Notice>(store, '/notice.json').id;
+    return { store, noticeId, deps: { rules: loadRules(), newId: () => 'run-x' } as AiApiDeps };
+  }
+  const SPARSE = [...Array.from({ length: 80 }, (_, i) => `무관문장${i}`), '신용평가 배점 10점', ...Array.from({ length: 80 }, (_, i) => `꼬리문장${i}`)];
+
+  it('api 기본(sendFullText 미지정)은 전문, false면 발췌, manual은 항상 발췌', async () => {
+    const { store, noticeId, deps } = await setupLines(SPARSE);
+    const full = await prepareRun(store, { noticeId, scope: 'all', provider: 'claude', mode: 'api', model: 'm' }, deps);
+    expect(await store.readText(full.run.promptPath)).toContain('무관문장0');
+    expect(full.run.warnings).toEqual([]);
+    expect(full.stats.fullText).toBe(true);
+    const ex = await prepareRun(store, { noticeId, scope: 'all', provider: 'claude', mode: 'api', model: 'm', sendFullText: false }, deps);
+    expect(await store.readText(ex.run.promptPath)).not.toContain('무관문장0');
+    expect(ex.stats.fullText).toBe(false);
+    const man = await prepareRun(store, { noticeId, scope: 'all', provider: 'claude', mode: 'manual', model: null, sendFullText: true }, deps);
+    expect(man.built.manualText).not.toContain('무관문장0');
+    expect(man.stats.fullText).toBe(false);
+  });
+
+  it('전문 상한 초과면 발췌로 폴백하고 warning을 남긴다', async () => {
+    const big = Array.from({ length: 4200 }, (_, i) => `문장${i} ${'가'.repeat(100)}`);
+    big.splice(2000, 0, '신용평가 배점 10점');
+    const { store, noticeId, deps } = await setupLines(big);
+    const p = await prepareRun(store, { noticeId, scope: 'all', provider: 'claude', mode: 'api', model: 'm' }, deps);
+    expect(p.run.warnings).toContain('전문 상한 초과로 발췌 전송');
+    expect(p.stats.fullText).toBe(false);
+    expect(p.run.excerptChars).toBeLessThan(250_000);
+    expect(await store.readText(p.run.promptPath)).toContain('신용평가 배점 10점');
+  });
+});
+
 describe('finishRun / 반자동 제출', () => {
   it('정상 응답은 done, 검증 실패는 rejected로 분리하고 응답 txt를 남긴다', async () => {
     const { store, noticeId, deps } = await setup();
@@ -138,7 +172,7 @@ describe('applySuggestion / dismissSuggestion', () => {
     const { store, noticeId, deps, runId } = await done();
     const r = await applySuggestion(store, { noticeId, runId, key: 'credibilityScore' }, deps);
     const item = r.extraction.items.credibilityScore;
-    expect(item.userEdited).toMatchObject({ value: 10, origin: { kind: 'ai', runId, provider: 'claude', model: null, promptVersion: '1.0.0' } });
+    expect(item.userEdited).toMatchObject({ value: 10, origin: { kind: 'ai', runId, provider: 'claude', model: null, promptVersion: '2.1.0' } });
     expect(item.userEdited!.note).toContain('AI 제안 적용(Claude');
     expect(r.notice.evaluation.credibilityScore).toMatchObject({ value: 10, status: 'user_edited', source: { kind: 'user', ref: `ai:${runId}` } });
     expect(r.aiReview.runs[0]!.suggestions.credibilityScore!.appliedAt).toBeTruthy();
@@ -150,6 +184,25 @@ describe('applySuggestion / dismissSuggestion', () => {
     const { store, noticeId, deps, runId } = await done();
     const r = await applySuggestion(store, { noticeId, runId, key: 'credibilityScore', note: '직접' }, deps);
     expect(r.extraction.items.credibilityScore.userEdited!.note).toBe('직접');
+  });
+
+  it('variantIndex: 선택 variant 값을 userEdited.value로, note는 [조건 텍스트] 접두', async () => {
+    const { store, noticeId, deps } = await setup();
+    const p = await prepareRun(store, { noticeId, scope: 'all', provider: 'claude', mode: 'manual', model: null }, deps);
+    const items = [{ key: 'credibilityScore', value: null, quote: '', file: null, page: null, note: '', variants: [
+      { condition: '단독', value: 10, quote: Q_CRED }, { condition: '없는 조건', value: 7, quote: '문서에 전혀 없는 문장입니다 정말로' },
+    ] }];
+    const f = await finishRun(store, { noticeId, runId: p.run.id, responseText: resp(p.run.id, items) }, deps);
+    const sg = f.runs[0]!.suggestions.credibilityScore!;
+    expect(sg).toMatchObject({ verdict: 'multi', value: null });
+    expect(sg.variants).toHaveLength(1);
+    expect(f.runs[0]!.rejected.map((r) => r.key)).toEqual(['credibilityScore#1']);
+    const a = await applySuggestion(store, { noticeId, runId: p.run.id, key: 'credibilityScore', variantIndex: 0 }, deps);
+    expect(a.extraction.items.credibilityScore.userEdited).toMatchObject({ value: 10, note: '[단독]' });
+    const b = await applySuggestion(store, { noticeId, runId: p.run.id, key: 'credibilityScore', variantIndex: 0, note: '메모' }, deps);
+    expect(b.extraction.items.credibilityScore.userEdited!.note).toBe('[단독] 메모');
+    await expect(applySuggestion(store, { noticeId, runId: p.run.id, key: 'credibilityScore', variantIndex: 5 }, deps)).rejects.toMatchObject({ code: 'AI_SUGGESTION_INVALID' });
+    await expect(applySuggestion(store, { noticeId, runId: p.run.id, key: 'credibilityScore' }, deps)).rejects.toMatchObject({ code: 'AI_SUGGESTION_INVALID' });
   });
 
   it('dismissed·없는 제안·none 제안·rejected 키는 AI_SUGGESTION_INVALID', async () => {
@@ -266,5 +319,63 @@ describe('execApiRun / cancel / 키 비노출', () => {
     expect(f.runs[0]!.status).toBe('cancelled');
     expect(f.runs[0]!.suggestions).toEqual({});
     expect(await cancelRunState(ctx.store, { noticeId: ctx.noticeId, runId: prepared.run.id }, ctx.deps)).toEqual({ cancelled: false });
+  });
+});
+
+describe('범위 모델(auto·keys)', () => {
+  const allVerified = (store: MemoryStore) => {
+    const k = fileKey(store, '/extraction.json');
+    const x = JSON.parse(store.files.get(k) as string) as Extraction;
+    for (const item of Object.values(x.items)) { item.status = 'verified'; delete item.userEdited; }
+    store.files.set(k, JSON.stringify(x));
+  };
+  const prep = (ctx: Awaited<ReturnType<typeof setup>>, extra: object) =>
+    prepareRun(ctx.store, { noticeId: ctx.noticeId, provider: 'claude', mode: 'manual', model: null, ...extra } as never, ctx.deps);
+
+  it('auto: 확인 필요가 있으면 그것만(저장 scope pending)', async () => {
+    const ctx = await setup();
+    const x = readJsonFile<Extraction>(ctx.store, '/extraction.json');
+    const expected = pendingKeys(x.items);
+    expect(expected.length).toBeGreaterThan(0);
+    const p = await prep(ctx, { scope: 'auto' });
+    expect(p.run.keys).toEqual(expected);
+    expect(p.run.scope).toBe('pending');
+  });
+
+  it('auto: 확인 필요가 없으면 7개 전체(저장 scope all), 파일에 auto가 저장되지 않는다', async () => {
+    const ctx = await setup();
+    allVerified(ctx.store);
+    const p = await prep(ctx, { scope: 'auto' });
+    expect(p.run.keys).toHaveLength(7);
+    expect(p.run.scope).toBe('all');
+    expect(JSON.stringify(await review(ctx.store, ctx.noticeId))).not.toContain('"scope": "auto"');
+    await expect(prep(ctx, { scope: 'pending' })).rejects.toMatchObject({ code: 'NOTHING_TO_REVIEW' });
+  });
+
+  it('keys: 중복 제거·정의 순서, 저장 scope keys, 프롬프트에 그 항목만', async () => {
+    const ctx = await setup();
+    const p = await prep(ctx, { scope: 'keys', keys: ['performancePeriod', 'credibilityScore', 'performancePeriod'] });
+    expect(p.run.keys).toEqual(['credibilityScore', 'performancePeriod']);
+    expect(p.run.scope).toBe('keys');
+    expect(p.built.spec.keys).toEqual(['credibilityScore', 'performancePeriod']);
+    const prompt = await ctx.store.readText(p.run.promptPath);
+    expect(prompt).toContain('### credibilityScore');
+    expect(prompt).not.toContain('### managementScore');
+  });
+
+  it('keys: 빈 배열·없음은 NOTHING_TO_REVIEW, 모르는 키는 AI_BAD_REQUEST', async () => {
+    const ctx = await setup();
+    await expect(prep(ctx, { scope: 'keys', keys: [] })).rejects.toMatchObject({ code: 'NOTHING_TO_REVIEW' });
+    await expect(prep(ctx, { scope: 'keys' })).rejects.toMatchObject({ code: 'NOTHING_TO_REVIEW' });
+    await expect(prep(ctx, { scope: 'keys', keys: ['credibilityScore', 'nope'] })).rejects.toMatchObject({ code: 'AI_BAD_REQUEST' });
+    await expect(prep(ctx, { scope: 'weird' })).rejects.toMatchObject({ code: 'AI_BAD_REQUEST' });
+  });
+
+  it('1키 run의 응답은 그 키만 요청으로 검증된다(요청 밖 키는 unknown_key)', async () => {
+    const ctx = await setup();
+    const p = await prep(ctx, { scope: 'keys', keys: ['credibilityScore'] });
+    const f = await finishRun(ctx.store, { noticeId: ctx.noticeId, runId: p.run.id, responseText: resp(p.run.id, goodItems) }, ctx.deps);
+    expect(Object.keys(f.runs[0]!.suggestions)).toEqual(['credibilityScore']);
+    expect(f.runs[0]!.rejected).toEqual([expect.objectContaining({ key: 'managementScore', reason: 'unknown_key' })]);
   });
 });

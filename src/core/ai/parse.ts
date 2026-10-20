@@ -1,9 +1,10 @@
 import { parseKoreanAmount } from '../extraction/normalize';
 import { VALUE_CHECK } from '../model/field-edit';
 import type { ExtractionKey } from '../types/extraction';
-import { AI_SCHEMA_TAG, type AiErrorCode } from '../types/ai';
+import { AI_MAX_VARIANTS, AI_SCHEMA_TAGS_ACCEPTED, type AiErrorCode } from '../types/ai';
 
-export interface RawAiItem { key: string; value: unknown; quote: string; file: string | null; page: number | null; note?: string }
+export interface RawAiVariant { condition: string; value: unknown; quote: string }
+export interface RawAiItem { key: string; value: unknown; quote: string; file: string | null; page: number | null; note?: string; variants?: RawAiVariant[] }
 export type ParseResult =
   | { ok: true; items: RawAiItem[] }
   | { ok: false; code: Extract<AiErrorCode, 'AI_CLIPBOARD_IS_PROMPT' | 'AI_BAD_RESPONSE' | 'AI_RUN_MISMATCH'>; message: string };
@@ -51,7 +52,7 @@ export function detectClipboard(text: string): 'request' | 'response' | 'unknown
   if (!j) return 'unknown';
   try {
     const o = JSON.parse(j) as { schema?: unknown; items?: unknown } | null;
-    if (o && typeof o === 'object' && (o.schema === AI_SCHEMA_TAG || Array.isArray(o.items))) return 'response';
+    if (o && typeof o === 'object' && (AI_SCHEMA_TAGS_ACCEPTED.includes(o.schema as string) || Array.isArray(o.items))) return 'response';
   } catch { /* unknown */ }
   return 'unknown';
 }
@@ -69,7 +70,8 @@ export function coerceValue(key: ExtractionKey, v: unknown): Coerced {
       break;
     case 'performanceMinAmount':
       if (typeof v === 'string') {
-        const t = v.trim();
+        // v2는 원문 표기로 받으므로 "5억원 이상"의 꼬리 "이상"은 떼고 해석한다.
+        const t = v.trim().replace(/\s*이상$/, '');
         if (/^[\d,.\s조억만천백]+원?$/.test(t) && /[\d조억만천백]/.test(t) && !DOT_THOUSANDS.test(t)) {
           const n = parseKoreanAmount(t);
           if (n !== null) out = n;
@@ -79,7 +81,9 @@ export function coerceValue(key: ExtractionKey, v: unknown): Coerced {
     case 'performancePeriod':
       if (typeof v === 'number' && Number.isInteger(v)) out = `${v}년`;
       else if (typeof v === 'string') {
-        const m = /^\s*(\d{1,2})\s*(?:년(?:간)?)?\s*$/.exec(v);
+        // v2 원문 표기("최근 5년", "5년 이내", "5년간")도 받는다.
+        // 숫자만 있으면 그대로, "최근"·"이내"가 붙으면 '년'이 있어야 한다.
+        const m = /^\s*(\d{1,2})\s*(?:년(?:간)?)?\s*$/.exec(v) ?? /^\s*(?:최근\s*)?(\d{1,2})\s*년(?:간)?\s*(?:이내)?\s*$/.exec(v);
         if (m) out = `${parseInt(m[1]!, 10)}년`;
       }
       break;
@@ -97,20 +101,27 @@ export function coerceValue(key: ExtractionKey, v: unknown): Coerced {
 
 export function parseAiResponse(text: string, ctx: { runId: string; keys: ExtractionKey[] }): ParseResult {
   const bad = (code: Extract<ParseResult, { ok: false }>['code'], message: string): ParseResult => ({ ok: false, code, message });
-  if (detectClipboard(text) === 'request') return bad('AI_CLIPBOARD_IS_PROMPT', '붙여넣은 내용이 요청문입니다. AI의 답변을 복사해 주세요.');
+  if (detectClipboard(text) === 'request') return bad('AI_CLIPBOARD_IS_PROMPT', '붙여넣은 내용이 프롬프트입니다. AI의 답변을 복사해 주세요.');
   const j = extractJson(text);
   if (!j) return bad('AI_BAD_RESPONSE', '답변에서 JSON을 찾지 못했습니다.');
   let o: unknown;
   try { o = JSON.parse(j); } catch { return bad('AI_BAD_RESPONSE', '답변 JSON을 읽을 수 없습니다.'); }
   if (!o || typeof o !== 'object' || Array.isArray(o)) return bad('AI_BAD_RESPONSE', '답변 형식이 올바르지 않습니다.');
   const r = o as { schema?: unknown; runId?: unknown; items?: unknown };
-  if (r.schema !== AI_SCHEMA_TAG) return bad('AI_BAD_RESPONSE', '답변의 schema 값이 다릅니다.');
+  if (typeof r.schema !== 'string' || !AI_SCHEMA_TAGS_ACCEPTED.includes(r.schema)) return bad('AI_BAD_RESPONSE', '답변의 schema 값이 다릅니다.');
   if (r.runId !== ctx.runId) return bad('AI_RUN_MISMATCH', '다른 요청에 대한 답변입니다(runId 불일치).');
   if (!Array.isArray(r.items)) return bad('AI_BAD_RESPONSE', '답변에 items 배열이 없습니다.');
   const items: RawAiItem[] = [];
   for (const it of r.items) {
     if (!it || typeof it !== 'object' || typeof (it as { key?: unknown }).key !== 'string') continue;
     const x = it as Record<string, unknown>;
+    const variants: RawAiVariant[] = Array.isArray(x.variants)
+      ? x.variants.slice(0, AI_MAX_VARIANTS).flatMap((v): RawAiVariant[] => {
+        if (!v || typeof v !== 'object') return [];
+        const y = v as Record<string, unknown>;
+        return [{ condition: typeof y.condition === 'string' ? y.condition : '', value: y.value === undefined ? null : y.value, quote: typeof y.quote === 'string' ? y.quote : '' }];
+      })
+      : [];
     items.push({
       key: x.key as string,
       value: x.value === undefined ? null : x.value,
@@ -118,6 +129,7 @@ export function parseAiResponse(text: string, ctx: { runId: string; keys: Extrac
       file: typeof x.file === 'string' && x.file ? x.file : null,
       page: typeof x.page === 'number' && Number.isFinite(x.page) ? x.page : null,
       ...(typeof x.note === 'string' && x.note ? { note: x.note } : {}),
+      ...(variants.length ? { variants } : {}),
     });
   }
   return { ok: true, items };

@@ -1,0 +1,78 @@
+{
+ "totals": {
+  "credibilityScore": {
+   "wrong": 3,
+   "correct": 11,
+   "rejected": 4
+  },
+  "managementScore": {
+   "skipped": 5,
+   "correct": 11,
+   "rejected": 2
+  },
+  "performanceScore": {
+   "correct": 18
+  },
+  "performancePeriod": {
+   "correct": 18
+  },
+  "performanceMinAmount": {
+   "wrong": 5,
+   "skipped": 4,
+   "correct": 5,
+   "partial": 4
+  },
+  "performanceCondition": {
+   "correct": 17,
+   "wrong": 1
+  },
+  "differentialScoring": {
+   "correct": 18
+  }
+ },
+ "changes": [
+  "tests/fixtures/ai-eval/responses/R26BK01678997-000/1.1.0-1.txt credibilityScore: skipped → wrong",
+  "tests/fixtures/ai-eval/responses/R26BK01678997-000/1.1.0-1.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01678997-000/1.1.0-2.txt credibilityScore: skipped → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01678997-000/1.1.0-2.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01678997-000/1.1.0-3.txt credibilityScore: skipped → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01678997-000/1.1.0-3.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01678997-000/1.1.0-3.txt performanceMinAmount: rejected → wrong",
+  "tests/fixtures/ai-eval/responses/R26BK01722175-000/1.1.0-1.txt credibilityScore: skipped → wrong",
+  "tests/fixtures/ai-eval/responses/R26BK01722175-000/1.1.0-1.txt managementScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01722175-000/1.1.0-1.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01722175-000/1.1.0-1.txt performanceCondition: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/1.1.0-2.txt credibilityScore: skipped → rejected",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/1.1.0-2.txt managementScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/1.1.0-2.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/1.1.0-2.txt performanceMinAmount: rejected → wrong",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/1.1.0-2.txt performanceCondition: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/1.1.0-3.txt credibilityScore: skipped → rejected",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/1.1.0-3.txt managementScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/1.1.0-3.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/1.1.0-3.txt performanceCondition: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01724847-000/1.1.0-1.txt credibilityScore: skipped → rejected",
+  "tests/fixtures/ai-eval/responses/R26BK01724847-000/1.1.0-1.txt managementScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01724847-000/1.1.0-1.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01724847-000/1.1.0-1.txt performanceCondition: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01724847-000/1.1.0-2.txt credibilityScore: skipped → rejected",
+  "tests/fixtures/ai-eval/responses/R26BK01724847-000/1.1.0-2.txt managementScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01724847-000/1.1.0-2.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01724847-000/1.1.0-2.txt performanceCondition: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01724847-000/1.1.0-3.txt credibilityScore: skipped → wrong",
+  "tests/fixtures/ai-eval/responses/R26BK01724847-000/1.1.0-3.txt managementScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01724847-000/1.1.0-3.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01724847-000/1.1.0-3.txt performanceCondition: rejected → wrong",
+  "tests/fixtures/ai-eval/responses/R26BK01678997-000/2.0.0-1.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01678997-000/2.0.0-2.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01722175-000/2.0.0-1.txt managementScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01722175-000/2.0.0-1.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01722175-000/2.0.0-3.txt managementScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01722175-000/2.0.0-3.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/2.0.0-1.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/2.0.0-1.txt performancePeriod: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/2.0.0-2.txt managementScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/2.0.0-2.txt performanceScore: rejected → correct",
+  "tests/fixtures/ai-eval/responses/R26BK01723328-000/2.0.0-2.txt performancePeriod: rejected → correct"
+ ]
+}

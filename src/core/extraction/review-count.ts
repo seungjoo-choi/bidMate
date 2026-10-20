@@ -29,6 +29,6 @@ export function reviewCountOf(x: Extraction): number {
 export function conflictCountOf(x: Extraction): number {
   return EXTRACTION_KEYS.filter((k) => {
     const it = x.items[k];
-    return it.status === 'needs_review' && (it.reason === 'conflict' || it.reason === 'low_confidence') && it.userEdited === undefined;
+    return it.status === 'needs_review' && (it.reason === 'conflict' || it.reason === 'multi' || it.reason === 'low_confidence') && it.userEdited === undefined;
   }).length;
 }

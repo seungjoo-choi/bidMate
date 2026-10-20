@@ -60,7 +60,7 @@ describe('AI 라우터', () => {
     stubChrome({ mode: 'manual' });
     vi.mocked(send).mockResolvedValue({ runId: 'r9' } as never);
     expect(await handlerOf('ai/run')({ noticeId: 'n', scope: 'all' }, dash)).toEqual({ runId: 'r9' });
-    expect(vi.mocked(send)).toHaveBeenCalledWith('ai/exec', expect.objectContaining({ api: { key: KEY, model: 'claude-sonnet-5-5' } }), expect.objectContaining({ target: 'offscreen' }));
+    expect(vi.mocked(send)).toHaveBeenCalledWith('ai/exec', expect.objectContaining({ api: { key: KEY, model: 'claude-sonnet-5-5', sendFullText: true } }), expect.objectContaining({ target: 'offscreen' }));
   });
 
   it('ai/run: 키·모델·권한이 없으면 각각 코드로 거부하고 offscreen을 띄우지 않는다', async () => {
@@ -80,7 +80,7 @@ describe('AI 라우터', () => {
     vi.mocked(send).mockResolvedValue({ runId: 'r1' } as never);
     const r = await handlerOf('ai/run')({ noticeId: 'n', scope: 'pending', files: ['a'] }, dash);
     expect(r).toEqual({ runId: 'r1' });
-    expect(vi.mocked(send)).toHaveBeenCalledWith('ai/exec', { noticeId: 'n', scope: 'pending', provider: 'claude', files: ['a'], api: { key: KEY, model: 'claude-sonnet-5-5' } }, expect.objectContaining({ target: 'offscreen' }));
+    expect(vi.mocked(send)).toHaveBeenCalledWith('ai/exec', { noticeId: 'n', scope: 'pending', provider: 'claude', files: ['a'], api: { key: KEY, model: 'claude-sonnet-5-5', sendFullText: true } }, expect.objectContaining({ target: 'offscreen' }));
   });
 
   it('ai/run: offscreen 오류 메시지의 키는 가려서 던진다', async () => {
@@ -125,5 +125,16 @@ describe('AI 라우터', () => {
     await handlerOf('ai/prepare')({ noticeId: 'n', scope: 'all' }, dash);
     expect(vi.mocked(send)).toHaveBeenLastCalledWith('ai/prepare', { noticeId: 'n', scope: 'all', provider: 'claude' }, expect.objectContaining({ target: 'offscreen' }));
     await expect(handlerOf('ai/prepare')({ noticeId: 'n', scope: 'all' }, tabSender)).rejects.toMatchObject({ code: 'SENDER_FORBIDDEN' });
+  });
+
+  it('ai/run·ai/prepare 릴레이가 scope와 keys를 그대로 전달한다', async () => {
+    vi.mocked(send).mockResolvedValue({ runId: 'r1' } as never);
+    await handlerOf('ai/run')({ noticeId: 'n', scope: 'keys', keys: ['credibilityScore'] }, dash);
+    expect(vi.mocked(send)).toHaveBeenLastCalledWith('ai/exec', { noticeId: 'n', scope: 'keys', keys: ['credibilityScore'], provider: 'claude', api: { key: KEY, model: 'claude-sonnet-5-5', sendFullText: true } }, expect.anything());
+    await handlerOf('ai/run')({ noticeId: 'n', scope: 'auto' }, dash);
+    expect(vi.mocked(send).mock.calls.at(-1)![1]).toMatchObject({ scope: 'auto' });
+    expect(vi.mocked(send).mock.calls.at(-1)![1]).not.toHaveProperty('keys');
+    await handlerOf('ai/prepare')({ noticeId: 'n', scope: 'keys', keys: ['performancePeriod'] }, dash);
+    expect(vi.mocked(send)).toHaveBeenLastCalledWith('ai/prepare', { noticeId: 'n', scope: 'keys', keys: ['performancePeriod'], provider: 'claude' }, expect.anything());
   });
 });

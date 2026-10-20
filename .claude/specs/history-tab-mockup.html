@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>수집과 메일 이력 리디자인</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --canvas:#111110; --surface:#1c1c1b; --sunken:#171716; --line:#2e2e2b; --line-strong:#3a3a37;
+    --ink:#e9e9e5; --muted:#9b9b95; --faint:#6a6a65; --accent:#9bb8e8; --primary:#3b6fd6; --primary-hover:#4c7ee3;
+    --ok:#6cc08e; --warn:#e0a44a; --danger:#ec7a6d; --ok-wash:#18241c; --warn-wash:#2a2216; --info-wash:#1b222d;
+    --shadow-card: 0 1px 2px rgb(0 0 0/.45), 0 2px 8px -2px rgb(0 0 0/.35); --shadow-btn: 0 1px 2px rgb(0 0 0/.45);
+  }
+  :root.light {
+    --canvas:#ebebe7; --surface:#fff; --sunken:#efefeb; --line:#e2e2dd; --line-strong:#cfcfc9;
+    --ink:#1b1b19; --muted:#65655f; --faint:#a1a19b; --accent:#2a4f86; --primary:#2b5cb0; --primary-hover:#224d97;
+    --ok:#2f7a4f; --warn:#a1620a; --danger:#b8382c; --ok-wash:#ecf5ef; --warn-wash:#fbf3e4; --info-wash:#eef2f8;
+    --shadow-card: 0 1px 2px rgb(27 27 25/.06), 0 2px 8px -2px rgb(27 27 25/.09); --shadow-btn: 0 1px 2px rgb(27 27 25/.06);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--canvas); color:var(--ink); font:15px/1.6 'Pretendard Variable', Pretendard, 'Malgun Gothic', sans-serif;
+    letter-spacing:-0.01em; word-break:keep-all; overflow-wrap:break-word; -webkit-font-smoothing:antialiased; }
+  .page { max-width:1100px; margin:0 auto; padding:32px 24px 80px; }
+  .mono { font-family: ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; letter-spacing:0; }
+  a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
+
+  /* 데모 상단 바 */
+  .demo { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:28px; padding:10px 14px; border:1px dashed var(--line-strong); border-radius:10px; color:var(--muted); font-size:13px; }
+  .demo b { color:var(--ink); margin-right:4px; }
+  .demo button { font:inherit; font-size:13px; padding:4px 10px; border-radius:6px; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); cursor:pointer; }
+  .demo button[aria-pressed="true"] { background:var(--primary); border-color:var(--primary); color:#fff; }
+
+  /* 기존 헤더(맥락용, 흐리게) */
+  .ctx { opacity:.55; }
+  .back { font-size:14px; }
+  .title { font-size:24px; font-weight:700; line-height:1.35; margin:14px 0 6px; }
+  .meta { display:flex; flex-wrap:wrap; gap:18px; font-size:13px; color:var(--muted); }
+  .tabs { display:flex; gap:28px; border-bottom:1px solid var(--line); margin:22px 0 24px; font-size:15px; color:var(--muted); }
+  .tabs span { padding-bottom:10px; }
+  .tabs .on { color:var(--ink); font-weight:600; border-bottom:2px solid var(--ink); }
+
+  .stack { display:flex; flex-direction:column; gap:20px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow-card); }
+  .card-h { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 24px; border-bottom:1px solid var(--line); }
+  .card-h h2 { margin:0; font-size:16px; font-weight:650; display:flex; align-items:center; gap:8px; }
+  .card-h h2 .n { color:var(--faint); font-weight:500; }
+  .card-b { padding:20px 24px; }
+
+  .badge { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; white-space:nowrap; }
+  .badge::before { content:''; width:7px; height:7px; border-radius:2px; background:currentColor; }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .err { color:var(--danger); } .idle { color:var(--muted); }
+  .chip { display:inline-block; font-size:12px; font-weight:600; padding:1px 7px; border-radius:999px; background:var(--sunken); border:1px solid var(--line); color:var(--muted); white-space:nowrap; }
+  .chip.auto { color:var(--accent); }
+
+  /* 진행 타임라인 */
+  .steps { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); padding:22px 24px 20px; }
+  .step { position:relative; padding-right:12px; }
+  .step .dot { position:relative; z-index:1; width:22px; height:22px; border-radius:50%; display:grid; place-items:center; background:var(--surface); border:2px solid var(--line-strong); color:var(--faint); }
+  .step .dot svg { width:12px; height:12px; stroke-width:3; }
+  .step::before { content:''; position:absolute; top:10px; left:22px; right:0; height:2px; background:var(--line-strong); }
+  .step:last-child::before { display:none; }
+  .step.done .dot { background:var(--ok); border-color:var(--ok); color:var(--surface); }
+  .step.done::before { background:var(--ok); opacity:.55; }
+  .step.warn .dot { background:var(--warn); border-color:var(--warn); color:var(--surface); }
+  .step .lbl { margin-top:10px; font-weight:600; font-size:14px; }
+  .step .t { font-size:13px; color:var(--muted); }
+  .step .sub { font-size:12.5px; color:var(--faint); margin-top:2px; }
+  .step .sub.warn { color:var(--warn); }
+  @media (max-width:640px) {
+    .steps { grid-template-columns:1fr; gap:14px; }
+    .step { display:grid; grid-template-columns:22px 1fr; column-gap:12px; padding:0; }
+    .step::before { top:22px; bottom:-14px; left:10px; right:auto; width:2px; height:auto; }
+    .step .lbl { margin:0; } .step .t, .step .sub { grid-column:2; }
+  }
+
+  /* 메일 초안 */
+  .kv { display:grid; grid-template-columns:88px minmax(0,1fr); row-gap:10px; column-gap:16px; font-size:14px; margin:0; }
+  .kv dt { color:var(--muted); } .kv dd { margin:0; }
+  .foot { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:14px 24px; border-top:1px solid var(--line); }
+  .foot .hint { color:var(--faint); font-size:13px; }
+  .foot .acts { margin-left:auto; display:flex; flex-wrap:wrap; gap:8px; }
+
+  /* 버튼 (B/C안 스타일) */
+  .btn { display:inline-flex; align-items:center; gap:6px; height:40px; padding:0 16px; border-radius:8px; border:1px solid transparent; font:inherit; font-size:14px; line-height:20px; font-weight:600; white-space:nowrap; cursor:pointer; }
+  .btn.ic { padding-left:12px; }
+  .btn svg { width:15px; height:15px; stroke-width:1.75; }
+  .btn.pri { background:var(--primary); border-color:var(--primary); color:#fff; box-shadow:var(--shadow-btn); }
+  .btn.pri:hover { background:var(--primary-hover); }
+  .btn.sec { background:var(--surface); border-color:var(--line-strong); color:var(--ink); box-shadow:var(--shadow-btn); }
+  .btn.sec:hover { background:var(--sunken); }
+  .btn.sm { height:32px; padding:0 10px; font-size:13px; }
+  .btn.ghost { background:transparent; color:var(--muted); }
+  .btn.ghost:hover { background:var(--sunken); color:var(--ink); }
+  .btn.ghost.danger:hover { color:var(--danger); }
+
+  /* 발송 이력 */
+  .hist { list-style:none; margin:0; padding:0; }
+  .hist li { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:16px; align-items:center; padding:12px 24px; border-top:1px solid var(--line); }
+  .hist li:first-child { border-top:0; }
+  .hist .when { font-size:13.5px; color:var(--muted); }
+  .hist .what { min-width:0; display:flex; align-items:center; gap:8px; font-size:14px; }
+  .hist .what .s { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hist .acts { display:flex; gap:2px; opacity:.85; }
+  .hist li.void .when, .hist li.void .s { color:var(--faint); text-decoration:line-through; }
+  .empty { padding:22px 24px; color:var(--muted); font-size:14px; }
+  .manual { padding:12px 24px; border-top:1px solid var(--line); font-size:13px; color:var(--faint); }
+  .manual a { font-weight:600; }
+  .mform { display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px; padding:14px 24px 16px; border-top:1px solid var(--line); background:var(--sunken); }
+  .mform label { display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; }
+  .mform input { height:40px; border:1px solid var(--line-strong); border-radius:6px; background:var(--surface); color:var(--ink); padding:0 12px; font:inherit; font-size:14px; }
+  .mform .grow { flex:1 1 200px; }
+  .mform .acts { display:flex; gap:8px; margin-left:auto; }
+
+  /* 오류·다른 차수 */
+  .errs { width:100%; border-collapse:collapse; font-size:14px; }
+  .errs th { text-align:left; font-weight:500; color:var(--muted); background:var(--sunken); padding:10px 24px; }
+  .errs td { padding:12px 24px; border-top:1px solid var(--line); vertical-align:top; }
+  .rounds li { grid-template-columns:4.5rem minmax(0,1fr) auto; }
+
+  .note { margin-top:36px; padding:18px 22px; border-radius:10px; background:var(--info-wash); border:1px solid var(--line); font-size:14px; color:var(--muted); }
+  .note b { color:var(--ink); }
+  .note ul { margin:8px 0 0; padding-left:18px; } .note li { margin:3px 0; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="demo">
+    <b>목업 상태</b>
+    <button data-st="sent" aria-pressed="true">발송 완료</button>
+    <button data-st="draft" aria-pressed="false">초안만 있음</button>
+    <button data-st="err" aria-pressed="false">수집 일부 누락 + 다른 차수</button>
+    <span style="margin-left:auto"></span>
+    <button id="theme">라이트로 보기</button>
+  </div>
+
+  <div class="ctx">
+    <div class="back">← 공고 목록</div>
+    <div class="title">네팔 떠라이 지역 기후탄력적 벼 품종 재배 및 쌀 생산량 증대사업(2026-2031/1,200만불) PMC 용역</div>
+    <div class="meta"><span class="mono">R26BK01678997-000</span><span>한국국제협력단</span><span>입찰마감 <b class="mono">10/28 10:00</b> D-8</span></div>
+  </div>
+  <div class="tabs"><span>개요</span><span>첨부파일 10</span><span class="on">수집과 메일 이력</span><span>평가정보 검토 0</span></div>
+
+  <div class="stack">
+    <!-- 1. 진행 -->
+    <section class="card">
+      <div class="steps" id="steps"></div>
+    </section>
+
+    <!-- 2. 메일 -->
+    <section class="card">
+      <div class="card-h"><h2>메일</h2><span class="badge" id="mailBadge"></span></div>
+      <div class="card-b">
+        <dl class="kv">
+          <dt>제목</dt><dd>[입찰공고 공유] 네팔 떠라이 지역 기후탄력적 벼 품종 재배 및 쌀 생산량 증대사업(2026-2031/1,200만불) PMC 용역</dd>
+          <dt>받는 사람</dt><dd>2명 · 참조 없음</dd>
+          <dt>첨부</dt><dd>10개</dd>
+        </dl>
+      </div>
+      <div class="foot">
+        <span class="hint" id="mailHint"></span>
+        <div class="acts" id="mailActs"></div>
+      </div>
+    </section>
+
+    <!-- 3. 발송 이력 -->
+    <section class="card">
+      <div class="card-h"><h2>발송 이력 <span class="n" id="histN"></span></h2></div>
+      <div id="histBody"></div>
+      <div class="manual" id="manualLink">웹메일 발송이 자동으로 기록되지 않았나요? <a href="#" id="openManual">직접 기록</a></div>
+      <div class="mform" id="manualForm" hidden>
+        <label>발송 시각<input type="datetime-local" value="2026-10-20T12:05"></label>
+        <label class="grow">메모 (선택)<input placeholder="예: 네이버웍스에서 직접 발송"></label>
+        <div class="acts">
+          <button class="btn ghost" id="closeManual">닫기</button>
+          <button class="btn pri">기록</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. 수집 오류 (있을 때만) -->
+    <section class="card" id="errCard" hidden>
+      <div class="card-h"><h2>수집 오류 <span class="n">2</span></h2><span class="badge warn">일부 누락</span></div>
+      <div style="overflow-x:auto">
+        <table class="errs">
+          <thead><tr><th>단계</th><th>내용</th><th>다시 시도</th></tr></thead>
+          <tbody>
+            <tr><td>첨부 내려받기</td><td>제안요청서.hwp 내려받기가 시간 초과로 실패했습니다 <span class="mono idle" style="font-size:12px">TIMEOUT</span></td><td>가능</td></tr>
+            <tr><td>첨부 내려받기</td><td>과업지시서.pdf 파일이 서버에 없습니다 <span class="mono idle" style="font-size:12px">NOT_FOUND</span></td><td>불가</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="foot"><div class="acts"><button class="btn sec ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>다시 수집</button></div></div>
+    </section>
+
+    <!-- 5. 다른 차수 (있을 때만) -->
+    <section class="card" id="roundCard" hidden>
+      <div class="card-h"><h2>같은 공고의 다른 차수</h2><span class="badge warn">정정공고</span></div>
+      <ul class="hist rounds">
+        <li><span class="mono idle">-000</span><a class="s" href="#">네팔 떠라이 지역 기후탄력적 벼 품종 재배 및 쌀 생산량 증대사업 PMC 용역</a><span class="mono when">10/14 09:12 수집</span></li>
+        <li><span class="mono">-001</span><span class="s" style="font-weight:600">네팔 떠라이 지역 기후탄력적 벼 품종 재배 및 쌀 생산량 증대사업(2026-2031/1,200만불) PMC 용역 <span class="chip">지금 보는 공고</span></span><span class="mono when">10/20 11:41 수집</span></li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="note">
+    <b>바뀌는 점</b>
+    <ul>
+      <li>수집·메일 두 카드로 나뉘어 있던 시각 정보를 맨 위 <b>진행 단계</b> 한 줄로 합쳤습니다. 오류가 있으면 수집 단계가 주황색이 되고 아래에 오류 카드가 나옵니다.</li>
+      <li>메일 카드에는 초안 요약(제목·받는 사람·첨부)과 다음 할 일 버튼만 둡니다. 발송 후에는 [보낸 메일 보기]가 주 버튼이 됩니다.</li>
+      <li><b>발송 1회 더 기록</b> 버튼은 없애고, 이력 아래 "자동으로 기록되지 않았나요? <b>직접 기록</b>" 링크로 바꿨습니다. 누르면 그 자리에 입력 줄이 펼쳐집니다.</li>
+      <li>이력 줄은 <span class="chip auto">자동</span>/<span class="chip">직접</span> 칩, 서비스, 제목 순서입니다. [내용]·[취소]는 작은 고스트 버튼으로 바꿨습니다.</li>
+      <li><b>삭제</b>: "이번 세션 작업" 카드, 수집의 "마지막 작업" ID, 동작하지 않던 "이 공고를 대체한 공고".</li>
+      <li><b>정정공고 연결</b>은 다른 차수가 수집됐거나 정정공고일 때만 "같은 공고의 다른 차수" 카드로 나옵니다(상단 "수집 일부 누락 + 다른 차수" 상태에서 확인).</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  const I = {
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    eye: '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
+    mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    alert: '<path d="M12 9v4"/><path d="M12 17h.01"/>',
+  };
+  const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${I[k]}</svg>`;
+
+  const S = {
+    sent: {
+      steps: [
+        ['done', '수집', '10/20 11:41', '첨부 10개 · 오류 없음'],
+        ['done', '메일 작성', '10/20 11:43', ''],
+        ['done', '발송 준비', '10/20 12:00', '편집 없음'],
+        ['done', '발송', '10/20 12:05', '네이버웍스 · 자동 기록'],
+      ],
+      badge: ['ok', '발송 완료'], hint: '마지막 발송 10/20 12:05',
+      acts: `<button class="btn sec ic">${svg('mail')}메일 다시 작성</button><button class="btn pri ic">${svg('eye')}보낸 메일 보기</button>`,
+      hist: [
+        ['10/20 12:05', 'auto', '네이버웍스', '[입찰공고 공유] 네팔 떠라이 지역 기후탄력적 벼 품종 재배 및 쌀 생산량 증대사업(2026-2031/1,200만불) PMC 용역', false],
+        ['10/20 11:58', 'manual', '', '테스트로 나에게 보냄', true],
+      ],
+      err: false, rounds: false,
+    },
+    draft: {
+      steps: [
+        ['done', '수집', '10/20 11:41', '첨부 10개 · 오류 없음'],
+        ['done', '메일 작성', '10/20 11:43', ''],
+        ['done', '발송 준비', '10/20 12:00', '편집 없음'],
+        ['', '발송', '아직 보내지 않음', ''],
+      ],
+      badge: ['warn', '초안 작성됨'], hint: '초안을 확인하고 웹메일에서 보내세요',
+      acts: `<button class="btn pri ic">${svg('mail')}메일 초안 보기</button>`,
+      hist: [], err: false, rounds: false,
+    },
+    err: {
+      steps: [
+        ['warn', '수집', '10/20 11:41', '첨부 8/10개 · 오류 2건', true],
+        ['', '메일 작성', '아직 작성하지 않음', ''],
+        ['', '발송 준비', '—', ''],
+        ['', '발송', '—', ''],
+      ],
+      badge: ['idle', '초안 없음'], hint: '',
+      acts: `<button class="btn pri ic">${svg('mail')}메일 작성 준비</button>`,
+      hist: [], err: true, rounds: true,
+    },
+  };
+
+  function render(k) {
+    const s = S[k];
+    document.getElementById('steps').innerHTML = s.steps.map(([st, l, t, sub, w]) =>
+      `<div class="step ${st}"><div class="dot">${st === 'done' ? svg('check') : st === 'warn' ? svg('alert') : ''}</div><div class="lbl">${l}</div><div class="t ${t.includes('/') ? 'mono' : ''}">${t}</div>${sub ? `<div class="sub ${w ? 'warn' : ''}">${sub}</div>` : ''}</div>`).join('');
+    const b = document.getElementById('mailBadge'); b.className = 'badge ' + s.badge[0]; b.textContent = s.badge[1];
+    document.getElementById('mailHint').textContent = s.hint;
+    document.getElementById('mailActs').innerHTML = s.acts;
+    const live = s.hist.filter((h) => !h[4]).length;
+    document.getElementById('histN').textContent = s.hist.length ? live : '';
+    document.getElementById('histBody').innerHTML = s.hist.length
+      ? `<ul class="hist">${s.hist.map(([w, src, p, subj, v]) => `<li class="${v ? 'void' : ''}"><span class="when mono">${w}</span><span class="what"><span class="chip ${src === 'auto' ? 'auto' : ''}">${src === 'auto' ? '자동' : '직접'}</span>${p ? `<span class="idle" style="font-size:13px;white-space:nowrap">${p}</span>` : ''}<span class="s">${subj}</span>${v ? '<span class="chip">취소됨</span>' : ''}</span><span class="acts"><button class="btn ghost sm ic">${svg('eye')}내용</button>${v ? '' : `<button class="btn ghost sm danger" title="발송 기록 취소">취소</button>`}</span></li>`).join('')}</ul>`
+      : '<div class="empty">아직 기록된 발송이 없습니다. 웹메일에서 보내면 자동으로 기록됩니다.</div>';
+    document.getElementById('errCard').hidden = !s.err;
+    document.getElementById('roundCard').hidden = !s.rounds;
+    document.querySelectorAll('.demo [data-st]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.st === k)));
+  }
+  document.querySelectorAll('.demo [data-st]').forEach((x) => x.onclick = () => render(x.dataset.st));
+  document.getElementById('theme').onclick = (e) => { const l = document.documentElement.classList.toggle('light'); e.target.textContent = l ? '다크로 보기' : '라이트로 보기'; };
+  const mf = document.getElementById('manualForm'), ml = document.getElementById('manualLink');
+  document.getElementById('openManual').onclick = (e) => { e.preventDefault(); mf.hidden = false; ml.hidden = true; };
+  document.getElementById('closeManual').onclick = () => { mf.hidden = true; ml.hidden = false; };
+  render('sent');
+</script>
+</body>
+</html>

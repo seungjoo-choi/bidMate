@@ -1,7 +1,7 @@
 import { Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { normalizeBizNo } from '../../core/evaluation/company';
-import { Button, Card, Field, InlineAlert } from '../../ui/components';
+import { Button, Card, Field, FormActions, InlineAlert } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useSettings } from '../../ui/hooks/useSettings';
 
@@ -45,7 +45,9 @@ export function CompanyCard() {
       <Field label="회사명 (선택)" htmlFor="company-name">
         <input id="company-name" className={inputClass} value={name} onChange={(e) => setName(e.target.value)} />
       </Field>
-      <Button icon={<Save />} loading={busy} disabled={!settings} onClick={() => void submit()}>저장</Button>
+      <FormActions>
+        <Button icon={<Save />} loading={busy} disabled={!settings} onClick={() => void submit()}>저장</Button>
+      </FormActions>
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
       {done && <InlineAlert tone="ok">저장했습니다.</InlineAlert>}
     </Card>

@@ -64,7 +64,7 @@ export function App() {
           <Logo size={26} />
           <span>
             <span className="block text-lg leading-tight font-bold tracking-tight">BidMate</span>
-            <span className="block text-xs leading-tight font-normal text-muted">나의 입찰메이트</span>
+            <span className="block text-xs leading-tight font-normal text-muted">비드메이트</span>
           </span>
         </h1>
         {detected && <StatusBadge status="ok">웹메일 감지</StatusBadge>}

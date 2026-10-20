@@ -58,6 +58,9 @@ describe('coerceValue', () => {
   });
   it('금액: 한글 금액 문자열 → 원 단위 정수', () => {
     expect(coerceValue('performanceMinAmount', '5억원')).toEqual({ ok: true, value: 500_000_000 });
+    expect(coerceValue('performanceMinAmount', '3.7억원')).toEqual({ ok: true, value: 370_000_000 });
+    expect(coerceValue('performanceMinAmount', '3억')).toEqual({ ok: true, value: 300_000_000 });
+    expect(coerceValue('performanceMinAmount', '500,000,000원')).toEqual({ ok: true, value: 500_000_000 });
     expect(coerceValue('performanceMinAmount', '500,000,000')).toEqual({ ok: true, value: 500_000_000 });
     expect(coerceValue('performanceMinAmount', 300000000)).toEqual({ ok: true, value: 300_000_000 });
     expect(coerceValue('performanceMinAmount', '5.000.000원').ok).toBe(false);
@@ -81,5 +84,22 @@ describe('coerceValue', () => {
     expect(coerceValue('performanceCondition', '원문').ok).toBe(true);
     expect(coerceValue('performanceCondition', 5).ok).toBe(false);
     expect(coerceValue('performanceCondition', 'a'.repeat(2001)).ok).toBe(false);
+  });
+});
+
+describe('variants / schema 태그', () => {
+  const v2 = (items: unknown[], schema = 'bidmate-ai-review/2') => JSON.stringify({ schema, runId: 'r1', items });
+  it('variants가 있으면 파싱하고(최대 8개), 없으면 필드를 두지 않는다', () => {
+    const many = Array.from({ length: 10 }, (_, i) => ({ condition: `c${i}`, value: i, quote: 'q' }));
+    const r = parseAiResponse(v2([{ key: 'credibilityScore', value: null, quote: '', variants: many }, { key: 'managementScore', value: 3, quote: 'q' }]), ctx);
+    expect(r.ok && r.items[0]!.variants).toHaveLength(8);
+    expect(r.ok && r.items[0]!.variants![0]).toEqual({ condition: 'c0', value: 0, quote: 'q' });
+    expect(r.ok && r.items[1]).not.toHaveProperty('variants');
+    const empty = parseAiResponse(v2([{ key: 'credibilityScore', value: 1, quote: 'q', variants: [] }]), ctx);
+    expect(empty.ok && empty.items[0]).not.toHaveProperty('variants');
+  });
+  it('구 태그(bidmate-ai-review/1)도 받아들이고 알 수 없는 태그는 거부한다', () => {
+    expect(parseAiResponse(v2([{ key: 'credibilityScore', value: 1, quote: 'q' }], 'bidmate-ai-review/1'), ctx).ok).toBe(true);
+    expect(parseAiResponse(v2([], 'bidmate-ai-review/9'), ctx)).toMatchObject({ ok: false, code: 'AI_BAD_RESPONSE' });
   });
 });

@@ -53,7 +53,7 @@ export function DuelSection({ ctx }: { ctx: EvalCtx }) {
   return (
     <Section title="승부 분해" sub={duelTitle(lead, chase, relation, duel.leadRank, duel.chaseRank)}>
       {notes.length > 0 && (
-        <div className="mx-6 mb-1 flex flex-col gap-0.5 rounded-ctl bg-sunken px-3.5 py-2 text-[13px] text-muted">
+        <div className="mx-6 mb-1 flex flex-col gap-0.5 rounded-ctl bg-sunken px-3.5 py-2 text-[0.8125rem] text-muted">
           {notes.map((n) => <div key={n}>{n}</div>)}
         </div>
       )}
@@ -65,7 +65,7 @@ export function DuelSection({ ctx }: { ctx: EvalCtx }) {
               {chaserSigned(dec.totalDiff)}<span className="ml-0.5 text-lg font-semibold text-muted">점</span>
             </div>
             <div className="mt-1 flex flex-col gap-2">{part('기술', dec.techDiff)}{part('가격', dec.priceDiff)}</div>
-            <div className="text-[13px] text-muted">{partNote(chase, dec)}</div>
+            <div className="text-[0.8125rem] text-muted">{partNote(chase, dec)}</div>
           </div>
         ) : placeholder(rec.official ? PARTIAL_OFFICIAL : NO_OFFICIAL)}
         {dec && (
@@ -78,16 +78,16 @@ export function DuelSection({ ctx }: { ctx: EvalCtx }) {
                   {lines.grade && lines.equal && rev.maxItemScore !== null ? (
                     <>
                       <div className="flex items-baseline justify-between gap-3"><dt className="whitespace-nowrap">{gradeStepLabel(rev.maxItemScore)}</dt><dd className="font-bold whitespace-nowrap tabular-nums">{lines.grade}</dd></div>
-                      <div className="flex items-baseline justify-between gap-3 text-[13px] text-muted"><dt className="whitespace-nowrap">기술 1등급</dt><dd className="whitespace-nowrap tabular-nums">{lines.equal}</dd></div>
+                      <div className="flex items-baseline justify-between gap-3 text-[0.8125rem] text-muted"><dt className="whitespace-nowrap">기술 1등급</dt><dd className="whitespace-nowrap tabular-nums">{lines.equal}</dd></div>
                     </>
                   ) : (
-                    <div className="text-[13px] text-muted">등급 방식이 아니라 기술 항목 환산 생략</div>
+                    <div className="text-[0.8125rem] text-muted">등급 방식이 아니라 기술 항목 환산 생략</div>
                   )}
                 </dl>
                 {(() => {
                   const box = priceBox(dec, chase);
                   return (
-                    <div className={`flex flex-col gap-0.5 rounded-ctl px-3.5 py-3 text-[13px] ${box.tone === 'warn' ? 'bg-warn-wash' : 'bg-info-wash'}`}>
+                    <div className={`flex flex-col gap-0.5 rounded-ctl px-3.5 py-3 text-[0.8125rem] ${box.tone === 'warn' ? 'bg-warn-wash' : 'bg-info-wash'}`}>
                       <div className={`text-sm font-bold ${box.tone === 'warn' ? 'text-warn' : 'text-primary'}`}>{box.head}</div>
                       <div>{box.body}</div>
                     </div>
@@ -95,7 +95,7 @@ export function DuelSection({ ctx }: { ctx: EvalCtx }) {
                 })()}
               </>
             ) : (
-              <div className="rounded-ctl bg-sunken px-3.5 py-3 text-[13px]">
+              <div className="rounded-ctl bg-sunken px-3.5 py-3 text-[0.8125rem]">
                 <div>{FORMULA_MISMATCH}</div>
                 {check.reason && <div className="mt-0.5 text-muted">{check.reason}</div>}
               </div>
@@ -112,7 +112,7 @@ export function DuelSection({ ctx }: { ctx: EvalCtx }) {
             <li>{rt.top3Line}</li>
             {rt.stepsLine && <li>{rt.stepsLine}</li>}
           </ul>
-          {rt.advice && <div className="text-[13px] text-muted">{rt.advice}</div>}
+          {rt.advice && <div className="text-[0.8125rem] text-muted">{rt.advice}</div>}
         </div>
       </div>
     </Section>

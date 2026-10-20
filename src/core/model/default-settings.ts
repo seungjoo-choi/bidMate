@@ -22,7 +22,7 @@ export function defaultSettings(): Settings {
     mail: { provider: 'naverworks' },
     customFields: [],
     company: { bizNo: '' },
-    ai: { provider: 'gemini', mode: 'api', models: { ...AI_DEFAULT_MODELS } },
+    ai: { provider: 'gemini', mode: 'api', models: { ...AI_DEFAULT_MODELS }, sendFullText: true },
     updatedAt: new Date().toISOString(),
   };
 }

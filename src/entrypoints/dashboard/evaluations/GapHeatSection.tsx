@@ -52,7 +52,7 @@ export function GapSection({ ctx }: { ctx: EvalCtx }) {
                   <tr className={ROW}>
                     <td className={`${TD} py-2 ${byLoss || grp === null ? 'pl-6' : 'pl-9'}`}>
                       {leafName(g.names)}
-                      {byLoss && grp ? <span className="ml-2 rounded-full bg-sunken px-2 py-px text-[11px] text-muted">{grp}</span> : null}
+                      {byLoss && grp ? <span className="ml-2 rounded-full bg-sunken px-2 py-px text-[0.6875rem] text-muted">{grp}</span> : null}
                     </td>
                     <td className={`${TD} py-2 text-right text-muted`}>{g.maxScore ?? '—'}</td>
                     {isOurs ? (
@@ -78,7 +78,7 @@ export function GapSection({ ctx }: { ctx: EvalCtx }) {
 function FragmentRows({ head, span, children }: { head: string | null; span: number; children: React.ReactNode }) {
   return (
     <>
-      {head !== null && <tr className="border-t border-line"><td colSpan={span} className="px-6 pt-3 pb-1 text-[13px] font-bold whitespace-nowrap">{head}</td></tr>}
+      {head !== null && <tr className="border-t border-line"><td colSpan={span} className="px-6 pt-3 pb-1 text-[0.8125rem] font-bold whitespace-nowrap">{head}</td></tr>}
       {children}
     </>
   );
@@ -106,9 +106,9 @@ export function HeatSection({ ctx }: { ctx: EvalCtx }) {
         <table className="w-full border-separate border-spacing-[3px] text-sm tabular-nums">
           <thead>
             <tr className="text-muted">
-              <th scope="col" className="px-2 py-1 text-left text-[13px] font-semibold whitespace-nowrap">항목</th>
+              <th scope="col" className="px-2 py-1 text-left text-[0.8125rem] font-semibold whitespace-nowrap">항목</th>
               {rec.judges.map((j) => (
-                <th scope="col" key={j.index} title={judgeLabel(j.index)} className={`min-w-11 py-1 text-center text-[13px] font-semibold whitespace-nowrap ${ctx.excluded.has(j.index) ? 'text-faint line-through' : ''}`}>{j.index}</th>
+                <th scope="col" key={j.index} title={judgeLabel(j.index)} className={`min-w-11 py-1 text-center text-[0.8125rem] font-semibold whitespace-nowrap ${ctx.excluded.has(j.index) ? 'text-faint line-through' : ''}`}>{j.index}</th>
               ))}
             </tr>
           </thead>
@@ -142,7 +142,7 @@ export function HeatSection({ ctx }: { ctx: EvalCtx }) {
           </tbody>
         </table>
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-6 pt-2 pb-4 text-[13px] text-muted">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-6 pt-2 pb-4 text-[0.8125rem] text-muted">
         {HEAT_CLASS.map((cls, k) => (
           <span key={k} className="inline-flex items-center gap-1.5 whitespace-nowrap"><span className={`size-3.5 rounded-[4px] ${cls}`} />{GRADE_NAMES[k]}</span>
         ))}
@@ -156,7 +156,7 @@ export function HeatSection({ ctx }: { ctx: EvalCtx }) {
 function FragmentHeat({ head, span, children }: { head: string | null; span: number; children: React.ReactNode }) {
   return (
     <>
-      {head !== null && <tr><td colSpan={span} className="px-2 pt-3 pb-0.5 text-[13px] font-bold whitespace-nowrap">{head}</td></tr>}
+      {head !== null && <tr><td colSpan={span} className="px-2 pt-3 pb-0.5 text-[0.8125rem] font-bold whitespace-nowrap">{head}</td></tr>}
       {children}
     </>
   );

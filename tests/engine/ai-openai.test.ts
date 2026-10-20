@@ -3,7 +3,7 @@ import type { OutputSpec } from '../../src/core/types/ai';
 import { openaiAdapter } from '../../src/engine/ai/providers/openai';
 
 const spec: OutputSpec = {
-  tag: 'bidmate-ai-review/1', runId: 'r1', keys: ['credibilityScore', 'differentialScoring'],
+  tag: 'bidmate-ai-review/2', runId: 'r1', keys: ['credibilityScore', 'differentialScoring'],
   kindOf: { credibilityScore: 'number', managementScore: 'number', performanceScore: 'number', performancePeriod: 'string', performanceMinAmount: 'number', performanceCondition: 'string', differentialScoring: 'boolean' },
 };
 const KEY = 'sk-openai-test-9999';

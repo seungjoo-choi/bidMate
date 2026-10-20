@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { quoteStrength, locateQuote, normalizeForMatch, verifySuggestions, type VerifyContext, type VerifyFile } from '../../src/core/ai/verify';
-import type { RawAiItem } from '../../src/core/ai/parse';
+import { coerceValue, type RawAiItem } from '../../src/core/ai/parse';
 
 const TEXT = [
   '[p 1]', '서문입니다', '[p 2]', '평가항목',
@@ -177,5 +177,187 @@ describe('verifySuggestions', () => {
     const files = [{ ...f1, text: '계약금액이 5.000.000 원 이상인 실적입니다' }];
     const r = verifySuggestions([item({ key: 'performanceMinAmount', value: 5_000_000, quote: '계약금액이 5.000.000 원 이상인 실적입니다' })], ctx({ files }));
     expect(r.suggestions.performanceMinAmount!.valueInQuote).toBe(false);
+  });
+});
+
+describe('웹 AI 복사 보정', () => {
+  const rfp: VerifyFile = {
+    attachmentId: 'a3', sourceFile: 'a3.hwp', name: '2. 제안요청서.hwp', docKind: 'rfp',
+    text: ['[셀 2 0 rs5] 회사 유사사업 수행실적', '[셀 2 1 rs5] (해당 사업규모* 대비)', '국내외', '유사사업 수행실적** 비율', '* 25억원', '** 이행완료 기준', '[셀 2 2] 100% 이상'].join('\n'),
+  };
+  it('줄 앞 글머리표(* → -) 차이를 무시한다', () => {
+    expect(normalizeForMatch('- 25억원')).toBe(normalizeForMatch('* 25억원'));
+    expect(locateQuote(rfp.text, '- 25억원')).toMatchObject({ line: 5 });
+  });
+  it('AI가 억 단위를 잘못 환산하면 인용 원문의 단위 금액으로 고치고 경고한다', () => {
+    const r = verifySuggestions([item({ key: 'performanceMinAmount', value: 25_000_000, quote: '- 25억원', file: '2. 제안요청서.hwp' })], ctx({ files: [rfp] }));
+    expect(r.rejected).toEqual([]);
+    expect(r.suggestions.performanceMinAmount).toMatchObject({ value: 2_500_000_000, valueInQuote: true, verdict: 'new' });
+    expect(r.warnings.some((w) => w.includes('원문 금액'))).toBe(true);
+  });
+  it('항목명 줄까지 이은 여러 줄 인용도 찾는다', () => {
+    const r = verifySuggestions([item({ key: 'performanceMinAmount', value: 2_500_000_000, quote: '유사사업 수행실적** 비율\n* 25억원' })], ctx({ files: [rfp] }));
+    expect(r.suggestions.performanceMinAmount).toMatchObject({ value: 2_500_000_000, valueInQuote: true });
+  });
+  it('인용 원문에 단위 금액이 둘 이상이면 고치지 않는다(valueInQuote false)', () => {
+    const two: VerifyFile = { ...rfp, text: '실적 인정 기준 10억원 또는 20억원 이상' };
+    const r = verifySuggestions([item({ key: 'performanceMinAmount', value: 1_000_000, quote: '실적 인정 기준 10억원 또는 20억원 이상' })], ctx({ files: [two] }));
+    expect(r.suggestions.performanceMinAmount?.value).toBe(1_000_000);
+    expect(r.suggestions.performanceMinAmount?.valueInQuote).toBe(false);
+  });
+});
+
+describe('금액 자릿수 보정 범위', () => {
+  it('자릿수 차이가 아닌 다른 금액(3억 vs 원문 5억)은 고치지 않는다', () => {
+    const r = verifySuggestions([item({ key: 'performanceMinAmount', value: 300_000_000, quote: '수행실적 | 최근 5년간 5억원 이상 실적' })], ctx());
+    expect(r.suggestions.performanceMinAmount).toMatchObject({ value: 300_000_000, valueInQuote: false });
+  });
+});
+
+describe('performanceCondition 글머리표', () => {
+  const cond: VerifyFile = { attachmentId: 'a4', sourceFile: 'a4.hwp', name: '공고.hwp', docKind: 'rfp', text: '실적 인정 조건\n공공기관 발주 유사용역 실적\n- 단, 공동수급은 지분율만 인정' };
+  it('여러 줄 값의 2번째 줄 글머리표가 원문과 같으면 통과', () => {
+    const value = '공공기관 발주 유사용역 실적\n- 단, 공동수급은 지분율만 인정';
+    const r = verifySuggestions([item({ key: 'performanceCondition', value, quote: value })], ctx({ files: [cond] }));
+    expect(r.rejected).toEqual([]);
+  });
+  it('한 줄로 이어 붙인 값도 통과', () => {
+    const value = '공공기관 발주 유사용역 실적 - 단, 공동수급은 지분율만 인정';
+    const r = verifySuggestions([item({ key: 'performanceCondition', value, quote: '공공기관 발주 유사용역 실적\n- 단, 공동수급은 지분율만 인정' })], ctx({ files: [cond] }));
+    expect(r.rejected).toEqual([]);
+  });
+  it('웹 AI가 기호를 바꾼 값(- → *)도 통과', () => {
+    const value = '공공기관 발주 유사용역 실적\n* 단, 공동수급은 지분율만 인정';
+    const r = verifySuggestions([item({ key: 'performanceCondition', value, quote: value })], ctx({ files: [cond] }));
+    expect(r.rejected).toEqual([]);
+  });
+});
+
+describe('표 행·긴 문단 인용 대조', () => {
+  const row: VerifyFile = {
+    attachmentId: 'a5', sourceFile: 'a5.hwp', name: '제안요청서.hwp', docKind: 'rfp',
+    text: ['[표 1]', '[셀 0 0] 평가부문', '[셀 1 1] 경영상태', '[셀 1 2] - 신용평가등급 : 참여사 전체의 신용평가 등급으로 평가한다.', '※ 공동수급의 경우 지분율을 곱해 합산', '[셀 1 3] 4', '[셀 2 1] 회사 유사사업'].join('\n'),
+  };
+  it('셀 안 줄바꿈(태그 없는 줄)이 낀 표 한 행 인용을 찾는다', () => {
+    const q = '경영상태 | - 신용평가등급 : 참여사 전체의 신용평가 등급으로 평가한다.\n※ 공동수급의 경우 지분율을 곱해 합산\n4';
+    expect(locateQuote(row.text, q)).toMatchObject({ line: 3, endLine: 6 });
+    const r = verifySuggestions([item({ key: 'managementScore', value: 4, quote: q })], ctx({ files: [row] }));
+    expect(r.suggestions.managementScore).toMatchObject({ value: 4, valueInQuote: true });
+  });
+  it('다른 행으로 넘어가는 4줄 이상 짧은 인용은 거부한다', () => {
+    expect(locateQuote(row.text, '경영상태\n신용평가등급\n4\n회사유사사업')).toBeNull();
+  });
+  it('긴 문단 인용(정규화 60자 이상)은 3줄을 넘어도 찾는다', () => {
+    const para = ['※ 유사사업 : 다음 중 각 항목에 해당하는 수행실적 중 일정 금액 이상인 사업', '- 국내외 대민 정보서비스 제공형 시스템 구축, SW 개발', '- 국내외 농업 분야의 공공기관 대상 시스템 구축', '(단, 단순 기자재 공급, 감리, 연수 실적은 불포함)'];
+    expect(locateQuote(['서문', ...para, '끝'].join('\n'), para.join('\n'))).toMatchObject({ line: 2, endLine: 5 });
+  });
+  it('짧은 인용은 여전히 3줄까지만', () => {
+    expect(locateQuote('가나\n다라\n마바\n사아', '가나다라마바사아')).toBeNull();
+  });
+});
+
+describe('표 행 판정 경계(리뷰 반영)', () => {
+  it('표 마지막 행 전체의 짧은 인용은 뒤에 일반 문단이 와도 정확 일치로 허용', () => {
+    const text = ['[표 1]', '[셀 3 0] 신용등급', '[셀 3 1] 15', '다음 문단은 표 밖 설명입니다'].join('\n');
+    expect(locateQuote(text, '신용등급 | 15', { exactOnly: true })).toMatchObject({ line: 2, endLine: 3 });
+  });
+  it('셀 태그 뒤 이어진 줄은 최대 6줄까지만 같은 행으로 본다', () => {
+    const text = ['[표 1]', '[셀 0 0] 가', ...Array.from({ length: 8 }, (_, i) => `줄${i}`)].join('\n');
+    expect(locateQuote(text, '가줄0줄1줄2줄3줄4')).not.toBeNull();
+    expect(locateQuote(text, '줄5줄6줄7')).not.toBeNull(); // 3줄 이내는 원래 허용
+    expect(locateQuote(text, '줄4줄5줄6줄7')).toBeNull(); // 6줄을 넘은 뒤는 행으로 묶지 않음(짧은 4줄)
+  });
+  it('앞 50자만 맞는 partial 검색은 긴 범위(4줄 이상)를 허용하지 않는다', () => {
+    const lines = Array.from({ length: 6 }, (_, i) => `${'가나다라마바사아자차'.slice(0, 9)}${i}`);
+    const quote = `${lines.join('')}틀린꼬리부분입니다`;
+    expect(locateQuote(lines.join('\n'), quote)).toBeNull();
+  });
+  it('| 뒤 "-2점"의 부호는 지우지 않는다', () => {
+    expect(normalizeForMatch('감점 | -2점')).not.toBe(normalizeForMatch('감점 | 2점'));
+    expect(normalizeForMatch('감점 | - 2점')).toBe(normalizeForMatch('감점 | 2점'));
+  });
+});
+
+describe('글머리·행 조각 경계(재리뷰 반영)', () => {
+  it('공백 없는 글머리("-항목", "※참고")도 지우되 숫자 부호는 둔다', () => {
+    expect(normalizeForMatch('-항목')).toBe(normalizeForMatch('- 항목'));
+    expect(normalizeForMatch('※참고')).toBe(normalizeForMatch('※ 참고'));
+    expect(normalizeForMatch('-2점')).not.toBe(normalizeForMatch('2점'));
+  });
+  it('셀 안 이어진 줄에서 시작하는 조각은 정확 일치(한 행 전체)로 보지 않는다', () => {
+    const text = ['[표 1]', '[셀 2 1] 가나', '다라', '마바', '사아'].join('\n');
+    expect(locateQuote(text, '마바\n사아', { exactOnly: true })).toBeNull();
+    expect(locateQuote(text, '가나\n다라\n마바\n사아', { exactOnly: true })).not.toBeNull();
+  });
+});
+
+describe('행 압축 인용(셀 중간 줄 생략)', () => {
+  const text = ['[표 1]', '[셀 1 1] 경영상태', '[셀 1 2] - 신용평가등급 : 참여사 전체의 신용평가 등급으로 평가한다.', '※ 공동수급의 경우 지분율을 곱해 합산', '[셀 1 3] 4', '[셀 2 1] 회사 유사사업', '[셀 2 3] 6'].join('\n');
+  it('중간 줄을 뺀 `셀 | 셀 | 셀` 인용을 같은 행에서 찾는다', () => {
+    const q = '경영상태 | - 신용평가등급 : 참여사 전체의 신용평가 등급으로 평가한다. | 4';
+    expect(locateQuote(text, q)).toMatchObject({ line: 2, endLine: 5, partial: false });
+    const f: VerifyFile = { attachmentId: 'a6', sourceFile: 'a6.hwp', name: '제안요청서.hwp', docKind: 'rfp', text };
+    expect(verifySuggestions([item({ key: 'managementScore', value: 4, quote: q })], ctx({ files: [f] })).suggestions.managementScore).toMatchObject({ value: 4, valueInQuote: true });
+  });
+  it('조각이 다른 행에 걸치면 찾지 않는다', () => {
+    expect(locateQuote(text, '경영상태 | 신용평가등급 | 6')).toBeNull();
+  });
+});
+
+describe('v2 원문 표기 값 변환', () => {
+  it('기간 "5년 이내"·"최근 5년", 금액 "5억원 이상"', () => {
+    expect(coerceValue('performancePeriod', '5년 이내')).toEqual({ ok: true, value: '5년' });
+    expect(coerceValue('performancePeriod', '최근 5년')).toEqual({ ok: true, value: '5년' });
+    expect(coerceValue('performanceMinAmount', '5억원 이상')).toEqual({ ok: true, value: 500_000_000 });
+  });
+});
+
+describe('행 조각 대조 안전장치(리뷰 반영)', () => {
+  const text = ['[표 1]', '[셀 3 0] 신용평가등급', '[셀 3 1] 14', '[셀 3 2] 16'].join('\n');
+  const f: VerifyFile = { attachmentId: 'a7', sourceFile: 'a7.hwp', name: '제안요청서.hwp', docKind: 'rfp', text };
+  it('행 조각으로 찾았는데 값이 원문 행에 없으면 거부한다("14" 속 "4")', () => {
+    const r = verifySuggestions([item({ key: 'managementScore', value: 4, quote: '신용평가등급 | 4 | 6' })], ctx({ files: [f] }));
+    expect(r.suggestions.managementScore).toBeUndefined();
+    expect(r.rejected.map((x) => x.key)).toEqual(['managementScore']);
+  });
+  it('단위 없는 "5 이내"는 기간으로 받지 않는다', () => {
+    expect(coerceValue('performancePeriod', '5 이내')).not.toEqual({ ok: true, value: '5년' });
+    expect(coerceValue('performancePeriod', '5')).toEqual({ ok: true, value: '5년' });
+  });
+});
+
+describe('variants 검증', () => {
+  const v = (condition: string, value: unknown, quote: string) => ({ condition, value, quote });
+  it('통과한 variant만 남기고 실패는 <key>#<i>로 rejected, value null이면 multi', () => {
+    const r = verifySuggestions([item({ key: 'performanceMinAmount', variants: [
+      v('A', '5억원', '수행실적 | 최근 5년간 5억원 이상 실적'), v('B', '9억원', '문서에 전혀 없는 문장입니다 정말로'),
+    ] })], ctx());
+    const s = r.suggestions.performanceMinAmount!;
+    expect(s).toMatchObject({ verdict: 'multi', value: null });
+    expect(s.variants).toHaveLength(1);
+    expect(s.variants![0]).toMatchObject({ condition: 'A', value: 500_000_000, valueInQuote: true });
+    expect(r.rejected).toEqual([expect.objectContaining({ key: 'performanceMinAmount#1', reason: 'quote_not_found' })]);
+  });
+  it('모든 variant가 실패하면 none', () => {
+    const r = verifySuggestions([item({ key: 'credibilityScore', variants: [v('A', 10, '없는 문장입니다 정말로 10점')] })], ctx());
+    expect(r.suggestions.credibilityScore!.verdict).toBe('none');
+    expect(r.suggestions.credibilityScore!.variants).toBeUndefined();
+  });
+  it('값이 있는 항목에 variants를 함께 붙이고 variant 값은 coerce한다', () => {
+    const r = verifySuggestions([item({ key: 'credibilityScore', value: 10, quote: '신용평가 | 10점', variants: [v('B', '10점', '신용평가 | 10점')] })], ctx());
+    expect(r.suggestions.credibilityScore).toMatchObject({ verdict: 'new', value: 10, variants: [{ value: 10 }] });
+  });
+  it('ruleRelation: 후보 일치 / 다름 / 후보 없음 / candidates 미지정이면 필드 없음', () => {
+    const it1 = () => [item({ key: 'credibilityScore', value: 10, quote: '신용평가 | 10점' })];
+    const rel = (candidates?: VerifyContext['candidates'], items = it1()) =>
+      verifySuggestions(items, ctx({ candidates })).suggestions.credibilityScore!.ruleRelation;
+    expect(rel({ credibilityScore: [5, 10] })).toBe('in_candidates');
+    expect(rel({ credibilityScore: [5] })).toBe('differs_from_candidates');
+    expect(rel({ credibilityScore: [] })).toBe('no_candidates');
+    expect(rel(undefined)).toBeUndefined();
+    const multi = [item({ key: 'credibilityScore', variants: [v('A', 10, '신용평가 | 10점')] })];
+    expect(rel({ credibilityScore: [10] }, multi)).toBe('in_candidates');
+    const two = [item({ key: 'credibilityScore', value: 10, quote: '신용평가 | 10점', variants: [v('A', 15, '경영상태 평가 15점')] })];
+    expect(rel({ credibilityScore: [10] }, two)).toBe('differs_from_candidates');
   });
 });

@@ -10,7 +10,7 @@ import type { FieldSource, FieldValue } from '../../../core/types/common';
 import type { UnresolvedVar } from '../../../core/types/mail';
 import type { Notice, NoticeFieldKey } from '../../../core/types/notice';
 import type { TemplateFieldKey } from '../../../core/types/template';
-import { Button, InlineAlert, StatusBadge } from '../../../ui/components';
+import { Button, FormActions, InlineAlert, StatusBadge } from '../../../ui/components';
 import { inputClass } from '../../../ui/components/Field';
 import { evidenceMeta, fileDisplayName, findTextPath, reasonText } from '../../../ui/review/view';
 import { TextDrawer, type DrawerTarget } from '../review/TextDrawer';
@@ -141,7 +141,7 @@ export function ResolveDialog({ noticeId, notice, extraction, item, fieldKey, on
         <header className="flex items-center gap-3 border-b border-line px-6 py-4">
           <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-ink">{item.label}</h2>
           <StatusBadge status="warn">{item.status === 'missing' ? '값 없음' : '확인 필요'}</StatusBadge>
-          <Button variant="ghost" size="icon" aria-label="닫기" className="-mr-2" icon={<X />} onClick={onClose} />
+          <Button variant="ghost" size="icon" aria-label="닫기" icon={<X />} onClick={onClose} />
         </header>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-auto px-6 py-5 text-sm">
@@ -252,17 +252,20 @@ export function ResolveDialog({ noticeId, notice, extraction, item, fieldKey, on
           </section>
         </div>
 
-        <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-6 py-4">
-          {onSaveNotice && editedTargets.length > 0 && (
-            <Button variant="ghost" icon={<RotateCcw />} className="mr-auto" disabled={saving} title="직접 고친 공고 값을 지우고 자동으로 수집한 값으로 돌아갑니다" onClick={() => void submit(editedTargets.map((t) => ({ key: t.key, value: null })))}>자동값으로 되돌리기</Button>
-          )}
-          <Button variant="secondary" onClick={onClose}>닫기</Button>
-          {onApplyMail && (
-            <Button variant={onSaveNotice && targets.length > 0 ? 'secondary' : 'primary'} disabled={!value} title="공고 데이터는 그대로 두고 이 메일에서만 값을 바꿉니다" onClick={() => { onApplyMail(value); onClose(); }}>
-              이 메일에만 적용
-            </Button>
-          )}
-          {onSaveNotice && targets.length > 0 && <Button disabled={shared && !value} loading={saving} title="공고 값을 고쳐 상세 화면과 다른 메일에도 반영합니다" onClick={saveNotice}>공고에 저장</Button>}
+        <footer className="border-t border-line px-6 py-4">
+          <FormActions
+            status={onSaveNotice && editedTargets.length > 0 ? (
+              <Button variant="ghost" icon={<RotateCcw />} disabled={saving} title="직접 고친 공고 값을 지우고 자동으로 수집한 값으로 돌아갑니다" onClick={() => void submit(editedTargets.map((t) => ({ key: t.key, value: null })))}>자동값으로 되돌리기</Button>
+            ) : undefined}
+          >
+            <Button variant="secondary" onClick={onClose}>닫기</Button>
+            {onApplyMail && (
+              <Button variant={onSaveNotice && targets.length > 0 ? 'secondary' : 'primary'} disabled={!value} title="공고 데이터는 그대로 두고 이 메일에서만 값을 바꿉니다" onClick={() => { onApplyMail(value); onClose(); }}>
+                이 메일에만 적용
+              </Button>
+            )}
+            {onSaveNotice && targets.length > 0 && <Button disabled={shared && !value} loading={saving} title="공고 값을 고쳐 상세 화면과 다른 메일에도 반영합니다" onClick={saveNotice}>공고에 저장</Button>}
+          </FormActions>
         </footer>
       </div>
       {drawer && <TextDrawer key={`${drawer.textPath}|${drawer.line ?? ''}|${drawer.query ?? ''}`} noticeId={noticeId} target={drawer} onClose={() => setDrawer(null)} />}

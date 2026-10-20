@@ -102,9 +102,9 @@ export function EvaluationDetailPage({ noticeId }: { noticeId: string }) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 pb-1">
         <div className="flex min-w-0 flex-1 basis-[560px] flex-col gap-2">
-          <div className="text-[13px] text-muted"><a href="#/evaluations" className="text-primary hover:underline">평가분석</a><span className="mx-1.5 text-faint">/</span><span className="font-mono">{rec.noticeId}</span></div>
-          <h1 className="text-[26px] leading-tight font-bold tracking-tight">{rec.title}</h1>
-          <div className="flex flex-wrap gap-1.5 text-[13px] text-muted">
+          <div className="text-[0.8125rem] text-muted"><a href="#/evaluations" className="text-primary hover:underline">평가분석</a><span className="mx-1.5 text-faint">/</span><span className="font-mono">{rec.noticeId}</span></div>
+          <h1 className="text-[1.625rem] leading-tight font-bold tracking-tight">{rec.title}</h1>
+          <div className="flex flex-wrap gap-1.5 text-[0.8125rem] text-muted">
             {rec.orgName && <span className={CHIP}>{rec.orgName}</span>}
             {dateOnly(rec.evaluatedAt) && <span className={CHIP}>평가 종료 {dateOnly(rec.evaluatedAt)}</span>}
             {rec.techWeight !== null && <span className={CHIP}>기술배점 {rec.techWeight}</span>}
@@ -121,7 +121,7 @@ export function EvaluationDetailPage({ noticeId }: { noticeId: string }) {
           <Button variant="secondary" loading={busy} icon={<RotateCw />} onClick={() => void refetch()}>다시 가져오기</Button>
         </div>
       </div>
-      {viewNote && <div className="text-[13px] text-muted">{viewNote}</div>}
+      {viewNote && <div className="text-[0.8125rem] text-muted">{viewNote}</div>}
       {refetchError && <InlineAlert tone="error">{refetchError}</InlineAlert>}
       {rec.warnings.length > 0 && <InlineAlert tone="warn">{rec.warnings.join(' / ')}</InlineAlert>}
 

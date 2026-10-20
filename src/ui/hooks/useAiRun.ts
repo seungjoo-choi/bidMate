@@ -6,18 +6,19 @@ import { terminalSignal } from '../review/ai-view';
 /**
  * storage.session `aiRun.<noticeId>`(진행 상태)를 구독하고 `ai/get`으로 run 파일을 읽는다.
  * 진행 상태가 done/failed/cancelled로 바뀌면 다시 읽는다(처음부터 끝난 상태였다면 다시 읽지 않는다). review가 undefined면 아직 읽는 중.
- * 공고가 바뀌면 이전 공고의 늦은 응답은 버린다.
+ * 공고가 바뀌면 이전 공고의 늦은 응답은 버린다. noticeId가 비어 있으면 send·구독 없이 state·review를 null로 둔다.
  */
-export function useAiRun(noticeId: string) {
+export function useAiRun(noticeId: string | null | undefined) {
   const [state, setState] = useState<AiRunState | null>(null);
   const [review, setReview] = useState<AiReviewFile | null | undefined>(undefined);
   const handled = useRef<string | null>(null);
   const current = useRef(noticeId);
   current.current = noticeId;
-  const key = `${AI_RUN_SESSION_PREFIX}${noticeId}`;
+  const key = noticeId ? `${AI_RUN_SESSION_PREFIX}${noticeId}` : null;
 
   const reload = useCallback(async () => {
     const id = noticeId;
+    if (!id) return;
     try {
       const r = await send('ai/get', { noticeId: id });
       if (current.current === id) setReview(r);
@@ -27,15 +28,17 @@ export function useAiRun(noticeId: string) {
   }, [noticeId]);
 
   useEffect(() => {
+    if (!noticeId) { setReview(null); return; }
     setReview(undefined);
     void reload();
-  }, [reload]);
+  }, [noticeId, reload]);
 
   useEffect(() => {
     let alive = true;
     let first = true;
     handled.current = null;
     setState(null);
+    if (!key) return;
     const load = async () => {
       const s = ((await chrome.storage.session.get(key))[key] as AiRunState | undefined) ?? null;
       if (!alive) return;

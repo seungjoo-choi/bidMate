@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { kindOf } from '../../core/model/ids';
 import { composeHost,originOf } from '../../core/model/mail-provider';
 import type { AfterCollect, AutoComposeSettings, ReviewGate } from '../../core/types/settings';
-import { Button, Card, Field, InlineAlert, Select, StatusBadge } from '../../ui/components';
+import { Button, Card, Field, FormActions, InlineAlert, Select, StatusBadge } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useRecipients, useTemplates } from '../../ui/hooks/useConfig';
 import { useSettings } from '../../ui/hooks/useSettings';
@@ -207,10 +207,9 @@ export function AutoComposeCard() {
         </div>
       </Field>
 
-      <div className="flex items-center gap-3">
+      <FormActions status={<StatusBadge status={saved?.enabled ? 'ok' : 'idle'}>{saved?.enabled ? '사용 중' : '사용 안 함'}</StatusBadge>}>
         <Button icon={<Save />} loading={busy} disabled={!loaded} onClick={submit}>저장</Button>
-        <StatusBadge status={saved?.enabled ? 'ok' : 'idle'}>{saved?.enabled ? '사용 중' : '사용 안 함'}</StatusBadge>
-      </div>
+      </FormActions>
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
       {note && <InlineAlert tone="info">{note}</InlineAlert>}
     </Card>

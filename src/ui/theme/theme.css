@@ -1,5 +1,14 @@
 @import 'tailwindcss';
 
+/* 본문 폰트. 시스템에 Pretendard가 없으면 Windows에서 맑은 고딕으로 떨어져 글자가 아래로 쏠리므로 확장에 번들한다(OFL, fonts/LICENSE.txt). */
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/PretendardVariable.woff2') format('woff2-variations');
+}
+
 /* 색은 모두 토큰으로 쓴다. 다크 값은 아래 media 블록이 같은 변수를 덮어쓴다(시스템 설정을 따름). */
 @theme {
   --color-canvas: #ebebe7;
@@ -20,6 +29,11 @@
   --color-primary: #2b5cb0;
   --color-primary-hover: #224d97;
   --color-primary-ink: #ffffff;
+  /* 버튼 면(옅은 면+얇은 테두리+진한 글자). AI 버튼과 같은 결로 용도별 색만 바꾼다. */
+  --color-btn-pri-wash: #eef3fb;
+  --color-btn-pri-line: #c9d8f0;
+  --color-btn-pri-ink: #224d97;
+  --color-btn-danger-line: #efccc8;
   --color-select-hover: #dcdcd6;
   --color-ok: #2f7a4f;
   --color-warn: #a1620a;
@@ -28,25 +42,32 @@
   --color-warn-wash: #fbf3e4;
   --color-danger-wash: #fbeceb;
   --color-info-wash: #eef2f8;
+  /* AI가 만든 것(AI 버튼·제안·진행·AI 배지)에만 쓴다. claude는 Claude 로고 색. */
+  --color-ai-wash: #f3f0fa;
+  --color-ai-line: #ddd5ee;
+  --color-ai-ink: #5b4a8a;
+  /* AI 영역(.ai-tint) 안의 카드·버튼·입력 면. 다크에서 회색 면이 색 바탕 위에 뜨지 않게 공급자 색을 섞는다. */
+  --color-ai-surface: #ffffff;
+  --color-claude: #d97757;
   --color-mark: #fde9a8;
   --color-mark-strong: #f6c945;
   /* 글자 단계. 본문은 base(15px). rem이 아니라 px로 고정해 html 크기와 무관하게 한다. */
-  --text-xs: 13px;
+  --text-xs: 0.8125rem;
   --text-xs--line-height: 1.5;
-  --text-sm: 14px;
+  --text-sm: 0.875rem;
   --text-sm--line-height: 1.55;
-  --text-base: 15px;
+  --text-base: 0.9375rem;
   --text-base--line-height: 1.6;
-  --text-lg: 17px;
+  --text-lg: 1.0625rem;
   --text-lg--line-height: 1.5;
-  --text-xl: 20px;
+  --text-xl: 1.25rem;
   --text-xl--line-height: 1.4;
-  --text-2xl: 24px;
+  --text-2xl: 1.5rem;
   --text-2xl--line-height: 1.35;
   --radius-card: 10px;
   --radius-ctl: 6px;
   --radius-btn: 8px;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Segoe UI', 'Malgun Gothic', sans-serif;
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', 'Malgun Gothic', sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   /* 그림자 색. shadow 값은 빌드 시 인라인되므로 색만 변수로 빼서 다크에서 덮어쓴다. */
   --color-shade-1: rgb(27 27 25 / 0.06);
@@ -82,6 +103,10 @@
     --color-primary: #3b6fd6;
     --color-primary-hover: #4c7ee3;
     --color-primary-ink: #ffffff;
+    --color-btn-pri-wash: #1b2231;
+    --color-btn-pri-line: #2e3d5c;
+    --color-btn-pri-ink: #aac2f0;
+    --color-btn-danger-line: #4a2724;
     --color-select-hover: #353532;
     --color-ok: #6cc08e;
     --color-warn: #e0a44a;
@@ -90,6 +115,10 @@
     --color-warn-wash: #2a2216;
     --color-danger-wash: #2c1a18;
     --color-info-wash: #1b222d;
+    --color-ai-wash: #211d2b;
+    --color-ai-line: #3a3150;
+    --color-ai-ink: #c3b5ea;
+    --color-ai-surface: #19161f;
     --color-mark: #4a3d12;
     --color-mark-strong: #7a6213;
     --color-shade-1: rgb(0 0 0 / 0.45);
@@ -99,16 +128,48 @@
   }
 }
 
+/* AI 영역은 공급자 대표색으로 칠한다. data-ai를 단 요소 아래에서 ai-* 토큰을 덮어쓴다(없으면 위 보라 기본값).
+   claude=Claude 로고 주황, openai=흑백(그래파이트, OpenAI 로고), gemini=보라(기본값과 같음). */
+[data-ai='claude'] { --color-ai-wash: #fbf1ec; --color-ai-line: #f0d3c5; --color-ai-ink: #a5492a; }
+[data-ai='openai'] { --color-ai-wash: #f1f1ef; --color-ai-line: #d6d6d2; --color-ai-ink: #2b2b29; }
+[data-ai='gemini'] { --color-ai-wash: #f3f0fa; --color-ai-line: #ddd5ee; --color-ai-ink: #5b4a8a; }
+@media (prefers-color-scheme: dark) {
+  [data-ai='claude'] { --color-ai-wash: #2a1d18; --color-ai-line: #4d3026; --color-ai-ink: #eba98f; --color-ai-surface: #1f1613; }
+  [data-ai='openai'] { --color-ai-wash: #232322; --color-ai-line: #3d3d3a; --color-ai-ink: #dcdcd7; --color-ai-surface: #1a1a19; }
+  [data-ai='gemini'] { --color-ai-wash: #211d2b; --color-ai-line: #3a3150; --color-ai-ink: #c3b5ea; --color-ai-surface: #19161f; }
+}
+
+/* AI 색 바탕 블록 안에서는 회색 면·테두리 대신 공급자 색을 쓴다(카드·버튼·입력창이 바탕 위에 뜨지 않게). */
+.ai-tint {
+  --color-surface: var(--color-ai-surface);
+  --color-sunken: var(--color-ai-wash);
+  --color-line: var(--color-ai-line);
+  --color-line-strong: var(--color-ai-line);
+}
+
+/* 대시보드는 넓은 화면에서 보므로 약 110%로 키운다(사이드패널·팝업은 폭이 좁아 기본 크기 유지). */
+html.ui-scale { font-size: 110%; }
+
+/* 크롬은 확장 페이지 body에 자체 글꼴 규칙(Segoe UI·맑은 고딕, 75% 크기)을 레이어 밖에서 넣는다.
+   @layer 안 규칙은 레이어 밖 규칙에 항상 지므로, 글꼴·크기만 레이어 밖에서 더 높은 우선순위로 지정한다. */
+:root body {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+}
+
 @layer base {
-  /* html 글자 크기는 건드리지 않는다(rem 기준 16px 유지, 여백 단위가 여기에 묶여 있다). */
+  /* html 글자 크기는 기본 16px. 여백·글자 토큰이 모두 rem이라 html.ui-scale(대시보드)만 키우면 화면 전체가 같은 비율로 커진다. */
   html, body {
     background: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-sans);
+    letter-spacing: -0.01em;
+    /* 한글은 어절 단위로 줄바꿈하고, 한 어절이 줄보다 길 때만 글자 단위로 끊는다. */
+    word-break: keep-all;
+    overflow-wrap: break-word;
     -webkit-font-smoothing: antialiased;
   }
   body {
-    font-size: var(--text-base);
     line-height: 1.6;
   }
   button { cursor: pointer; }

@@ -1,5 +1,7 @@
 import type { BasicFacts, EvalFacts } from '../../core/model/notice-summary';
 import { formatAmountComma, formatAmountShort, formatDifferential, formatJoint, formatPeriod, formatScore } from '../../core/model/format';
+import type { ExtractionKey } from '../../core/types/extraction';
+import type { AiCardInfo } from '../../ui/review/ai-view';
 import type { Job } from '../../core/types/job';
 import type { Attachment, Notice, NoticeKind } from '../../core/types/notice';
 import { formatDateTime, formatDDay } from '../../ui/review/format';
@@ -9,7 +11,8 @@ import { dash, sizeText } from './view-format';
 export type ChipTone = 'ok' | 'run' | 'warn' | 'danger';
 export interface StatusChip { tone: ChipTone; text: string }
 export interface KeyCell { label: string; value: string; sub: string; hot?: boolean }
-export interface SummaryRow { label: string; value: string; check?: boolean }
+/** ai: 검증을 통과한 AI 제안이 있는 행(제안 배지). 일치·못 찾음은 표시하지 않는다. */
+export interface SummaryRow { label: string; value: string; check?: boolean; ai?: true }
 export type ExtBadge = 'pdf' | 'hwp' | 'zip' | 'xls' | 'etc';
 export interface SummaryFile { name: string; ext: ExtBadge; extLabel: string; size: string; problem?: string }
 
@@ -17,6 +20,8 @@ export interface SummaryInput {
   facts: BasicFacts;
   eval: EvalFacts;
   notice: Pick<Notice, 'id' | 'folder' | 'attachments' | 'collect'>;
+  /** buildAiCards 결과. 없으면 배지 없음 */
+  ai?: Partial<Record<ExtractionKey, Pick<AiCardInfo, 'suggestion'>>>;
 }
 export interface SummaryView {
   kind: NoticeKind;
@@ -63,7 +68,7 @@ const PROBLEM: Partial<Record<Attachment['status'], string>> = {
 };
 
 export function summaryView(input: SummaryInput, now: Date = new Date()): SummaryView {
-  const { facts: f, eval: ev, notice } = input;
+  const { facts: f, eval: ev, notice, ai } = input;
   const prespec = f.kind === 'prespec' && !!f.prespec;
   const key3: KeyCell[] = prespec
     ? [
@@ -95,9 +100,13 @@ export function summaryView(input: SummaryInput, now: Date = new Date()): Summar
         ['실적 기간', 'performancePeriod', formatPeriod],
         ['실적 최소금액', 'performanceMinAmount', formatAmountShort],
         ['차등점수', 'differentialScoring', formatDifferential],
-      ] as const).map(([label, key, fmt]): SummaryRow => ({
-        label, value: dash((fmt as (v: unknown) => string)(ev.items[key].value)), check: ev.items[key].needsCheck,
-      })),
+      ] as const).map(([label, key, fmt]): SummaryRow => {
+        const verdict = ai?.[key]?.suggestion.verdict;
+        return {
+          label, value: dash((fmt as (v: unknown) => string)(ev.items[key].value)), check: ev.items[key].needsCheck,
+          ...(verdict === 'new' || verdict === 'differs' ? { ai: true as const } : {}),
+        };
+      }),
     };
   const atts = notice.attachments;
   const saved = atts.filter((a) => a.status === 'saved').length;

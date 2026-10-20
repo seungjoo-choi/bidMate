@@ -35,7 +35,7 @@ export const evaluationHash = (noticeId: string): string => `#/evaluations/${enc
 export function settingsSectionOf(hash: string): SettingsSection | undefined {
   if (!hash.startsWith('#/settings?')) return undefined;
   const s = splitQuery(hash.slice('#/settings'.length)).query.section;
-  return s === 'storage' || s === 'mail-service' || s === 'auto-compose' || s === 'g2b' || s === 'company' ? s : undefined;
+  return s === 'storage' || s === 'mail-service' || s === 'auto-compose' || s === 'g2b' || s === 'company' || s === 'ai' ? s : undefined;
 }
 
 export function parseRoute(hash: string): Route {

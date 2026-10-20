@@ -1,0 +1,1178 @@
+[
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01678997-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "differentialScoring",
+    "covered": false
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01722175-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01723328-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "all",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api",
+    "scope": "single",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "all",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "manual",
+    "scope": "single",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "all",
+    "key": "differentialScoring",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "credibilityScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "managementScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performanceScore",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performancePeriod",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performanceMinAmount",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "performanceCondition",
+    "covered": true
+  },
+  {
+    "noticeId": "R26BK01724847-000",
+    "mode": "api-fulltext",
+    "scope": "single",
+    "key": "differentialScoring",
+    "covered": true
+  }
+]

@@ -1,8 +1,11 @@
 export type MascotMood = 'idle' | 'guide' | 'work' | 'run' | 'happy' | 'huh';
 export type MascotVariant = 'full' | 'face';
 
-// 기분별 전용 그림. 없으면 BASE. 그림이 들어오면 여기 한 줄만 추가
-const FILES: Record<MascotVariant, Partial<Record<MascotMood, string>>> = { full: {}, face: {} };
+// 기분별 전용 그림. 없으면 BASE(눈 뜬 얼굴). 그림이 들어오면 여기 한 줄만 추가
+const FILES: Record<MascotVariant, Partial<Record<MascotMood, string>>> = {
+  full: { happy: 'full-happy.png', huh: 'full-sad.png' },
+  face: { happy: 'face-happy.png', huh: 'face-sad.png' },
+};
 const BASE: Record<MascotVariant, string> = { full: 'full.png', face: 'face.png' };
 
 export function mascotFile(mood: MascotMood, variant: MascotVariant): string {

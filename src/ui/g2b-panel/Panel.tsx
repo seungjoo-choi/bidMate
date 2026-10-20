@@ -35,7 +35,7 @@ function EvalButton({ ctl, busy, onError }: { ctl: PanelController; busy: boolea
   return (
     <button
       type="button" disabled={busy} onClick={() => void run()} title="개찰이 끝난 협상 공고의 평가점수를 가져와 분석합니다"
-      className="inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-60"
+      className="inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-[0.8125rem] font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-60"
     >
       {busy ? <Loader2 className="size-3.5 animate-spin" /> : <BarChart3 className="size-3.5" />}
       {busy ? '가져오는 중' : '평가점수 가져오기'}
@@ -174,7 +174,7 @@ export function PanelApp({ controller: ctl }: { controller: PanelController }) {
         {!c && (
           <button
             type="button" disabled={st.starting} onClick={() => void ctl.collect()}
-            className={`relative rounded-full border border-slate-200 bg-surface px-3 py-1.5 text-[12px] font-medium text-slate-700 transition-opacity hover:bg-slate-50 ${nudge ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+            className={`relative rounded-full border border-slate-200 bg-surface px-3 py-1.5 text-[0.75rem] font-medium text-slate-700 transition-opacity hover:bg-slate-50 ${nudge ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
             style={{ boxShadow: CARD_SHADOW, transitionDuration: '300ms' }}
           >
             {st.starting ? '수집 시작 중…' : '이 공고 수집할까요?'}
@@ -196,7 +196,7 @@ export function PanelApp({ controller: ctl }: { controller: PanelController }) {
             className="absolute -right-1 -top-1 grid size-[18px] place-items-center rounded-full border-2 border-surface text-white"
             style={{ background: !c ? '#2563eb' : c.tone === 'ok' ? '#2f7a4f' : '#a1620a' }}
           >
-            {!c ? <Download className="size-2.5" strokeWidth={3} /> : c.tone === 'ok' ? <Check className="size-2.5" strokeWidth={3.5} /> : <span className="text-[10px] font-bold leading-none">!</span>}
+            {!c ? <Download className="size-2.5" strokeWidth={3} /> : c.tone === 'ok' ? <Check className="size-2.5" strokeWidth={3.5} /> : <span className="text-[0.625rem] font-bold leading-none">!</span>}
           </span>
         </button>
       </div>
@@ -225,7 +225,7 @@ export function PanelApp({ controller: ctl }: { controller: PanelController }) {
             {/* 누르면 사이드 패널 요약이 열리고, 다시 누르면 닫힌다. 채운 버튼 모양으로 눌러야 하는 것임을 보인다 */}
             <button
               type="button" onClick={() => ctl.openSidePanel()} title="요약 보기 (다시 누르면 닫기)"
-              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,.08)] transition-[background-color,box-shadow,transform] hover:shadow-[0_2px_6px_rgba(15,23,42,.14)] hover:brightness-[.97] dark:hover:brightness-[1.15] active:scale-[.97]"
+              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[0.8125rem] font-semibold shadow-[0_1px_2px_rgba(15,23,42,.08)] transition-[background-color,box-shadow,transform] hover:shadow-[0_2px_6px_rgba(15,23,42,.14)] hover:brightness-[.97] dark:hover:brightness-[1.15] active:scale-[.97]"
               style={{ color, background: c.tone === 'ok' ? 'var(--bm-ok-wash)' : 'var(--bm-warn-wash)', borderColor: c.tone === 'ok' ? 'var(--bm-ok-line)' : 'var(--bm-warn-line)' }}
             >
               <Icon className="size-4" />
@@ -235,7 +235,7 @@ export function PanelApp({ controller: ctl }: { controller: PanelController }) {
             <span className="h-5 w-px bg-slate-200" />
             <button
               type="button" disabled={st.starting} onClick={() => void ctl.collect()}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-60"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-[0.8125rem] font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-60"
             >
               {st.starting ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCw className="size-3.5" />}
               다시 수집
@@ -244,7 +244,7 @@ export function PanelApp({ controller: ctl }: { controller: PanelController }) {
         ) : (
           <button
             type="button" disabled={st.starting} onClick={() => void ctl.collect()}
-            className="ml-1 inline-flex h-9 items-center gap-2 rounded-full bg-blue-600 px-4 text-[13px] font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+            className="ml-1 inline-flex h-9 items-center gap-2 rounded-full bg-blue-600 px-4 text-[0.8125rem] font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
           >
             {st.starting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
             {view.buttonLabel}
@@ -268,7 +268,7 @@ export function PanelApp({ controller: ctl }: { controller: PanelController }) {
     body = minimized ? (
       <button
         key="pill" type="button" onClick={() => setMinimized(false)}
-        className="tm-in inline-flex h-10 items-center gap-2 rounded-full bg-blue-600 px-4 text-[13px] font-medium text-white"
+        className="tm-in inline-flex h-10 items-center gap-2 rounded-full bg-blue-600 px-4 text-[0.8125rem] font-medium text-white"
         style={{ boxShadow: CARD_SHADOW }}
       >
         <Loader2 className="size-4 animate-spin" />{view.pillText}
@@ -280,7 +280,7 @@ export function PanelApp({ controller: ctl }: { controller: PanelController }) {
           <div className="line-clamp-2 min-w-0 flex-1 font-semibold" title={view.title}>{view.title ?? '공고 수집 중'}</div>
           <Btn aria-label="최소화" className="!px-1.5" onClick={() => setMinimized(true)}><X className="size-4" /></Btn>
         </div>
-        <div className="mt-1 break-all text-xs text-slate-500">{view.label}</div>
+        <div className="mt-1 wrap-anywhere text-xs text-slate-500">{view.label}</div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
           <div className="tm-bar h-full rounded-full bg-blue-600" style={{ width: `${Math.round(view.ratio * 100)}%`, transition: 'width 200ms' }} />
         </div>
@@ -309,7 +309,7 @@ export function PanelApp({ controller: ctl }: { controller: PanelController }) {
           <XCircle className="mt-0.5 size-4 shrink-0 text-red-600" />
           <div className="min-w-0 flex-1">
             <div className="font-semibold">{view.message}</div>
-            {view.detail && <div className="mt-0.5 break-all text-xs text-slate-500">{view.detail}</div>}
+            {view.detail && <div className="mt-0.5 wrap-anywhere text-xs text-slate-500">{view.detail}</div>}
           </div>
           <Btn aria-label="닫기" className="!px-1.5" onClick={() => ctl.dismissJob()}><X className="size-4" /></Btn>
         </div>

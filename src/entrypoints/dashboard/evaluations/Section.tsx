@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 /** 표 머리와 칸 공통 클래스. 숫자와 라벨은 줄바꿈하지 않는다 */
-export const TH = 'px-3 py-2.5 text-[13px] font-semibold whitespace-nowrap text-muted';
+export const TH = 'px-3 py-2.5 text-[0.8125rem] font-semibold whitespace-nowrap text-muted';
 export const TD = 'px-3 py-2.5 whitespace-nowrap';
 export const HEAD_ROW = 'bg-sunken';
 export const ROW = 'border-t border-line transition-colors hover:bg-sunken/60 motion-reduce:transition-none';
@@ -14,7 +14,7 @@ export function Section({ title, sub, action, children, className = '' }: { titl
       <header className="flex items-center justify-between gap-4 px-6 pt-4.5 pb-3.5">
         <div className="min-w-0">
           <h2 className="text-base font-bold whitespace-nowrap">{title}</h2>
-          {sub && <p className="mt-0.5 truncate text-[13px] text-muted" title={sub}>{sub}</p>}
+          {sub && <p className="mt-0.5 truncate text-[0.8125rem] text-muted" title={sub}>{sub}</p>}
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </header>
@@ -54,5 +54,5 @@ export function CenterBar({ side, widthPct, h = 'h-2' }: { side: 'win' | 'lose' 
 
 /** 작은 라벨 + 내용 묶음(승부 분해 칸 등) */
 export function Label({ children }: { children: ReactNode }) {
-  return <div className="text-[13px] font-semibold whitespace-nowrap text-muted">{children}</div>;
+  return <div className="text-[0.8125rem] font-semibold whitespace-nowrap text-muted">{children}</div>;
 }

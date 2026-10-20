@@ -1,0 +1,92 @@
+{
+  "noticeId": "R26BK01724847-000",
+  "title": "페루 클라우드 기반 중앙부처 전자문서 통합관리시스템 구축사업 기자재 공급 및 현지화 PC",
+  "textDir": "tests/fixtures/ai-eval/text/R26BK01724847-000",
+  "items": {
+    "credibilityScore": {
+      "expected": null,
+      "evidenceLines": [
+        {
+          "file": "2_2. 제안요청서_ R26BK01724847-000.hwp.txt",
+          "line": 3495
+        }
+      ],
+      "reviewedNote": "사용자 확인 2026-10-20: 합계 배점 없음 = 정답 null (이전 메모: 가감점 항목만 있고 합계 배점 없음)"
+    },
+    "managementScore": {
+      "expected": 4,
+      "evidenceLines": [
+        {
+          "file": "2_2. 제안요청서_ R26BK01724847-000.hwp.txt",
+          "line": 3368
+        },
+        {
+          "file": "2_2. 제안요청서_ R26BK01724847-000.hwp.txt",
+          "line": 3476
+        }
+      ]
+    },
+    "performanceScore": {
+      "expected": 6,
+      "evidenceLines": [
+        {
+          "file": "2_2. 제안요청서_ R26BK01724847-000.hwp.txt",
+          "line": 3375
+        },
+        {
+          "file": "2_2. 제안요청서_ R26BK01724847-000.hwp.txt",
+          "line": 3485
+        }
+      ]
+    },
+    "performancePeriod": {
+      "expected": "3년",
+      "evidenceLines": [
+        {
+          "file": "2_2. 제안요청서_ R26BK01724847-000.hwp.txt",
+          "line": 3684
+        }
+      ]
+    },
+    "performanceMinAmount": {
+      "expected": "3억",
+      "evidenceLines": [
+        {
+          "file": "2_2. 제안요청서_ R26BK01724847-000.hwp.txt",
+          "line": 3679
+        }
+      ],
+      "reviewedNote": "사용자 확인 2026-10-20 (이전 메모: 원문 \"단일 건 3억 이상의 경우 인정\"(단위 \"원\" 없음). 평가표 \"해당 사업규모 16억원\"은 비율 분모(3481줄))"
+    },
+    "performanceCondition": {
+      "expected": "※ 유사사업 :\n① 국내 외 \"정보시스템 구축 용역\" 수행인 단일 건 3억 이상의 경우 인정\n② \"정보시스템 구축 용역': 과업명 또는 사업 내용에 '①정보시스템 구축 용역' 또는 '②기자재 납품 및 설치 용역'이 포함된 사업\n③ 유사사업이라 하더라도 평가 및 연구, 유지보수, 단순 기자재 납품, 감리, 연수 실적인 경우는 유사사업 실적으로 불인정\n④ ‘단순 기자재 납품’: 시스템 구축 또는 용역이 포함되지 않는 단순 장비 또는 S/W 라이센스 공급을 의미함",
+      "evidenceLines": [
+        {
+          "file": "2_2. 제안요청서_ R26BK01724847-000.hwp.txt",
+          "line": 3678
+        },
+        {
+          "file": "2_2. 제안요청서_ R26BK01724847-000.hwp.txt",
+          "line": 3682
+        }
+      ]
+    },
+    "differentialScoring": {
+      "expected": false,
+      "evidenceLines": [
+        {
+          "file": "2_2. 제안요청서_ R26BK01724847-000.hwp.txt",
+          "line": 3356
+        },
+        {
+          "file": "0_1-1. (재)입찰공고문_ R26BK01724847-000.hwp.txt",
+          "line": 97
+        },
+        {
+          "file": "1_1-2. (재)입찰공고문_ R26BK01724847-000.pdf.txt",
+          "line": 66
+        }
+      ]
+    }
+  }
+}

@@ -76,6 +76,14 @@ describe('summaryView', () => {
     expect(a.files[1]).toMatchObject({ problem: '실패', size: '1.7MB' });
     expect(extOf('메모.txt')).toEqual({ ext: 'etc', label: 'TXT' });
   });
+  it('AI 제안 배지: new·differs 행만, match·none·카드 없음은 없음', () => {
+    const n = mk();
+    const ev = { ...evalFacts(n, null), extractionStatus: 'needs_review' as const, reviewCount: 1 };
+    const card = (verdict: 'new' | 'differs' | 'match' | 'none') => ({ suggestion: { verdict } as never });
+    const rows = summaryView({ ...input(n, ev), ai: { performanceScore: card('new'), managementScore: card('differs'), credibilityScore: card('match'), performancePeriod: card('none') } }, now).evaluation!.rows;
+    expect(rows.map((r) => !!r.ai)).toEqual([true, true, false, false, false, false]);
+    expect(summaryView(input(n, ev), now).evaluation!.rows.some((r) => r.ai)).toBe(false);
+  });
   it('액션 정보와 개인정보 미포함', () => {
     const n = mk('prespec');
     n.prespec.officerName = { value: '홍길동', status: 'verified' };

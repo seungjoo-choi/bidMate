@@ -545,7 +545,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
                 <div className="border-t border-line pt-2.5">
                   <p className="text-xs font-semibold text-danger">미확보 {missing.length}개</p>
                   <ul className="mt-1.5 space-y-1 text-xs text-danger">
-                    {missing.map((a) => <li key={a.id} className="break-all">{a.originalName}</li>)}
+                    {missing.map((a) => <li key={a.id} className="wrap-anywhere">{a.originalName}</li>)}
                   </ul>
                 </div>
               )}
@@ -567,7 +567,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
 
           {draftPath && (
             <PanelSection title="초안 파일">
-              <p className="font-mono text-xs break-all text-muted">{draftPath}</p>
+              <p className="font-mono text-xs wrap-anywhere text-muted">{draftPath}</p>
             </PanelSection>
           )}
         </aside>

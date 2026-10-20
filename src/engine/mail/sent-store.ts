@@ -1,5 +1,5 @@
 import { attributeCompose, deriveMailStatus, legacyRecord, sentIndexEntryOf, summaryOf } from '../../core/mail/sent-derive';
-import type { ComposeRecord, SendRecord, SentIndexEntry, SentIndexFile } from '../../core/types/compose';
+import type { ComposeRecord, SendRecord, SentIndexEntry, SentIndexFile, SentMailView } from '../../core/types/compose';
 import type { Notice } from '../../core/types/notice';
 import type { MailProvider } from '../../core/types/settings';
 import { readJson, writeJson } from '../file-store/json-store';
@@ -29,6 +29,24 @@ export class SentStore {
     const notice = await this.ns.loadNotice(noticeId);
     if (!notice) return [];
     return (await this.readRecords(notice.folder)) ?? this.legacyOf(notice);
+  }
+
+  /** 발송 기록에 연결된 작성 기록의 내용. 연결이 없으면 현재 초안, 둘 다 없으면 null. */
+  async view(p: { noticeId: string; recordId: string }): Promise<SentMailView | null> {
+    const notice = await this.ns.loadNotice(p.noticeId);
+    if (!notice) throw err('NOT_FOUND', '공고를 찾을 수 없습니다.');
+    const r = ((await this.readRecords(notice.folder)) ?? this.legacyOf(notice)).find((x) => x.id === p.recordId);
+    if (!r) throw err('NOT_FOUND', '발송 기록을 찾을 수 없습니다.');
+    const c = r.composeRecordId ? (await this.readComposes(notice.folder)).find((x) => x.id === r.composeRecordId) : undefined;
+    if (c) {
+      return {
+        source: 'compose', composedAt: c.composedAt, ...c.snapshot,
+        attachments: c.attachments.filter((a) => a.status === 'uploaded').map((a) => ({ name: a.name, size: a.size })),
+      };
+    }
+    const d = await readDraft(this.store, notice.folder);
+    if (!d) return null;
+    return { source: 'draft', to: d.to, cc: d.cc, subject: d.subject, html: d.html, attachments: d.attachments.map((a) => ({ name: a.name, size: a.size })) };
   }
 
   async loadIndex(): Promise<SentIndexFile> {

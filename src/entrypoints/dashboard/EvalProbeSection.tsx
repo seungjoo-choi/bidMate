@@ -1,4 +1,4 @@
-import { FlaskConical, Save } from 'lucide-react';
+import { Save, Search } from 'lucide-react';
 import { useState } from 'react';
 import { resolveRef } from '../../adapters/g2b/openapi';
 import { EVAL_COLLECT_UI_TIMEOUT_MS, EVAL_PROBE_UI_TIMEOUT_MS } from '../../core/evaluation/limits';
@@ -50,16 +50,19 @@ export function EvalProbeSection() {
   };
 
   return (
-    <Card title="평가 API 시험" description="개찰이 끝난 협상 공고의 평가 점수 API를 나라장터 탭에서 호출해 개수만 확인합니다([시험]은 저장하지 않고, [저장까지]는 저장 폴더에 기록합니다).">
+    <Card title="평가 점수 API 확인" description="개찰이 끝난 협상 공고의 평가 점수를 나라장터 탭에서 조회해 받은 개수를 보여줍니다. [조회]는 확인만 하고, [저장]은 저장 폴더에도 기록합니다.">
       <Field label="공고번호" htmlFor="eval-probe-no">
-        <input id="eval-probe-no" className={inputClass} value={text} onChange={(e) => setText(e.target.value)} />
+        {/* 입력칸 하나짜리 폼이라 버튼을 같은 줄 오른쪽에 붙인다(주 버튼이 맨 오른쪽). */}
+        <div className="flex flex-wrap gap-2">
+          <input id="eval-probe-no" className={`${inputClass} min-w-48 flex-1`} value={text} onChange={(e) => setText(e.target.value)} />
+          <Button variant="secondary" icon={<Save />} loading={saving} onClick={() => void collect()}>저장</Button>
+          <Button icon={<Search />} loading={busy} onClick={() => void run()}>조회</Button>
+        </div>
       </Field>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm text-muted">
         <input type="checkbox" checked={noIds} onChange={(e) => setNoIds(e.target.checked)} />
-        식별 헤더 없이
+        식별 헤더 없이 조회
       </label>
-      <Button icon={<FlaskConical />} loading={busy} onClick={() => void run()}>시험</Button>
-      <Button variant="secondary" icon={<Save />} loading={saving} onClick={() => void collect()}>저장까지</Button>
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
       {saved && (
         <InlineAlert tone={saved.warnings.length > 0 ? 'warn' : 'ok'}>

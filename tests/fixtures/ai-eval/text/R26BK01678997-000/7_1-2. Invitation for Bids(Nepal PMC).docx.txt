@@ -1,0 +1,88 @@
+Invitation for Bids
+(Procurement of Services)
+The KOICA HQ Procurement Team 1 intends to invite foreign and local eligible Bidders for the Project for the “PMC service for Climate-Resilient Rice Production and Productivity Increase in the Terai Region, Nepal(’26-’31/USD12mil) Project”
+[표 0]
+[셀 0 0] Bid Title
+[셀 0 1] PMC service for Climate-Resilient Rice Production and Productivity Increase in the Terai Region, Nepal(’26-’31/USD12mil) Project
+[셀 1 0] Summary
+of Services
+[셀 1 1] - Strengthened Rice Governance
+- Improved Rice Seed Distribution System Support 
+- Enhanced Climate Resilience of Farmers
+- Improved Market Access through Integrated Post-Harvest Processing
+- Performance Management, Project Management, and Public Relations, etc.
+* Please refer to the attached RFP (Korean version) for detailed information.
+[셀 2 0] Service Area
+[셀 2 1] Gyeonggi-do, Korea/Lumbini, Sudurpashchim, Nepal
+[셀 3 0] Duration
+[셀 3 1] Until Nov 30 2031 from the date of signing the contract
+[셀 4 0] Budget Limit
+[셀 4 1] 10,083,377,627 KRW (Korean won / including all expenses)
+Employer: Korea International Cooperation Agency (KOICA)
+Bid Type: International Bidding, Open Competitive Bidding 
+Selection of the Successful Bidders:
+Conclusion of contract by negotiation (technical proposal (90%) and price quotation (10%)).
+The Company with a high overall score have priority of negotiation.
+Bidders that receive less than 85 out of 100 points at the technical proposal evaluation shall be disqualified from negotiations.
+Bidders must submit a price below the budget limit, and if it exceeds this, the bidders shall be disqualified from negotiations.
+Conclusion of contract by negotiation.
+Qualification of Bidders:
+	Shall be registered on Korea government’s On-line e-procurement system (PPS, http://www.g2b.go.kr) 
+	shall have the PPS service code [Academic, Research Service: 1169 or Others: 9999]
+	For further information, Please refer to Invitation for Bids and Request for proposal in Korean version.
+	Anyone whose qualifications to participate in the bidding are restricted by an international organization or a foreign government, or who have been declared ineligible for a contract, or those who have been sanctioned for the same, cannot participate in the bidding.
+	According to domestic and foreign laws and regulations, a person convicted of a bribery-related crime cannot participate in the bidding.
+	In accordance with the 「National Contract Act」, 「Local Contract Act」, or 「Act on the Operation of Public Institutions」in Korean law, a person who is a fraudulent business entity who has been restricted from participating in bidding and is in the disposition period, cannot participate in the bidding.
+	A person who has pledged the following: Confirmation of participation in subcontracting with conditions of direct payment, Pledge of Practice for Human Rights business management, Pledge of Practice for the Prevention of Sexual Harassment and Sexual Violence.
+Type of Currency: Korean won (KRW)
+Language of Proposal: Korean
+Bidding Schedule (Korean Standard Time):
+[표 1]
+[셀 0 0] Schedule
+[셀 0 1] Date, Time
+[셀 0 2] Place
+[셀 1 0] Opening Date
+for Submission of Bid
+[셀 1 1] October 26, 2026 10:00
+[셀 1 2 rs4]   Bids must be submitted to the Public Procurement Service (PPS) either electronically through KONEPS system (www.g2b.go.kr)
+[셀 2 0] Closing Date
+for Submission of Bid
+[셀 2 1] October 28, 2026 10:00
+[셀 3 0] Technical evaluation date
+[셀 3 1] December 10, 2026 14:00
+(subject to change)
+[셀 4 0] Bid Opening Date
+[셀 4 1] December 10, 2026 14:00
+(subject to change)
+Submission of a bid
+Bids must be submitted to the Public Procurement Service (PPS) either electronically 
+      through KONEPS system (www.g2b.go.kr)
+Please refer to the Korean version of the bid invitation. 
+Submission of Documents
+All documents should be submitted electronically.
+One (1) copy of each of the official seal certificate and notified seal for the transaction. 
+One (1) copy of a certificate of his/her seal impression. 
+The Technical Proposal I (main text), the Technical Proposal II (manpower field), documentary evidence, and presentation(summary). (PDF format)
+Each One (1) copy of the documentary evidence proving the acquirement of the qualification listed above (Competitive bidding participation qualification registration certificate, certified copy of corporate register, (In the case of a joint contract) joint contract agreement document, etc.).
+Each One (1) copy of the Pledge Document (Pledge on compliance with tax laws (anti-tax evasion policy), Pledge of Practice for Human Rights business management, Pledge of Practice for the Prevention of Sexual Harassment and Sexual Violence, Declaration of Anti-Corruption in ODA Business Participation, Confirmation of participation in subcontracting with conditions of direct payment, Integrity Agreement (Implementation  Pledge), Self-checklist, Certified Copy Confirmation, Declaration of Fair Bidding Practices)
+For further information, Please refer to Invitation for Bids and Request for proposal in Korean version.
+The budget limit for this procurement assignment is KRW 10,083,377,627 and the Bidders’ price proposals will be evaluated by the relevant formula (please check the attached document “Contract by Negotiation (Korean Version)”). However, the final contract price cannot exceed the budget limit.
+All bids must be accompanied by a bid security of not less than five percent (5%) of the Total Bid Price or stated fixed amount. When a fixed amount is stated, it should be approximately five percent (5%) of the estimated cost of the Contract.
+The KOICA Procurement Team requires that bidders and contractors observe the highest standard of ethics during the procurement and execution of such contracts. In pursuance of this policy, KOICA will:
+Reject a proposal for award if it determines that the bidder recommended for award has engaged in corrupt or fraudulent practices in competing for the contract in question; and
+Recognize such an inappropriate contractor as ineligible for a period determined by KOICA. 
+All Bidders undertake full understanding and compliance with 「the Act on Combating Bribery of Foreign Public Officials in International Business Transactions」, and must declare that neither he/she nor any other party acting on his/her behalf with regard to the Project has engaged or will engage in corrupt practices such as bribery.
+KOICA now invites sealed bids from eligible bidders, and the bidding is open to all eligible source countries.
+KOICA will not be responsible for any costs or expenses incurred by bidders in connection with the preparation or delivery of bids.
+Interested eligible bidders may obtain further information on the bid form and inspect the bidding documents from following Contact. If any applicant would like to participate in the bid wants more information, please contact the person in charge stated below.
+Contact Information
+[표 2]
+[셀 0 0] [A] Bid Information
+[셀 0 1] [B] Project Information
+[셀 1 0 cs2] KOICA Address:
+825 Daewangpangyo-ro, Sujeong-gu, Seongnam-si, Gyeonggi-do, 13449, Korea
+[셀 2 0 cs2] Procurement Team 1
+Mail: procurement@koica.go.kr
+For further information, Please refer to Invitation for Bids and Request for proposal in Korean version. If the English version is different from the Korean version, the Korean version shall have priority.
+August, 2026
+Korea International Cooperation Agency

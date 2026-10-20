@@ -20,7 +20,7 @@ export function TotalsSection({ ctx, onToggle, onClear }: { ctx: EvalCtx; onTogg
                   <button
                     type="button" aria-pressed={excluded.has(j.index) || j.excluded} disabled={j.excluded} onClick={() => onToggle(j.index)}
                     title={j.excluded ? '시스템 제외 위원' : '눌러서 제외/포함'}
-                    className={`min-h-9 w-full min-w-16 rounded-ctl px-1.5 text-[13px] font-semibold whitespace-nowrap transition-colors hover:bg-select disabled:pointer-events-none motion-reduce:transition-none ${excluded.has(j.index) || j.excluded ? 'text-faint line-through' : 'text-muted'}`}
+                    className={`min-h-9 w-full min-w-16 rounded-ctl px-1.5 text-[0.8125rem] font-semibold whitespace-nowrap transition-colors hover:bg-select disabled:pointer-events-none motion-reduce:transition-none ${excluded.has(j.index) || j.excluded ? 'text-faint line-through' : 'text-muted'}`}
                   >
                     {judgeLabel(j.index)}{j.excluded ? ' (제외)' : ''}
                   </button>
@@ -39,8 +39,8 @@ export function TotalsSection({ ctx, onToggle, onClear }: { ctx: EvalCtx; onTogg
                 <tr key={b.seq} className={`${ROW} ${mine ? OURS_ROW : ''}`}>
                   <th scope="row" className={`${TD} pl-6 text-left font-normal`}>
                     <span className="font-semibold">{b.name}</span>
-                    {mine && <span className="ml-2 rounded-full bg-primary px-2 py-px text-[11px] font-semibold text-primary-ink">우리</span>}
-                    {b.excluded && <span className="ml-2 rounded-full bg-sunken px-2 py-px text-[11px] font-semibold text-muted">제외</span>}
+                    {mine && <span className="ml-2 rounded-full bg-primary px-2 py-px text-[0.6875rem] font-semibold text-primary-ink">우리</span>}
+                    {b.excluded && <span className="ml-2 rounded-full bg-sunken px-2 py-px text-[0.6875rem] font-semibold text-muted">제외</span>}
                   </th>
                   {t.byJudge.map((v, ji) => {
                     const j = rec.judges[ji]!;
@@ -53,7 +53,7 @@ export function TotalsSection({ ctx, onToggle, onClear }: { ctx: EvalCtx; onTogg
                   <td className={`${TD} text-right`}>{f2(t.trimmedMean)}</td>
                   <td className={`${TD} text-right text-muted`}>{f2(t.sd)}</td>
                   <td className={`${TD} pr-6 text-right`}>
-                    <span className={`inline-flex min-w-10 justify-center rounded-full px-2 py-0.5 text-[13px] font-bold ${rank === 1 ? 'bg-primary text-primary-ink' : 'bg-sunken text-ink'}`}>{rankLabel(rank)}</span>
+                    <span className={`inline-flex min-w-10 justify-center rounded-full px-2 py-0.5 text-[0.8125rem] font-bold ${rank === 1 ? 'bg-primary text-primary-ink' : 'bg-sunken text-ink'}`}>{rankLabel(rank)}</span>
                   </td>
                 </tr>
               );
@@ -62,7 +62,7 @@ export function TotalsSection({ ctx, onToggle, onClear }: { ctx: EvalCtx; onTogg
         </table>
       </div>
       {excluded.size > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line bg-info-wash px-6 py-2.5 text-[13px]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line bg-info-wash px-6 py-2.5 text-[0.8125rem]">
           <span>{excludedNote([...excluded])}</span>
           <Button variant="secondary" className="!h-8 !px-2.5" onClick={onClear}>모두 포함</Button>
         </div>

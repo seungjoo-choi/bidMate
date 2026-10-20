@@ -3,7 +3,7 @@ import type { OutputSpec } from '../../src/core/types/ai';
 import { geminiAdapter } from '../../src/engine/ai/providers/gemini';
 
 const spec: OutputSpec = {
-  tag: 'bidmate-ai-review/1', runId: 'r1', keys: ['credibilityScore', 'performancePeriod'],
+  tag: 'bidmate-ai-review/2', runId: 'r1', keys: ['credibilityScore', 'performancePeriod'],
   kindOf: { credibilityScore: 'number', managementScore: 'number', performanceScore: 'number', performancePeriod: 'string', performanceMinAmount: 'number', performanceCondition: 'string', differentialScoring: 'boolean' },
 };
 const KEY = 'AQ.test-key-1234567890';

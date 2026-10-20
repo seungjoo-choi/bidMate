@@ -13,6 +13,11 @@ describe('mascotSrc', () => {
     expect(mascotSrc()).toBe('/icon/mascot/full.png');
     expect(mascotSrc('idle', 'face')).toBe('/icon/mascot/face.png');
   });
+  it('happy는 웃는 그림, huh는 슬픈 그림', () => {
+    expect(mascotSrc('happy')).toBe('/icon/mascot/full-happy.png');
+    expect(mascotSrc('huh', 'face')).toBe('/icon/mascot/face-sad.png');
+    expect(mascotSrc('work')).toBe('/icon/mascot/full.png');
+  });
   it('chrome.runtime.getURL 스텁 결과를 쓴다', () => {
     vi.stubGlobal('chrome', { runtime: { getURL: (p: string) => `chrome-extension://abc${p}` } });
     expect(mascotSrc()).toBe('chrome-extension://abc/icon/mascot/full.png');
@@ -46,5 +51,6 @@ describe('createMascotImg / setMascotMood', () => {
     const img = createMascotImg(document, { size: 40 });
     setMascotMood(img, 'happy');
     expect(img.dataset.mood).toBe('happy');
+    expect(img.src).toContain('full-happy.png');
   });
 });

@@ -25,6 +25,7 @@ const STYLE = `
   position: fixed; right: 20px; bottom: 20px; z-index: 2147483000; width: 340px; max-width: calc(100vw - 40px);
   font-family: 'Pretendard', -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif; font-size: 12px; line-height: 17px; color: var(--ink-2);
   -webkit-font-smoothing: antialiased;
+  word-break: keep-all; overflow-wrap: break-word;
 }
 * { box-sizing: border-box; }
 .card {

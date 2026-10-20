@@ -1,6 +1,6 @@
 import { listen, send } from '../messaging/bus';
-import { AI_RUN_SESSION_PREFIX } from '../core/types/ai';
-import type { AiProvider, AiRunState } from '../core/types/ai';
+import { AI_BATCH_MAX, AI_BATCH_SESSION_KEY, AI_RUN_SESSION_PREFIX } from '../core/types/ai';
+import type { AiBatchState, AiProvider, AiRunState } from '../core/types/ai';
 import { withDefaults } from '../core/model/default-settings';
 import type { Settings } from '../core/types/settings';
 import { PROVIDERS } from '../engine/ai/providers';
@@ -9,7 +9,7 @@ import { SIDEPANEL_FOCUS_KEY, type Envelope, type MsgType, type PayloadOf, type 
 import { openDashboard } from './dashboard-tabs';
 import { assertExtensionSender, isOffscreenSender } from './job-coordinator';
 import { getInboxHost } from './site-registry';
-import { ensureOffscreen } from './offscreen-manager';
+import { ensureOffscreen, hasOffscreen } from './offscreen-manager';
 import { closeSidePanel, isSidePanelOpen, setShownNotice, shownNoticeOf } from './sidepanel-ports';
 
 const MAX_LOOKUP_BATCH = 200;
@@ -77,8 +77,8 @@ export const EXTENSION_ONLY_TYPES = [
   'notice/list', 'notice/get', 'extraction/edit', 'notice/field-edit', 'extraction/text',
   'recipients/list', 'recipients/save', 'recipients/import', 'recipients/delete', 'groups/save', 'groups/delete', 'groups/set-default',
   'templates/list', 'templates/save', 'templates/delete', 'templates/set-default',
-  'mail/prepare', 'mail/draft-get', 'mail/edits-get', 'mail/sent-list', 'mail/sent-get', 'mail/sent-add', 'mail/sent-void', 'config/repair',
-  'ai/get', 'ai/prepare', 'ai/prompt-get', 'ai/submit', 'ai/apply', 'ai/dismiss', 'ai/cancel',
+  'mail/prepare', 'mail/draft-get', 'mail/edits-get', 'mail/sent-list', 'mail/sent-get', 'mail/sent-add', 'mail/sent-void', 'mail/sent-view', 'config/repair',
+  'ai/get', 'ai/prepare', 'ai/prompt-get', 'ai/submit', 'ai/apply', 'ai/dismiss', 'ai/cancel', 'ai/batch-cancel',
 ] as const;
 type ExtensionOnlyType = (typeof EXTENSION_ONLY_TYPES)[number];
 
@@ -125,6 +125,119 @@ async function requireAiAccess(provider: AiProvider, keys: Partial<Record<AiProv
   return { key, adapter };
 }
 
+/** 키·모델·권한을 확인한다(ai/run과 ai/batch-run 공용). 순서: 키 → 모델 → 권한. */
+async function resolveAiRun(requested: AiProvider | undefined) {
+  const { settings, keys } = await readAiSettings();
+  const provider = requested ?? settings.ai.provider;
+  if (!keys[provider]?.trim()) throw err('AI_KEY_MISSING', 'API 키가 없습니다. 설정에서 저장하세요.');
+  const model = settings.ai.models[provider]?.trim();
+  if (!model) throw err('AI_MODEL_MISSING', '모델이 설정되지 않았습니다.');
+  const { key } = await requireAiAccess(provider, keys);
+  return { provider, key, model, raw: keys[provider], sendFullText: settings.ai.sendFullText };
+}
+
+/** ai/batch-run 처리 중 표시(SW 모듈 변수). 동시 요청 방지 */
+let batchRunInFlight = false;
+const batchActive = (s: AiBatchState | null | undefined): boolean => s?.status === 'running' || s?.status === 'waiting';
+async function readBatch(): Promise<AiBatchState | null> {
+  return ((await chrome.storage.session.get(AI_BATCH_SESSION_KEY))[AI_BATCH_SESSION_KEY] as AiBatchState | undefined) ?? null;
+}
+/** 배치를 stopped로 닫은 상태. 실행 중이던 항목은 failed, 대기 항목은 skipped. */
+function stoppedBatch(s: AiBatchState, reason: { code: string; message: string }): AiBatchState {
+  const at = new Date().toISOString();
+  const { currentIndex: _c, waitUntil: _w, ...rest } = s;
+  return {
+    ...rest, status: 'stopped', finishedAt: at, updatedAt: at, stopReason: reason,
+    items: s.items.map((it) => (it.status === 'running' ? { ...it, status: 'failed' as const, error: { code: 'AI_INTERRUPTED', message: '실행이 중단되었습니다' } }
+      : it.status === 'queued' ? { ...it, status: 'skipped' as const, error: { code: 'AI_BATCH_STOPPED', message: '중단으로 미실행' } } : it)),
+  };
+}
+/** 세션이 running/waiting인데 offscreen에 그 배치가 없으면 고아로 보고 stopped(AI_INTERRUPTED)로 덮어쓴다. offscreen은 만들지 않는다. */
+async function reconcileBatch(): Promise<AiBatchState | null> {
+  const cur = await readBatch();
+  if (!cur || !batchActive(cur)) return cur;
+  // 고아는 두 경우뿐이다: (a) offscreen이 없다, (b) offscreen이 정상 응답했는데 그 배치가 없다(null·다른 batchId).
+  // offscreen이 같은 batchId를 돌려주면 상태와 관계없이(done·cancelled 포함) 그 상태가 최신이다. 응답을 못 받으면 고아로 보지 않는다.
+  if (await hasOffscreen()) {
+    let live: AiBatchState | null;
+    try { live = await send('ai/batch-get', {}, { target: 'offscreen', timeoutMs: 5_000 }); } catch { return cur; }
+    if (live && live.batchId === cur.batchId) {
+      await chrome.storage.session.set({ [AI_BATCH_SESSION_KEY]: live });
+      return live;
+    }
+  }
+  // 덮어쓰기 직전에 세션을 다시 읽어, 기다리는 사이 갱신됐으면(offscreen push 등) 덮어쓰지 않는다.
+  const again = await readBatch();
+  if (!again || again.batchId !== cur.batchId || again.updatedAt !== cur.updatedAt) return again;
+  const stopped = stoppedBatch(cur, { code: 'AI_INTERRUPTED', message: '실행이 중단되었습니다. 다시 실행하세요' });
+  await chrome.storage.session.set({ [AI_BATCH_SESSION_KEY]: stopped });
+  return stopped;
+}
+
+/** 일괄 실행 릴레이. */
+function relayAiBatch(): void {
+  listen(
+    'ai/batch-run',
+    async (payload, sender) => {
+      assertExtensionSender(sender);
+      const ids = payload?.noticeIds;
+      if (!Array.isArray(ids) || ids.some((x) => typeof x !== 'string' || !x)) throw err('INVALID_VALUE', 'noticeIds가 올바르지 않습니다.');
+      const noticeIds = [...new Set(ids)];
+      if (noticeIds.length === 0) throw err('NOTHING_TO_REVIEW', '선택한 공고가 없습니다.');
+      if (noticeIds.length > AI_BATCH_MAX) throw err('PAYLOAD_TOO_LARGE', `한 번에 ${AI_BATCH_MAX}건까지 실행할 수 있습니다.`);
+      // 동시에 두 요청이 오면 먼저 온 것만 진행한다(첫 await 전에 동기로 표시한다).
+      if (batchRunInFlight) throw err('AI_BATCH_BUSY', '이미 일괄 실행을 시작하는 중입니다.');
+      batchRunInFlight = true;
+      try {
+      const { provider, key, model, raw, sendFullText } = await resolveAiRun(payload.provider);
+      if (batchActive(await reconcileBatch())) throw err('AI_BATCH_BUSY', '이미 일괄 실행 중입니다.');
+      const batchId = crypto.randomUUID();
+      const at = new Date().toISOString();
+      const initial: AiBatchState = {
+        batchId, provider, model, status: 'running', startedAt: at, updatedAt: at,
+        items: noticeIds.map((noticeId) => ({ noticeId, status: 'queued' as const, attempts: 0 })),
+      };
+      await chrome.storage.session.set({ [AI_BATCH_SESSION_KEY]: initial });
+      try {
+        await ensureOffscreen();
+        await send('ai/batch-exec', { batchId, noticeIds, provider, api: { key, model, sendFullText } }, { target: 'offscreen', timeoutMs: 25_000 });
+      } catch (e) {
+        const message = maskKey(e instanceof Error ? e.message : String(e), raw);
+        const code = (e as { code?: string }).code ?? 'AI_HTTP';
+        // 세션이 내 배치일 때만 stopped로 닫는다(다른 배치의 상태를 덮지 않는다).
+        const now = await readBatch();
+        if (now?.batchId === batchId) await chrome.storage.session.set({ [AI_BATCH_SESSION_KEY]: stoppedBatch(now, { code, message }) });
+        throw Object.assign(new Error(message), { code });
+      }
+      return { batchId };
+      } finally {
+        batchRunInFlight = false;
+      }
+    },
+    'sw',
+  );
+  listen('ai/batch-get', async (_p, sender) => { assertExtensionSender(sender); return reconcileBatch(); }, 'sw');
+  listen(
+    'ai/batch-status',
+    async (state: AiBatchState, sender) => {
+      if (!isOffscreenSender(sender)) throw err('SENDER_FORBIDDEN', '허용되지 않은 발신자입니다.');
+      await chrome.storage.session.set({ [AI_BATCH_SESSION_KEY]: state });
+    },
+    'sw',
+  );
+  listen(
+    'ai/batch-clear',
+    async ({ batchId }, sender) => {
+      assertExtensionSender(sender);
+      const cur = await readBatch();
+      if (!cur || cur.batchId !== batchId) return;
+      if (batchActive(cur)) throw err('AI_BATCH_BUSY', '실행 중인 일괄 실행은 지울 수 없습니다. 먼저 취소하세요.');
+      await chrome.storage.session.remove(AI_BATCH_SESSION_KEY);
+    },
+    'sw',
+  );
+}
+
 /** AI 재검토 릴레이. 키는 SW가 storage에서 읽어 offscreen에 주입한다(대시보드 payload에는 키가 없다). */
 function relayAi(): void {
   listen(
@@ -140,7 +253,7 @@ function relayAi(): void {
       const { key } = await requireAiAccess(provider, keys);
       await ensureOffscreen();
       try {
-        return await send('ai/exec', { noticeId: payload.noticeId, scope: payload.scope, provider, ...(payload.files ? { files: payload.files } : {}), api: { key, model } }, { target: 'offscreen', timeoutMs: 60_000 });
+        return await send('ai/exec', { noticeId: payload.noticeId, scope: payload.scope, ...(payload.keys ? { keys: payload.keys } : {}), provider, ...(payload.files ? { files: payload.files } : {}), api: { key, model, sendFullText: settings.ai.sendFullText } }, { target: 'offscreen', timeoutMs: 60_000 });
       } catch (e) {
         throw Object.assign(new Error(maskKey(e instanceof Error ? e.message : String(e), keys[provider])), { code: (e as { code?: string }).code });
       }
@@ -256,6 +369,7 @@ export function registerRouter(): void {
   registerUiMessages();
   relayG2bTest();
   relayAi();
+  relayAiBatch();
   for (const t of EXTENSION_ONLY_TYPES) if (!CUSTOM_RELAY.has(t)) relayExtensionOnly(t);
   relayToOffscreen('fs/status');
   relayToOffscreen('fs/root-updated');

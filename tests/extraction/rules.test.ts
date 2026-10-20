@@ -133,6 +133,20 @@ describe('결정기', () => {
     expect(items.credibilityScore).toMatchObject({ status: 'needs_review', reason: 'conflict' });
     expect(items.credibilityScore.candidates).toHaveLength(2);
   });
+  it("금액 후보 2개가 같은 줄에서 조건 구분자(△)와 함께 나오면 reason 'multi'", () => {
+    const line = (value: number, evidence: string): Candidate => ({ ...cand('performanceMinAmount', value, 'a', 'notice', 2), evidence: { ...ev('a', 'notice'), line: 7, evidence } });
+    const text = '△ 단독 5억원 이상 △ 공동 3억원 이상';
+    const { items } = decide([line(500_000_000, text), line(300_000_000, text)], rules);
+    expect(items.performanceMinAmount).toMatchObject({ status: 'needs_review', reason: 'multi', value: null });
+    expect(items.performanceMinAmount.candidates).toHaveLength(2);
+    // 구분자가 없거나 다른 줄/다른 항목이면 기존대로 conflict
+    const plain = decide([line(500_000_000, '5억원 이상'), line(300_000_000, '3억원 이상')], rules);
+    expect(plain.items.performanceMinAmount.reason).toBe('conflict');
+    const other = decide([cand('performanceMinAmount', 500_000_000, 'a', 'notice', 2), cand('performanceMinAmount', 300_000_000, 'b', 'rfp', 3)], rules);
+    expect(other.items.performanceMinAmount.reason).toBe('conflict');
+    const score = decide([{ ...cand('credibilityScore', 4, 'a', 'notice', 2), evidence: { ...ev('a', 'notice'), line: 1, evidence: '△ 4점' } }, { ...cand('credibilityScore', 5, 'a', 'notice', 2), evidence: { ...ev('a', 'notice'), line: 1, evidence: '△ 5점' } }], rules);
+    expect(score.items.credibilityScore.reason).toBe('conflict');
+  });
   it('qna 문서에만 값 → low_confidence', () => {
     const { items } = decide([cand('credibilityScore', 4, 'q', 'qna', 4)], rules);
     expect(items.credibilityScore).toMatchObject({ value: 4, status: 'needs_review', reason: 'low_confidence' });

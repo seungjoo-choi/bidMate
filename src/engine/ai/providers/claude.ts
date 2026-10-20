@@ -27,7 +27,8 @@ export const claudeAdapter: AiProviderAdapter = {
       url: `${ORIGIN}/v1/messages`,
       headers: { ...COMMON_HEADERS, 'x-api-key': r.apiKey },
       body: {
-        model: r.model, max_tokens: r.maxTokens, temperature: 0,
+        // temperature는 보내지 않는다: Sonnet 5.5·Opus 5.5·Fable 5.1·Haiku 5.5는 기본값 외 sampling 값을 400으로 거부한다
+        model: r.model, max_tokens: r.maxTokens,
         system: r.system,
         messages: [{ role: 'user', content: r.user }],
         output_config: { format: { type: 'json_schema', schema: outputSchema(r.spec) } },
@@ -49,7 +50,8 @@ export const claudeAdapter: AiProviderAdapter = {
   },
   async listModels(apiKey, fetchFn) {
     // S0 실측 전: GET /v1/models 응답 형태(data[].id, display_name)
-    const res = await fetchFn(`${ORIGIN}/v1/models`, { headers: { ...COMMON_HEADERS, 'x-api-key': apiKey } });
+    // 기본 페이지 크기는 20개라 최대치(1000)로 한 번에 받는다
+    const res = await fetchFn(`${ORIGIN}/v1/models?limit=1000`, { headers: { ...COMMON_HEADERS, 'x-api-key': apiKey } });
     const json = (await res.json().catch(() => null)) as { data?: Array<{ id?: string; display_name?: string }> } | null;
     if (!res.ok) {
       const err = httpError(res.status, json);

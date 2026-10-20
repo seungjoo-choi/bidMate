@@ -33,6 +33,12 @@ const KIND_OPTIONS: { value: NoticeKind; label: string }[] = [
   { value: 'prespec', label: '사전규격' },
 ];
 
+/** 편집 화면에 다녀와도 보던 종류 탭을 유지한다. */
+const KIND_STORAGE_KEY = 'bidmate.templates.kind';
+function loadKind(): NoticeKind {
+  try { return sessionStorage.getItem(KIND_STORAGE_KEY) === 'prespec' ? 'prespec' : 'bid'; } catch { return 'bid'; }
+}
+
 /** 템플릿 배열 순서가 곧 만든 순서다(새 템플릿은 끝에 붙는다). */
 function sortTemplates(list: Template[], key: SortKey): Template[] {
   if (key === 'added') return list;
@@ -48,10 +54,13 @@ export function TemplatesPage() {
   const [sort, setSort] = useState<SortKey>('recent');
   const [opError, setOpError] = useState<{ code: string; message: string } | null>(null);
   const [repairing, setRepairing] = useState(false);
-  const [newKind, setNewKind] = useState<NoticeKind>('bid');
+  const [kind, setKindState] = useState<NoticeKind>(loadKind);
   const toast = useToast();
   const builtinOf = (k: NoticeKind) => (k === 'prespec' ? builtinPrespecTemplate(new Date()) : builtinDefaultTemplate(new Date()));
-  const kindLabel = newKind === 'prespec' ? '사전규격' : '입찰공고';
+  const setKind = (k: NoticeKind) => {
+    setKindState(k);
+    try { sessionStorage.setItem(KIND_STORAGE_KEY, k); } catch { /* 저장 불가 시 탭 기억만 생략 */ }
+  };
 
   const go = (id: string) => { window.location.hash = `#/templates/${id}`; };
 
@@ -96,16 +105,18 @@ export function TemplatesPage() {
 
   const corrupt = error?.code === 'CONFIG_CORRUPT';
   const newer = error?.code === 'CONFIG_NEWER';
-  const shownTemplates = sortTemplates((data?.templates ?? []).filter((t) => matchesQuery(t.name, q)), sort);
+  const all = data?.templates ?? [];
+  const counts: Partial<Record<NoticeKind, number>> = {};
+  for (const t of all) counts[kindOf(t)] = (counts[kindOf(t)] ?? 0) + 1;
+  const shownTemplates = sortTemplates(all.filter((t) => kindOf(t) === kind && matchesQuery(t.name, q)), sort);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <PageTitle page="templates" />
         <div className="flex items-center gap-2">
-          <Select className="w-32 shrink-0" aria-label="새 템플릿 종류" value={newKind} options={KIND_OPTIONS} onChange={(v) => setNewKind(v as NoticeKind)} />
-          <Button variant="secondary" disabled={busy || !data} onClick={() => void create(builtinOf(newKind), `기본 템플릿 (새 양식)${newKind === 'prespec' ? ` - ${kindLabel}` : ''}`, newKind)}>기본 양식으로 새로 만들기</Button>
-          <Button icon={<FilePlus />} disabled={busy || !data} onClick={() => void create(builtinOf(newKind), newKind === 'prespec' ? '새 사전규격 템플릿' : '새 템플릿', newKind)}>새 템플릿</Button>
+          <Button variant="secondary" disabled={busy || !data} onClick={() => void create(builtinOf(kind), `기본 템플릿 (새 양식)${kind === 'prespec' ? ' - 사전규격' : ''}`, kind)}>기본 양식으로 새로 만들기</Button>
+          <Button icon={<FilePlus />} disabled={busy || !data} onClick={() => void create(builtinOf(kind), kind === 'prespec' ? '새 사전규격 템플릿' : '새 템플릿', kind)}>새 템플릿</Button>
         </div>
       </div>
 
@@ -127,7 +138,23 @@ export function TemplatesPage() {
       )}
 
       {data && (
-        <Card title="템플릿 목록" description="행을 누르면 편집 화면으로 이동합니다.">
+        <Card title="템플릿 목록" description="행을 누르면 편집 화면으로 이동합니다. 공고 종류별로 따로 관리되며, 기본 템플릿도 종류마다 하나씩입니다.">
+          <div role="tablist" aria-label="템플릿 종류" className="mb-4 flex gap-7 border-b border-line">
+            {KIND_OPTIONS.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                role="tab"
+                aria-selected={kind === o.value}
+                onClick={() => setKind(o.value)}
+                className={`-mb-px border-b-2 pb-3 transition-colors motion-reduce:transition-none ${
+                  kind === o.value ? 'border-ink font-semibold text-ink' : 'border-transparent font-medium text-muted hover:text-ink'
+                }`}
+              >
+                {o.label} 템플릿<span className="ml-1.5 font-mono text-sm font-normal text-faint tabular-nums">{counts[o.value] ?? 0}</span>
+              </button>
+            ))}
+          </div>
           <div className="mb-3 flex items-center gap-2">
             <div className="relative max-w-sm min-w-0 flex-1">
               <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" />
@@ -154,8 +181,7 @@ export function TemplatesPage() {
                     <td className="px-3 py-2 text-center text-muted tabular-nums">{i + 1}</td>
                     <td className="px-3 py-2">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-[15px] font-semibold text-ink">{t.name}</span>
-                        {kindOf(t) === 'prespec' && <StatusBadge status="idle">사전규격</StatusBadge>}
+                        <span className="truncate text-[0.9375rem] font-semibold text-ink">{t.name}</span>
                         {t.isDefault && <StatusBadge status="ok">기본</StatusBadge>}
                       </div>
                     </td>

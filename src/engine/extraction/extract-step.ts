@@ -75,7 +75,7 @@ function fieldOfItem(it: ExtractedItem<unknown>, fetchedAt: string, conflictValu
   if (it.status === 'verified' && it.value !== null && source) {
     return { value: it.value, raw: it.raw, status: 'verified', source } as FieldValue<unknown>;
   }
-  if (it.status === 'needs_review' && it.reason === 'conflict' && it.candidates?.length) {
+  if (it.status === 'needs_review' && (it.reason === 'conflict' || it.reason === 'multi') && it.candidates?.length) {
     // raw가 비면 mergeFields가 값 없는 레이어를 무시해 충돌이 notice에 드러나지 않는다. 후보 원문을 raw로 남긴다.
     const raw = it.candidates.map((c) => c.raw ?? String(c.value)).join(' / ').slice(0, 200);
     // 대표값을 쓸 때는 출처도 남긴다. 없으면 다음 추출에서 문서 값으로 인식되지 않아 갱신이 막힌다.

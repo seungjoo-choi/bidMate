@@ -4,17 +4,18 @@ import { claudeAdapter } from '../../src/engine/ai/providers/claude';
 import { getAdapter, PROVIDERS } from '../../src/engine/ai/providers';
 
 const spec: OutputSpec = {
-  tag: 'bidmate-ai-review/1', runId: 'r1', keys: ['credibilityScore', 'differentialScoring'],
+  tag: 'bidmate-ai-review/2', runId: 'r1', keys: ['credibilityScore', 'differentialScoring'],
   kindOf: { credibilityScore: 'number', managementScore: 'number', performanceScore: 'number', performancePeriod: 'string', performanceMinAmount: 'number', performanceCondition: 'string', differentialScoring: 'boolean' },
 };
 
 describe('Claude 어댑터', () => {
-  it('buildRequest: 엔드포인트·헤더·system/messages·temperature 0·스키마', () => {
+  it('buildRequest: 엔드포인트·헤더·system/messages·temperature 미전송·스키마', () => {
     const r = claudeAdapter.buildRequest({ apiKey: 'K', model: 'claude-x', system: 'SYS', user: 'USR', spec, maxTokens: 8192 });
     expect(r.url).toBe('https://api.anthropic.com/v1/messages');
     expect(r.headers).toMatchObject({ 'x-api-key': 'K', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' });
-    const b = r.body as { model: string; max_tokens: number; temperature: number; system: string; messages: unknown[]; output_config: { format: { type: string; schema: { properties: { items: { items: { anyOf: Array<{ properties: { key: { enum: string[] } } }> } } } } } } };
-    expect(b).toMatchObject({ model: 'claude-x', max_tokens: 8192, temperature: 0, system: 'SYS', messages: [{ role: 'user', content: 'USR' }] });
+    const b = r.body as { model: string; max_tokens: number; temperature?: number; system: string; messages: unknown[]; output_config: { format: { type: string; schema: { properties: { items: { items: { anyOf: Array<{ properties: { key: { enum: string[] } } }> } } } } } } };
+    expect(b).toMatchObject({ model: 'claude-x', max_tokens: 8192, system: 'SYS', messages: [{ role: 'user', content: 'USR' }] });
+    expect(b.temperature).toBeUndefined();
     expect(b.output_config.format.type).toBe('json_schema');
     expect(b.output_config.format.schema.properties.items.items.anyOf.map((x) => x.properties.key.enum[0])).toEqual(['credibilityScore', 'differentialScoring']);
     expect(JSON.stringify(r.body)).not.toContain('"K"');

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { loadRootRecord, saveRootHandle } from '../../engine/file-store/idb-handles';
 import { send } from '../../messaging/bus';
 import type { FsStatus, SmokeTestResult } from '../../messaging/protocol';
-import { Button, Card, InlineAlert, StatusBadge } from '../../ui/components';
+import { Button, Card, FormActions, InlineAlert, StatusBadge } from '../../ui/components';
 
 const PERM_LABEL = { granted: '접근 허용됨', prompt: '재승인 필요', denied: '접근 거부됨' } as const;
 const PERM_STATUS = { granted: 'ok', prompt: 'warn', denied: 'error' } as const;
@@ -113,12 +113,7 @@ export function StorageFolderCard() {
         </InlineAlert>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        {perm === 'prompt' && handle && (
-          <Button icon={<KeyRound />} loading={busy === 'reauth'} onClick={reauthorize}>
-            접근 재승인
-          </Button>
-        )}
+      <FormActions>
         <Button
           variant="secondary"
           icon={<FlaskConical />}
@@ -128,7 +123,12 @@ export function StorageFolderCard() {
         >
           저장 테스트
         </Button>
-      </div>
+        {perm === 'prompt' && handle && (
+          <Button icon={<KeyRound />} loading={busy === 'reauth'} onClick={reauthorize}>
+            접근 재승인
+          </Button>
+        )}
+      </FormActions>
 
       {smoke && (
         <InlineAlert tone={smoke.ok ? 'ok' : 'error'}>
@@ -136,7 +136,7 @@ export function StorageFolderCard() {
           <div className="mt-1 text-xs">
             쓰기 {smoke.steps.write ? 'OK' : '실패'}, 읽기 {smoke.steps.read ? 'OK' : '실패'}, 삭제 {smoke.steps.delete ? 'OK' : '실패'}
           </div>
-          {smoke.error && <div className="mt-1 break-all text-xs">{smoke.error}</div>}
+          {smoke.error && <div className="mt-1 wrap-anywhere text-xs">{smoke.error}</div>}
         </InlineAlert>
       )}
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
@@ -150,8 +150,8 @@ function FolderGuide() {
     <>
       <ol className="mt-1 list-decimal space-y-0.5 pl-5">
         <li>오른쪽 위 <b>폴더 선택</b>을 누르면 <b>문서</b> 폴더에서 선택 창이 열립니다.</li>
-        <li>선택 창 왼쪽 아래 <b>새 폴더</b>를 눌러 <b>나의 입찰메이트</b> 폴더를 만듭니다.</li>
-        <li>만든 <b>나의 입찰메이트</b> 폴더를 고른 채로 <b>선택</b>을 누르고, 이어서 뜨는 접근 허용 창에서 허용합니다.</li>
+        <li>선택 창 왼쪽 아래 <b>새 폴더</b>를 눌러 <b>비드메이트</b> 폴더를 만듭니다.</li>
+        <li>만든 <b>비드메이트</b> 폴더를 고른 채로 <b>선택</b>을 누르고, 이어서 뜨는 접근 허용 창에서 허용합니다.</li>
       </ol>
       <div className="mt-1 text-xs">바탕화면, 다운로드 폴더 전체, iCloud나 NAS 동기화 폴더는 피해 주세요. 폴더를 바꾸면 기존 폴더의 파일은 옮겨지지 않습니다.</div>
     </>

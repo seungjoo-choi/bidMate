@@ -20,7 +20,7 @@ export interface EvidenceRef {
 }
 export interface ExtractedItem<T> {
   value: T | null; raw?: string; status: ExtractionStatus;
-  reason?: 'not_found' | 'conflict' | 'low_confidence' | 'no_documents' | 'no_total';
+  reason?: 'not_found' | 'conflict' | 'multi' | 'low_confidence' | 'no_documents' | 'no_total';
   evidence?: EvidenceRef;
   candidates?: Array<{ value: T; raw?: string; evidence: EvidenceRef }>;
   userEdited?: {

@@ -2,7 +2,7 @@ import { Check, Search } from 'lucide-react';
 import { useState } from 'react';
 import type { RecipientInput } from '../../../core/types/config-file';
 import type { Group, Recipient } from '../../../core/types/recipient';
-import { Button, Field, inputClass } from '../../../ui/components';
+import { Button, Field, FormActions, inputClass } from '../../../ui/components';
 import { matchesQuery } from '../../../ui/components/select-filter';
 import { EmailDomainInput } from './EmailDomainInput';
 import { Switch, errorText, type OpError } from './shared';
@@ -92,10 +92,10 @@ export function RecipientForm({ recipient, groups, initialGroupIds, error, busy,
         <Switch label="메일 발송" checked={enabled} onChange={setEnabled} />
       </div>
       {otherErr && <p className="text-xs text-danger">{otherErr}</p>}
-      <div className="flex gap-2">
-        <Button type="submit" disabled={busy}>저장</Button>
+      <FormActions>
         <Button variant="ghost" onClick={onCancel}>취소</Button>
-      </div>
+        <Button type="submit" disabled={busy}>저장</Button>
+      </FormActions>
     </form>
   );
 }

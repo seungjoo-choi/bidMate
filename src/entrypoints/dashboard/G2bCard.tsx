@@ -2,7 +2,7 @@ import { FlaskConical, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { send } from '../../messaging/bus';
 import type { G2bTestResult } from '../../messaging/protocol';
-import { Button, Card, Field, InlineAlert, StatusBadge } from '../../ui/components';
+import { Button, Card, Field, FormActions, InlineAlert, StatusBadge } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 
 type Secrets = { g2bServiceKey?: string; [k: string]: unknown };
@@ -58,11 +58,11 @@ export function G2bCard() {
       <Field label="서비스키" htmlFor="g2b-key">
         <input id="g2b-key" type="password" autoComplete="off" className={inputClass} value={input} onChange={(e) => setInput(e.target.value)} />
       </Field>
-      <div className="flex flex-wrap gap-2">
-        <Button icon={<Save />} loading={busy === 'save'} disabled={!input.trim()} onClick={save}>저장</Button>
+      <FormActions>
         <Button variant="secondary" icon={<FlaskConical />} loading={busy === 'test'} disabled={!saved} onClick={() => void runTest()}>연결 테스트</Button>
         <Button variant="secondary" icon={<FlaskConical />} loading={busy === 'test-prespec'} disabled={!saved} onClick={() => void runTest('prespec')}>사전규격 API 테스트</Button>
-      </div>
+        <Button icon={<Save />} loading={busy === 'save'} disabled={!input.trim()} onClick={save}>저장</Button>
+      </FormActions>
       {test && (
         <InlineAlert tone={test.ok ? 'ok' : 'error'}>
           {test.ok ? <>연결 성공: {test.title}</> : <>{test.error?.code}: {test.error?.message}</>}

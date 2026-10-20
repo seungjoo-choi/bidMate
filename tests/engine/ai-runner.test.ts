@@ -225,3 +225,59 @@ describe('AiRunner', () => {
     expect((await review()).runs[0]!.status).toBe('done');
   });
 });
+
+describe('AiRunner outcome와 keys', () => {
+  it('done은 AiRunOutcome: 성공 done+run, API 실패 failed+error, 취소 cancelled', async () => {
+    const { noticeId, make } = await setup();
+    const ok = await (await make((async () => claudeOk(resp('run-1'))) as unknown as typeof fetch).exec(req(noticeId))).done;
+    expect(ok).toMatchObject({ status: 'done', run: { id: 'run-1', status: 'done' } });
+
+    const s2 = await setup();
+    const bad = await (await s2.make((async () => new Response(JSON.stringify({ error: { message: 'no' } }), { status: 401 })) as unknown as typeof fetch).exec(req(s2.noticeId))).done;
+    expect(bad).toMatchObject({ status: 'failed', error: { code: 'AI_AUTH' } });
+
+    const s3 = await setup();
+    const runner = s3.make(((_u: string, init: RequestInit) => new Promise<Response>((_r, rej) => {
+      (init.signal as AbortSignal).addEventListener('abort', () => rej(new DOMException('aborted', 'AbortError')));
+    })) as unknown as typeof fetch);
+    const { runId, done } = await runner.exec(req(s3.noticeId));
+    await new Promise((r) => setTimeout(r, 20));
+    await runner.cancel({ noticeId: s3.noticeId, runId });
+    expect(await done).toMatchObject({ status: 'cancelled' });
+  });
+
+  it('예외 경로(저장소 오류)는 failed + error(키 가림)', async () => {
+    const { store, noticeId, make } = await setup();
+    const orig = store.writeText.bind(store);
+    store.writeText = async (p: string, t: string) => { if (p.endsWith('-response.txt')) throw new Error(`disk ${KEY}`); return orig(p, t); };
+    const out = await (await make((async () => claudeOk(resp('run-1'))) as unknown as typeof fetch).exec(req(noticeId))).done;
+    expect(out.status).toBe('failed');
+    expect(out.error!.message).not.toContain(KEY);
+  });
+
+  it('exec·prepare가 keys를 prepareRun에 전달한다(scope keys, auto)', async () => {
+    const { noticeId, make, review } = await setup();
+    const runner = make((async () => claudeOk(resp('run-1'))) as unknown as typeof fetch);
+    const { done } = await runner.exec({ ...req(noticeId), scope: 'keys', keys: ['credibilityScore'] });
+    await done;
+    expect((await review()).runs[0]).toMatchObject({ scope: 'keys', keys: ['credibilityScore'] });
+    const prepared = await runner.prepare({ noticeId, scope: 'keys', keys: ['performancePeriod'], provider: 'claude' });
+    expect(prepared.run).toMatchObject({ scope: 'keys', keys: ['performancePeriod'] });
+    const auto = await runner.prepare({ noticeId, scope: 'auto', provider: 'claude' });
+    expect(['pending', 'all']).toContain(auto.run.scope);
+  });
+});
+
+describe('AiRunner 전문 전송 실패', () => {
+  it('전문 전송이 400(AI_BAD_REQUEST)이어도 자동 재시도하지 않는다: fetch 1번, failed, 새 run 없음', async () => {
+    const { noticeId, make, review } = await setup();
+    let calls = 0;
+    const runner = make((async () => { calls++; return new Response(JSON.stringify({ error: { message: 'x' } }), { status: 400 }); }) as unknown as typeof fetch);
+    const out = await (await runner.exec(req(noticeId))).done;
+    expect(calls).toBe(1);
+    expect(out).toMatchObject({ status: 'failed', error: { code: 'AI_BAD_REQUEST' } });
+    const runs = (await review()).runs;
+    expect(runs.map((r) => r.id)).toEqual(['run-1']);
+    expect(runs[0]).toMatchObject({ status: 'failed' });
+  });
+});

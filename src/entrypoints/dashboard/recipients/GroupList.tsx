@@ -1,7 +1,7 @@
 import { BookUser, Plus, Star } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import type { Group } from '../../../core/types/recipient';
-import { Button, EmptyState, inputClass } from '../../../ui/components';
+import { Button, EmptyState, FormActions, inputClass } from '../../../ui/components';
 import { errorText, type OpError } from './shared';
 
 /** 'all'이면 주소록 전체, 아니면 그룹 id */
@@ -58,10 +58,10 @@ export function GroupList({ groups, recipientCount, view, error, busy, onSelect,
             onKeyDown={(e) => { if (e.key === 'Enter') void submit(); if (e.key === 'Escape') setAdding(false); }}
           />
           {error && <p className="text-xs text-danger">{errorText(error)}</p>}
-          <div className="flex gap-2">
-            <Button disabled={busy || !name.trim()} onClick={() => void submit()}>만들기</Button>
+          <FormActions>
             <Button variant="ghost" onClick={() => { setAdding(false); setName(''); }}>취소</Button>
-          </div>
+            <Button disabled={busy || !name.trim()} onClick={() => void submit()}>만들기</Button>
+          </FormActions>
         </div>
       ) : (
         <Button variant="secondary" className="mt-3 w-full" icon={<Plus />} disabled={busy} onClick={() => setAdding(true)}>새 그룹</Button>

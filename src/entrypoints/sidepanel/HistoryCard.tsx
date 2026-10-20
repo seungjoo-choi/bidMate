@@ -61,7 +61,7 @@ const LINE_TEXT: Record<HistoryLine['tone'], string> = {
 
 function Line({ line }: { line: HistoryLine }) {
   return (
-    <li className="sp-slide grid grid-cols-[58px_1fr] gap-2 text-[13px] leading-snug">
+    <li className="sp-slide grid grid-cols-[58px_1fr] gap-2 text-[0.8125rem] leading-snug">
       <time className="pt-px font-mono text-xs text-faint tabular-nums">{line.time}</time>
       <div className={`min-w-0 [overflow-wrap:anywhere] ${LINE_TEXT[line.tone]}`}>
         {line.name && <span className="text-ink">{line.name}</span>}
@@ -87,14 +87,14 @@ function Line({ line }: { line: HistoryLine }) {
 function Facts({ rows }: { rows: FactRow[] }) {
   if (rows.length === 0) return null;
   return (
-    <dl className="sp-slide mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 rounded-btn border border-line bg-surface px-2.5 py-1.5 text-[13px]">
+    <dl className="sp-slide mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 rounded-btn border border-line bg-surface px-2.5 py-1.5 text-[0.8125rem]">
       {rows.map((r) => (
         <div key={r.label} className="contents">
           <dt className="whitespace-nowrap text-muted">{r.label}</dt>
           <dd className={`m-0 min-w-0 font-semibold tabular-nums [overflow-wrap:anywhere] ${r.check ? 'text-warn' : ''}`}>
             {r.value}
             {r.dday && <span className="ml-1.5 text-warn">{r.dday}</span>}
-            {r.check && <span className="ml-1.5 rounded-full bg-warn-wash px-1.5 text-[11px] font-semibold">확인 필요</span>}
+            {r.check && <span className="ml-1.5 rounded-full bg-warn-wash px-1.5 text-[0.6875rem] font-semibold">확인 필요</span>}
           </dd>
         </div>
       ))}
@@ -121,7 +121,7 @@ export function HistoryCard({ view, open, onToggle, onSelectAttempt }: HistoryCa
         <button type="button" onClick={onToggle} aria-expanded={open}
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-[4px] text-left text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
           <ChevronRight className={`size-3.5 shrink-0 transition-transform duration-150 motion-reduce:transition-none ${open ? 'rotate-90' : ''}`} />
-          <h2 className="m-0 text-[13px] font-semibold tracking-wide">수집 기록</h2>
+          <h2 className="m-0 text-[0.8125rem] font-semibold tracking-wide">수집 기록</h2>
           <span className="truncate text-xs">{view.summary}</span>
         </button>
         {open && view.runs.length > 1 && (

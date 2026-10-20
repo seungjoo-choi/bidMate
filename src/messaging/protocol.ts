@@ -1,4 +1,4 @@
-import type { AttachResult, FieldResult, SendRecord, SentIndexEntry } from '../core/types/compose';
+import type { AttachResult, FieldResult, SendRecord, SentIndexEntry, SentMailView } from '../core/types/compose';
 import type { ComposeParams, HtmlFields, Job, JobError, JobProgress, JobStatus } from '../core/types/job';
 import type { Extraction, ExtractionKey } from '../core/types/extraction';
 import type { IndexEntry } from '../core/types/index-file';
@@ -13,7 +13,7 @@ import type { DetectedDetail } from '../adapters/g2b/detail-page';
 import type { ComposeSelectorSet, ComposeState, SendWatchConfig } from '../adapters/naverworks/types';
 import type { EvalRaw } from '../adapters/g2b/eval-api';
 import type { EvalIndexEntry, EvalRecord } from '../core/types/evaluation';
-import type { AiProvider, AiReviewFile, AiRunState, AiScope } from '../core/types/ai';
+import type { AiBatchState, AiProvider, AiReviewFile, AiRunState, AiScope } from '../core/types/ai';
 
 /** 'content'는 SW/팝업이 content script로 보내는 메시지의 대상. */
 export type Target = 'sw' | 'offscreen' | 'content';
@@ -125,6 +125,7 @@ export type Msg =
   | { type: 'mail/sent-get'; payload: { noticeId: string }; response: SendRecord[] }
   | { type: 'mail/sent-add'; payload: { noticeId: string; sentAt?: string; note?: string }; response: { record: SendRecord; notice: Notice } }
   | { type: 'mail/sent-void'; payload: { noticeId: string; recordId: string }; response: { notice: Notice } }
+  | { type: 'mail/sent-view'; payload: { noticeId: string; recordId: string }; response: SentMailView | null }
   | { type: 'mail/send-signal'; payload: { jobId: string; kind: 'click' | 'hotkey' | 'confirm'; confirmation?: 'ui_gone' | 'toast' | 'unload' }; response: void }  // CS→SW
   | { type: 'mail/sent-record'; payload: { noticeId: string; jobId: string; composeRecordId?: string; provider?: MailProvider; kind: 'click' | 'hotkey' | 'confirm'; confirmation?: 'ui_gone' | 'toast' | 'unload' }; response: { recorded: boolean } }  // SW→offscreen
   | { type: 'config/repair'; payload: { file: 'recipients' | 'groups' | 'templates' }; response: { backupPath: string } }
@@ -144,17 +145,23 @@ export type Msg =
   | { type: 'eval/delete'; payload: { noticeId: string }; response: { removed: boolean } }
   | { type: 'eval/probe'; payload: { ref: EvalRef; withoutIdHeaders?: boolean }; response: EvalProbeResult }  // 확장 페이지→SW. 저장 없이 개수만 반환
   | { type: 'ai/get'; payload: { noticeId: string }; response: AiReviewFile | null }
-  | { type: 'ai/run'; payload: { noticeId: string; scope: AiScope; provider?: AiProvider; files?: string[] }; response: { runId: string } }  // 대시보드→SW. 키는 SW가 주입한다
-  | { type: 'ai/exec'; payload: { noticeId: string; scope: AiScope; provider: AiProvider; files?: string[]; api: { key: string; model: string } }; response: { runId: string } }  // SW→offscreen 전용
+  | { type: 'ai/run'; payload: { noticeId: string; scope: AiScope; keys?: ExtractionKey[]; provider?: AiProvider; files?: string[] }; response: { runId: string } }  // 대시보드→SW. 키는 SW가 주입한다
+  | { type: 'ai/exec'; payload: { noticeId: string; scope: AiScope; keys?: ExtractionKey[]; provider: AiProvider; files?: string[]; api: { key: string; model: string; sendFullText?: boolean } }; response: { runId: string } }  // SW→offscreen 전용
   | { type: 'ai/status'; payload: AiRunState; response: void }  // offscreen→SW 전용
   | { type: 'ai/cancel'; payload: { noticeId: string; runId: string }; response: { cancelled: boolean } }
-  | { type: 'ai/prepare'; payload: { noticeId: string; scope: AiScope; provider?: AiProvider; files?: string[] }; response: { runId: string; text: string; webUrl: string; stats: { chars: number; files: number; truncated: boolean; excludedFiles: string[] } } }
+  | { type: 'ai/prepare'; payload: { noticeId: string; scope: AiScope; keys?: ExtractionKey[]; provider?: AiProvider; files?: string[] }; response: { runId: string; text: string; webUrl: string; stats: { chars: number; files: number; truncated: boolean; excludedFiles: string[] } } }
   | { type: 'ai/prompt-get'; payload: { noticeId: string; runId: string }; response: { text: string } }
   | { type: 'ai/submit'; payload: { noticeId: string; runId: string; text: string }; response: AiReviewFile }  // text 상한 200KB(SW 검사)
-  | { type: 'ai/apply'; payload: { noticeId: string; runId: string; key: ExtractionKey; note?: string }; response: { notice: Notice; extraction: Extraction; aiReview: AiReviewFile } }
+  | { type: 'ai/apply'; payload: { noticeId: string; runId: string; key: ExtractionKey; note?: string; variantIndex?: number }; response: { notice: Notice; extraction: Extraction; aiReview: AiReviewFile } }
   | { type: 'ai/dismiss'; payload: { noticeId: string; runId: string; key: ExtractionKey }; response: AiReviewFile }
   | { type: 'ai/test'; payload: { provider: AiProvider }; response: { ok: boolean; models?: Array<{ id: string; displayName?: string }>; error?: { code: string; message: string } } }  // 대시보드→SW
   | { type: 'ai/models'; payload: { provider: AiProvider; apiKey: string }; response: { models: Array<{ id: string; displayName?: string }> } }  // SW→offscreen 전용
+  | { type: 'ai/batch-run'; payload: { noticeIds: string[]; provider?: AiProvider }; response: { batchId: string } }  // 대시보드→SW. 키는 SW가 주입한다
+  | { type: 'ai/batch-exec'; payload: { batchId: string; noticeIds: string[]; provider: AiProvider; api: { key: string; model: string; sendFullText?: boolean } }; response: { batchId: string } }  // SW→offscreen 전용
+  | { type: 'ai/batch-status'; payload: AiBatchState; response: void }  // offscreen→SW 전용
+  | { type: 'ai/batch-get'; payload: Record<string, never>; response: AiBatchState | null }  // 대시보드→SW(고아 판정 포함), SW→offscreen(현재 배치)
+  | { type: 'ai/batch-cancel'; payload: { batchId: string }; response: { cancelled: boolean } }
+  | { type: 'ai/batch-clear'; payload: { batchId: string }; response: void }  // SW 단독. 실행 중이면 AI_BATCH_BUSY
   | { type: 'g2b/collect'; payload: void; response: { started: boolean; jobId?: string; code?: string } }  // popup→CS
   | { type: 'g2b/retry'; payload: { jobId: string }; response: { started: boolean; jobId?: string; code?: string } };  // sidepanel→CS: 이 탭 공고의 잡 재시도(SW가 공고/탭 일치 검사)
 

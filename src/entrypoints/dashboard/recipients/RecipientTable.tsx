@@ -69,7 +69,7 @@ export function RecipientTable({ recipients, groups, busy, onAdd, onImport, onEd
                       <tr key={r.id} className={`border-t border-line ${r.enabled ? '' : 'text-faint'}`}>
                         <td className="px-3 py-2 text-center text-muted tabular-nums">{i + 1}</td>
                         <td className="px-3 py-2">
-                          <div className={`text-[15px] font-semibold ${r.enabled ? 'text-ink' : 'text-faint'}`}>
+                          <div className={`text-[0.9375rem] font-semibold ${r.enabled ? 'text-ink' : 'text-faint'}`}>
                             {r.name}
                             {r.memo && <span className="ml-1.5 font-normal text-muted">({r.memo})</span>}
                           </div>

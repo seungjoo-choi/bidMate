@@ -20,7 +20,7 @@ export function GradeSection({ ctx }: { ctx: EvalCtx }) {
       title="대항목별 등급 분포"
       sub="위원 × 세부항목 칸의 등급 비율, 오른쪽 숫자는 만점 비율"
       action={
-        <div className="flex flex-wrap gap-3 text-[13px] text-muted">
+        <div className="flex flex-wrap gap-3 text-[0.8125rem] text-muted">
           {GRADE_NAMES.map((n, k) => <span key={n} className="inline-flex items-center gap-1.5 whitespace-nowrap"><span className={`size-3 rounded-[3px] ${GRADE_SEG_CLASS[k]}`} />{n}</span>)}
         </div>
       }
@@ -30,13 +30,13 @@ export function GradeSection({ ctx }: { ctx: EvalCtx }) {
           <div key={g.group} className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between gap-3 text-sm">
               <b className="whitespace-nowrap">{g.group}</b>
-              <span className="text-[13px] whitespace-nowrap text-muted">배점 {g.maxScore}</span>
+              <span className="text-[0.8125rem] whitespace-nowrap text-muted">배점 {g.maxScore}</span>
             </div>
             {seqs.map((s, si) => {
               const share = gradeShare(dists[si]?.[gi]?.counts ?? [0, 0, 0, 0]);
               const mine = ctx.isOurs && s === ctx.ourSeq;
               return (
-                <div key={s} className="grid grid-cols-[120px_1fr_44px] items-center gap-3 text-[13px] tabular-nums">
+                <div key={s} className="grid grid-cols-[120px_1fr_44px] items-center gap-3 text-[0.8125rem] tabular-nums">
                   <span className={`truncate ${mine ? 'font-bold text-primary' : 'text-muted'}`}>{ctx.nameOf(s)}</span>
                   <div className="flex h-2.5 gap-px overflow-hidden rounded-full bg-sunken">
                     {share.pct.map((p, k) => p > 0 && <div key={k} className={`h-full ${GRADE_SEG_CLASS[k]}`} style={{ width: `${p}%` }} title={`${GRADE_NAMES[k]} ${dists[si]?.[gi]?.counts[k] ?? 0}칸`} />)}
@@ -134,7 +134,7 @@ export function OfficialSection({ ctx }: { ctx: EvalCtx }) {
                 return (
                   <tr key={r.seq} className={`${ROW} ${mine ? OURS_ROW : ''}`}>
                     <td className={`${TD} pl-6`}>
-                      <span className={`inline-flex min-w-10 justify-center rounded-full px-2 py-0.5 text-[13px] font-bold ${r.rank === 1 ? 'bg-primary text-primary-ink' : 'bg-sunken text-ink'}`}>{rankLabel(r.rank)}</span>
+                      <span className={`inline-flex min-w-10 justify-center rounded-full px-2 py-0.5 text-[0.8125rem] font-bold ${r.rank === 1 ? 'bg-primary text-primary-ink' : 'bg-sunken text-ink'}`}>{rankLabel(r.rank)}</span>
                     </td>
                     <th scope="row" className={`${TD} text-left font-semibold`}>{r.name}</th>
                     <td className={`${TD} text-right`}>{formatAmount(amount)}</td>

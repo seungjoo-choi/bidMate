@@ -34,7 +34,7 @@ function JobView({ job, onRetry, onCancel }: { job: Job; onRetry: () => void; on
         </div>
       </div>
       {job.label && (job.status === 'running' || job.status === 'cancelling') && (
-        <div className="break-all text-xs text-muted">{job.label}</div>
+        <div className="wrap-anywhere text-xs text-muted">{job.label}</div>
       )}
       <ul className="space-y-1 text-sm">
         {job.steps.map((s) => (
@@ -50,7 +50,7 @@ function JobView({ job, onRetry, onCancel }: { job: Job; onRetry: () => void; on
       {result && (
         <div className="space-y-2">
           <div className="text-sm">{result.title}</div>
-          <div className="break-all text-xs text-muted">저장 폴더: {result.folder}</div>
+          <div className="wrap-anywhere text-xs text-muted">저장 폴더: {result.folder}</div>
           <ul className="space-y-1 text-sm">
             {result.attachments.map((a) => (
               <li key={a.name} className="flex items-center justify-between gap-3">
@@ -103,11 +103,14 @@ export function CollectTestSection() {
   };
 
   return (
-    <Card title="수집 테스트" description="나라장터 공고번호로 공고정보와 첨부파일을 저장 폴더에 수집합니다. (Stage B 전 검증용)">
+    <Card title="수집 테스트" description="나라장터 공고번호로 공고정보와 첨부파일을 저장 폴더에 수집합니다.">
       <Field label="공고번호" htmlFor="collect-no">
-        <input id="collect-no" className={inputClass} value={text} onChange={(e) => setText(e.target.value)} />
+        {/* 입력칸 하나짜리 폼이라 버튼을 같은 줄 오른쪽에 붙인다. */}
+        <div className="flex gap-2">
+          <input id="collect-no" className={`${inputClass} min-w-0 flex-1`} value={text} onChange={(e) => setText(e.target.value)} />
+          <Button icon={<Download />} loading={busy} onClick={collect}>수집</Button>
+        </div>
       </Field>
-      <Button icon={<Download />} loading={busy} onClick={collect}>수집</Button>
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
       <div className="space-y-3">
         {jobs.filter((j) => j.type === 'collect').map((j) => (

@@ -1,0 +1,644 @@
+{
+  "promptVersion": "2.0.0",
+  "model": "gemini-3.5-flash",
+  "mode": "api",
+  "n": 3,
+  "runs": [
+    {
+      "noticeId": "R26BK01678997-000",
+      "n": 1,
+      "responseFile": "tests/fixtures/ai-eval/responses/R26BK01678997-000/2.0.0-1.txt",
+      "inputTokens": 50256,
+      "outputTokens": 1298,
+      "ms": 6872,
+      "items": {
+        "credibilityScore": {
+          "expected": null,
+          "aiValue": null,
+          "aiNote": "가감점 항목만 있고 합계 배점 없음",
+          "verdict": "correct",
+          "quote": "E. 정책지원 관련 다음 각 항목에 해당하는 경우(지분율 또는 분담률 20% 이상인 경우)\n(1) 여성가족부장관(또는 위임 받은 자)으로부터 가족친화 인증을 받은 기업\n(2) 고용노동부장관(또는 위임 받은 자)으로부터 사회적기업 인증을 받은 기업\n(3) 대중소농어업재단 또는 동반성장위원회(또는 위임 받은 자)으로부터 ESG우수중소기업으로 선정된 기업 | 건별 0.5점 (최대 2.0점)",
+          "rejectedReason": null
+        },
+        "managementScore": {
+          "expected": 4,
+          "aiValue": 4,
+          "aiNote": null,
+          "verdict": "skipped",
+          "quote": "경영상태 | - 신용평가등급 : 참여사 전체의 신용평가 등급에 대해 정량평가 기준표에 의거하여 평가한다. | 4",
+          "rejectedReason": "quote_not_found",
+          "ambiguous": "평가항목표 배점 칸(2972줄)이 \"104/4/4\"로 추출되어 깨짐. 기준표 3070줄과 신용평가 4.00점 최고점 기준 4로 판정"
+        },
+        "performanceScore": {
+          "expected": 6,
+          "aiValue": 6,
+          "aiNote": null,
+          "verdict": "rejected",
+          "quote": "회사 유사사업 수행 실적 | - 국내외 유사사업 수행실적 비율 : 국내외 유사사업 수행실적에 대해 정량평가 기준표에 의거하여 해당 사업규모 대비 실적 비율 점수를 부여한다. | 6",
+          "rejectedReason": "quote_not_found"
+        },
+        "performancePeriod": {
+          "expected": "10년",
+          "aiValue": "10년",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "① 입찰공고일 기준 10년 이내 국내외 용역 수행 완료 실적 중 유사사업 수행실적만 작성",
+          "rejectedReason": null
+        },
+        "performanceMinAmount": {
+          "expected": null,
+          "aiValue": null,
+          "aiNote": "농업 또는 농촌개발 분야 국제개발협력사업: 건당 6억원 이상 | 국내외 벼 생산성 관련 연구용역 및 역량강화 사업: 건당 1억원 이상",
+          "verdict": "partial",
+          "quote": "※ 유사사업 : 농업 또는 농촌개발 분야 국제개발협력사업(건당 6억원 이상 실적만 인정) 또는 국내외 벼 생산성 관련 연구용역 및 역량강화 사업(실적규모 건당 1억 이상 실적만 인정)",
+          "rejectedReason": null
+        },
+        "performanceCondition": {
+          "expected": "※ 유사사업 : 농업 또는 농촌개발 분야 국제개발협력사업(건당 6억원 이상 실적만 인정) 또는 국내외 벼 생산성 관련 연구용역 및 역량강화 사업(실적규모 건당 1억 이상 실적만 인정)\n- 다음의 사업 요소 중 하나 이상을 포함하는 사업: ① 벼·곡물 생산성 향상 및 가치사슬 개발 ② 농민·협동조합 대상 교육훈련 및 역량강화 ③ 수확후관리·가공·유통·마케팅 지원 ④ 농업기계화 및 생산기반시설 지원 ⑤ 수확후관리·가공·유통·마케팅 지원",
+          "aiValue": "※ 유사사업 : 농업 또는 농촌개발 분야 국제개발협력사업(건당 6억원 이상 실적만 인정) 또는 국내외 벼 생산성 관련 연구용역 및 역량강화 사업(실적규모 건당 1억 이상 실적만 인정)\n- 다음의 사업 요소 중 하나 이상을 포함하는 사업: ① 벼·곡물 생산성 향상 및 가치사슬 개발 ② 농민·협동조합 대상 교육훈련 및 역량강화 ③ 수확후관리·가공·유통·마케팅 지원 ④ 농업기계화 및 생산기반시설 지원 ⑤ 수확후관리·가공·유통·마케팅 지원",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "※ 유사사업 : 농업 또는 농촌개발 분야 국제개발협력사업(건당 6억원 이상 실적만 인정) 또는 국내외 벼 생산성 관련 연구용역 및 역량강화 사업(실적규모 건당 1억 이상 실적만 인정)\n- 다음의 사업 요소 중 하나 이상을 포함하는 사업: ① 벼·곡물 생산성 향상 및 가치사슬 개발 ② 농민·협동조합 대상 교육훈련 및 역량강화 ③ 수확후관리·가공·유통·마케팅 지원 ④ 농업기계화 및 생산기반시설 지원 ⑤ 수확후관리·가공·유통·마케팅 지원",
+          "rejectedReason": null
+        },
+        "differentialScoring": {
+          "expected": false,
+          "aiValue": false,
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "- 차등점수제 : 미적용",
+          "rejectedReason": null
+        }
+      }
+    },
+    {
+      "noticeId": "R26BK01678997-000",
+      "n": 2,
+      "responseFile": "tests/fixtures/ai-eval/responses/R26BK01678997-000/2.0.0-2.txt",
+      "inputTokens": 50256,
+      "outputTokens": 1305,
+      "ms": 7226,
+      "items": {
+        "credibilityScore": {
+          "expected": null,
+          "aiValue": null,
+          "aiNote": "가감점 항목만 있고 합계 배점 없음",
+          "verdict": "correct",
+          "quote": "E. 정책지원 관련 다음 각 항목에 해당하는 경우(지분율 또는 분담률 20% 이상인 경우)\n(1) 여성가족부장관(또는 위임 받은 자)으로부터 가족친화 인증을 받은 기업\n(2) 고용노동부장관(또는 위임 받은 자)으로부터 사회적기업 인증을 받은 기업\n(3) 대중소농어업재단 또는 동반성장위원회(또는 위임 받은 자)으로부터 ESG우수중소기업으로 선정된 기업 | 건별 0.5점 (최대 2.0점)",
+          "rejectedReason": null
+        },
+        "managementScore": {
+          "expected": 4,
+          "aiValue": 4,
+          "aiNote": null,
+          "verdict": "skipped",
+          "quote": "경영상태 | - 신용평가등급 : 참여사 전체의 신용평가 등급에 대해 정량평가 기준표에 의거하여 평가한다. | 4",
+          "rejectedReason": "quote_not_found",
+          "ambiguous": "평가항목표 배점 칸(2972줄)이 \"104/4/4\"로 추출되어 깨짐. 기준표 3070줄과 신용평가 4.00점 최고점 기준 4로 판정"
+        },
+        "performanceScore": {
+          "expected": 6,
+          "aiValue": 6,
+          "aiNote": null,
+          "verdict": "rejected",
+          "quote": "회사 유사사업 수행 실적 | - 국내외 유사사업 수행실적 비율 : 국내외 유사사업 수행실적에 대해 정량평가 기준표에 의거하여 해당 사업규모 대비 실적 비율 점수를 부여한다. | 6",
+          "rejectedReason": "quote_not_found"
+        },
+        "performancePeriod": {
+          "expected": "10년",
+          "aiValue": "10년",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "① 입찰공고일 기준 10년 이내 국내외 용역 수행 완료 실적 중 유사사업 수행실적만 작성\n(현재 진행 중인 실적은 불포함)",
+          "rejectedReason": null
+        },
+        "performanceMinAmount": {
+          "expected": null,
+          "aiValue": null,
+          "aiNote": "농업 또는 농촌개발 분야 국제개발협력사업: 6억원 | 국내외 벼 생산성 관련 연구용역 및 역량강화 사업: 1억원",
+          "verdict": "partial",
+          "quote": "※ 유사사업 : 농업 또는 농촌개발 분야 국제개발협력사업(건당 6억원 이상 실적만 인정) 또는 국내외 벼 생산성 관련 연구용역 및 역량강화 사업(실적규모 건당 1억 이상 실적만 인정)",
+          "rejectedReason": null
+        },
+        "performanceCondition": {
+          "expected": "※ 유사사업 : 농업 또는 농촌개발 분야 국제개발협력사업(건당 6억원 이상 실적만 인정) 또는 국내외 벼 생산성 관련 연구용역 및 역량강화 사업(실적규모 건당 1억 이상 실적만 인정)\n- 다음의 사업 요소 중 하나 이상을 포함하는 사업: ① 벼·곡물 생산성 향상 및 가치사슬 개발 ② 농민·협동조합 대상 교육훈련 및 역량강화 ③ 수확후관리·가공·유통·마케팅 지원 ④ 농업기계화 및 생산기반시설 지원 ⑤ 수확후관리·가공·유통·마케팅 지원",
+          "aiValue": "※ 유사사업 : 농업 또는 농촌개발 분야 국제개발협력사업(건당 6억원 이상 실적만 인정) 또는 국내외 벼 생산성 관련 연구용역 및 역량강화 사업(실적규모 건당 1억 이상 실적만 인정)\n- 다음의 사업 요소 중 하나 이상을 포함하는 사업: ① 벼·곡물 생산성 향상 및 가치사슬 개발 ② 농민·협동조합 대상 교육훈련 및 역량강화 ③ 수확후관리·가공·유통·마케팅 지원 ④ 농업기계화 및 생산기반시설 지원 ⑤ 수확후관리·가공·유통·마케팅 지원",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "※ 유사사업 : 농업 또는 농촌개발 분야 국제개발협력사업(건당 6억원 이상 실적만 인정) 또는 국내외 벼 생산성 관련 연구용역 및 역량강화 사업(실적규모 건당 1억 이상 실적만 인정)\n- 다음의 사업 요소 중 하나 이상을 포함하는 사업: ① 벼·곡물 생산성 향상 및 가치사슬 개발 ② 농민·협동조합 대상 교육훈련 및 역량강화 ③ 수확후관리·가공·유통·마케팅 지원 ④ 농업기계화 및 생산기반시설 지원 ⑤ 수확후관리·가공·유통·마케팅 지원",
+          "rejectedReason": null
+        },
+        "differentialScoring": {
+          "expected": false,
+          "aiValue": false,
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "- 차등점수제 : 미적용",
+          "rejectedReason": null
+        }
+      }
+    },
+    {
+      "noticeId": "R26BK01678997-000",
+      "n": 3,
+      "responseFile": "tests/fixtures/ai-eval/responses/R26BK01678997-000/2.0.0-3.txt",
+      "inputTokens": null,
+      "outputTokens": null,
+      "ms": 16861,
+      "items": {},
+      "error": "AI_OVERLOADED: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+    },
+    {
+      "noticeId": "R26BK01722175-000",
+      "n": 1,
+      "responseFile": "tests/fixtures/ai-eval/responses/R26BK01722175-000/2.0.0-1.txt",
+      "inputTokens": 29725,
+      "outputTokens": 852,
+      "ms": 18206,
+      "items": {
+        "credibilityScore": {
+          "expected": null,
+          "aiValue": null,
+          "aiNote": "가감점 항목만 있고 합계 배점 없음",
+          "verdict": "correct",
+          "quote": "",
+          "rejectedReason": null
+        },
+        "managementScore": {
+          "expected": 4,
+          "aiValue": 4,
+          "aiNote": null,
+          "verdict": "rejected",
+          "quote": "경영상태 | - 신용평가등급 : 참여사 전체의 신용평가 등급에 대해 정량평가 기준표에 의거하여 평가한다. | 4",
+          "rejectedReason": "quote_not_found"
+        },
+        "performanceScore": {
+          "expected": 6,
+          "aiValue": 6,
+          "aiNote": null,
+          "verdict": "rejected",
+          "quote": "회사 유사사업 수행 실적 | - 국내외 유사사업 수행실적 비율 : 국내외 유사사업 수행실적에 대해 정량평가 기준표에 의거하여 해당 사업규모 대비 실적 비율 점수를 부여한다. | 6",
+          "rejectedReason": "quote_not_found"
+        },
+        "performancePeriod": {
+          "expected": "5년",
+          "aiValue": "5년",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "① 입찰공고일 기준 5년 이내 국내외 용역 수행 완료 실적 중 유사사업 수행실적만 작성",
+          "rejectedReason": null
+        },
+        "performanceMinAmount": {
+          "expected": "5억원",
+          "aiValue": 500000000,
+          "aiNote": "비율 기준금액 15억원",
+          "verdict": "skipped",
+          "quote": "※ 유사사업 : 다음 중 각 항목에 해당하는 수행실적 중 5억원 이상인 사업",
+          "rejectedReason": null,
+          "ambiguous": "\"해당 사업규모 15억원\"은 비율 분모(4382줄)이며 하한 아님. 5억원은 유사사업 정의 문장의 1건 하한으로 판정"
+        },
+        "performanceCondition": {
+          "expected": "※ 유사사업 : 다음 중 각 항목에 해당하는 수행실적 중 5억원 이상인 사업\n- 국내외 대민 정보서비스 제공형 시스템 구축, SW 개발\n- 국내외 축산 또는 농업 분야의 정부, 공공기관 혹은 연구기관 대상 시스템 구축, SW 개발\n(단, 유사사업이라고 하더라도 단순 기자재 공급/유지보수, 상용 소프트웨어 공급/유지보수, 감리, 연수, 컨설팅, 위탁운영만 이행한 실적은 불포함)",
+          "aiValue": "※ 유사사업 : 다음 중 각 항목에 해당하는 수행실적 중 5억원 이상인 사업\n- 국내외 대민 정보서비스 제공형 시스템 구축, SW 개발\n- 국내외 축산 또는 농업 분야의 정부, 공공기관 혹은 연구기관 대상 시스템 구축, SW 개발\n(단, 유사사업이라고 하더라도 단순 기자재 공급/유지보수, 상용 소프트웨어 공급/유지보수, 감리, 연수, 컨설팅, 위탁운영만 이행한 실적은 불포함)",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "※ 유사사업 : 다음 중 각 항목에 해당하는 수행실적 중 5억원 이상인 사업\n- 국내외 대민 정보서비스 제공형 시스템 구축, SW 개발\n- 국내외 축산 또는 농업 분야의 정부, 공공기관 혹은 연구기관 대상 시스템 구축, SW 개발\n(단, 유사사업이라고 하더라도 단순 기자재 공급/유지보수, 상용 소프트웨어 공급/유지보수, 감리, 연수, 컨설팅, 위탁운영만 이행한 실적은 불포함)",
+          "rejectedReason": null
+        },
+        "differentialScoring": {
+          "expected": false,
+          "aiValue": false,
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "- | 차등점수제 : 미적용",
+          "rejectedReason": null
+        }
+      }
+    },
+    {
+      "noticeId": "R26BK01722175-000",
+      "n": 2,
+      "responseFile": "tests/fixtures/ai-eval/responses/R26BK01722175-000/2.0.0-2.txt",
+      "inputTokens": 29725,
+      "outputTokens": 1104,
+      "ms": 5814,
+      "items": {
+        "credibilityScore": {
+          "expected": null,
+          "aiValue": null,
+          "aiNote": "가감점 항목만 있고 합계 배점 없음",
+          "verdict": "correct",
+          "quote": "가점 | A. 지방 소재 중소기업(지분율 또는 분담률 10% 이상인 경우) | 0.5점\n(최대 0.5점)\n(미해당) B. 중기업, 소기업, 소상공인 지원(지분율 또는 분담률 20% 이상인 경우)",
+          "rejectedReason": null
+        },
+        "managementScore": {
+          "expected": 4,
+          "aiValue": 4,
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "경영상태 | - 신용평가등급 : 참여사 전체의 신용평가 등급에 대해 정량평가 기준표에 의거하여 평가한다.\n※ 공동수급(공동이행/분담이행)의 경우, 공동수급체 구성원별로 각각 산출한 평가점수에 지분율/분담률을 곱한 후 이를 합산하여 평가\n4",
+          "rejectedReason": null
+        },
+        "performanceScore": {
+          "expected": 6,
+          "aiValue": 6,
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "회사 유사사업\n수행 실적\n- 국내외 유사사업 수행실적 비율 : 국내외 유사사업 수행실적에 대해 정량평가 기준표에 의거하여 해당 사업규모 대비 실적 비율 점수를 부여한다.\n- [별지 제3호 서식] 상 기재된 내용을 토대로 평가하되, 증빙서류가 제출된 경우에 한해 해당실적을 인정한다.\n※ 관련 별지3호 서식 및 증빙서류 미제출시 유사사업 수행실적으로 불인정\n※ 공동수급(공동이행/분담이행)의 경우, 구성원별 실적에 지분율을 곱한 후 그 실적들을 합산하여 평가\n6",
+          "rejectedReason": null
+        },
+        "performancePeriod": {
+          "expected": "5년",
+          "aiValue": "5년",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "① 입찰공고일 기준 5년 이내 국내외 용역 수행 완료 실적 중 유사사업 수행실적만 작성",
+          "rejectedReason": null
+        },
+        "performanceMinAmount": {
+          "expected": "5억원",
+          "aiValue": 500000000,
+          "aiNote": "질의답변에서도 5억원 기준 적용 재확인",
+          "verdict": "skipped",
+          "quote": "※ 유사사업 : 다음 중 각 항목에 해당하는 수행실적 중 5억원 이상인 사업",
+          "rejectedReason": null,
+          "ambiguous": "\"해당 사업규모 15억원\"은 비율 분모(4382줄)이며 하한 아님. 5억원은 유사사업 정의 문장의 1건 하한으로 판정"
+        },
+        "performanceCondition": {
+          "expected": "※ 유사사업 : 다음 중 각 항목에 해당하는 수행실적 중 5억원 이상인 사업\n- 국내외 대민 정보서비스 제공형 시스템 구축, SW 개발\n- 국내외 축산 또는 농업 분야의 정부, 공공기관 혹은 연구기관 대상 시스템 구축, SW 개발\n(단, 유사사업이라고 하더라도 단순 기자재 공급/유지보수, 상용 소프트웨어 공급/유지보수, 감리, 연수, 컨설팅, 위탁운영만 이행한 실적은 불포함)",
+          "aiValue": "※ 유사사업 : 다음 중 각 항목에 해당하는 수행실적 중 5억원 이상인 사업\n- 국내외 대민 정보서비스 제공형 시스템 구축, SW 개발\n- 국내외 축산 또는 농업 분야의 정부, 공공기관 혹은 연구기관 대상 시스템 구축, SW 개발\n(단, 유사사업이라고 하더라도 단순 기자재 공급/유지보수, 상용 소프트웨어 공급/유지보수, 감리, 연수, 컨설팅, 위탁운영만 이행한 실적은 불포함)",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "※ 유사사업 : 다음 중 각 항목에 해당하는 수행실적 중 5억원 이상인 사업\n- 국내외 대민 정보서비스 제공형 시스템 구축, SW 개발\n- 국내외 축산 또는 농업 분야의 정부, 공공기관 혹은 연구기관 대상 시스템 구축, SW 개발\n(단, 유사사업이라고 하더라도 단순 기자재 공급/유지보수, 상용 소프트웨어 공급/유지보수, 감리, 연수, 컨설팅, 위탁운영만 이행한 실적은 불포함)",
+          "rejectedReason": null
+        },
+        "differentialScoring": {
+          "expected": false,
+          "aiValue": false,
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "- | 차등점수제 : 미적용",
+          "rejectedReason": null
+        }
+      }
+    },
+    {
+      "noticeId": "R26BK01722175-000",
+      "n": 3,
+      "responseFile": "tests/fixtures/ai-eval/responses/R26BK01722175-000/2.0.0-3.txt",
+      "inputTokens": 29725,
+      "outputTokens": 882,
+      "ms": 4738,
+      "items": {
+        "credibilityScore": {
+          "expected": null,
+          "aiValue": null,
+          "aiNote": "가감점 항목만 있고 합계 배점 없음",
+          "verdict": "correct",
+          "quote": "※ 가·감점 평가는 기술평가지침 [별표 4]를 따른다.",
+          "rejectedReason": null
+        },
+        "managementScore": {
+          "expected": 4,
+          "aiValue": 4,
+          "aiNote": null,
+          "verdict": "rejected",
+          "quote": "경영상태 | - 신용평가등급 : 참여사 전체의 신용평가 등급에 대해 정량평가 기준표에 의거하여 평가한다. | 4",
+          "rejectedReason": "quote_not_found"
+        },
+        "performanceScore": {
+          "expected": 6,
+          "aiValue": 6,
+          "aiNote": null,
+          "verdict": "rejected",
+          "quote": "회사 유사사업 수행 실적 | - 국내외 유사사업 수행실적 비율 : 국내외 유사사업 수행실적에 대해 정량평가 기준표에 의거하여 해당 사업규모 대비 실적 비율 점수를 부여한다. | 6",
+          "rejectedReason": "quote_not_found"
+        },
+        "performancePeriod": {
+          "expected": "5년",
+          "aiValue": "5년",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "① 입찰공고일 기준 5년 이내 국내외 용역 수행 완료 실적 중 유사사업 수행실적만 작성",
+          "rejectedReason": null
+        },
+        "performanceMinAmount": {
+          "expected": "5억원",
+          "aiValue": 500000000,
+          "aiNote": "비율 기준금액 15억원",
+          "verdict": "skipped",
+          "quote": "※ 유사사업 : 다음 중 각 항목에 해당하는 수행실적 중 5억원 이상인 사업",
+          "rejectedReason": null,
+          "ambiguous": "\"해당 사업규모 15억원\"은 비율 분모(4382줄)이며 하한 아님. 5억원은 유사사업 정의 문장의 1건 하한으로 판정"
+        },
+        "performanceCondition": {
+          "expected": "※ 유사사업 : 다음 중 각 항목에 해당하는 수행실적 중 5억원 이상인 사업\n- 국내외 대민 정보서비스 제공형 시스템 구축, SW 개발\n- 국내외 축산 또는 농업 분야의 정부, 공공기관 혹은 연구기관 대상 시스템 구축, SW 개발\n(단, 유사사업이라고 하더라도 단순 기자재 공급/유지보수, 상용 소프트웨어 공급/유지보수, 감리, 연수, 컨설팅, 위탁운영만 이행한 실적은 불포함)",
+          "aiValue": "※ 유사사업 : 다음 중 각 항목에 해당하는 수행실적 중 5억원 이상인 사업\n- 국내외 대민 정보서비스 제공형 시스템 구축, SW 개발\n- 국내외 축산 또는 농업 분야의 정부, 공공기관 혹은 연구기관 대상 시스템 구축, SW 개발\n(단, 유사사업이라고 하더라도 단순 기자재 공급/유지보수, 상용 소프트웨어 공급/유지보수, 감리, 연수, 컨설팅, 위탁운영만 이행한 실적은 불포함)",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "※ 유사사업 : 다음 중 각 항목에 해당하는 수행실적 중 5억원 이상인 사업\n- 국내외 대민 정보서비스 제공형 시스템 구축, SW 개발\n- 국내외 축산 또는 농업 분야의 정부, 공공기관 혹은 연구기관 대상 시스템 구축, SW 개발\n(단, 유사사업이라고 하더라도 단순 기자재 공급/유지보수, 상용 소프트웨어 공급/유지보수, 감리, 연수, 컨설팅, 위탁운영만 이행한 실적은 불포함)",
+          "rejectedReason": null
+        },
+        "differentialScoring": {
+          "expected": false,
+          "aiValue": false,
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "- | 차등점수제 : 미적용",
+          "rejectedReason": null
+        }
+      }
+    },
+    {
+      "noticeId": "R26BK01723328-000",
+      "n": 1,
+      "responseFile": "tests/fixtures/ai-eval/responses/R26BK01723328-000/2.0.0-1.txt",
+      "inputTokens": 32554,
+      "outputTokens": 1415,
+      "ms": 12412,
+      "items": {
+        "credibilityScore": {
+          "expected": null,
+          "aiValue": null,
+          "aiNote": "가감점 항목만 있고 합계 배점 없음",
+          "verdict": "correct",
+          "quote": "E. 정책지원 관련 다음 각 항목에 해당하는 경우(지분율 또는 분담률 20% 이상인 경우)\n건별 0.5점(최대 1.5점)\nF. 핵심투입인력이 입찰공고일 기준 유효한 ODA 전문가 자격증(ODA 전문가 자격증(3급) 또는 ODA 일반 자격증) 취득자인 경우 인당 0.5(최대 1점) 부여한다.",
+          "rejectedReason": null
+        },
+        "managementScore": {
+          "expected": 4,
+          "aiValue": 4,
+          "aiNote": null,
+          "verdict": "rejected",
+          "quote": "구분 | 평가부문 | 평가항목 | 배점\n정량평가 (12점)\n경영상태 | - 신용평가등급 : 참여사 전체의 신용평가 등급에 대해 정량평가 기준표에 의거하여 평가한다. | 4",
+          "rejectedReason": "quote_not_found"
+        },
+        "performanceScore": {
+          "expected": 6,
+          "aiValue": 6,
+          "aiNote": null,
+          "verdict": "rejected",
+          "quote": "회사 유사사업 수행 실적 | - 국내외 유사사업 수행실적 비율 : 국내외 유사사업 수행실적에 대해 정량평가 기준표에 의거하여 해당 사업규모 대비 실적 비율 점수를 부여한다. | 6",
+          "rejectedReason": "quote_not_found"
+        },
+        "performancePeriod": {
+          "expected": "5년",
+          "aiValue": "5년 이내",
+          "aiNote": null,
+          "verdict": "rejected",
+          "quote": "① 입찰공고일 기준 5년 이내 국내외 용역 수행 완료 실적 중 유사사업 수행실적만 작성\n(현재 진행 중인 실적은 불포함)",
+          "rejectedReason": "bad_format"
+        },
+        "performanceMinAmount": {
+          "expected": null,
+          "aiValue": null,
+          "aiNote": "타당성조사/예비조사/기획조사: 0.5억원 이상 | 프로젝트: 5억원 이상 | 연수사업: 0.2억원 이상 | 정책연구사업: 0.4억원 이상 (비율 기준금액 25억원)",
+          "verdict": "partial",
+          "quote": "※ 해당 사업규모(지분금액 기준**) : △타당성조사/예비조사/기획조사 : 0.5억원 이상, △프로젝트 5억원 이상, △연수사업 0.2억원 이상, △정책연구사업 0.4억원 이상",
+          "rejectedReason": null
+        },
+        "performanceCondition": {
+          "expected": "※ 유사사업 : 국내외 관련분야* ODA사업의 조사 또는 시행 또는 연수 또는 정책연구, 기자재 조달 수행 실적\n※ 해당 사업규모(지분금액 기준**) : △타당성조사/예비조사/기획조사 : 0.5억원 이상, △프로젝트 5억원 이상, △연수사업 0.2억원 이상, △정책연구사업 0.4억원 이상\n* 관련분야 : 태풍, 홍수, 호우, 강풍, 풍랑, 해일 대설, 낙뢰, 가뭄, 지진, 황사, 조류 대발생, 조수, 화산활동, 소행성·유성체 등 자연우주물체의 추락·충돌, 화재, 붕괴, 폭발, 교통사고(항공사고 및 해상사고), 화생방사고, 환경오염사고 등\n** 기준 금액의 경우, 총 용역금액이 아닌 각 부문의 최종 이행완료 기준 금액이며 증빙 상 동 사항이 확인되어야 함\n*** 단, 정부 또는 공공기관 또는 국제기구가 발주한 사업만 해당하며 재하도급 사업 및 자체 발주사업은 제외함",
+          "aiValue": "※ 유사사업 : 국내외 관련분야* ODA사업의 조사 또는 시행 또는 연수 또는 정책연구, 기자재 조달 수행 실적\n※ 해당 사업규모(지분금액 기준**) : △타당성조사/예비조사/기획조사 : 0.5억원 이상, △프로젝트 5억원 이상, △연수사업 0.2억원 이상, △정책연구사업 0.4억원 이상\n* 관련분야 : 태풍, 홍수, 호우, 강풍, 풍랑, 해일 대설, 낙뢰, 가뭄, 지진, 황사, 조류 대발생, 조수, 화산활동, 소행성·유성체 등 자연우주물체의 추락·충돌, 화재, 붕괴, 폭발, 교통사고(항공사고 및 해상사고), 화생방사고, 환경오염사고 등\n** 기준 금액의 경우, 총 용역금액이 아닌 각 부문의 최종 이행완료 기준 금액이며 증빙 상 동 사항이 확인되어야 함\n*** 단, 정부 또는 공공기관 또는 국제기구가 발주한 사업만 해당하며 재하도급 사업 및 자체 발주사업은 제외함",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "※ 유사사업 : 국내외 관련분야* ODA사업의 조사 또는 시행 또는 연수 또는 정책연구, 기자재 조달 수행 실적\n※ 해당 사업규모(지분금액 기준**) : △타당성조사/예비조사/기획조사 : 0.5억원 이상, △프로젝트 5억원 이상, △연수사업 0.2억원 이상, △정책연구사업 0.4억원 이상\n* 관련분야 : 태풍, 홍수, 호우, 강풍, 풍랑, 해일 대설, 낙뢰, 가뭄, 지진, 황사, 조류 대발생, 조수, 화산활동, 소행성·유성체 등 자연우주물체의 추락·충돌, 화재, 붕괴, 폭발, 교통사고(항공사고 및 해상사고), 화생방사고, 환경오염사고 등\n** 기준 금액의 경우, 총 용역금액이 아닌 각 부문의 최종 이행완료 기준 금액이며 증빙 상 동 사항이 확인되어야 함\n*** 단, 정부 또는 공공기관 또는 국제기구가 발주한 사업만 해당하며 재하도급 사업 및 자체 발주사업은 제외함",
+          "rejectedReason": null
+        },
+        "differentialScoring": {
+          "expected": false,
+          "aiValue": false,
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "- | 차등점수제 : 미적용",
+          "rejectedReason": null
+        }
+      }
+    },
+    {
+      "noticeId": "R26BK01723328-000",
+      "n": 2,
+      "responseFile": "tests/fixtures/ai-eval/responses/R26BK01723328-000/2.0.0-2.txt",
+      "inputTokens": 32554,
+      "outputTokens": 1417,
+      "ms": 16532,
+      "items": {
+        "credibilityScore": {
+          "expected": null,
+          "aiValue": null,
+          "aiNote": "가감점 항목만 있고 합계 배점 없음",
+          "verdict": "correct",
+          "quote": "E. 정책지원 관련 다음 각 항목에 해당하는 경우(지분율 또는 분담률 20% 이상인 경우)\n건별 0.5점 (최대 1.5점)\nF. 핵심투입인력이 입찰공고일 기준 유효한 ODA 전문가 자격증(ODA 전문가 자격증(3급) 또는 ODA 일반 자격증) 취득자인 경우 인당 0.5(최대 1점) 부여한다.\n감점 G. 협력단 사업 수행과 관련하여 협력단으로부터 경고조치를 받은 자 0.5점 (최대 2.5점)",
+          "rejectedReason": null
+        },
+        "managementScore": {
+          "expected": 4,
+          "aiValue": 4,
+          "aiNote": null,
+          "verdict": "rejected",
+          "quote": "경영상태 | - 신용평가등급 : 참여사 전체의 신용평가 등급에 대해 정량평가 기준표에 의거하여 평가한다. | 4",
+          "rejectedReason": "quote_not_found"
+        },
+        "performanceScore": {
+          "expected": 6,
+          "aiValue": 6,
+          "aiNote": null,
+          "verdict": "rejected",
+          "quote": "회사 유사사업 수행 실적 | - 국내외 유사사업 수행실적 비율 : 국내외 유사사업 수행실적에 대해 정량평가 기준표에 의거하여 해당 사업규모 대비 실적 비율 점수를 부여한다. | 6",
+          "rejectedReason": "quote_not_found"
+        },
+        "performancePeriod": {
+          "expected": "5년",
+          "aiValue": "5년 이내",
+          "aiNote": null,
+          "verdict": "rejected",
+          "quote": "① 입찰공고일 기준 5년 이내 국내외 용역 수행 완료 실적 중 유사사업 수행실적만 작성\n(현재 진행 중인 실적은 불포함)",
+          "rejectedReason": "bad_format"
+        },
+        "performanceMinAmount": {
+          "expected": null,
+          "aiValue": null,
+          "aiNote": "타당성조사/예비조사/기획조사: 0.5억원 이상 | 프로젝트: 5억원 이상 | 연수사업: 0.2억원 이상 | 정책연구사업: 0.4억원 이상",
+          "verdict": "partial",
+          "quote": "※ 해당 사업규모(지분금액 기준**) : △타당성조사/예비조사/기획조사 : 0.5억원 이상, △프로젝트 5억원 이상, △연수사업 0.2억원 이상, △정책연구사업 0.4억원 이상",
+          "rejectedReason": null
+        },
+        "performanceCondition": {
+          "expected": "※ 유사사업 : 국내외 관련분야* ODA사업의 조사 또는 시행 또는 연수 또는 정책연구, 기자재 조달 수행 실적\n※ 해당 사업규모(지분금액 기준**) : △타당성조사/예비조사/기획조사 : 0.5억원 이상, △프로젝트 5억원 이상, △연수사업 0.2억원 이상, △정책연구사업 0.4억원 이상\n* 관련분야 : 태풍, 홍수, 호우, 강풍, 풍랑, 해일 대설, 낙뢰, 가뭄, 지진, 황사, 조류 대발생, 조수, 화산활동, 소행성·유성체 등 자연우주물체의 추락·충돌, 화재, 붕괴, 폭발, 교통사고(항공사고 및 해상사고), 화생방사고, 환경오염사고 등\n** 기준 금액의 경우, 총 용역금액이 아닌 각 부문의 최종 이행완료 기준 금액이며 증빙 상 동 사항이 확인되어야 함\n*** 단, 정부 또는 공공기관 또는 국제기구가 발주한 사업만 해당하며 재하도급 사업 및 자체 발주사업은 제외함",
+          "aiValue": "※ 유사사업 : 국내외 관련분야* ODA사업의 조사 또는 시행 또는 연수 또는 정책연구, 기자재 조달 수행 실적\n※ 해당 사업규모(지분금액 기준**) : △타당성조사/예비조사/기획조사 : 0.5억원 이상, △프로젝트 5억원 이상, △연수사업 0.2억원 이상, △정책연구사업 0.4억원 이상\n* 관련분야 : 태풍, 홍수, 호우, 강풍, 풍랑, 해일 대설, 낙뢰, 가뭄, 지진, 황사, 조류 대발생, 조수, 화산활동, 소행성·유성체 등 자연우주물체의 추락·충돌, 화재, 붕괴, 폭발, 교통사고(항공사고 및 해상사고), 화생방사고, 환경오염사고 등\n** 기준 금액의 경우, 총 용역금액이 아닌 각 부문의 최종 이행완료 기준 금액이며 증빙 상 동 사항이 확인되어야 함\n*** 단, 정부 또는 공공기관 또는 국제기구가 발주한 사업만 해당하며 재하도급 사업 및 자체 발주사업은 제외함",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "※ 유사사업 : 국내외 관련분야* ODA사업의 조사 또는 시행 또는 연수 또는 정책연구, 기자재 조달 수행 실적\n※ 해당 사업규모(지분금액 기준**) : △타당성조사/예비조사/기획조사 : 0.5억원 이상, △프로젝트 5억원 이상, △연수사업 0.2억원 이상, △정책연구사업 0.4억원 이상\n* 관련분야 : 태풍, 홍수, 호우, 강풍, 풍랑, 해일 대설, 낙뢰, 가뭄, 지진, 황사, 조류 대발생, 조수, 화산활동, 소행성·유성체 등 자연우주물체의 추락·충돌, 화재, 붕괴, 폭발, 교통사고(항공사고 및 해상사고), 화생방사고, 환경오염사고 등\n** 기준 금액의 경우, 총 용역금액이 아닌 각 부문의 최종 이행완료 기준 금액이며 증빙 상 동 사항이 확인되어야 함\n*** 단, 정부 또는 공공기관 또는 국제기구가 발주한 사업만 해당하며 재하도급 사업 및 자체 발주사업은 제외함",
+          "rejectedReason": null
+        },
+        "differentialScoring": {
+          "expected": false,
+          "aiValue": false,
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "- | 차등점수제 : 미적용",
+          "rejectedReason": null
+        }
+      }
+    },
+    {
+      "noticeId": "R26BK01723328-000",
+      "n": 3,
+      "responseFile": "tests/fixtures/ai-eval/responses/R26BK01723328-000/2.0.0-3.txt",
+      "inputTokens": null,
+      "outputTokens": null,
+      "ms": 403,
+      "items": {},
+      "error": "AI_QUOTA: You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 21h42m34.616198929s."
+    },
+    {
+      "noticeId": "R26BK01724847-000",
+      "n": 1,
+      "responseFile": "tests/fixtures/ai-eval/responses/R26BK01724847-000/2.0.0-1.txt",
+      "inputTokens": 40739,
+      "outputTokens": 1381,
+      "ms": 7314,
+      "items": {
+        "credibilityScore": {
+          "expected": null,
+          "aiValue": null,
+          "aiNote": "가감점 항목만 있고 합계 배점 없음",
+          "verdict": "correct",
+          "quote": "E. 정책지원 관련 다음 각 항목에 해당하는 경우(지분율 또는 분담률 20% 이상인 경우)\n(1) 여성가족부장관(또는 위임 받은 자)으로부터 가족친화 인증을 받은 기업\n(2) 고용노동부장관(또는 위임 받은 자)으로부터 사회적기업 인증을 받은 기업\n(3) 대중소농어업재단 또는 동반성장위원회(또는 위임 받은 자)으로부터 ESG우수중소기업으로 선정된 기업\n건별 0.5점 (최대 2.0점)",
+          "rejectedReason": null
+        },
+        "managementScore": {
+          "expected": 4,
+          "aiValue": 4,
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "경영상태 | - 신용평가등급 : 참여사 전체의 신용평가 등급에 대해 정량평가 기준표에 의거하여 평가한다.\n※ 공동수급(공동이행/분담이행)의 경우, 공동수급체 구성원별로 각각 산출한 평가점수에 지분율/분담률을 곱한 후 이를 합산하여 평가\n4",
+          "rejectedReason": null
+        },
+        "performanceScore": {
+          "expected": 6,
+          "aiValue": 6,
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "회사 유사사업\n수행 실적\n- 국내외 유사사업 수행실적 비율 : 국내외 유사사업 수행실적에 대해 정량평가 기준표에 의거하여 해당 사업규모 대비 실적 비율 점수를 부여한다.\n- [별지 제3호 서식] 상 기재된 내용을 토대로 평가하되, 증빙서류가 제출된 경우에 한해 해당실적을 인정한다.\n※ 관련 별지3호 서식 및 증빙서류 미제출시 유사사업 수행실적으로 불인정\n※ 공동수급(공동이행/분담이행)의 경우, 구성원별 실적에 지분율을 곱한 후 그 실적들을 합산하여 평가\n6",
+          "rejectedReason": null
+        },
+        "performancePeriod": {
+          "expected": "3년",
+          "aiValue": "3년",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "① 입찰공고일 기준 3년 이내 국내외 용역 수행 완료 실적 중 유사사업 수행실적만 작성\n(현재 진행 중인 실적은 불포함)",
+          "rejectedReason": null
+        },
+        "performanceMinAmount": {
+          "expected": "3억",
+          "aiValue": 300000000,
+          "aiNote": "비율 기준금액 16억원",
+          "verdict": "correct",
+          "quote": "① 국내 외 \"정보시스템 구축 용역\" 수행인 단일 건 3억 이상의 경우 인정",
+          "rejectedReason": null
+        },
+        "performanceCondition": {
+          "expected": "※ 유사사업 :\n① 국내 외 \"정보시스템 구축 용역\" 수행인 단일 건 3억 이상의 경우 인정\n② \"정보시스템 구축 용역': 과업명 또는 사업 내용에 '①정보시스템 구축 용역' 또는 '②기자재 납품 및 설치 용역'이 포함된 사업\n③ 유사사업이라 하더라도 평가 및 연구, 유지보수, 단순 기자재 납품, 감리, 연수 실적인 경우는 유사사업 실적으로 불인정\n④ ‘단순 기자재 납품’: 시스템 구축 또는 용역이 포함되지 않는 단순 장비 또는 S/W 라이센스 공급을 의미함",
+          "aiValue": "※ 유사사업 :\n① 국내 외 \"정보시스템 구축 용역\" 수행인 단일 건 3억 이상의 경우 인정\n② \"정보시스템 구축 용역': 과업명 또는 사업 내용에 '①정보시스템 구축 용역' 또는 '②기자재 납품 및 설치 용역'이 포함된 사업\n③ 유사사업이라 하더라도 평가 및 연구, 유지보수, 단순 기자재 납품, 감리, 연수 실적인 경우는 유사사업 실적으로 불인정\n④ ‘단순 기자재 납품’: 시스템 구축 또는 용역이 포함되지 않는 단순 장비 또는 S/W 라이센스 공급을 의미함",
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "※ 유사사업 :\n① 국내 외 \"정보시스템 구축 용역\" 수행인 단일 건 3억 이상의 경우 인정\n② \"정보시스템 구축 용역': 과업명 또는 사업 내용에 '①정보시스템 구축 용역' 또는 '②기자재 납품 및 설치 용역'이 포함된 사업\n③ 유사사업이라 하더라도 평가 및 연구, 유지보수, 단순 기자재 납품, 감리, 연수 실적인 경우는 유사사업 실적으로 불인정\n④ ‘단순 기자재 납품’: 시스템 구축 또는 용역이 포함되지 않는 단순 장비 또는 S/W 라이센스 공급을 의미함",
+          "rejectedReason": null
+        },
+        "differentialScoring": {
+          "expected": false,
+          "aiValue": false,
+          "aiNote": null,
+          "verdict": "correct",
+          "quote": "- 차등점수제 : 미적용",
+          "rejectedReason": null
+        }
+      }
+    },
+    {
+      "noticeId": "R26BK01724847-000",
+      "n": 2,
+      "responseFile": "tests/fixtures/ai-eval/responses/R26BK01724847-000/2.0.0-2.txt",
+      "inputTokens": null,
+      "outputTokens": null,
+      "ms": 9007,
+      "items": {},
+      "error": "AI_QUOTA: You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 21h41m38.02954524s."
+    },
+    {
+      "noticeId": "R26BK01724847-000",
+      "n": 3,
+      "responseFile": "tests/fixtures/ai-eval/responses/R26BK01724847-000/2.0.0-3.txt",
+      "inputTokens": null,
+      "outputTokens": null,
+      "ms": 470,
+      "items": {},
+      "error": "AI_QUOTA: You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 21h41m17.551619835s."
+    }
+  ],
+  "accuracy": {
+    "credibilityScore": {
+      "correct": 8,
+      "partial": 0,
+      "wrong": 0,
+      "rejected": 0,
+      "total": 8,
+      "rate": 1
+    },
+    "managementScore": {
+      "correct": 2,
+      "partial": 0,
+      "wrong": 0,
+      "rejected": 4,
+      "total": 6,
+      "rate": 0.3333333333333333
+    },
+    "performanceScore": {
+      "correct": 2,
+      "partial": 0,
+      "wrong": 0,
+      "rejected": 6,
+      "total": 8,
+      "rate": 0.25
+    },
+    "performancePeriod": {
+      "correct": 6,
+      "partial": 0,
+      "wrong": 0,
+      "rejected": 2,
+      "total": 8,
+      "rate": 0.75
+    },
+    "performanceMinAmount": {
+      "correct": 1,
+      "partial": 4,
+      "wrong": 0,
+      "rejected": 0,
+      "total": 5,
+      "rate": 0.2
+    },
+    "performanceCondition": {
+      "correct": 8,
+      "partial": 0,
+      "wrong": 0,
+      "rejected": 0,
+      "total": 8,
+      "rate": 1
+    },
+    "differentialScoring": {
+      "correct": 8,
+      "partial": 0,
+      "wrong": 0,
+      "rejected": 0,
+      "total": 8,
+      "rate": 1
+    }
+  },
+  "tokens": {
+    "input": 295534,
+    "output": 9654,
+    "ms": 105855
+  }
+}

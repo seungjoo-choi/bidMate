@@ -125,7 +125,7 @@ export function GroupDetail({ group, recipients, error, busy, onSave, onDelete, 
                   <li key={id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
                     <span className="w-6 shrink-0 text-center text-sm text-muted tabular-nums">{i + 1}</span>
                     <div className="min-w-0 flex-1">
-                      <div className={`truncate text-[15px] font-semibold ${r ? 'text-ink' : 'text-faint'}`}>
+                      <div className={`truncate text-[0.9375rem] font-semibold ${r ? 'text-ink' : 'text-faint'}`}>
                         {r ? r.name : '(삭제된 수신자)'}
                         {r?.memo && <span className="ml-1.5 font-normal text-muted">({r.memo})</span>}
                         {r?.dept && <span className="ml-2 text-xs font-normal text-muted">{r.dept}</span>}

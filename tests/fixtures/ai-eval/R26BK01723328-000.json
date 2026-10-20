@@ -1,0 +1,103 @@
+{
+  "noticeId": "R26BK01723328-000",
+  "title": "팔레스타인 재난·위기 대응 역량강화사업 PMC 용역",
+  "textDir": "tests/fixtures/ai-eval/text/R26BK01723328-000",
+  "items": {
+    "credibilityScore": {
+      "expected": null,
+      "evidenceLines": [
+        {
+          "file": "2_2. 제안요청서.hwp.txt",
+          "line": 2000
+        }
+      ],
+      "reviewedNote": "사용자 확인 2026-10-20: 합계 배점 없음 = 정답 null (이전 메모: 가감점 항목만 있고 합계 배점 없음)"
+    },
+    "managementScore": {
+      "expected": 4,
+      "evidenceLines": [
+        {
+          "file": "2_2. 제안요청서.hwp.txt",
+          "line": 1870
+        },
+        {
+          "file": "2_2. 제안요청서.hwp.txt",
+          "line": 1966
+        }
+      ]
+    },
+    "performanceScore": {
+      "expected": 6,
+      "evidenceLines": [
+        {
+          "file": "2_2. 제안요청서.hwp.txt",
+          "line": 1877
+        },
+        {
+          "file": "2_2. 제안요청서.hwp.txt",
+          "line": 1975
+        }
+      ]
+    },
+    "performancePeriod": {
+      "expected": "5년",
+      "evidenceLines": [
+        {
+          "file": "2_2. 제안요청서.hwp.txt",
+          "line": 2217
+        }
+      ]
+    },
+    "performanceMinAmount": {
+      "expected": null,
+      "variants": [
+        {
+          "condition": "타당성조사/예비조사/기획조사",
+          "value": "0.5억원"
+        },
+        {
+          "condition": "프로젝트",
+          "value": "5억원"
+        },
+        {
+          "condition": "연수사업",
+          "value": "0.2억원"
+        },
+        {
+          "condition": "정책연구사업",
+          "value": "0.4억원"
+        }
+      ],
+      "evidenceLines": [
+        {
+          "file": "2_2. 제안요청서.hwp.txt",
+          "line": 2212
+        }
+      ],
+      "reviewedNote": "사용자 확인 2026-10-20 (이전 메모: '해당 사업규모'가 평가표에서는 비율 분모(25억원)로도 쓰임)"
+    },
+    "performanceCondition": {
+      "expected": "※ 유사사업 : 국내외 관련분야* ODA사업의 조사 또는 시행 또는 연수 또는 정책연구, 기자재 조달 수행 실적\n※ 해당 사업규모(지분금액 기준**) : △타당성조사/예비조사/기획조사 : 0.5억원 이상, △프로젝트 5억원 이상, △연수사업 0.2억원 이상, △정책연구사업 0.4억원 이상\n* 관련분야 : 태풍, 홍수, 호우, 강풍, 풍랑, 해일 대설, 낙뢰, 가뭄, 지진, 황사, 조류 대발생, 조수, 화산활동, 소행성·유성체 등 자연우주물체의 추락·충돌, 화재, 붕괴, 폭발, 교통사고(항공사고 및 해상사고), 화생방사고, 환경오염사고 등\n** 기준 금액의 경우, 총 용역금액이 아닌 각 부문의 최종 이행완료 기준 금액이며 증빙 상 동 사항이 확인되어야 함\n*** 단, 정부 또는 공공기관 또는 국제기구가 발주한 사업만 해당하며 재하도급 사업 및 자체 발주사업은 제외함",
+      "evidenceLines": [
+        {
+          "file": "2_2. 제안요청서.hwp.txt",
+          "line": 2211
+        },
+        {
+          "file": "2_2. 제안요청서.hwp.txt",
+          "line": 2215
+        }
+      ],
+      "reviewedNote": "사용자 확인 2026-10-20 (이전 메모: 정의 문단 범위(2211~2215: 유사사업 정의+사업규모+관련분야/기준금액/발주처 주석)를 어디까지 볼지 갈릴 수 있음)"
+    },
+    "differentialScoring": {
+      "expected": false,
+      "evidenceLines": [
+        {
+          "file": "0_1. 입찰공고문.hwp.txt",
+          "line": 92
+        }
+      ]
+    }
+  }
+}

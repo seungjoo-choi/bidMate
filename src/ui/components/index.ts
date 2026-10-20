@@ -8,3 +8,7 @@ export * from './ConfirmDialog';
 export * from './Select';
 export * from './Logo';
 export * from './EmptyState';
+export * from './ProviderIcon';
+export * from './MenuButton';
+export * from './FormActions';
+export * from './ErrorBoundary';

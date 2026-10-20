@@ -1,10 +1,16 @@
 import { ClipboardCopy } from 'lucide-react';
+import { useState } from 'react';
+import type { Extraction, ExtractionFile } from '../../../core/types/extraction';
 import type { Notice } from '../../../core/types/notice';
 import { Button, EmptyState, StatusBadge } from '../../../ui/components';
 import { ATTACHMENT_STATUS, attachmentRows, attachmentSummary, folderRelPath } from '../../../ui/notice-detail/view';
+import { TextDrawer, type DrawerTarget } from '../review/TextDrawer';
 import { StatStrip } from './parts';
 
-export function FilesTab({ notice, toast }: { notice: Notice; toast: { show: (t: string) => void } }) {
+const linkClass = 'text-left hover:text-accent hover:underline';
+
+export function FilesTab({ notice, extraction, toast }: { notice: Notice; extraction: Extraction | null; toast: { show: (t: string) => void } }) {
+  const [drawer, setDrawer] = useState<DrawerTarget | null>(null);
   const rows = attachmentRows(notice);
   if (rows.length === 0) return <EmptyState title="첨부파일이 없습니다" />;
   const sum = attachmentSummary(notice);
@@ -35,12 +41,26 @@ export function FilesTab({ notice, toast }: { notice: Notice; toast: { show: (t:
           <tbody>
             {rows.map((r) => {
               const st = ATTACHMENT_STATUS[r.status];
+              // 추출 텍스트가 있는 파일만 클릭해 오른쪽 패널로 본다. zip은 안쪽 파일별로 링크를 단다.
+              const texts = (extraction?.files ?? []).filter((f): f is ExtractionFile & { textPath: string } => f.attachmentId === r.id && f.status === 'parsed' && !!f.textPath);
+              const single = texts.length === 1 && !texts[0]!.innerPath ? texts[0]! : null;
               return (
                 <tr key={r.id} className="border-t border-line" title={r.openable ? undefined : '브라우저에서 열 수 없는 형식입니다. 폴더 경로를 복사해 탐색기에서 여세요'}>
                   <td className="px-5 py-3 font-mono tabular-nums">{r.no}</td>
-                  <td className="max-w-xs px-5 py-3 break-all">
-                    {r.name}
+                  <td className="max-w-xs px-5 py-3 wrap-anywhere">
+                    {single
+                      ? <button type="button" className={linkClass} title="추출한 원문 텍스트 보기" onClick={() => setDrawer({ textPath: single.textPath, title: r.name })}>{r.name}</button>
+                      : r.name}
                     {r.savedName && <div className="text-xs text-faint">{r.savedName}</div>}
+                    {!single && texts.length > 0 && (
+                      <ul className="mt-1 space-y-0.5 text-xs text-muted">
+                        {texts.map((f) => (
+                          <li key={f.textPath}>
+                            <button type="button" className={linkClass} title="추출한 원문 텍스트 보기" onClick={() => setDrawer({ textPath: f.textPath, title: `${r.name} › ${f.innerPath ?? f.name}` })}>└ {f.innerPath ?? f.name}</button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </td>
                   <td className="px-5 py-3">{r.kind}</td>
                   <td className="px-5 py-3 whitespace-nowrap tabular-nums">{r.size}</td>
@@ -54,6 +74,7 @@ export function FilesTab({ notice, toast }: { notice: Notice; toast: { show: (t:
           </tbody>
         </table>
       </div>
+      {drawer && <TextDrawer key={drawer.textPath} noticeId={notice.id} target={drawer} onClose={() => setDrawer(null)} />}
     </div>
   );
 }

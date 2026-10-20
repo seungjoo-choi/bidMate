@@ -13,6 +13,7 @@
 
 :host {
   font-family: var(--font-sans); font-size: 13px; line-height: 20px; color: #0f172a;
+  word-break: keep-all; overflow-wrap: break-word;
   --bm-card-shadow: 0 8px 24px rgba(15, 23, 42, .12);
   --bm-ok: #2f7a4f; --bm-ok-wash: #ecf5ef; --bm-ok-line: rgba(47, 122, 79, .35);
   --bm-warn: #a1620a; --bm-warn-wash: #fbf3e4; --bm-warn-line: rgba(161, 98, 10, .35);

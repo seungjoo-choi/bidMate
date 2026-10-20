@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { DEFAULT_WEBMAIL_HOST } from '../../core/model/default-settings';
 import { composeProvider, inboxProvider, PROVIDER_LABEL } from '../../core/model/mail-provider';
 import type { MailProvider, Settings } from '../../core/types/settings';
-import { Button, Card, Field, InlineAlert, StatusBadge } from '../../ui/components';
+import { Button, Card, Field, FormActions, InlineAlert, StatusBadge } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useSettings } from '../../ui/hooks/useSettings';
 import { originsToRequest } from './mail-service-logic';
@@ -158,22 +158,27 @@ export function MailServiceCard() {
           </InlineAlert>
         </>
       )}
-      <div className="flex flex-wrap items-center gap-3">
+      <FormActions
+        status={
+          <div className="flex flex-wrap items-center gap-2">
+            {!stored ? (
+              <StatusBadge status="idle">미설정</StatusBadge>
+            ) : settings && Object.keys(granted).length === 0 ? (
+              <StatusBadge status="idle">확인 중</StatusBadge>
+            ) : (
+              settings && originsToRequest(settings).map((o) => (
+                <StatusBadge key={o} status={granted[o] ? 'ok' : 'warn'}>
+                  {o.replace(/^https:\/\/|\/\*$/g, '')} {granted[o] ? '권한 허용됨' : '권한 없음'}
+                </StatusBadge>
+              ))
+            )}
+          </div>
+        }
+      >
         <Button icon={<ShieldCheck />} loading={busy} disabled={!settings} onClick={submit}>
           저장 및 권한 허용
         </Button>
-        {!stored ? (
-          <StatusBadge status="idle">미설정</StatusBadge>
-        ) : settings && Object.keys(granted).length === 0 ? (
-          <StatusBadge status="idle">확인 중</StatusBadge>
-        ) : (
-          settings && originsToRequest(settings).map((o) => (
-            <StatusBadge key={o} status={granted[o] ? 'ok' : 'warn'}>
-              {o.replace(/^https:\/\/|\/\*$/g, '')} {granted[o] ? '권한 허용됨' : '권한 없음'}
-            </StatusBadge>
-          ))
-        )}
-      </div>
+      </FormActions>
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
     </Card>
   );

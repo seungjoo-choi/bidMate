@@ -1,18 +1,28 @@
+import { FileText, Settings, Sparkles, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { AiMode, AiProvider, AiScope } from '../../../core/types/ai';
-import type { Extraction } from '../../../core/types/extraction';
+import type { Extraction, ExtractionKey } from '../../../core/types/extraction';
 import { PROVIDERS } from '../../../engine/ai/providers';
 import { send } from '../../../messaging/bus';
-import { Button, InlineAlert } from '../../../ui/components';
+import { Button, FormActions, InlineAlert, ProviderIcon } from '../../../ui/components';
 import { useAiKeyPresence } from '../../../ui/hooks/useAiRun';
 import { useSettings } from '../../../ui/hooks/useSettings';
 import { fileChecklist, filesParam, isLimitError, isSetupError, selectedChars } from '../../../ui/review/ai-view';
+import { ITEM_LABEL } from '../../../ui/review/view';
 
 const PROVIDER_IDS: AiProvider[] = ['gemini', 'claude', 'openai'];
-const MODE_LABEL: Record<AiMode, string> = { api: 'API', manual: '반자동' };
+const MODE_LABEL: Record<AiMode, string> = { api: 'API', manual: '프롬프트 복사' };
+/** 이 팝업의 실행 버튼(AI 톤). 공통 Button의 ghost 위에 덮어쓴다. */
+const AI_RADIO = 'accent-ai-ink';
 
-export interface AiDialogPreset { scope?: AiScope; provider?: AiProvider; /** 이번만 바꾸기를 펼친 채로 연다 */ expandSwitch?: boolean }
+export interface AiDialogPreset {
+  scope?: AiScope; provider?: AiProvider;
+  /** scope가 'keys'일 때 대상 항목. 범위에 "이 항목만: <라벨>"이 세 번째로 고정된다 */
+  keys?: ExtractionKey[];
+  /** 이번만 바꾸기를 펼친 채로 연다 */ expandSwitch?: boolean;
+  /** 열자마자 보여 줄 오류(설정 오류 등) */ initialError?: { code?: string; message: string };
+}
 
 /** [AI로 다시 찾기] 실행 설정: 범위, 공급자·방식(이번만 바꾸기), 파일 체크리스트. */
 export function AiRunDialog({ noticeId, extraction, pendingCount, preset, onClose, onStarted }: {
@@ -26,13 +36,18 @@ export function AiRunDialog({ noticeId, extraction, pendingCount, preset, onClos
 }) {
   const { settings } = useSettings();
   const keys = useAiKeyPresence();
-  const [scope, setScope] = useState<AiScope>(preset?.scope ?? (pendingCount > 0 ? 'pending' : 'all'));
+  const [scope, setScope] = useState<AiScope>(() => {
+    if (preset?.scope === 'keys' && preset.keys?.length) return 'keys';
+    if (preset?.scope === 'pending' || preset?.scope === 'all') return preset.scope;
+    return pendingCount > 0 ? 'pending' : 'all';
+  });
+  const presetKeys = preset?.keys && preset.keys.length > 0 ? preset.keys : null;
   const [override, setOverride] = useState<{ provider: AiProvider; mode: AiMode } | null>(null);
   const [switchOpen, setSwitchOpen] = useState(!!preset?.expandSwitch);
   const rows = useMemo(() => fileChecklist(extraction.files), [extraction.files]);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(rows.filter((r) => r.selectable).map((r) => r.textPath!)));
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<{ code?: string; message: string } | null>(null);
+  const [error, setError] = useState<{ code?: string; message: string } | null>(preset?.initialError ?? null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -60,10 +75,10 @@ export function AiRunDialog({ noticeId, extraction, pendingCount, preset, onClos
     setError(null);
     try {
       if (mode === 'api') {
-        await send('ai/run', { noticeId, scope, provider: cur.provider, ...(files ? { files } : {}) }, { timeoutMs: 70_000 });
+        await send('ai/run', { noticeId, scope, ...(scope === 'keys' && presetKeys ? { keys: presetKeys } : {}), provider: cur.provider, ...(files ? { files } : {}) }, { timeoutMs: 70_000 });
       } else {
         // 1단계: 요청문(awaiting run)만 만든다. 복사와 탭 열기는 대기 패널의 [요청문 복사하고 … 열기] 클릭에서 한다(사용자 활성화 만료 방지).
-        await send('ai/prepare', { noticeId, scope, provider: cur.provider, ...(files ? { files } : {}) }, { timeoutMs: 35_000 });
+        await send('ai/prepare', { noticeId, scope, ...(scope === 'keys' && presetKeys ? { keys: presetKeys } : {}), provider: cur.provider, ...(files ? { files } : {}) }, { timeoutMs: 35_000 });
       }
       onStarted();
       onClose();
@@ -78,67 +93,91 @@ export function AiRunDialog({ noticeId, extraction, pendingCount, preset, onClos
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-label="AI로 다시 찾기" className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-card border border-line bg-surface shadow-overlay">
+      <div role="dialog" aria-modal="true" aria-label="AI로 다시 찾기" data-ai={cur.provider} className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-card border border-ai-line bg-surface shadow-overlay">
+        <div className="ai-tint flex items-start gap-3 border-b border-ai-line bg-ai-wash px-6 py-4">
+          <span className="grid size-9 shrink-0 place-items-center rounded-full border border-ai-line bg-surface text-ai-ink"><ProviderIcon provider={cur.provider} size={20} /></span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-semibold text-ink">AI로 다시 찾기</h2>
+            <p className="mt-0.5 text-xs text-ai-ink">AI가 공고 문서를 다시 읽고, 근거와 함께 값을 제안합니다.</p>
+          </div>
+          <Button variant="ghost" size="icon" aria-label="닫기" className="-mt-1" icon={<X />} onClick={onClose} />
+        </div>
         <div className="space-y-5 overflow-y-auto p-6">
-          <h2 className="text-base font-semibold text-ink">AI로 다시 찾기</h2>
-
           <fieldset className="space-y-2 text-sm">
             <legend className="mb-1 font-semibold">범위</legend>
             <label className={`flex items-center gap-2 ${pendingCount === 0 ? 'text-faint' : ''}`}>
-              <input type="radio" name="ai-scope" className="accent-current" disabled={pendingCount === 0} checked={scope === 'pending'} onChange={() => setScope('pending')} />
+              <input type="radio" name="ai-scope" className={AI_RADIO} disabled={pendingCount === 0} checked={scope === 'pending'} onChange={() => setScope('pending')} />
               확인 필요 항목만 ({pendingCount}개)
             </label>
             <label className="flex items-center gap-2">
-              <input type="radio" name="ai-scope" className="accent-current" checked={scope === 'all'} onChange={() => setScope('all')} />
+              <input type="radio" name="ai-scope" className={AI_RADIO} checked={scope === 'all'} onChange={() => setScope('all')} />
               7개 항목 전체 재검토
             </label>
+            {presetKeys && (
+              <label className="flex items-center gap-2">
+                <input type="radio" name="ai-scope" className={AI_RADIO} checked={scope === 'keys'} onChange={() => setScope('keys')} />
+                이 항목만: {presetKeys.map((k) => ITEM_LABEL[k] ?? k).join(', ')}
+              </label>
+            )}
           </fieldset>
 
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between gap-3">
-              <span>공급자·방식: <b>{adapter.label} {MODE_LABEL[cur.mode]}</b> <span className="text-muted">({override ? '이번만' : '설정값'})</span></span>
-              <Button variant="ghost" onClick={() => setSwitchOpen(!switchOpen)}>이번만 바꾸기</Button>
-            </div>
-            {switchOpen && (
-              <div className="space-y-3 rounded-ctl border border-line bg-sunken p-4">
-                <div className="flex flex-wrap gap-x-5 gap-y-1">
-                  {PROVIDER_IDS.map((p) => (
-                    <label key={p} className="flex items-center gap-2">
-                      <input type="radio" name="ai-provider" className="accent-current" checked={cur.provider === p} onChange={() => setOverride({ provider: p, mode: cur.mode })} />
-                      {PROVIDERS[p].label}
-                    </label>
-                  ))}
-                </div>
-                <div className="space-y-1">
-                  {(['api', 'manual'] as AiMode[]).map((m) => {
-                    const why = m === 'api' ? apiBlock(cur.provider) : null;
-                    return (
-                      <label key={m} className={`flex items-center gap-2 ${why ? 'text-faint' : ''}`}>
-                        <input type="radio" name="ai-mode" className="accent-current" disabled={!!why} checked={cur.mode === m} onChange={() => setOverride({ provider: cur.provider, mode: m })} />
-                        {MODE_LABEL[m]}{why && <span className="text-xs">({why})</span>}
-                      </label>
-                    );
-                  })}
-                </div>
+          <fieldset className="text-sm">
+            <legend className="mb-2 font-semibold">사용할 AI</legend>
+            <div className="overflow-hidden rounded-ctl border border-line">
+              <div className="flex items-center gap-2.5 px-3.5 py-2.5">
+                <ProviderIcon provider={cur.provider} size={16} />
+                <span className="min-w-0 truncate">
+                  <span className="font-semibold">{adapter.label}</span>
+                  <span className="text-muted"> · {MODE_LABEL[cur.mode]}</span>
+                </span>
+                <span className={`shrink-0 rounded-full px-2 py-px text-xs ${override ? 'bg-ai-wash text-ai-ink' : 'bg-sunken text-muted'}`}>{override ? '이번만 변경' : '기본 설정'}</span>
+                <Button variant="secondary" className="ml-auto !h-8 !px-3 !text-[0.8125rem]" aria-expanded={switchOpen} onClick={() => setSwitchOpen(!switchOpen)}>
+                  {switchOpen ? '접기' : '이번만 바꾸기'}
+                </Button>
               </div>
-            )}
-          </div>
+              {switchOpen && (
+                <div className="grid grid-cols-[3.5rem_1fr] items-start gap-x-3 gap-y-2.5 border-t border-line bg-sunken px-3.5 py-3">
+                  <span className="pt-px text-xs text-muted">공급자</span>
+                  <div className="flex flex-wrap gap-x-5 gap-y-1">
+                    {PROVIDER_IDS.map((p) => (
+                      <label key={p} className="flex items-center gap-2">
+                        <input type="radio" name="ai-provider" className={AI_RADIO} checked={cur.provider === p} onChange={() => setOverride({ provider: p, mode: cur.mode })} />
+                        {PROVIDERS[p].label}
+                      </label>
+                    ))}
+                  </div>
+                  <span className="pt-px text-xs text-muted">방식</span>
+                  <div className="space-y-1">
+                    {(['api', 'manual'] as AiMode[]).map((m) => {
+                      const why = m === 'api' ? apiBlock(cur.provider) : null;
+                      return (
+                        <label key={m} className={`flex items-center gap-2 ${why ? 'text-faint' : ''}`}>
+                          <input type="radio" name="ai-mode" className={AI_RADIO} disabled={!!why} checked={cur.mode === m} onChange={() => setOverride({ provider: cur.provider, mode: m })} />
+                          {MODE_LABEL[m]}{why && <span className="text-xs">({why})</span>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </fieldset>
 
           <fieldset className="space-y-1.5 text-sm">
             <legend className="mb-1 font-semibold">분석에 쓸 파일</legend>
             {rows.length === 0 && <p className="text-muted">분석된 파일이 없습니다.</p>}
             {rows.map((r, i) => (
               <label key={r.textPath ?? i} className={`flex items-start gap-2 ${r.selectable ? '' : 'text-faint'}`}>
-                <input type="checkbox" className="mt-1 accent-current" disabled={!r.selectable} checked={r.selectable && selected.has(r.textPath!)} onChange={() => r.textPath && toggle(r.textPath)} />
-                <span className="min-w-0 break-all">{r.name} <span className="text-muted">({r.kindLabel})</span>{r.remark && <span className="block text-xs">{r.remark}</span>}</span>
+                <input type="checkbox" className={`mt-1 ${AI_RADIO}`} disabled={!r.selectable} checked={r.selectable && selected.has(r.textPath!)} onChange={() => r.textPath && toggle(r.textPath)} />
+                <span className="min-w-0 wrap-anywhere">{r.name} <span className="text-muted">({r.kindLabel})</span>{r.remark && <span className="block text-xs">{r.remark}</span>}</span>
               </label>
             ))}
           </fieldset>
 
           {overLimit && (
-            <InlineAlert tone="warn">선택한 파일이 길어 일부는 잘릴 수 있습니다(반자동 상한 {adapter.manualMaxChars.toLocaleString('en-US')}자). 파일을 나눠 여러 번 실행하세요.</InlineAlert>
+            <InlineAlert tone="warn">선택한 파일이 길어 일부는 잘릴 수 있습니다(프롬프트 상한 {adapter.manualMaxChars.toLocaleString('en-US')}자). 파일을 나눠 여러 번 실행하세요.</InlineAlert>
           )}
-          {cur.mode === 'manual' && <p className="text-xs text-muted">요청문을 만든 뒤, 다음 화면의 버튼으로 복사하고 {adapter.label} 웹 사이트({adapter.webUrl})를 새 탭으로 엽니다. 붙여넣은 뒤 답을 복사해 여기로 가져오세요.</p>}
+          {cur.mode === 'manual' && <p className="text-xs text-muted">프롬프트를 만든 뒤, 다음 화면의 버튼으로 복사하고 {adapter.label} 웹 사이트({adapter.webUrl})를 새 탭으로 엽니다. 붙여넣은 뒤 답을 복사해 여기로 가져오세요.</p>}
 
           {error && (
             <InlineAlert tone="error">
@@ -146,22 +185,32 @@ export function AiRunDialog({ noticeId, extraction, pendingCount, preset, onClos
                 <p>{error.code === 'NOTHING_TO_REVIEW' ? '확인이 필요한 항목이 없습니다. 7개 항목 전체로 실행하세요.'
                   : error.code === 'JOB_ALREADY_RUNNING' ? '이 공고는 다른 작업이 진행 중입니다'
                   : error.code === 'AI_RUN_BUSY' ? '이 공고는 이미 AI 실행 중입니다'
+                  : isSetupError(error.code) ? error.message
                   : `${error.code ?? ''} ${error.message}`.trim()}</p>
                 {(isSetupError(error.code) || isLimitError(error.code)) && (
                   <div className="flex flex-wrap gap-2">
-                    {isSetupError(error.code) && <Button variant="secondary" onClick={() => void send('ui/open', { page: 'settings', section: 'ai' })}>설정 열기</Button>}
-                    {cur.mode === 'api' && <Button variant="secondary" disabled={busy || noneSelected} onClick={() => void start('manual')}>이번만 반자동으로 실행</Button>}
+                    {isSetupError(error.code) && <Button variant="secondary" icon={<Settings />} onClick={() => void send('ui/open', { page: 'settings', section: 'ai' })}>AI 설정 열기</Button>}
+                    {cur.mode === 'api' && (
+                      <Button variant="secondary" disabled={busy} icon={<FileText />} title={`이번만 ${adapter.label} 웹 사이트에 프롬프트를 붙여넣는 방식으로 바꿉니다`} onClick={() => { setOverride({ provider: cur.provider, mode: 'manual' }); setError(null); }}>
+                        프롬프트 방식으로 바꾸기
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
             </InlineAlert>
           )}
         </div>
-        <div className="flex justify-end gap-2 border-t border-line px-6 py-4">
-          <Button variant="secondary" onClick={onClose}>닫기</Button>
-          <Button loading={busy} disabled={noneSelected || (scope === 'pending' && pendingCount === 0)} onClick={() => void start(cur.mode)}>
-            {cur.mode === 'api' ? '실행' : '요청문 만들기'}
-          </Button>
+        <div className="border-t border-line px-6 py-4">
+          <FormActions>
+            <Button variant="secondary" onClick={onClose}>닫기</Button>
+            <Button
+              variant="ai" loading={busy} icon={cur.mode === 'api' ? <Sparkles /> : <FileText />}
+              disabled={noneSelected || (scope === 'pending' && pendingCount === 0)} onClick={() => void start(cur.mode)}
+            >
+              {cur.mode === 'api' ? 'AI로 찾기' : '프롬프트 만들기'}
+            </Button>
+          </FormActions>
         </div>
       </div>
     </div>,

@@ -6,10 +6,15 @@ import type { Extraction } from '../../core/types/extraction';
 import type { Notice } from '../../core/types/notice';
 import { send, sendToTab } from '../../messaging/bus';
 import { SIDEPANEL_FOCUS_KEY, type G2bDetected, type NoticeLookup } from '../../messaging/protocol';
+import { PROVIDERS } from '../../engine/ai/providers';
 import { Button, InlineAlert, Logo, StatusBadge } from '../../ui/components';
 import { panelView, progressRatio, type PanelView } from '../../ui/g2b-panel/panel-view';
+import { useAiKeyPresence, useAiRun } from '../../ui/hooks/useAiRun';
 import { useJobLog } from '../../ui/hooks/useJobLog';
 import { useJobs } from '../../ui/hooks/useJobs';
+import { useSettings } from '../../ui/hooks/useSettings';
+import { buildAiCards, latestRun, quickView } from '../../ui/review/ai-view';
+import { aiButtonView } from './ai-button';
 import { DiagnosticsSection } from './DiagnosticsSection';
 import { HistoryCard } from './HistoryCard';
 import { historyView } from './history-view';
@@ -128,10 +133,32 @@ export function App() {
 
   const log = useJobLog(job?.id ?? null);
   const current = data && data.notice.id === noticeId ? data : null;
+  const { state: aiState, review: aiReview } = useAiRun(noticeId);
+  const { settings } = useSettings();
+  const keyPresence = useAiKeyPresence();
+  const [aiBusy, setAiBusy] = useState(false);
+  useEffect(() => { setAiBusy(false); setNote(null); }, [noticeId]);
   const summary = useMemo(
-    () => (current && !active ? summaryView({ facts: basicFacts(current.notice), eval: evalFacts(current.notice, current.extraction), notice: current.notice }) : null),
-    [current, active],
+    () => (current && !active
+      ? summaryView({
+        facts: basicFacts(current.notice), eval: evalFacts(current.notice, current.extraction), notice: current.notice,
+        ai: current.extraction ? buildAiCards(aiReview, current.extraction) : undefined,
+      })
+      : null),
+    [current, active, aiReview],
   );
+  // 설정 로드 전에는 null(버튼 로딩). 진행·결과 표시의 공급자는 최신 run → 세션 state → 설정값 순.
+  const settingsProvider = settings?.ai.provider ?? null;
+  const aiQuick = quickView(aiReview, current?.extraction, aiState);
+  const aiProvider = aiQuick.phase !== 'idle' ? (latestRun(aiReview)?.provider ?? aiState?.provider ?? settingsProvider) : settingsProvider;
+  const aiView = aiButtonView({
+    quick: aiQuick,
+    mode: settings?.ai.mode,
+    parsedCount: current?.extraction?.files.filter((f) => f.status === 'parsed' && f.textPath).length ?? 0,
+    jobActive: active,
+    hasKey: keyPresence && settingsProvider ? keyPresence[settingsProvider] : null,
+    hasModel: !!(settingsProvider && settings?.ai.models[settingsProvider]?.trim()),
+  });
   const composeJob = job?.handoff?.action === 'compose' ? jobs.find((j) => j.id === (job.handoff as { jobId?: string }).jobId) ?? null : null;
   const hist = useMemo(
     () => (job ? historyView({ log, job, compose: composeJob, hasSummary: !!summary, attempt: attemptSel ?? undefined }) : null),
@@ -166,6 +193,19 @@ export function App() {
   const cancel = (force: boolean, target: Job | null = job) => { if (target) void send('job/cancel', { jobId: target.id, force }).catch(() => undefined); };
   const openUi = (page: 'settings' | 'grant' | 'review', noticeId?: string) => void send('ui/open', { page, noticeId }).catch(() => undefined);
   const openDashboard = () => void chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
+  // 실행·취소만 한다. 적용은 대시보드 확인 탭에서(사이드패널에서 ai/apply 금지).
+  const runAi = () => {
+    if (!noticeId || aiBusy) return;
+    setAiBusy(true);
+    setNote(null);
+    send('ai/run', { noticeId, scope: 'auto' }, { timeoutMs: 70_000 })
+      .catch((e) => setNote(e instanceof Error ? e.message : String(e)))
+      .finally(() => setAiBusy(false));
+  };
+  const cancelAi = () => {
+    const runId = aiState?.runId ?? latestRun(aiReview)?.id;
+    if (noticeId && runId) void send('ai/cancel', { noticeId, runId }).catch(() => undefined);
+  };
   const copyFolder = (folder: string) => void navigator.clipboard?.writeText(folder).then(() => setCopied(true)).catch(() => undefined);
 
   const errorList = job && job.errors.length > 0 && (
@@ -179,7 +219,7 @@ export function App() {
           {job.errors.map((e, i) => (
             <li key={i} className="rounded-ctl bg-sunken px-3 py-2 text-sm">
               <div className="font-mono text-xs text-muted">{e.code}{e.step ? `, ${e.step}` : ''}</div>
-              <div className="mt-0.5 break-all">{e.message}</div>
+              <div className="mt-0.5 wrap-anywhere">{e.message}</div>
             </li>
           ))}
         </ul>
@@ -199,7 +239,7 @@ export function App() {
     status = (
       <div className="space-y-2.5">
         {view.foreignLabel && <InlineAlert tone="info"><div className="truncate">{view.foreignLabel}</div></InlineAlert>}
-        <div className="break-all text-sm">{view.label}</div>
+        <div className="wrap-anywhere text-sm">{view.label}</div>
         <div className="flex items-center justify-between gap-2 text-sm">
           <span className="flex items-center gap-3 text-muted">
             {view.attach && <span>첨부 {view.attach.done}/{view.attach.total}</span>}
@@ -290,7 +330,7 @@ export function App() {
         <Logo size={26} />
         <div>
           <div className="text-lg leading-tight font-bold tracking-tight">BidMate</div>
-          <div className="text-xs leading-tight text-muted">나의 입찰메이트</div>
+          <div className="text-xs leading-tight text-muted">비드메이트</div>
         </div>
         <span className="ml-auto flex items-center gap-3">
           <button onClick={openDashboard} className="inline-flex items-center gap-1 text-sm text-accent hover:underline">
@@ -331,7 +371,10 @@ export function App() {
         {status && <Section title="진행 상태">{status}</Section>}
 
         {summary && current && (
-          <SummaryCard view={summary} jobs={jobs} noticeRef={current.notice.ref} copied={copied}
+          <SummaryCard view={summary}
+            ai={noticeId ? { view: aiBusy && aiView.kind === 'run' ? { ...aiView, disabled: true } : aiView, provider: aiProvider ?? 'claude', providerLabel: PROVIDERS[aiProvider ?? 'claude'].label,
+              onRun: runAi, onCancel: cancelAi, onOpenReview: () => openUi('review', noticeId), onOpenSettings: () => void send('ui/open', { page: 'settings', section: 'ai' }).catch(() => undefined) } : undefined}
+            jobs={jobs} noticeRef={current.notice.ref} copied={copied}
             onReview={(id) => openUi('review', id)} onCopyFolder={copyFolder} />
         )}
 

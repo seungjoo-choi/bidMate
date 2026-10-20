@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPrompt, PROMPT_VERSION, REQUEST_MARKER } from '../../src/core/ai/prompt';
+import { buildPrompt, ITEM_DEFS, PROMPT_VERSION, REQUEST_MARKER } from '../../src/core/ai/prompt';
 
 describe('buildPrompt', () => {
   const base = { runId: 'run-1', excerpt: '=== 파일: a.hwp (제안요청서) ===\n신용평가 10점', skippedFiles: [] as string[] };
@@ -8,7 +8,7 @@ describe('buildPrompt', () => {
     const p = buildPrompt({ ...base, keys: ['performanceScore', 'credibilityScore'] });
     expect(p.spec.keys).toEqual(['credibilityScore', 'performanceScore']);
     expect(p.spec.runId).toBe('run-1');
-    expect(p.spec.tag).toBe('bidmate-ai-review/1');
+    expect(p.spec.tag).toBe('bidmate-ai-review/2');
     expect(p.user).toContain('### credibilityScore');
     expect(p.user).not.toContain('### managementScore');
     expect(p.user).not.toContain('### differentialScoring');
@@ -28,5 +28,23 @@ describe('buildPrompt', () => {
     // @ts-expect-error buildPrompt 입력에는 baseline 같은 추출값 필드가 없다
     const p = buildPrompt({ ...base, keys: ['credibilityScore'], baseline: { credibilityScore: 'BASELINE_SENTINEL_77' } });
     expect(p.manualText).toContain('credibilityScore');
+  });
+
+  it('항목 정의는 정의 → 식별 → 이것은 아님 → 값 형식 → 다중값 순으로 렌더된다', () => {
+    const p = buildPrompt({ ...base, keys: ['performanceMinAmount'] });
+    const idx = ['- 정의:', '- 식별:', '- 이것은 아님:', '- 값 형식:', '- 다중값:'].map((m) => p.user.indexOf(m));
+    expect(idx.every((i) => i >= 0)).toBe(true);
+    expect([...idx].sort((a, b) => a - b)).toEqual(idx);
+    expect(p.user).not.toContain('- 힌트:');
+    expect(p.user).not.toContain('- 주의:');
+    expect(ITEM_DEFS.credibilityScore.multi).toBeUndefined();
+    expect(buildPrompt({ ...base, keys: ['credibilityScore'] }).user).not.toContain('- 다중값:');
+  });
+
+  it('실적 인정금액은 string 형식으로 스키마에 전달된다', () => {
+    expect(PROMPT_VERSION).toBe('2.1.0');
+    const p = buildPrompt({ ...base, keys: ['performanceMinAmount', 'credibilityScore'] });
+    expect(p.spec.kindOf.performanceMinAmount).toBe('string');
+    expect(p.spec.kindOf.credibilityScore).toBe('number');
   });
 });

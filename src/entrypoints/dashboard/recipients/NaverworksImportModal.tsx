@@ -4,7 +4,7 @@ import { buildImportPlan, defaultSelection, diffContacts, domainIdFrom, NW_CONTA
 import type { RecipientImportSummary } from '../../../core/types/config-file';
 import type { Recipient } from '../../../core/types/recipient';
 import { send } from '../../../messaging/bus';
-import { Button, inputClass, InlineAlert } from '../../../ui/components';
+import { Button, FormActions, inputClass, InlineAlert } from '../../../ui/components';
 import { errorText, Modal } from './shared';
 
 type Phase = 'fetching' | 'domain-input' | 'preview' | 'applying' | 'error';
@@ -168,7 +168,7 @@ export function NaverworksImportModal({ recipients, domainId, initialErrorCode, 
                 <Row key={r.id} checked={sel.changed.has(r.id)} onChange={() => toggle('changed', r.id)}>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      {fields.includes('name') ? <Change before={r.name} after={c.name} bold /> : <span className="text-[15px] font-semibold text-ink">{c.name}</span>}
+                      {fields.includes('name') ? <Change before={r.name} after={c.name} bold /> : <span className="text-[0.9375rem] font-semibold text-ink">{c.name}</span>}
                       {c.flagged && <FlagBadge reason={c.flagReason} />}
                     </div>
                     {fields.includes('dept') ? <div className="text-xs"><Change before={r.dept ?? '(없음)'} after={c.dept ?? '(없음)'} /></div> : c.dept && <div className="text-xs text-muted">{c.dept}</div>}
@@ -190,13 +190,10 @@ export function NaverworksImportModal({ recipients, domainId, initialErrorCode, 
         </div>
       );
       footer = (
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <span className="text-xs text-muted">{noteText}</span>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={onClose}>취소</Button>
-            <Button disabled={count === 0} onClick={() => void apply()}>선택 반영 ({count}건)</Button>
-          </div>
-        </div>
+        <FormActions status={<span className="text-xs text-muted">{noteText}</span>}>
+          <Button variant="ghost" onClick={onClose}>취소</Button>
+          <Button disabled={count === 0} onClick={() => void apply()}>선택 반영 ({count}건)</Button>
+        </FormActions>
       );
     }
   }
@@ -249,7 +246,7 @@ function Who({ name, dept, email, flag }: { name: string; dept?: string; email: 
   return (
     <div className="min-w-0 flex-1">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[15px] font-semibold text-ink">{name}</span>
+        <span className="text-[0.9375rem] font-semibold text-ink">{name}</span>
         {flag && <FlagBadge reason={flag} />}
       </div>
       {dept && <div className="text-xs text-muted">{dept}</div>}
@@ -260,7 +257,7 @@ function Who({ name, dept, email, flag }: { name: string; dept?: string; email: 
 
 function Change({ before, after, bold }: { before: string; after: string; bold?: boolean }) {
   return (
-    <span className={bold ? 'text-[15px] font-semibold text-ink' : 'text-ink'}>
+    <span className={bold ? 'text-[0.9375rem] font-semibold text-ink' : 'text-ink'}>
       <span className="text-faint line-through">{before}</span> → {after}
     </span>
   );

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { AiReviewFile, AiRun, AiSuggestion } from '../../src/core/types/ai';
-import type { ExtractedItem, Extraction, ExtractionFile } from '../../src/core/types/extraction';
+import type { AiReviewFile, AiRun, AiRunState, AiSuggestion } from '../../src/core/types/ai';
+import type { ExtractedItem, Extraction, ExtractionFile, ExtractionKey } from '../../src/core/types/extraction';
 import {
-  REJECT_LABEL, VERDICT_LABEL, afterCopy, buildAiCards, copyOpenButton, terminalSignal, fileChecklist, filesParam, isStale, latestRun, olderCardCount, runSummary, selectedChars, suggestionActions,
+  REJECT_LABEL, VERDICT_LABEL, afterCopy, buildAiCards, copyOpenButton, terminalSignal, fileChecklist, filesParam, isStale, latestRun, olderCardCount, quickView, runSummary, scopeLabel, selectedChars, suggestionActions,
 } from '../../src/ui/review/ai-view';
 import { buildCard, buildCards, userEditedBadgeText } from '../../src/ui/review/view';
 
@@ -65,10 +65,17 @@ describe('runSummary', () => {
   });
 
   it('라벨: verdict 4종과 거부 사유(quote_too_short 포함)', () => {
-    expect(Object.keys(VERDICT_LABEL).sort()).toEqual(['differs', 'match', 'new', 'none']);
+    expect(Object.keys(VERDICT_LABEL).sort()).toEqual(['differs', 'match', 'multi', 'new', 'none']);
     expect(VERDICT_LABEL.match).toBe('AI 확인 일치');
     expect(REJECT_LABEL.quote_too_short).toBeTruthy();
     for (const r of ['quote_missing', 'quote_not_found', 'bad_format', 'unknown_key', 'file_not_found'] as const) expect(REJECT_LABEL[r]).toBeTruthy();
+  });
+});
+
+describe('runSummary multi', () => {
+  it('multi는 proposals와 별도로 집계한다', () => {
+    const r = run('r', { credibilityScore: sug({ key: 'credibilityScore', verdict: 'multi', value: null }), managementScore: sug({ key: 'managementScore' }) });
+    expect(runSummary(r)).toEqual({ match: 0, proposals: 1, none: 0, rejected: 0, multi: 1 });
   });
 });
 
@@ -82,6 +89,11 @@ describe('suggestionActions', () => {
     const m = sug({ key: 'credibilityScore', verdict: 'match' });
     expect(suggestionActions(open, m)).toEqual(['confirm']);
     expect(suggestionActions({ badge: 'verified', userEdited: false }, m)).toEqual([]);
+  });
+  it('multi: value null이어도 variants가 있으면 적용 가능, 없으면 무시만', () => {
+    const v = { condition: 'A', value: 10, quote: 'q', valueInQuote: true };
+    expect(suggestionActions(open, sug({ key: 'credibilityScore', verdict: 'multi', value: null, variants: [v] }))).toEqual(['apply', 'dismiss']);
+    expect(suggestionActions(open, sug({ key: 'credibilityScore', verdict: 'multi', value: null }))).toEqual(['dismiss']);
   });
   it('none → 무시만, 적용 후 사용자 수정이면 버튼 없음', () => {
     expect(suggestionActions(open, sug({ key: 'credibilityScore', verdict: 'none', value: null }))).toEqual(['dismiss']);
@@ -142,10 +154,10 @@ describe('파일 체크리스트', () => {
 
 describe('반자동 대기 패널 주 버튼', () => {
   it('요청문을 받기 전·실패 시 비활성, 받은 뒤 활성(라벨에 공급자)', () => {
-    expect(copyOpenButton('loading', 'Gemini')).toMatchObject({ label: '요청문 복사하고 Gemini 열기', disabled: true });
+    expect(copyOpenButton('loading', 'Gemini')).toMatchObject({ label: '프롬프트 복사하고 Gemini 열기', disabled: true });
     expect(copyOpenButton('error', 'Gemini')).toMatchObject({ disabled: true });
     expect(copyOpenButton('error', 'Gemini').hint).toBeTruthy();
-    expect(copyOpenButton('ready', 'Claude')).toEqual({ label: '요청문 복사하고 Claude 열기', disabled: false });
+    expect(copyOpenButton('ready', 'Claude')).toEqual({ label: '프롬프트 복사하고 Claude 열기', disabled: false });
   });
   it('복사에 성공해야 탭을 연다, 실패하면 열지 않고 다시 누르라고 안내', () => {
     expect(afterCopy(true)).toMatchObject({ openTab: true, message: { tone: 'info' } });
@@ -163,3 +175,69 @@ describe('terminalSignal', () => {
     expect(terminalSignal(null)).toBeNull();
   });
 });
+
+describe('D2: 요청 여부(run.keys) 기준 buildAiCards', () => {
+  const req = (id: string, keys: ExtractionKey[], suggestions: AiRun['suggestions'], over: Partial<AiRun> = {}) => run(id, suggestions, { keys, ...over });
+  it('최신 run이 요청했는데 제안이 없으면(검증 실패) 오래된 run으로 폴백하지 않고 빈칸', () => {
+    const older = req('r1', ['credibilityScore'], { credibilityScore: sug({ key: 'credibilityScore' }) });
+    const newer = req('r2', ['credibilityScore'], {}, { rejected: [{ key: 'credibilityScore', reason: 'quote_not_found' }] });
+    expect(buildAiCards(file([newer, older]), ex).credibilityScore).toBeUndefined();
+  });
+  it('최신 run이 요청하지 않은 키는 오래된 run의 제안을 쓴다', () => {
+    const older = req('r1', ['credibilityScore', 'managementScore'], { credibilityScore: sug({ key: 'credibilityScore' }), managementScore: sug({ key: 'managementScore' }) });
+    const newer = req('r2', ['managementScore'], { managementScore: sug({ key: 'managementScore', value: 3 }) });
+    const cards = buildAiCards(file([newer, older]), ex);
+    expect(cards.managementScore!.run.id).toBe('r2');
+    expect(cards.credibilityScore!.run.id).toBe('r1');
+  });
+  it('keys가 빈 옛 run은 제안이 있는 키만 요청한 것으로 본다(방어)', () => {
+    const legacy = req('r0', [], { performanceScore: sug({ key: 'performanceScore' }) });
+    expect(Object.keys(buildAiCards(file([legacy]), ex))).toEqual(['performanceScore']);
+  });
+  it('요청했지만 무시된 제안도 오래된 run으로 폴백하지 않는다', () => {
+    const older = req('r1', ['credibilityScore'], { credibilityScore: sug({ key: 'credibilityScore' }) });
+    const newer = req('r2', ['credibilityScore'], { credibilityScore: sug({ key: 'credibilityScore', dismissedAt: 't' }) });
+    expect(buildAiCards(file([newer, older]), ex).credibilityScore).toBeUndefined();
+  });
+});
+
+describe('scopeLabel', () => {
+  it('pending / all / keys 라벨', () => {
+    expect(scopeLabel({ scope: 'pending', keys: ['credibilityScore'] })).toBe('확인 필요 항목');
+    expect(scopeLabel({ scope: 'all', keys: [] })).toBe('7개 전체');
+    expect(scopeLabel({ scope: 'keys', keys: ['credibilityScore', 'performancePeriod'] })).toBe('항목: 대외신인도 배점, 실적 인정기간');
+  });
+});
+
+describe('quickView', () => {
+  const st = (status: AiRunState['status'], runId = 'r1', label = '요청 중') => ({ noticeId: 'N', runId, provider: 'gemini' as const, status, label, at: 't' });
+  it('run 없음·cancelled·stale done은 idle', () => {
+    expect(quickView(null, ex, null).phase).toBe('idle');
+    expect(quickView(file([run('r1', {}, { status: 'cancelled' })]), ex, null).phase).toBe('idle');
+    expect(quickView(file([run('r1', {}, { extractionJobId: 'old' })]), ex, null).phase).toBe('idle');
+  });
+  it('requesting은 running(세션 라벨 우선), awaiting은 awaiting', () => {
+    expect(quickView(file([run('r1', {}, { status: 'requesting' })]), ex, st('requesting', 'r1', '근거 확인 중'))).toMatchObject({ phase: 'running', label: '근거 확인 중' });
+    expect(quickView(file([run('r1', {}, { status: 'requesting' })]), ex, st('requesting', 'other'))).toMatchObject({ phase: 'running', label: 'AI에 요청하는 중' });
+    expect(quickView(file([run('r1', {}, { status: 'awaiting' })]), ex, null).phase).toBe('awaiting');
+  });
+  it('failed는 error를 담고, done은 요약 라벨', () => {
+    const f = quickView(file([run('r1', {}, { status: 'failed', error: { code: 'AI_QUOTA', message: 'q' } })]), ex, null);
+    expect(f).toMatchObject({ phase: 'failed', error: { code: 'AI_QUOTA' } });
+    const d = quickView(file([run('r1', {
+      credibilityScore: sug({ key: 'credibilityScore', verdict: 'match' }), managementScore: sug({ key: 'managementScore', verdict: 'new' }),
+    }, { rejected: [{ key: 'x', reason: 'bad_format' }] })]), ex, null);
+    expect(d).toMatchObject({ phase: 'done', label: 'AI 제안 1 · 일치 1 · 못 찾음 0 · 검증 실패 1', summary: { match: 1, proposals: 1, none: 0, rejected: 1 } });
+  });
+
+  it('세션이 진행 상태이고 run이 없거나 runId가 다르면 running', () => {
+    const st = (status: AiRunState['status'], runId: string, label = ''): AiRunState => ({ noticeId: 'n', runId, provider: 'gemini', status, label, at: '2026-01-01T00:00:00Z' });
+    expect(quickView(null, ex, st('preparing', 'r9', '프롬프트 만드는 중'))).toEqual({ phase: 'running', label: '프롬프트 만드는 중' });
+    expect(quickView(null, ex, st('preparing', 'r9')).label).toBe('준비 중');
+    const prev = { schemaVersion: 1, noticeId: 'n', runs: [run('old', {})] } as AiReviewFile;
+    expect(quickView(prev, ex, st('verifying', 'r9', '검증 중')).phase).toBe('running');
+    // 종료 상태는 기존 로직 유지
+    expect(quickView(null, ex, st('done', 'r9')).phase).toBe('idle');
+  });
+});
+

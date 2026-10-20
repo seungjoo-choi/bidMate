@@ -22,6 +22,7 @@ import { lookupInIndex } from '../../engine/notices/lookup';
 import { NoticeStore } from '../../engine/notices/notice-store';
 import type { NoticeKind } from '../../core/types/notice';
 import { applySuggestion, dismissSuggestion, finishRun, getPrompt, getReview, listModels } from '../../engine/ai/ai-review-api';
+import { AiBatch } from '../../engine/ai/ai-batch';
 import { AiRunner } from '../../engine/ai/ai-runner';
 import type { G2bTestResult, NoticeLookup, JobRunPayload, SmokeTestResult } from '../../messaging/protocol';
 
@@ -208,7 +209,7 @@ const aiRunner = new AiRunner({
 });
 listen('ai/exec', async (p) => ({ runId: (await aiRunner.exec(p)).runId }), 'offscreen');
 listen('ai/prepare', async (p) => {
-  const prepared = await aiRunner.prepare({ noticeId: p.noticeId, scope: p.scope, provider: p.provider as NonNullable<typeof p.provider>, files: p.files });
+  const prepared = await aiRunner.prepare({ noticeId: p.noticeId, scope: p.scope, keys: p.keys, provider: p.provider as NonNullable<typeof p.provider>, files: p.files });
   return { runId: prepared.run.id, text: prepared.built.manualText, webUrl: prepared.adapter.webUrl, stats: prepared.stats };
 }, 'offscreen');
 listen('ai/submit', async (p) => {
@@ -220,6 +221,13 @@ listen('ai/prompt-get', (p) => getPrompt(fileStore, p), 'offscreen');
 listen('ai/apply', async (p) => applySuggestion(fileStore, p, await aiDeps()), 'offscreen');
 listen('ai/dismiss', async (p) => dismissSuggestion(fileStore, p, await aiDeps()), 'offscreen');
 listen('ai/cancel', (p) => aiRunner.cancel(p), 'offscreen');
+const aiBatch = new AiBatch({
+  runner: aiRunner, getReview: (noticeId) => getReview(fileStore, noticeId),
+  pushStatus: (s) => { void send('ai/batch-status', s, { target: 'sw' }).catch(() => undefined); },
+});
+listen('ai/batch-exec', (p) => ({ batchId: aiBatch.start(p).batchId }), 'offscreen');
+listen('ai/batch-get', () => aiBatch.current(), 'offscreen');
+listen('ai/batch-cancel', ({ batchId }) => aiBatch.cancel(batchId), 'offscreen');
 listen('ai/models', ({ provider, apiKey }) => listModels(provider, apiKey, (...a) => fetch(...a)), 'offscreen');
 listen('recipients/list', () => listRecipients(fileStore), 'offscreen');
 listen('recipients/save', ({ recipient }) => saveRecipient(fileStore, recipient), 'offscreen');
@@ -240,6 +248,7 @@ listen('mail/sent-list', async () => (await sentStore.loadIndex()).entries, 'off
 listen('mail/sent-get', ({ noticeId }) => sentStore.list(noticeId), 'offscreen');
 listen('mail/sent-add', (p) => sentStore.addManual(p, new Date()), 'offscreen');
 listen('mail/sent-void', (p) => sentStore.voidRecord(p, new Date()), 'offscreen');
+listen('mail/sent-view', (p) => sentStore.view(p), 'offscreen');
 listen('mail/sent-record', async ({ kind, confirmation, ...p }) => {
   if (kind === 'confirm') {
     if (!confirmation) return { recorded: false };

@@ -87,7 +87,7 @@ export function TextDrawer({ noticeId, target, onClose }: { noticeId: string; ta
       >
         <header className="flex items-center gap-3 border-b border-line px-5 py-3">
           <div className="min-w-0 flex-1 truncate text-base font-semibold">{target.title}</div>
-          <Button variant="ghost" size="icon" aria-label="닫기" className="-mr-2" icon={<X />} onClick={close} />
+          <Button variant="ghost" size="icon" aria-label="닫기" icon={<X />} onClick={close} />
         </header>
         <div className="flex items-center gap-1.5 border-b border-line px-5 py-3">
           <div className="relative flex-1">
@@ -120,7 +120,7 @@ export function TextDrawer({ noticeId, target, onClose }: { noticeId: string; ta
                 return (
                   <div key={i} data-i={i} className={`flex ${isTarget ? 'bg-warn-wash' : ''} ${isMatch ? (isCur ? 'bg-mark-strong' : 'bg-mark') : ''}`}>
                     <span className="w-16 shrink-0 select-none pr-4 text-right text-faint">{i + 1}</span>
-                    <span className="min-w-0 whitespace-pre-wrap break-all">{l}</span>
+                    <span className="min-w-0 whitespace-pre-wrap wrap-anywhere">{l}</span>
                   </div>
                 );
               })}

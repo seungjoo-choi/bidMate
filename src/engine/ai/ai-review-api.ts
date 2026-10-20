@@ -1,4 +1,4 @@
-import { buildExcerpt, type ExcerptFileInput } from '../../core/ai/excerpt';
+import { buildExcerpt, buildFullText, type ExcerptFileInput } from '../../core/ai/excerpt';
 import { EXCERPT_MAX_CHARS } from '../../core/ai/constants';
 import { parseAiResponse } from '../../core/ai/parse';
 import { buildPrompt, PROMPT_VERSION, type BuiltPrompt } from '../../core/ai/prompt';
@@ -40,10 +40,11 @@ export interface AiApiDeps {
   isBusy?: (noticeId: string) => boolean;
   newId?: () => string;
 }
-export interface PrepareInput { noticeId: string; scope: AiScope; provider: AiProvider; mode: AiMode; model: string | null; /** 사용할 파일의 textPath 목록. 없으면 분석된 전체 */ files?: string[] }
+export interface PrepareInput { noticeId: string; scope: AiScope; /** scope가 'keys'일 때 대상 항목 */ keys?: ExtractionKey[]; provider: AiProvider; mode: AiMode; model: string | null; /** API 모드에서 문서 전문 전송 여부(기본 true). manual은 무시 */ sendFullText?: boolean; /** 사용할 파일의 textPath 목록. 없으면 분석된 전체 */ files?: string[] }
 export interface PreparedRun {
   notice: Notice; run: AiRun; built: BuiltPrompt; adapter: AiProviderAdapter;
-  stats: { chars: number; files: number; truncated: boolean; excludedFiles: string[] };
+  /** fullText: 전문을 보냈는가(실패 시 발췌 재시도 판단용) */
+  stats: { chars: number; files: number; truncated: boolean; excludedFiles: string[]; fullText: boolean };
 }
 
 async function loadNoticeAndExtraction(store: IFileStore, noticeId: string): Promise<{ notice: Notice; extraction: Extraction }> {
@@ -68,6 +69,28 @@ async function readFileText(store: IFileStore, notice: Notice, textPath: string)
 
 const isOpen = (r: AiRun) => r.status === 'awaiting' || r.status === 'requesting';
 
+/** 요청 범위를 대상 키와 저장할 scope로 푼다. auto·keys는 요청 전용이라 저장 scope는 pending | all | keys. */
+function resolveKeys(p: Pick<PrepareInput, 'scope' | 'keys'>, extraction: Extraction): { keys: ExtractionKey[]; scope: AiScope } {
+  const none = () => err('NOTHING_TO_REVIEW', '확인이 필요한 항목이 없습니다.');
+  if (p.scope === 'all') return { keys: [...EXTRACTION_KEYS], scope: 'all' };
+  if (p.scope === 'pending') {
+    const keys = pendingKeys(extraction.items);
+    if (keys.length === 0) throw none();
+    return { keys, scope: 'pending' };
+  }
+  if (p.scope === 'auto') {
+    const keys = pendingKeys(extraction.items);
+    return keys.length > 0 ? { keys, scope: 'pending' } : { keys: [...EXTRACTION_KEYS], scope: 'all' };
+  }
+  if (p.scope === 'keys') {
+    const req = Array.isArray(p.keys) ? p.keys : [];
+    if (req.length === 0) throw none();
+    if (req.some((k) => !(EXTRACTION_KEYS as string[]).includes(k))) throw err('AI_BAD_REQUEST', '알 수 없는 항목입니다.');
+    return { keys: EXTRACTION_KEYS.filter((k) => req.includes(k)), scope: 'keys' };
+  }
+  throw err('AI_BAD_REQUEST', '알 수 없는 범위입니다.');
+}
+
 /** run 준비: 대상 키 계산 → 발췌 → 프롬프트 txt와 run 저장. 같은 공고의 awaiting run은 cancelled로 바꾼다. */
 export async function prepareRun(store: IFileStore, p: PrepareInput, deps: AiApiDeps): Promise<PreparedRun> {
   const adapter = getAdapter(p.provider);
@@ -75,8 +98,7 @@ export async function prepareRun(store: IFileStore, p: PrepareInput, deps: AiApi
   const { notice, extraction } = await loadNoticeAndExtraction(store, p.noticeId);
   if (deps.isBusy?.(p.noticeId)) throw err('JOB_ALREADY_RUNNING', '같은 공고의 수집/추출 잡이 실행 중입니다.');
 
-  const keys: ExtractionKey[] = p.scope === 'all' ? [...EXTRACTION_KEYS] : pendingKeys(extraction.items);
-  if (keys.length === 0) throw err('NOTHING_TO_REVIEW', '확인이 필요한 항목이 없습니다.');
+  const { keys, scope: savedScope } = resolveKeys(p, extraction);
 
   const inputs: ExcerptFileInput[] = [];
   const skipped: AiRun['skipped'] = [];
@@ -93,17 +115,24 @@ export async function prepareRun(store: IFileStore, p: PrepareInput, deps: AiApi
   }
   if (inputs.length === 0) throw err('NO_DOCUMENTS', '읽을 수 있는 문서가 없습니다.');
 
-  const excerpt = buildExcerpt({
-    files: inputs, synonyms: deps.rules.synonyms,
+  const excerptInput = {
+    files: inputs, synonyms: deps.rules.synonyms, keys,
     maxChars: p.mode === 'manual' ? Math.min(EXCERPT_MAX_CHARS, adapter.manualMaxChars) : EXCERPT_MAX_CHARS,
-  });
+  };
+  // API 모드 + 전문 전송 설정이면 전문, 상한 초과(null)면 발췌로 폴백한다. manual은 항상 발췌(붙여넣기 상한).
+  let excerpt = p.mode === 'api' && p.sendFullText !== false ? buildFullText(excerptInput) : null;
+  const fullText = excerpt !== null;
+  if (excerpt === null) {
+    excerpt = buildExcerpt(excerptInput);
+    if (p.mode === 'api' && p.sendFullText !== false) excerpt = { ...excerpt, warnings: ['전문 상한 초과로 발췌 전송', ...excerpt.warnings] };
+  }
   const runId = (deps.newId ?? (() => crypto.randomUUID()))();
   const excludedFiles = skipped.filter((s) => UNREADABLE.includes(s.reason)).map((s) => s.name);
   const built = buildPrompt({ runId, keys, excerpt: excerpt.text, skippedFiles: excludedFiles });
   const nowIso = now().toISOString();
   const run: AiRun = {
     id: runId, createdAt: nowIso, provider: p.provider, mode: p.mode, model: p.mode === 'manual' ? null : p.model,
-    promptVersion: PROMPT_VERSION, scope: p.scope, keys,
+    promptVersion: PROMPT_VERSION, scope: savedScope, keys,
     extractionJobId: extraction.jobId, extractedAt: extraction.extractedAt,
     status: p.mode === 'manual' ? 'awaiting' : 'requesting',
     files: excerpt.files, skipped, excerptChars: excerpt.chars, truncated: excerpt.truncated,
@@ -116,7 +145,7 @@ export async function prepareRun(store: IFileStore, p: PrepareInput, deps: AiApi
     f.runs = f.runs.map((r) => (r.status === 'awaiting' ? { ...r, status: 'cancelled' as const, finishedAt: nowIso } : r));
     f.runs.unshift(run);
   });
-  return { notice, run, built, adapter, stats: { chars: excerpt.chars, files: excerpt.files.length, truncated: excerpt.truncated, excludedFiles } };
+  return { notice, run, built, adapter, stats: { chars: excerpt.chars, files: excerpt.files.length, truncated: excerpt.truncated, excludedFiles, fullText } };
 }
 
 export interface FinishInput {
@@ -152,7 +181,12 @@ export async function finishRun(store: IFileStore, p: FinishInput, deps: AiApiDe
   }
   const baseline: Partial<Record<ExtractionKey, unknown>> = {};
   for (const k of run.keys) { const it = extraction.items[k]; baseline[k] = it.userEdited ? it.userEdited.value : it.value; }
-  const v = verifySuggestions(parsed.items, { files, baseline, requested: run.keys, provider: run.provider, promptVersion: run.promptVersion });
+  const candidates: Partial<Record<ExtractionKey, unknown[]>> = {};
+  for (const k of run.keys) {
+    const it = extraction.items[k];
+    candidates[k] = [...(it.value !== null && it.value !== undefined ? [it.value] : []), ...(it.candidates ?? []).map((c) => c.value)];
+  }
+  const v = verifySuggestions(parsed.items, { files, baseline, candidates, requested: run.keys, provider: run.provider, promptVersion: run.promptVersion });
 
   const warnings = [...run.warnings, ...(p.warnings ?? []), ...v.warnings];
   if (extraction.jobId !== run.extractionJobId) warnings.push('AI가 실행되는 동안 다시 추출되어 이 제안은 현재 추출 결과와 맞지 않을 수 있습니다.');
@@ -238,7 +272,7 @@ export async function execApiRun(store: IFileStore, x: ExecInput, deps: AiApiDep
 
 /** AI 제안을 값으로 적용한다. 검증 실패·dismissed·stale 제안은 거부한다. */
 export async function applySuggestion(
-  store: IFileStore, p: { noticeId: string; runId: string; key: ExtractionKey; note?: string }, deps: AiApiDeps,
+  store: IFileStore, p: { noticeId: string; runId: string; key: ExtractionKey; note?: string; variantIndex?: number }, deps: AiApiDeps,
 ): Promise<{ notice: Notice; extraction: Extraction; aiReview: AiReviewFile }> {
   const now = deps.now ?? (() => new Date());
   const { notice, extraction } = await loadNoticeAndExtraction(store, p.noticeId);
@@ -246,12 +280,22 @@ export async function applySuggestion(
   const run = (await ai.load(notice))?.runs.find((r) => r.id === p.runId);
   if (!run) throw err('NOT_FOUND', '해당 AI 실행을 찾을 수 없습니다.');
   const s = Object.hasOwn(run.suggestions, p.key) ? run.suggestions[p.key] : undefined;
-  if (!s || run.status !== 'done' || s.value === null || s.dismissedAt) throw err('AI_SUGGESTION_INVALID', '적용할 수 없는 AI 제안입니다.');
+  const variant = p.variantIndex === undefined ? undefined : s?.variants?.[p.variantIndex];
+  if (p.variantIndex !== undefined && !variant) throw err('AI_SUGGESTION_INVALID', '적용할 수 없는 AI 제안입니다.');
+  const value = variant ? variant.value : s?.value;
+  if (!s || run.status !== 'done' || value === null || value === undefined || s.dismissedAt) throw err('AI_SUGGESTION_INVALID', '적용할 수 없는 AI 제안입니다.');
+  // 조건은 AI가 준 문자열이라 길이를 잘라 붙이고(빈 값은 UI와 같은 "조건 N"), note 상한 500자를 넘지 않게 한다.
+  const cond = variant ? (variant.condition.trim().slice(0, 60) || `조건 ${p.variantIndex! + 1}`) : '';
+  const note = variant ? `[${cond}] ${p.note ?? ''}`.trim().slice(0, 500) : p.note;
   if (run.extractionJobId !== extraction.jobId) throw err('AI_STALE', '추출 결과가 다시 만들어져 이 제안은 적용할 수 없습니다.');
-  const r = await editExtraction(store, { noticeId: p.noticeId, key: p.key, value: s.value, ...(p.note ? { note: p.note } : {}) }, {
+  const r = await editExtraction(store, { noticeId: p.noticeId, key: p.key, value, ...(note ? { note } : {}) }, {
     now: deps.now, isBusy: deps.isBusy, expectJobId: run.extractionJobId,
     origin: { kind: 'ai', runId: run.id, provider: run.provider, model: run.model, promptVersion: run.promptVersion },
-    source: { ref: `ai:${run.id}`, ...(s.evidence?.evidence ? { evidence: s.evidence.evidence } : {}), ...(s.page != null ? { page: s.page } : {}) },
+    source: {
+      ref: `ai:${run.id}`,
+      ...((variant ?? s).evidence?.evidence ? { evidence: (variant ?? s).evidence!.evidence } : {}),
+      ...((variant ?? s).page != null ? { page: (variant ?? s).page! } : {}),
+    },
   });
   const aiReview = await ai.mutate(notice, (f) => {
     const sug = f.runs.find((x) => x.id === run.id)?.suggestions[p.key];

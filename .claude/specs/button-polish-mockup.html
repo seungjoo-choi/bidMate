@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>버튼 다듬기 비교</title>
+<!-- C열 전용. 패밀리명이 'Pretendard Variable'이라 A·B열(스택에 'Pretendard'만 있음)에는 적용되지 않는다. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --canvas:#ebebe7; --surface:#fff; --sunken:#efefeb; --select:#e9e9e4; --select-hover:#dcdcd6;
+    --line:#e2e2dd; --line-strong:#cfcfc9; --ink:#1b1b19; --muted:#65655f; --faint:#a1a19b;
+    --primary:#2b5cb0; --primary-hover:#224d97; --danger:#b8382c;
+    --ai-wash:#f3f0fa; --ai-line:#ddd5ee; --ai-ink:#5b4a8a;
+    --font-now: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Segoe UI', 'Malgun Gothic', sans-serif;
+    --font-new: 'Pretendard Variable', Pretendard, -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--canvas); color:var(--ink); font: 14px/1.55 var(--font-now); padding: 32px 24px 64px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .lead { color:var(--muted); margin:0 0 24px; }
+  .grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:16px; }
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+  .col { background:var(--surface); border-radius:10px; padding:20px; box-shadow: 0 1px 2px rgb(27 27 25/.06); }
+  .col h2 { font-size:15px; margin:0 0 2px; }
+  .col .sub { color:var(--muted); font-size:13px; margin:0 0 18px; }
+  .sec { font-size:12px; color:var(--faint); font-weight:600; margin:20px 0 8px; letter-spacing:.02em; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+
+  /* ── A: 현재 Button.tsx 그대로 ── */
+  .A { font-family: var(--font-now); }
+  .A .btn { display:inline-flex; align-items:center; justify-content:center; height:40px; gap:8px; padding:0 16px;
+    border:1px solid transparent; border-radius:8px; font: 600 14px/1 var(--font-now); white-space:nowrap; cursor:pointer; }
+  .A .btn svg { width:16px; height:16px; flex-shrink:0; stroke-width:2; }
+
+  /* ── B/C 공통: 개선안 ── */
+  .B .btn, .C .btn { display:inline-flex; align-items:center; justify-content:center; height:40px; gap:6px; padding:0 16px;
+    border:1px solid transparent; border-radius:8px; font-size:14px; line-height:20px; font-weight:600; white-space:nowrap; cursor:pointer; }
+  .B .btn.has-icon, .C .btn.has-icon { padding-left:12px; }
+  .B .btn svg, .C .btn svg { width:15px; height:15px; flex-shrink:0; stroke-width:1.75; }
+  .B, .B .btn { font-family: var(--font-now); }
+  .C, .C .btn { font-family: var(--font-new); letter-spacing:-0.01em; }
+
+  /* 변형(A) */
+  .A .primary { background:var(--primary); border-color:var(--primary); color:#fff; }
+  .A .primary:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
+  .A .secondary { background:var(--select); color:var(--ink); }
+  .A .secondary:hover { background:var(--select-hover); }
+  /* 변형(B/C): secondary를 흰 바탕+옅은 테두리로 */
+  .B .primary, .C .primary { background:var(--primary); border-color:var(--primary); color:#fff; box-shadow: 0 1px 2px rgb(27 27 25/.12); }
+  .B .primary:hover, .C .primary:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
+  .B .secondary, .C .secondary { background:var(--surface); border-color:#d9d9d3; color:var(--ink); box-shadow: 0 1px 2px rgb(27 27 25/.05); }
+  .B .secondary:hover, .C .secondary:hover { background:#f6f6f3; border-color:var(--line-strong); }
+  .ghost { background:transparent; color:var(--muted); }
+  .ghost:hover { background:var(--sunken); color:var(--ink); }
+  .danger { background:var(--danger); border-color:var(--danger) !important; color:#fff; }
+  .btn.icon { width:40px; padding:0 !important; }
+
+  /* 확대 보기: 가운데 기준선 */
+  .zoom { position:relative; height:136px; overflow:hidden; background:var(--sunken); border-radius:8px; display:flex; align-items:center; padding-left:12px; }
+  .zoom .inner { transform: scale(3); transform-origin: left center; display:flex; }
+  .zoom::after { content:''; position:absolute; left:0; right:0; top:50%; border-top:1px dashed #e0483a; pointer-events:none; }
+  .zoom .btn { pointer-events:none; }
+
+  /* 맥락: 카드 툴바·다이얼로그 */
+  .card { border:1px solid var(--line); border-radius:10px; padding:14px; }
+  .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .input { flex:1 1 140px; min-width:0; height:40px; border:1px solid var(--line-strong); border-radius:6px; padding:0 12px; font: inherit; color:var(--ink); background:var(--surface); }
+  .dlg-title { font-weight:700; font-size:15px; margin:0 0 4px; }
+  .dlg-body { color:var(--muted); margin:0 0 14px; font-size:14px; }
+  .dlg-foot { display:flex; justify-content:flex-end; gap:8px; }
+  .note { margin-top:24px; background:var(--surface); border-radius:10px; padding:16px 20px; color:var(--muted); font-size:13px; }
+  .note b { color:var(--ink); }
+  .note ul { margin:6px 0 0; padding-left:18px; }
+</style>
+</head>
+<body>
+<h1>버튼 다듬기 비교</h1>
+<p class="lead">A는 지금 <code>Button.tsx</code> 그대로입니다. B는 폰트는 그대로 두고 버튼만 고친 안, C는 Pretendard까지 넣은 안입니다. 확대 보기의 빨간 점선이 버튼의 정중앙입니다.</p>
+
+<div class="grid" id="grid"></div>
+
+<div class="note">
+  <b>B·C에서 바뀐 것</b>
+  <ul>
+    <li>줄높이: <code>leading-none</code> → <code>leading-5</code>(20px). 글자 박스가 폰트 metric에 덜 휘둘립니다.</li>
+    <li>아이콘: 16px·선 2 → 15px·선 1.75, 간격 8px → 6px.</li>
+    <li>아이콘 있는 버튼은 왼쪽 여백 16px → 12px(시각적 좌우 균형).</li>
+    <li>secondary: 회색 채움(#e9e9e4) → 흰 바탕 + 옅은 테두리 + 아주 약한 그림자. primary에도 1px 그림자.</li>
+    <li>C만: 폰트 Pretendard Variable, 자간 -0.01em.</li>
+  </ul>
+</div>
+
+<template id="col">
+  <section class="col">
+    <h2></h2><p class="sub"></p>
+    <div class="sec">기본 변형</div>
+    <div class="row">
+      <button class="btn primary has-icon"><i data-i="send"></i>메일 보내기</button>
+      <button class="btn secondary has-icon"><i data-i="sparkles"></i>AI로 다시 찾기</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn secondary has-icon"><i data-i="download"></i>내려받기</button>
+      <button class="btn ghost has-icon"><i data-i="refresh"></i>새로고침</button>
+      <button class="btn danger has-icon"><i data-i="trash"></i>삭제</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn primary">저장</button>
+      <button class="btn secondary">취소</button>
+      <button class="btn secondary icon"><i data-i="plus"></i></button>
+      <button class="btn ghost icon"><i data-i="refresh"></i></button>
+    </div>
+
+    <div class="sec">확대 ×3 (빨간 점선 = 정중앙)</div>
+    <div class="zoom"><div class="inner"><button class="btn secondary has-icon"><i data-i="sparkles"></i>AI로 다시</button></div></div>
+
+    <div class="sec">맥락: 툴바</div>
+    <div class="card">
+      <div class="toolbar">
+        <input class="input" placeholder="공고명 검색">
+        <button class="btn secondary has-icon"><i data-i="search"></i>검색</button>
+        <button class="btn primary has-icon"><i data-i="plus"></i>추가</button>
+      </div>
+    </div>
+
+    <div class="sec">맥락: 다이얼로그</div>
+    <div class="card">
+      <p class="dlg-title">AI로 다시 찾을까요?</p>
+      <p class="dlg-body">파싱된 12개 항목을 AI가 다시 검토합니다.</p>
+      <div class="dlg-foot">
+        <button class="btn ghost">취소</button>
+        <button class="btn primary has-icon"><i data-i="sparkles"></i>다시 찾기</button>
+      </div>
+    </div>
+  </section>
+</template>
+
+<script>
+  const P = {
+    sparkles: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+    send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+    refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+    trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  };
+  const cols = [
+    ['A', 'A · 현재', '맑은 고딕 + leading-none + 아이콘 16px'],
+    ['B', 'B · 버튼만 수정', '폰트 그대로, 줄높이·아이콘·여백·색 수정'],
+    ['C', 'C · 폰트까지', 'B + Pretendard 번들'],
+  ];
+  const grid = document.getElementById('grid');
+  const tpl = document.getElementById('col');
+  for (const [cls, title, sub] of cols) {
+    const n = tpl.content.cloneNode(true);
+    const sec = n.querySelector('.col');
+    sec.classList.add(cls);
+    sec.querySelector('h2').textContent = title;
+    sec.querySelector('.sub').textContent = sub;
+    grid.appendChild(n);
+  }
+  document.querySelectorAll('i[data-i]').forEach(i => {
+    i.outerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${P[i.dataset.i]}</svg>`;
+  });
+</script>
+</body>
+</html>

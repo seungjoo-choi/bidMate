@@ -1,4 +1,4 @@
-import type { OutputSpec } from '../../../core/types/ai';
+import { AI_MAX_VARIANTS, type OutputSpec } from '../../../core/types/ai';
 
 const KIND_TYPE = { number: ['number', 'null'], string: ['string', 'null'], boolean: ['boolean', 'null'] } as const;
 
@@ -13,7 +13,7 @@ export function outputSchema(spec: OutputSpec): unknown {
         type: 'array',
         items: {
           anyOf: spec.keys.map((k) => ({
-            type: 'object', additionalProperties: false, required: ['key', 'value', 'quote', 'file', 'page', 'note'],
+            type: 'object', additionalProperties: false, required: ['key', 'value', 'quote', 'file', 'page', 'note', 'variants'],
             properties: {
               key: { type: 'string', enum: [k] },
               value: { type: [...KIND_TYPE[spec.kindOf[k]]] },
@@ -21,6 +21,13 @@ export function outputSchema(spec: OutputSpec): unknown {
               file: { type: ['string', 'null'] },
               page: { type: ['integer', 'null'] },
               note: { type: 'string' },
+              variants: {
+                type: 'array', // 개수 제한은 파서(AI_MAX_VARIANTS)가 한다. Claude structured outputs는 maxItems를 받지 않는다.
+                items: {
+                  type: 'object', additionalProperties: false, required: ['condition', 'value', 'quote'],
+                  properties: { condition: { type: 'string' }, value: { type: [...KIND_TYPE[spec.kindOf[k]]] }, quote: { type: 'string' } },
+                },
+              },
             },
           })),
         },

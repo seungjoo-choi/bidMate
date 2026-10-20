@@ -32,6 +32,13 @@ export interface SendRecord {
   note?: string;              // manual 메모(선택, 200자)
   voidedAt?: ISODate;         // 취소. 삭제하지 않는다
 }
+/** 발송 기록의 메일 내용. compose=웹메일에 채워 넣은 작성 기록, draft=작성 기록이 없어 현재 초안으로 대신함 */
+export interface SentMailView {
+  source: 'compose' | 'draft';
+  composedAt?: ISODate;
+  to: string[]; cc: string[]; subject: string; html: string;
+  attachments: Array<{ name: string; size?: number }>;
+}
 export interface SentIndexEntry {
   id: string; noticeId: string; kind?: NoticeKind; noticeNo: string; round: string; title: string; orderingOrg: string; folder: string;
   sentAt: ISODate; source: SendSource; provider?: MailProvider; confirmed?: boolean;

@@ -28,7 +28,7 @@ export function MailPreviewFrame({ html, subject, height = 560, tools, fill = fa
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line px-6 py-3">
           <div className="min-w-0 flex-1 basis-72">
             <p className="text-xs text-muted">제목</p>
-            <p className="mt-0.5 text-sm font-semibold text-ink break-all">{subject || '(제목 없음)'}</p>
+            <p className="mt-0.5 text-sm font-semibold text-ink wrap-anywhere">{subject || '(제목 없음)'}</p>
           </div>
           {tools && <div className="flex shrink-0 flex-wrap gap-1">{tools}</div>}
         </div>

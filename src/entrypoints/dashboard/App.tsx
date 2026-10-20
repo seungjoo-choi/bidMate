@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { send } from '../../messaging/bus';
 import type { FsStatus } from '../../messaging/protocol';
 import { parseHandoffReasons } from '../../core/model/handoff';
-import { Logo, StatusBadge } from '../../ui/components';
+import { ErrorBoundary, Logo, StatusBadge } from '../../ui/components';
 import { EvaluationDetailPage } from './evaluations/EvaluationDetailPage';
 import { EvaluationsPage } from './evaluations/EvaluationsPage';
 import { GrantPage } from './GrantPage';
@@ -55,25 +55,25 @@ export function App() {
   const route = parseRoute(hash);
   if (route.page === 'grant') return <GrantPage />;
   const active: Page = route.page === 'notice' || route.page === 'mail' ? 'notices' : route.page === 'template' ? 'templates' : route.page === 'evaluation' ? 'evaluations' : route.page;
-  const wide = route.page !== 'settings' && route.page !== 'diagnostics';
+  const wide = route.page !== 'diagnostics';
 
   return (
     <div className="flex min-h-screen bg-canvas">
       <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col gap-6 border-r border-line bg-surface px-3 py-6">
-        <div className="flex items-center gap-2.5 px-3">
+        <a href="#/home" className="flex items-center gap-2.5 px-3" aria-label="홈으로">
           <Logo size={30} />
           <div>
             <div className="text-lg leading-tight font-bold tracking-tight">BidMate</div>
-            <div className="text-xs leading-tight text-muted">나의 입찰메이트</div>
+            <div className="text-xs leading-tight text-muted">비드메이트</div>
           </div>
-        </div>
+        </a>
         <nav className="grid gap-1">
           {MENU.map(({ id, label, Icon }) => (
             <a
               key={id}
               href={`#/${id}`}
               aria-current={active === id ? 'page' : undefined}
-              className={`flex items-center gap-3 rounded-ctl px-3 py-2.5 text-lg transition-colors motion-reduce:transition-none ${
+              className={`flex items-center gap-3 rounded-ctl px-3 py-2.5 text-base transition-colors motion-reduce:transition-none ${
                 active === id ? 'bg-select font-semibold text-ink' : 'font-medium text-muted hover:bg-sunken hover:text-ink'
               }`}
             >
@@ -85,7 +85,8 @@ export function App() {
         <FolderStatus refreshKey={hash} />
       </aside>
       <main className="min-w-0 flex-1 px-12 pt-10 pb-16">
-        <div className={`mx-auto space-y-6 ${route.page === 'template' || route.page === 'recipients' ? 'max-w-[1440px]' : route.page === 'evaluation' ? 'max-w-[1680px]' : wide ? 'max-w-[1120px]' : 'max-w-[800px]'}`}>
+        <div className={`mx-auto space-y-6 ${route.page === 'template' || route.page === 'recipients' ? 'max-w-[90rem]' : route.page === 'evaluation' ? 'max-w-[105rem]' : wide ? 'max-w-[70rem]' : 'max-w-[50rem]'}`}>
+          <ErrorBoundary resetKey={hash}>
           {route.page === 'home' && <HomePage />}
           {route.page === 'notices' && <NoticesPage />}
           {route.page === 'sent' && <SentHistoryPage />}
@@ -98,6 +99,7 @@ export function App() {
           {route.page === 'notice' && <NoticeDetailPage key={route.noticeId} noticeId={route.noticeId} tab={route.tab} handoff={parseHandoffReasons(route.query.handoff)} />}
           {route.page === 'settings' && <SettingsPage section={settingsSectionOf(hash)} nonce={hash} />}
           {route.page === 'diagnostics' && <DiagnosticsPage />}
+          </ErrorBoundary>
         </div>
       </main>
     </div>

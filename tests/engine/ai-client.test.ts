@@ -5,7 +5,7 @@ import type { OutputSpec } from '../../src/core/types/ai';
 
 const KEY = 'sk-ant-SECRET-9999';
 const spec: OutputSpec = {
-  tag: 'bidmate-ai-review/1', runId: 'r1', keys: ['credibilityScore'],
+  tag: 'bidmate-ai-review/2', runId: 'r1', keys: ['credibilityScore'],
   kindOf: { credibilityScore: 'number', managementScore: 'number', performanceScore: 'number', performancePeriod: 'string', performanceMinAmount: 'number', performanceCondition: 'string', differentialScoring: 'boolean' },
 };
 const req = { apiKey: KEY, model: 'm', system: 's', user: 'u', spec, maxTokens: 8192 };

@@ -22,7 +22,20 @@ export function valueKey(v: unknown): string {
   return y ? `n:${y[1]}y` : `s:${s.slice(0, 40)}`;
 }
 
-function decideOne(cands: Candidate[], rules: RuleSet): ExtractedItem<unknown> {
+/** 한 줄에서 조건 구분자(△, ①~⑳, " / ")와 함께 서로 다른 금액 후보가 2개 이상 나온 경우(조건별로 값이 다른 것이지 문서 간 충돌이 아님). */
+const CONDITION_MARK = /[△▲①-⑳]|\s\/\s/;
+function isMultiCondition(target: string, cands: Candidate[]): boolean {
+  if (target !== 'performanceMinAmount') return false;
+  const byLine = new Map<string, Candidate[]>();
+  for (const c of cands) {
+    const k = `${c.evidence.attachmentId}|${c.evidence.sourceFile}|${c.evidence.line ?? c.evidence.location}`;
+    const l = byLine.get(k);
+    if (l) l.push(c); else byLine.set(k, [c]);
+  }
+  return [...byLine.values()].some((l) => new Set(l.map((c) => valueKey(c.value))).size >= 2 && l.some((c) => CONDITION_MARK.test(c.evidence.evidence)));
+}
+
+function decideOne(target: string, cands: Candidate[], rules: RuleSet): ExtractedItem<unknown> {
   if (cands.length === 0) return { value: null, status: 'needs_review', reason: 'not_found' };
   const sorted = cands
     .map((c, i) => ({ c, i }))
@@ -39,8 +52,9 @@ function decideOne(cands: Candidate[], rules: RuleSet): ExtractedItem<unknown> {
   }
   const prefer = sorted.some((c) => rules.rules.find((r) => r.id === c.evidence.ruleId)?.conflictPolicy === 'prefer_priority');
   const candidates = sorted.map(toRef);
-  if (prefer) return { value: top.value, raw: top.raw, evidence: top.evidence, status: 'needs_review', reason: 'conflict', candidates };
-  return { value: null, status: 'needs_review', reason: 'conflict', candidates };
+  const reason = isMultiCondition(target, sorted) ? 'multi' : 'conflict';
+  if (prefer) return { value: top.value, raw: top.raw, evidence: top.evidence, status: 'needs_review', reason, candidates };
+  return { value: null, status: 'needs_review', reason, candidates };
 }
 
 /** 가감점 표만 있고 합계 배점이 없는 경우, 신인도를 not_found 대신 no_total로 바꾼다(숫자는 만들지 않는다). */
@@ -59,12 +73,12 @@ export function decide(cands: Candidate[], rules: RuleSet): Decision {
     if (l) l.push(c); else by.set(c.target, [c]);
   }
   const items = {} as Record<ExtractionKey, ExtractedItem<unknown>>;
-  for (const k of EXTRACTION_KEYS) items[k] = decideOne(by.get(k) ?? [], rules);
+  for (const k of EXTRACTION_KEYS) items[k] = decideOne(k, by.get(k) ?? [], rules);
   const extras: Record<string, ExtractedItem<unknown>> = Object.create(null);
-  for (const [t, list] of by) if (t.startsWith('extras.')) extras[t.slice(7)] = decideOne(list, rules);
+  for (const [t, list] of by) if (t.startsWith('extras.')) extras[t.slice(7)] = decideOne(t, list, rules);
   // 규칙은 있는데 후보가 없는 extras도 not_found로 남긴다.
   for (const r of rules.rules) {
-    if (r.target.startsWith('extras.') && !(r.target.slice(7) in extras)) extras[r.target.slice(7)] = decideOne([], rules);
+    if (r.target.startsWith('extras.') && !(r.target.slice(7) in extras)) extras[r.target.slice(7)] = decideOne(r.target, [], rules);
   }
   applyBonusTable(items, extras);
   return { items, extras };

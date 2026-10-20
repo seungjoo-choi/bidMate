@@ -155,8 +155,8 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
       <TabBar noticeId={noticeId} tabs={tabs} active={active} query={handoff && handoff.length > 0 ? { handoff: handoff.join(',') } : undefined} />
 
       {active === 'overview' && <OverviewTab notice={notice} index={index} />}
-      {active === 'files' && <FilesTab notice={notice} toast={toast} />}
-      {active === 'history' && <HistoryTab notice={notice} index={index} jobs={jobs} onNoticeChange={(n) => setData((d) => (d ? { ...d, notice: n } : d))} />}
+      {active === 'files' && <FilesTab notice={notice} extraction={extraction} toast={toast} />}
+      {active === 'history' && <HistoryTab notice={notice} index={index} onNoticeChange={(n) => setData((d) => (d ? { ...d, notice: n } : d))} />}
       {active === 'review' && (
         <ReviewTab noticeId={noticeId} extraction={extraction} busy={busy} onExtract={() => void extract()} onEdit={edit} onApplied={(r) => setData((d) => (d ? { ...d, ...r } : d))} toast={toast} />
       )}
