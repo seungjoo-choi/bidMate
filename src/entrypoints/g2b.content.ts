@@ -60,6 +60,14 @@ export default defineContentScript({
     listen('g2b/collect', () => controller.collect(), 'content');
     listen('g2b/retry', ({ jobId }) => controller.collect(jobId), 'content');
 
+    // 크롬은 shadow root 안의 @font-face를 무시하므로 폰트는 문서에 선언한다(패널 style.css가 이 이름을 쓴다).
+    if (!document.getElementById('bidmate-font')) {
+      const font = document.createElement('style');
+      font.id = 'bidmate-font';
+      font.textContent = `@font-face { font-family: 'Pretendard Variable'; font-weight: 45 920; font-style: normal; font-display: swap; src: url('${chrome.runtime.getURL('/fonts/PretendardVariable.woff2')}') format('woff2-variations'); }`;
+      document.head.append(font);
+    }
+
     const ui = await createShadowRootUi(ctx, {
       name: 'bidmate-g2b-panel',
       position: 'inline',

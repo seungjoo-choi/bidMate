@@ -1,6 +1,6 @@
-import { conflictCountOf, coveredByGroup, reviewCountOf } from '../extraction/review-count';
+import { conflictCountOf, fieldReviewState, reviewCountOf } from '../extraction/review-count';
 import type { FieldStatus } from '../types/common';
-import { EXTRACTION_KEYS, type Extraction, type ExtractionKey, type ExtractionStatus } from '../types/extraction';
+import type { Extraction, ExtractionStatus } from '../types/extraction';
 import type { Notice, NoticeKind } from '../types/notice';
 
 export interface BasicFacts {
@@ -12,7 +12,7 @@ export interface BasicFacts {
   prespec?: { opinionCloseAt: string | null; assignedBudget: number | null; bizDivision: string | null };
 }
 export type EvalFactKey = 'performanceScore' | 'managementScore' | 'credibilityScore' | 'performancePeriod' | 'performanceMinAmount' | 'differentialScoring';
-export interface EvalFactItem { value: unknown; status: FieldStatus; needsCheck: boolean }
+export interface EvalFactItem { value: unknown; status: FieldStatus; needsCheck: boolean; notApplicable?: true }
 export interface EvalFacts { items: Record<EvalFactKey, EvalFactItem>; reviewCount: number; conflictCount: number; extractionStatus: ExtractionStatus }
 
 const EVAL_FACT_KEYS: EvalFactKey[] = ['performanceScore', 'managementScore', 'credibilityScore', 'performancePeriod', 'performanceMinAmount', 'differentialScoring'];
@@ -38,9 +38,8 @@ export function evalFacts(n: Notice, x: Extraction | null): EvalFacts {
   const items = {} as Record<EvalFactKey, EvalFactItem>;
   for (const k of EVAL_FACT_KEYS) {
     const f = n.evaluation[k];
-    // 같은 개념 그룹(대외신인도/경영상태)의 다른 항목이 충족이면 확인 필요로 보지 않는다(reviewCountOf와 같은 기준).
-    const covered = !!x && (EXTRACTION_KEYS as string[]).includes(k) && coveredByGroup(x.items, k as ExtractionKey);
-    items[k] = { value: f.value, status: f.status, needsCheck: (f.status === 'needs_review' || f.status === 'missing') && !covered };
+    const st = fieldReviewState(f, x, k);
+    items[k] = { value: f.value, status: f.status, needsCheck: st === 'needs_review' || st === 'missing', ...(st === 'not_applicable' ? { notApplicable: true as const } : {}) };
   }
   return {
     items,

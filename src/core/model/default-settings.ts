@@ -23,6 +23,7 @@ export function defaultSettings(): Settings {
     customFields: [],
     company: { bizNo: '' },
     ai: { provider: 'gemini', mode: 'api', models: { ...AI_DEFAULT_MODELS }, sendFullText: true },
+    notify: { rank: true, final: true, deadline: true },
     updatedAt: new Date().toISOString(),
   };
 }
@@ -45,6 +46,7 @@ export function withDefaults(stored: Settings | undefined): Settings {
     extraction: { ...d.extraction, ...stored.extraction },
     autoCompose: { ...d.autoCompose, ...stored.autoCompose },
     company: { ...d.company, ...stored.company },
+    notify: { ...d.notify, ...stored.notify },
     ai: { ...d.ai, ...stored.ai, models: { ...d.ai.models, ...stored.ai?.models } },
     mail: { ...d.mail, ...stored.mail, ...(legacyGmail ? { provider: 'gmail' as const } : {}) },
   };

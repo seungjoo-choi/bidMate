@@ -8,7 +8,6 @@ import { EmptyState, Select, StatusBadge } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { formatDateTime } from '../../ui/review/format';
 import { FsErrorAlert } from './FsErrorAlert';
-import { PageTitle } from './menu';
 import { noticeHash } from './route';
 
 const PRESETS: Array<{ value: Preset; label: string }> = [
@@ -16,7 +15,7 @@ const PRESETS: Array<{ value: Preset; label: string }> = [
 ];
 
 const SOURCE_OPTIONS: Array<{ value: SendSource | 'all'; label: string }> = [
-  { value: 'all', label: '자동·수동 모두' }, { value: 'auto', label: '자동 기록만' }, { value: 'manual', label: '수동 기록만' },
+  { value: 'all', label: '자동, 수동 모두' }, { value: 'auto', label: '자동 기록만' }, { value: 'manual', label: '수동 기록만' },
 ];
 
 const TH = 'px-4 py-3 font-medium whitespace-nowrap';
@@ -50,7 +49,6 @@ export function SentHistoryPage() {
 
   return (
     <div className="space-y-6">
-      <PageTitle page="sent" />
       <FsErrorAlert error={error} onRetry={load} />
 
       {list && list.length === 0 && <EmptyState title="기록된 발송이 없습니다" />}
@@ -95,7 +93,7 @@ export function SentHistoryPage() {
                     <th scope="col" className={TH}>발송 시각</th>
                     <th scope="col" className={TH}>공고</th>
                     <th scope="col" className={TH}>메일 제목</th>
-                    <th scope="col" className={`${TH} text-right`}>수신 · 첨부</th>
+                    <th scope="col" className={`${TH} text-right`}>수신 / 첨부</th>
                     <th scope="col" className={TH}>상태</th>
                     <th scope="col" className={TH}>서비스</th>
                   </tr>
@@ -121,13 +119,13 @@ export function SentHistoryPage() {
                           <div className="truncate font-semibold text-ink" title={r.title}>{r.title}</div>
                           <div className="mt-0.5 truncate text-xs text-muted">
                             <span className="font-mono">{r.noticeNo}-{r.round}</span>
-                            {r.orderingOrg && <span> · {r.orderingOrg}</span>}
+                            {r.orderingOrg && <span>, {r.orderingOrg}</span>}
                           </div>
                         </td>
                         <td className={`truncate px-4 py-3 ${strike}`} title={r.subject}>{r.subject}</td>
                         <td className={`px-4 py-3 text-right whitespace-nowrap tabular-nums ${strike}`}>
                           {r.toCount}<span className="text-muted">명</span>
-                          <span className="mx-1.5 text-faint">·</span>
+                          <span className="mx-1.5 text-faint">/</span>
                           {r.attachmentCount}<span className="text-muted">개</span>
                         </td>
                         <td className="px-4 py-3">

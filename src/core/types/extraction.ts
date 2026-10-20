@@ -2,6 +2,7 @@ import type { ISODate } from './common';
 import type { DocFormat } from '../doc/model';
 import type { DocKind } from '../extraction/classify';
 import type { AiProvider } from './ai';
+import type { AttachmentOrigin } from './notice';
 
 export type ExtractionStatus = 'verified' | 'needs_review' | 'unsupported' | 'failed' | 'not_run';
 export type ExtractionKey =
@@ -17,10 +18,11 @@ export interface EvidenceRef {
   evidence: string; /* ≤300자 원문 */
   context?: string; /* ≤400자 */
   ruleId: string; docKind: DocKind;
+  origin?: AttachmentOrigin;
 }
 export interface ExtractedItem<T> {
   value: T | null; raw?: string; status: ExtractionStatus;
-  reason?: 'not_found' | 'conflict' | 'multi' | 'low_confidence' | 'no_documents' | 'no_total';
+  reason?: 'not_found' | 'conflict' | 'multi' | 'low_confidence' | 'no_documents' | 'no_total' | 'not_applicable';
   evidence?: EvidenceRef;
   candidates?: Array<{ value: T; raw?: string; evidence: EvidenceRef }>;
   userEdited?: {
@@ -32,6 +34,7 @@ export type ExtractionFileStatus =
   | 'parsed' | 'unsupported' | 'encrypted' | 'drm' | 'scanned' | 'corrupt' | 'failed' | 'timeout' | 'skipped' | 'cancelled';
 export interface ExtractionFile {
   attachmentId: string; name: string; innerPath?: string; docKind: DocKind; priority: number;
+  origin?: AttachmentOrigin;
   format?: DocFormat | 'zip' | 'hwp3' | 'unknown';
   status: ExtractionFileStatus;
   skipReason?: 'excluded' | 'duplicate' | 'budget' | 'too_large' | 'not_saved' | 'unsupported_ext';

@@ -114,7 +114,7 @@ export function SectionEditor({ section, index, usedKeys, onChange, onRemove, on
   };
 
   return (
-    <div className="space-y-3 rounded-ctl border border-line bg-sunken p-4">
+    <div className="@container space-y-3 rounded-ctl border border-line bg-sunken p-4">
       <div className="flex items-center gap-2">
         <span className="shrink-0 text-sm font-semibold text-muted">{index + 1}.</span>
         <input
@@ -169,7 +169,8 @@ export function SectionEditor({ section, index, usedKeys, onChange, onRemove, on
               />
               <input
                 aria-label="항목 라벨"
-                className={inputClass}
+                title={varName}
+                className={`${inputClass} min-w-0 flex-1`}
                 value={it.label}
                 onFocus={focus}
                 onChange={(e) => setItem(i, { ...it, label: e.target.value })}
@@ -177,14 +178,14 @@ export function SectionEditor({ section, index, usedKeys, onChange, onRemove, on
               {isText && (
                 <input
                   aria-label="항목 문구"
-                  className={inputClass}
+                  className={`${inputClass} min-w-0 flex-1`}
                   placeholder="직접 입력 또는 {변수}"
                   value={it.text}
                   onFocus={focus}
                   onChange={(e) => setItem(i, { ...it, text: e.target.value })}
                 />
               )}
-              <span className="hidden w-28 shrink-0 truncate text-xs text-muted sm:block">{varName}</span>
+              <span className="hidden w-28 shrink-0 truncate text-xs text-muted @lg:block">{varName}</span>
               {onConvertToText && !isText && (
                 <Button variant="ghost" size="icon" aria-label={`${varName} 값 고치기`} title="이 메일에서만 값을 직접 고칩니다" icon={<PenLine />} onClick={() => onConvertToText(i)} />
               )}

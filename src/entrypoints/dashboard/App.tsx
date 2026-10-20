@@ -12,8 +12,9 @@ import { MailPreparePage } from './MailPreparePage';
 import { NoticeDetailPage } from './notice/NoticeDetailPage';
 import { NoticesPage } from './NoticesPage';
 import { RecipientsPage } from './RecipientsPage';
-import { SentHistoryPage } from './SentHistoryPage';
+import { MailsPage } from './MailsPage';
 import { SettingsPage } from './SettingsPage';
+import { StatsPage } from './stats/StatsPage';
 import { TemplateEditor } from './TemplateEditor';
 import { TemplatesPage } from './TemplatesPage';
 import { MENU } from './menu';
@@ -54,7 +55,7 @@ export function App() {
   }, []);
   const route = parseRoute(hash);
   if (route.page === 'grant') return <GrantPage />;
-  const active: Page = route.page === 'notice' || route.page === 'mail' ? 'notices' : route.page === 'template' ? 'templates' : route.page === 'evaluation' ? 'evaluations' : route.page;
+  const active: Page = route.page === 'mail' && route.query.from === 'mails' ? 'mails' : route.page === 'notice' || route.page === 'mail' ? 'notices' : route.page === 'template' ? 'templates' : route.page === 'evaluation' ? 'evaluations' : route.page;
   const wide = route.page !== 'diagnostics';
 
   return (
@@ -85,12 +86,13 @@ export function App() {
         <FolderStatus refreshKey={hash} />
       </aside>
       <main className="min-w-0 flex-1 px-12 pt-10 pb-16">
-        <div className={`mx-auto space-y-6 ${route.page === 'template' || route.page === 'recipients' ? 'max-w-[90rem]' : route.page === 'evaluation' ? 'max-w-[105rem]' : wide ? 'max-w-[70rem]' : 'max-w-[50rem]'}`}>
+        <div className={`mx-auto space-y-6 ${route.page === 'template' || route.page === 'recipients' || route.page === 'notices' ? 'max-w-[90rem]' : route.page === 'evaluation' ? 'max-w-[105rem]' : wide ? 'max-w-[70rem]' : 'max-w-[50rem]'}`}>
           <ErrorBoundary resetKey={hash}>
           {route.page === 'home' && <HomePage />}
           {route.page === 'notices' && <NoticesPage />}
-          {route.page === 'sent' && <SentHistoryPage />}
+          {route.page === 'mails' && <MailsPage tab={route.tab} />}
           {route.page === 'evaluations' && <EvaluationsPage />}
+          {route.page === 'stats' && <StatsPage />}
           {route.page === 'evaluation' && <EvaluationDetailPage key={route.noticeId} noticeId={route.noticeId} />}
           {route.page === 'recipients' && <RecipientsPage />}
           {route.page === 'templates' && <TemplatesPage />}

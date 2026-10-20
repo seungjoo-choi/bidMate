@@ -1,8 +1,12 @@
+import type { DeadlinePlan, DeadlineRefreshSummary } from '../core/types/deadline';
 import type { AttachResult, FieldResult, SendRecord, SentIndexEntry, SentMailView } from '../core/types/compose';
 import type { ComposeParams, HtmlFields, Job, JobError, JobProgress, JobStatus } from '../core/types/job';
+import type { AiKey } from '../core/ai/keys';
 import type { Extraction, ExtractionKey } from '../core/types/extraction';
 import type { IndexEntry } from '../core/types/index-file';
+import type { FollowTarget } from '../core/types/result';
 import type { NoticeKind } from '../core/types/notice';
+import type { PerformanceImportPlan, PerformanceImportResult, PerformanceInput, PerformancesSnapshot } from '../core/types/performance';
 import type { GroupInput, RecipientImportPlan, RecipientImportResult, RecipientInput, RecipientsSnapshot, TemplateInput, TemplatesSnapshot } from '../core/types/config-file';
 import type { NwRawUser } from '../adapters/naverworks/contacts-types';
 import type { MailDraft, MailEdits } from '../core/types/mail';
@@ -13,6 +17,8 @@ import type { DetectedDetail } from '../adapters/g2b/detail-page';
 import type { ComposeSelectorSet, ComposeState, SendWatchConfig } from '../adapters/naverworks/types';
 import type { EvalRaw } from '../adapters/g2b/eval-api';
 import type { EvalIndexEntry, EvalRecord } from '../core/types/evaluation';
+import type { ISODate } from '../core/types/common';
+import type { NotifyEvent, ResultProbeResult, ResultRunSummary } from '../core/types/result';
 import type { AiBatchState, AiProvider, AiReviewFile, AiRunState, AiScope } from '../core/types/ai';
 
 /** 'content'는 SW/팝업이 content script로 보내는 메시지의 대상. */
@@ -40,7 +46,7 @@ export type AttachStatus =
   | { done: true; result: AttachResult };
 export interface FileMeta { fileId: string; name: string; size: number; mime?: string; }
 /** 설정 화면에서 바로 보여 줄 카드 */
-export type SettingsSection = 'storage' | 'mail-service' | 'auto-compose' | 'g2b' | 'company' | 'ai';
+export type SettingsSection = 'storage' | 'mail-service' | 'auto-compose' | 'g2b' | 'company' | 'performances' | 'ai' | 'notify';
 /** 오류를 고칠 수 있는 화면. ui/open 페이로드로 그대로 보낸다 */
 export type FixTarget = { page: 'recipients' } | { page: 'settings'; section: SettingsSection };
 export interface NoticeLookup { found: boolean; collectedAt?: string; collectStatus?: CollectStatus; noticeId?: string; bidCloseAt?: string; title?: string }
@@ -107,6 +113,10 @@ export type Msg =
   | { type: 'notice/field-edit'; payload: { noticeId: string; key: NoticeFieldKey | `custom.${string}`; value: unknown | null; raw?: string; note?: string }; response: { notice: Notice; extraction: Extraction | null } }
   | { type: 'extraction/text'; payload: { noticeId: string; textPath: string }; response: { text: string } }
   | { type: 'recipients/list'; payload: void; response: RecipientsSnapshot }
+  | { type: 'performances/list'; payload: void; response: PerformancesSnapshot }
+  | { type: 'performances/save'; payload: { performance: PerformanceInput }; response: PerformancesSnapshot }
+  | { type: 'performances/delete'; payload: { id: string }; response: PerformancesSnapshot }
+  | { type: 'performances/import'; payload: { plan: PerformanceImportPlan }; response: PerformanceImportResult }
   | { type: 'recipients/save'; payload: { recipient: RecipientInput }; response: RecipientsSnapshot }
   | { type: 'recipients/import'; payload: { plan: RecipientImportPlan }; response: RecipientImportResult }  // 대시보드→SW→offscreen
   | { type: 'contacts/naverworks-fetch'; payload: { domainId?: string }; response: { domainId: string; users: NwRawUser[]; totalCount: number; tabReused: boolean } }  // 대시보드→SW
@@ -128,7 +138,7 @@ export type Msg =
   | { type: 'mail/sent-view'; payload: { noticeId: string; recordId: string }; response: SentMailView | null }
   | { type: 'mail/send-signal'; payload: { jobId: string; kind: 'click' | 'hotkey' | 'confirm'; confirmation?: 'ui_gone' | 'toast' | 'unload' }; response: void }  // CS→SW
   | { type: 'mail/sent-record'; payload: { noticeId: string; jobId: string; composeRecordId?: string; provider?: MailProvider; kind: 'click' | 'hotkey' | 'confirm'; confirmation?: 'ui_gone' | 'toast' | 'unload' }; response: { recorded: boolean } }  // SW→offscreen
-  | { type: 'config/repair'; payload: { file: 'recipients' | 'groups' | 'templates' }; response: { backupPath: string } }
+  | { type: 'config/repair'; payload: { file: 'recipients' | 'groups' | 'templates' | 'performances' }; response: { backupPath: string } }
   | { type: 'g2b/detect'; payload: void; response: G2bDetected | null }  // popup→CS
   | { type: 'g2b/read-html'; payload: { noticeNo: string; round?: string };
       response: { detected: DetectedDetail | null; match: boolean; html: HtmlFields | null; readyState: DocumentReadyState;
@@ -144,16 +154,25 @@ export type Msg =
   | { type: 'eval/get-many'; payload: { noticeIds?: string[] }; response: EvalRecord[] }
   | { type: 'eval/delete'; payload: { noticeId: string }; response: { removed: boolean } }
   | { type: 'eval/probe'; payload: { ref: EvalRef; withoutIdHeaders?: boolean }; response: EvalProbeResult }  // 확장 페이지→SW. 저장 없이 개수만 반환
+  | { type: 'result/refresh'; payload: { reason: 'list' | 'manual' }; response: ResultRunSummary }  // 대시보드→SW. throw하지 않는다
+  | { type: 'result/run'; payload: { mode: 'list' | 'follow'; serviceKey: string; bizNo: string }; response: ResultRunSummary }  // SW→offscreen 전용
+  | { type: 'result/done'; payload: { events: NotifyEvent[]; nextFollowCheckAt: ISODate | null; skipped?: ResultRunSummary['skipped'] }; response: void }  // offscreen→SW 전용. 실행/팔로우 설정이 끝날 때마다 알림과 알람 재예약을 맡긴다
+  | { type: 'follow/set'; payload: { noticeId: string; follow: boolean; target?: FollowTarget }; response: { following: boolean; target: FollowTarget | null; nextFollowCheckAt: ISODate | null; startAt: ISODate | null } }  // 대시보드→SW→offscreen
+  | { type: 'deadline/plan'; payload: void; response: DeadlinePlan }  // SW→offscreen 전용. index에서 계획 계산
+  | { type: 'deadline/refresh'; payload: { reason: 'list' | 'manual' }; response: DeadlineRefreshSummary }  // 확장 페이지→SW. throw하지 않는다
+  | { type: 'result/probe'; payload: { noticeNo: string; serviceKey?: string }; response: ResultProbeResult }  // 대시보드→SW→offscreen(키는 SW가 주입)
   | { type: 'ai/get'; payload: { noticeId: string }; response: AiReviewFile | null }
-  | { type: 'ai/run'; payload: { noticeId: string; scope: AiScope; keys?: ExtractionKey[]; provider?: AiProvider; files?: string[] }; response: { runId: string } }  // 대시보드→SW. 키는 SW가 주입한다
-  | { type: 'ai/exec'; payload: { noticeId: string; scope: AiScope; keys?: ExtractionKey[]; provider: AiProvider; files?: string[]; api: { key: string; model: string; sendFullText?: boolean } }; response: { runId: string } }  // SW→offscreen 전용
+  | { type: 'ai/run'; payload: { noticeId: string; scope: AiScope; keys?: AiKey[]; provider?: AiProvider; files?: string[] }; response: { runId: string } }  // 대시보드→SW. 키는 SW가 주입한다
+  | { type: 'ai/compare-run'; payload: { noticeId: string; scope: AiScope; keys?: AiKey[]; providers: AiProvider[]; files?: string[] }; response: { compareId: string; runId: string } }  // 대시보드→SW. 키는 SW가 주입
+  | { type: 'ai/compare-exec'; payload: { noticeId: string; scope: AiScope; keys?: AiKey[]; files?: string[]; compareId: string; targets: Array<{ provider: AiProvider; api: { key: string; model: string; sendFullText?: boolean } }> }; response: { compareId: string; runId: string } }  // SW→offscreen 전용
+  | { type: 'ai/exec'; payload: { noticeId: string; scope: AiScope; keys?: AiKey[]; provider: AiProvider; files?: string[]; api: { key: string; model: string; sendFullText?: boolean } }; response: { runId: string } }  // SW→offscreen 전용
   | { type: 'ai/status'; payload: AiRunState; response: void }  // offscreen→SW 전용
   | { type: 'ai/cancel'; payload: { noticeId: string; runId: string }; response: { cancelled: boolean } }
-  | { type: 'ai/prepare'; payload: { noticeId: string; scope: AiScope; keys?: ExtractionKey[]; provider?: AiProvider; files?: string[] }; response: { runId: string; text: string; webUrl: string; stats: { chars: number; files: number; truncated: boolean; excludedFiles: string[] } } }
+  | { type: 'ai/prepare'; payload: { noticeId: string; scope: AiScope; keys?: AiKey[]; provider?: AiProvider; files?: string[] }; response: { runId: string; text: string; webUrl: string; stats: { chars: number; files: number; truncated: boolean; excludedFiles: string[] } } }
   | { type: 'ai/prompt-get'; payload: { noticeId: string; runId: string }; response: { text: string } }
   | { type: 'ai/submit'; payload: { noticeId: string; runId: string; text: string }; response: AiReviewFile }  // text 상한 200KB(SW 검사)
-  | { type: 'ai/apply'; payload: { noticeId: string; runId: string; key: ExtractionKey; note?: string; variantIndex?: number }; response: { notice: Notice; extraction: Extraction; aiReview: AiReviewFile } }
-  | { type: 'ai/dismiss'; payload: { noticeId: string; runId: string; key: ExtractionKey }; response: AiReviewFile }
+  | { type: 'ai/apply'; payload: { noticeId: string; runId: string; key: AiKey; note?: string; variantIndex?: number }; response: { notice: Notice; extraction: Extraction; aiReview: AiReviewFile } }
+  | { type: 'ai/dismiss'; payload: { noticeId: string; runId: string; key: AiKey }; response: AiReviewFile }
   | { type: 'ai/test'; payload: { provider: AiProvider }; response: { ok: boolean; models?: Array<{ id: string; displayName?: string }>; error?: { code: string; message: string } } }  // 대시보드→SW
   | { type: 'ai/models'; payload: { provider: AiProvider; apiKey: string }; response: { models: Array<{ id: string; displayName?: string }> } }  // SW→offscreen 전용
   | { type: 'ai/batch-run'; payload: { noticeIds: string[]; provider?: AiProvider }; response: { batchId: string } }  // 대시보드→SW. 키는 SW가 주입한다

@@ -16,6 +16,7 @@ export function useSettingsStatus(): Partial<Record<SettingsSection, SectionHeal
   const [fs, setFs] = useState<FsStatus | null>(null);
   const [secrets, setSecrets] = useState<Secrets | null>(null);
   const [mailOk, setMailOk] = useState<boolean | null>(null);
+  const [perfCount, setPerfCount] = useState<number | null>(null);
 
   const loadFs = useCallback(() => {
     void send('fs/status', undefined, { timeoutMs: 30_000 }).then(setFs, () => setFs(null));
@@ -35,6 +36,10 @@ export function useSettingsStatus(): Partial<Record<SettingsSection, SectionHeal
       window.removeEventListener('focus', loadFs);
     };
   }, [loadFs]);
+
+  useEffect(() => {
+    void send('performances/list', undefined).then((r) => setPerfCount(r.items.length), () => {});
+  }, []);
 
   // 폴더 선택·재승인은 storage 이벤트가 없어서, 허용 상태가 될 때까지만 주기적으로 확인한다
   const fsOk = fs?.hasRoot && fs.permission === 'granted';
@@ -73,7 +78,9 @@ export function useSettingsStatus(): Partial<Record<SettingsSection, SectionHeal
       : { tone: 'ok', text: '완료' };
     out['auto-compose'] = settings.autoCompose.enabled ? { tone: 'ok', text: '사용 중' } : { tone: 'idle', text: '꺼짐' };
     out.company = settings.company.bizNo ? { tone: 'ok', text: '완료' } : { tone: 'idle', text: '선택' };
+    out.notify = settings.notify.rank || settings.notify.final || settings.notify.deadline ? { tone: 'ok', text: '사용 중' } : { tone: 'idle', text: '꺼짐' };
   }
+  if (perfCount !== null) out.performances = perfCount > 0 ? { tone: 'ok', text: `${perfCount}건` } : { tone: 'idle', text: '선택' };
   if (secrets) {
     out.g2b = secrets.g2bServiceKey ? { tone: 'ok', text: '완료' } : { tone: 'idle', text: '필요' };
     if (settings) {

@@ -1,5 +1,6 @@
 import { sanitizeSegment } from '../../core/model/sanitize';
 import { uniqueName } from '../../core/model/names';
+import { extOf } from '../../core/extraction/classify';
 import type { Attachment } from '../../core/types/notice';
 import type { IFileStore } from '../file-store/types';
 
@@ -72,6 +73,21 @@ export function safeFileName(original: string): string {
   return sanitizeSegment(original, 130);
 }
 
+/** content-disposition에서 파일명을 뽑는다. filename*=UTF-8'' 우선, 퍼센트 디코딩 실패 시 원문, 경로 구분자 제거. */
+export function fileNameFromDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const decode = (v: string): string => { try { return decodeURIComponent(v); } catch { return v; } };
+  const clean = (v: string): string | null => {
+    const name = v.trim().replace(/^"(.*)"$/, '$1').split(/[\\/]/).pop()!.trim();
+    return name === '' ? null : name;
+  };
+  const star = /filename\*\s*=\s*[^']*'[^']*'([^;]*)/i.exec(header);
+  if (star) { const n = clean(decode(star[1]!.trim())); if (n) return n; }
+  const plain = /(?:^|[;\s])filename\s*=\s*("([^"]*)"|[^;]*)/i.exec(header);
+  if (plain) return clean(decode(plain[2] ?? plain[1]!));
+  return null;
+}
+
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export async function downloadAttachments(input: Attachment[], opts: DownloadOptions): Promise<Attachment[]> {
@@ -110,7 +126,7 @@ export async function downloadAttachments(input: Attachment[], opts: DownloadOpt
     opts.onEvent?.({ attachmentId: a.id, type, bytes, total, done: doneCount, totalFiles: atts.length, ...extra });
 
   const attempt = async (a: Attachment): Promise<void> => {
-    const path = `${opts.folder}/attachments/${a.savedName}`;
+    let path = `${opts.folder}/attachments/${a.savedName}`;
     const ac = new AbortController();
     let kill!: (e: Error) => void;
     const dead = new Promise<never>((_, rej) => { kill = (e) => { ac.abort(); rej(e); }; });
@@ -135,6 +151,17 @@ export async function downloadAttachments(input: Attachment[], opts: DownloadOpt
       if (type.includes('text/html')) {
         await res.body?.cancel().catch(() => undefined);
         throw new AttachError('ATTACH_NOT_FILE', '파일이 아닌 HTML 응답입니다(오류 페이지로 판단).', false);
+      }
+      // 확장자 없는 이름(사전규격 첨부)은 서버가 알려준 파일명으로 바꾼다. 확장자가 있는 이름은 유지한다.
+      if (extOf(a.originalName) === '') {
+        const served = fileNameFromDisposition(res.headers.get('content-disposition'));
+        if (served) {
+          if (a.savedName) taken.delete(a.savedName);
+          a.originalName = served;
+          a.savedName = uniqueName(safeFileName(served), taken);
+          taken.add(a.savedName);
+          path = `${opts.folder}/attachments/${a.savedName}`;
+        }
       }
       const lenHeader = res.headers.get('content-length');
       const total = lenHeader !== null && /^\d+$/.test(lenHeader) ? Number(lenHeader) : null;
@@ -182,6 +209,7 @@ export async function downloadAttachments(input: Attachment[], opts: DownloadOpt
       }
       a.expectedSize = total ?? a.expectedSize;
       a.savedSize = size;
+      a.sha256 = undefined;   // 새로 저장했으니 옛 해시는 버린다.
       a.savedAt = now().toISOString();
       if (total === null) {
         a.status = 'saved';

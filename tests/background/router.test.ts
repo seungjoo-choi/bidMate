@@ -124,3 +124,14 @@ describe('ui/open', () => {
     expect(openDashboard).toHaveBeenLastCalledWith('#/recipients', { nearTabId: 4 });
   });
 });
+
+describe('performances 메시지', () => {
+  it('performances/* 4종을 SW에 등록하고 EXTENSION_ONLY로 처리한다', () => {
+    registerRouter();
+    const registered = vi.mocked(listen).mock.calls.filter((c) => c[2] === 'sw').map((c) => c[0] as string);
+    for (const t of ['performances/list', 'performances/save', 'performances/delete', 'performances/import']) {
+      expect(registered).toContain(t);
+      expect(EXTENSION_ONLY_TYPES as readonly string[]).toContain(t);
+    }
+  });
+});

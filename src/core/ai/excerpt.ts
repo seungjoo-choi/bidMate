@@ -1,5 +1,5 @@
 import { compact } from '../extraction/normalize';
-import type { ExtractionKey } from '../types/extraction';
+import type { AiKey } from './keys';
 import {
   AI_EXCERPT_EXTRA_KEYWORDS, AI_FOCUS_KEYWORDS, API_FULLTEXT_MAX_CHARS, EXCERPT_FILE_MAX_CHARS, EXCERPT_MAX_CHARS,
   NOTE_LINE_RE, REF_MAX_HITS, REF_WINDOW_AFTER, REF_WINDOW_BEFORE, SECTION_HEAD_RE, SECTION_MAX_CHARS,
@@ -16,7 +16,7 @@ export interface ExcerptInput {
   /** 총 상한(기본 EXCERPT_MAX_CHARS). 더 큰 값은 EXCERPT_MAX_CHARS로 줄인다. */
   maxChars?: number;
   /** 대상 항목. 주면 상한 초과 시 이 항목 키워드가 적은 구간부터 뺀다(없으면 뒤쪽 구간부터). */
-  keys?: ExtractionKey[];
+  keys?: AiKey[];
 }
 export interface ExcerptResult {
   text: string;
@@ -39,7 +39,7 @@ export function excerptKeywords(synonyms: Record<string, string[]>): string[] {
 }
 
 /** 대상 항목별 집중 키워드(compact). 구간 관련도 점수에 쓴다. */
-export function focusKeywords(synonyms: Record<string, string[]>, keys: ExtractionKey[]): string[] {
+export function focusKeywords(synonyms: Record<string, string[]>, keys: AiKey[]): string[] {
   const set = new Set<string>();
   for (const k of keys) {
     const f = AI_FOCUS_KEYWORDS[k];

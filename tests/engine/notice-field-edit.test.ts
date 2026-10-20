@@ -34,6 +34,16 @@ describe('editNoticeField', () => {
     });
   });
 
+  it('source 옵션을 주면 source.ref, evidence, page가 기록되고 raw가 보존된다', async () => {
+    const { store } = await runCollect({ files, parsers: nopeParsers });
+    await edit(store, 'jointVentureAllowed', true, { raw: '공동이행방식 허용' }, { source: { ref: 'ai:run1', evidence: '공동이행방식 허용', page: 3 } });
+    expect(notice(store).basic.jointVentureAllowed).toMatchObject({
+      value: true, raw: '공동이행방식 허용', status: 'user_edited', source: { kind: 'user', ref: 'ai:run1', evidence: '공동이행방식 허용', page: 3 },
+    });
+    await edit(store, 'priceMethod', '복수예비가격');
+    expect(notice(store).basic.priceMethod.source).toMatchObject({ kind: 'user', ref: 'dashboard' });
+  });
+
   it('null이면 before가 복원되고, 수정되지 않은 필드는 아무것도 바뀌지 않는다', async () => {
     const { store } = await runCollect({ files, parsers });
     const orig = notice(store).basic.projectPeriod;

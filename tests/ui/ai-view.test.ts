@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { AiReviewFile, AiRun, AiRunState, AiSuggestion } from '../../src/core/types/ai';
 import type { ExtractedItem, Extraction, ExtractionFile, ExtractionKey } from '../../src/core/types/extraction';
 import {
-  REJECT_LABEL, VERDICT_LABEL, afterCopy, buildAiCards, copyOpenButton, terminalSignal, fileChecklist, filesParam, isStale, latestRun, olderCardCount, quickView, runSummary, scopeLabel, selectedChars, suggestionActions,
+  AGREEMENT_LABEL, REJECT_LABEL, VERDICT_LABEL, aiAgreement, aiOthers, buildAiCardsByProvider, compareAgreementSummary, compareRows, afterCopy, buildAiCards, copyOpenButton, terminalSignal, fileChecklist, filesParam, isStale, latestRun, olderCardCount, quickView, runSummary, scopeLabel, selectedChars, suggestionActions,
 } from '../../src/ui/review/ai-view';
+import { AI_KEYS, isDocAiKey } from '../../src/core/ai/keys';
 import { buildCard, buildCards, userEditedBadgeText } from '../../src/ui/review/view';
 
 const sug = (over: Partial<AiSuggestion> & Pick<AiSuggestion, 'key'>): AiSuggestion => ({
@@ -204,7 +205,8 @@ describe('D2: 요청 여부(run.keys) 기준 buildAiCards', () => {
 describe('scopeLabel', () => {
   it('pending / all / keys 라벨', () => {
     expect(scopeLabel({ scope: 'pending', keys: ['credibilityScore'] })).toBe('확인 필요 항목');
-    expect(scopeLabel({ scope: 'all', keys: [] })).toBe('7개 전체');
+    expect(scopeLabel({ scope: 'all', keys: [...AI_KEYS] })).toBe('16개 전체');
+    expect(scopeLabel({ scope: 'all', keys: AI_KEYS.filter((k) => isDocAiKey(k)) })).toBe('7개 전체'); // 옛 run
     expect(scopeLabel({ scope: 'keys', keys: ['credibilityScore', 'performancePeriod'] })).toBe('항목: 대외신인도 배점, 실적 인정기간');
   });
 });
@@ -241,3 +243,86 @@ describe('quickView', () => {
   });
 });
 
+
+describe('비교 표시 순수 함수', () => {
+  const K = 'credibilityScore' as const;
+  const gem = (id: string, s: AiRun['suggestions'], over: Partial<AiRun> = {}) => run(id, s, { provider: 'gemini', keys: [K], ...over });
+  const cla = (id: string, s: AiRun['suggestions'], over: Partial<AiRun> = {}) => run(id, s, { provider: 'claude', keys: [K], ...over });
+  const info = (s: Partial<AiSuggestion>, id = 'x') => ({ suggestion: sug({ key: K, ...s }), run: run(id, {}) });
+
+  it('Gemini 뒤 Claude 실행: primary=Claude, others=[Gemini]', () => {
+    const f = file([cla('c1', { [K]: sug({ key: K }) }), gem('g1', { [K]: sug({ key: K, value: 3 }) })]);
+    const primary = buildAiCards(f, ex);
+    const others = aiOthers(primary, buildAiCardsByProvider(f, ex));
+    expect(primary[K]!.run.id).toBe('c1');
+    expect(others[K]!.map((i) => i.run.id)).toEqual(['g1']);
+  });
+
+  it('Claude가 키를 요청했지만 제안 없음: primary 없음, others=[Gemini]', () => {
+    const f = file([cla('c1', {}), gem('g1', { [K]: sug({ key: K }) })]);
+    const primary = buildAiCards(f, ex);
+    expect(primary[K]).toBeUndefined();
+    expect(aiOthers(primary, buildAiCardsByProvider(f, ex))[K]!.map((i) => i.run.id)).toEqual(['g1']);
+  });
+
+  it('dismissed 제안은 others에서 제외', () => {
+    const f = file([cla('c1', { [K]: sug({ key: K }) }), gem('g1', { [K]: sug({ key: K, dismissedAt: 't' }) })]);
+    expect(aiOthers(buildAiCards(f, ex), buildAiCardsByProvider(f, ex))).toEqual({});
+  });
+
+  it('stale run은 others에서 제외', () => {
+    const f = file([cla('c1', { [K]: sug({ key: K }) }), gem('g1', { [K]: sug({ key: K }) }, { extractionJobId: 'old' })]);
+    expect(aiOthers(buildAiCards(f, ex), buildAiCardsByProvider(f, ex))).toEqual({});
+  });
+
+  it('같은 공급자 run이 2개면 최신만', () => {
+    const f = file([cla('c1', { [K]: sug({ key: K }) }), gem('g2', { [K]: sug({ key: K }) }), gem('g1', { [K]: sug({ key: K }) })]);
+    expect(aiOthers(buildAiCards(f, ex), buildAiCardsByProvider(f, ex))[K]!.map((i) => i.run.id)).toEqual(['g2']);
+  });
+
+  it('others 순서는 AI_PROVIDERS 순', () => {
+    const o = run('o1', { [K]: sug({ key: K }) }, { provider: 'openai', keys: [K] });
+    const f = file([cla('c1', { [K]: sug({ key: K }) }), o, gem('g1', { [K]: sug({ key: K }) })].reverse().reverse());
+    const primary = buildAiCards(f, ex);
+    expect(primary[K]!.run.id).toBe('c1');
+    expect(aiOthers(primary, buildAiCardsByProvider(f, ex))[K]!.map((i) => i.run.provider)).toEqual(['gemini', 'openai']);
+  });
+
+  it('aiAgreement', () => {
+    expect(aiAgreement([info({ value: 3 }), info({ value: 3 })])).toEqual({ n: 2, verdict: 'agree' });
+    expect(aiAgreement([info({ value: '3년' }), info({ value: '3 년' })])!.verdict).toBe('agree');
+    expect(aiAgreement([info({ value: 3 }), info({ value: 4 })])!.verdict).toBe('differ');
+    expect(aiAgreement([info({ value: 3 }), info({ value: null, verdict: 'none' })])!.verdict).toBe('partial');
+    expect(aiAgreement([info({ value: null, verdict: 'none' }), info({ value: null, verdict: 'none' })])!.verdict).toBe('agree_none');
+    const v = (n: number) => ({ condition: 'c', value: n, quote: 'q', valueInQuote: true });
+    const m = (vs: number[]) => info({ value: null, verdict: 'multi', variants: vs.map(v) });
+    expect(aiAgreement([m([1, 2]), m([2, 1])])!.verdict).toBe('agree');
+    expect(aiAgreement([info({})])).toBeNull();
+    expect(AGREEMENT_LABEL.agree(3)).toBe('AI 3개 일치');
+    expect(compareAgreementSummary({ [K]: info({ value: 3 }) }, { [K]: [info({ value: 4 })] })).toEqual({ compared: 1, agree: 0, differ: 1, partial: 0, none: 0 });
+  });
+
+  it('compareRows', () => {
+    const base = { compareId: 'cmp' };
+    const f = file([gem('g1', {}, { ...base, status: 'requesting', createdAt: '2026-10-20T00:00:01Z' })]);
+    const state = (index: number): AiRunState => ({ noticeId: 'N', runId: 'g1', provider: 'gemini', status: 'requesting', label: 'x', at: 't', compare: { id: 'cmp', providers: ['gemini', 'claude', 'openai'], index } });
+    const live = compareRows(f, state(0))!;
+    expect(live.rows.map((r) => [r.provider, r.status])).toEqual([['gemini', 'running'], ['claude', 'queued'], ['openai', 'queued']]);
+    expect(compareRows(f, null)!.rows.map((r) => r.status)).toEqual(['running']);
+    const f2 = file([gem('g1', {}, { ...base, createdAt: '2026-10-20T00:00:01Z' }), cla('c1', {}, { ...base, createdAt: '2026-10-20T00:00:02Z' })]);
+    const [g, c] = f2.runs as [AiRun, AiRun];
+    const rows = compareRows({ ...f2, runs: [c, g] }, state(2))!;
+    expect(rows.rows.map((r) => [r.provider, r.status])).toEqual([['gemini', 'done'], ['claude', 'done'], ['openai', 'missing']]);
+    expect(rows.scopeRun.id).toBe('g1');
+    expect(compareRows(file([gem('g1', {})]), null)).toBeNull();
+    // 1번째에서 취소되어 종료 상태가 남으면 남은 공급자는 대기가 아니라 missing
+    const cancelled = file([gem('g1', {}, { ...base, status: 'cancelled', createdAt: '2026-10-20T00:00:01Z' })]);
+    const ended: AiRunState = { ...state(0), status: 'cancelled' };
+    expect(compareRows(cancelled, ended)!.rows.map((r) => r.status)).toEqual(['cancelled', 'missing', 'missing']);
+  });
+
+  it('quickView compare 라벨', () => {
+    const s: AiRunState = { noticeId: 'N', runId: 'r9', provider: 'claude', status: 'requesting', label: '요청 중', at: 't', compare: { id: 'c', providers: ['gemini', 'claude'], index: 1 } };
+    expect(quickView(null, ex, s).label).toBe('AI 비교 2/2 · 요청 중');
+  });
+});

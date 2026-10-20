@@ -1,8 +1,10 @@
 import type { ISODate } from './common';
 import type { AiRunSummary } from '../ai/summary';
-import type { EvidenceRef, ExtractionKey } from './extraction';
+import type { AiKey } from '../ai/keys';
+import type { EvidenceRef } from './extraction';
 
 export type AiProvider = 'claude' | 'openai' | 'gemini';
+export const AI_PROVIDERS: readonly AiProvider[] = ['gemini', 'claude', 'openai']; // 표시/선택 순서
 export type AiMode = 'api' | 'manual';
 /** auto(확인 필요가 있으면 그것만, 없으면 전체)와 keys(지정 항목만)는 요청 전용이다. 저장된 run의 scope는 pending | all | keys */
 export type AiScope = 'pending' | 'all' | 'auto' | 'keys';
@@ -20,7 +22,7 @@ export interface AiReviewFile { schemaVersion: 1; noticeId: string; runs: AiRun[
 export interface AiRun {
   id: string; createdAt: ISODate; finishedAt?: ISODate;
   provider: AiProvider; mode: AiMode; model: string | null; // manual은 null
-  promptVersion: string; scope: AiScope; keys: ExtractionKey[];
+  promptVersion: string; scope: AiScope; keys: AiKey[];
   extractionJobId: string; extractedAt: ISODate;            // 이 run이 본 extraction. 현재 jobId와 다르면 stale
   status: AiRunStatus;
   files: Array<{ attachmentId: string; sourceFile: string; name: string; chars: number; truncated: boolean }>;
@@ -29,15 +31,16 @@ export interface AiRun {
   usage?: { inputTokens: number; outputTokens: number };
   error?: { code: AiErrorCode; message: string };
   warnings: string[];
-  suggestions: Partial<Record<ExtractionKey, AiSuggestion>>;
+  suggestions: Partial<Record<AiKey, AiSuggestion>>;
   rejected: Array<{ key: string; reason: AiRejectReason; value?: unknown; quote?: string; file?: string }>;
   promptPath: string; responsePath?: string;               // `<folder>/ai/<runId>-prompt.txt`, `-response.txt`
+  compareId?: string; // 비교 실행으로 만들어진 run. 같은 id = 같은 비교
 }
 export type AiRuleRelation = 'in_candidates' | 'differs_from_candidates' | 'no_candidates';
 /** raw: AI가 준 원문 표기(금액·기간, 환산 전). 화면에서 환산값과 함께 보여 준다. */
 export interface AiVariant { condition: string; value: unknown; raw?: string; quote: string; file?: string; page?: number | null; evidence?: EvidenceRef; valueInQuote: boolean }
 export interface AiSuggestion {
-  key: ExtractionKey; value: unknown | null; raw?: string; quote: string; note?: string; file?: string; page?: number | null;
+  key: AiKey; value: unknown | null; raw?: string; quote: string; note?: string; file?: string; page?: number | null;
   evidence?: EvidenceRef;   // 검증 성공 시 코드가 생성. ruleId `ai:<provider>:<promptVersion>`, location `line N`
   verdict: 'match' | 'differs' | 'new' | 'none' | 'multi'; // multi = value null + 검증 통과 variants ≥ 1
   /** 조건별 값. 검증 통과분만(구 run에는 없음) */
@@ -52,8 +55,9 @@ export interface AiRunState { // storage.session `aiRun.<noticeId>`
   noticeId: string; runId: string; provider: AiProvider;
   status: 'preparing' | 'requesting' | 'verifying' | 'done' | 'failed' | 'cancelled';
   label: string; at: ISODate; error?: { code: AiErrorCode; message: string };
+  compare?: { id: string; providers: AiProvider[]; index: number }; // index = 현재 실행 중 공급자의 0-based 순번
 }
-export interface OutputSpec { tag: typeof AI_SCHEMA_TAG; runId: string; keys: ExtractionKey[]; kindOf: Record<ExtractionKey, 'number' | 'string' | 'boolean'> }
+export interface OutputSpec { tag: typeof AI_SCHEMA_TAG; runId: string; keys: AiKey[]; kindOf: Record<AiKey, 'number' | 'string' | 'boolean'> }
 export const AI_RUN_SESSION_PREFIX = 'aiRun.';
 export const AI_SCHEMA_TAG = 'bidmate-ai-review/2';
 /** 파서가 받아들이는 태그(저장된 v1 응답 리플레이용 포함) */

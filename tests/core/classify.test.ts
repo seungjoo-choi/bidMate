@@ -73,4 +73,20 @@ describe('planFiles', () => {
   it('form/reference는 excluded', () => {
     expect(planFiles([att('4. 사업 참고 자료.zip')])[0]!).toMatchObject({ action: 'skip', skipReason: 'excluded' });
   });
+  it('duplicateOf가 있으면 duplicate(not_saved보다 앞)', () => {
+    const a = { ...att('제안요청서.hwp'), status: 'skipped' as const, savedName: 'x.hwp', duplicateOf: 'a0', origin: 'prespec' as const };
+    expect(planFiles([a])[0]!).toMatchObject({ action: 'skip', skipReason: 'duplicate' });
+  });
+  it('bid pdf와 prespec hwpx가 같은 이름이면 둘 다 parse', () => {
+    const bid = att('제안요청서.pdf', 0);
+    const pre = { ...att('제안요청서.hwpx', 1), origin: 'prespec' as const };
+    expect(planFiles([bid, pre]).map((p) => p.action)).toEqual(['parse', 'parse']);
+  });
+  it('같은 origin의 hwp/pdf는 기존대로 pdf가 duplicate', () => {
+    const hwp = { ...att('제안요청서.hwp', 0), origin: 'prespec' as const };
+    const pdf = { ...att('제안요청서.pdf', 1), origin: 'prespec' as const };
+    const plan = planFiles([hwp, pdf]);
+    expect(plan[0]!.action).toBe('parse');
+    expect(plan[1]!).toMatchObject({ action: 'skip', skipReason: 'duplicate' });
+  });
 });

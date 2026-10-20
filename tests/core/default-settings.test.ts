@@ -57,4 +57,12 @@ describe('메일 서비스 기본값과 보정', () => {
     d.sites.gmail.accountIndex = 2;
     expect(withDefaults(d).sites.gmail.accountIndex).toBe(2);
   });
+
+  it('notify 기본값과 병합', () => {
+    expect(defaultSettings().notify).toEqual({ rank: true, final: true, deadline: true });
+    const { notify: _omit, ...rest } = defaultSettings();
+    expect(withDefaults(rest as unknown as ReturnType<typeof defaultSettings>).notify).toEqual({ rank: true, final: true, deadline: true });
+    const d = defaultSettings();
+    expect(withDefaults({ ...d, notify: { rank: false } } as unknown as typeof d).notify).toEqual({ rank: false, final: true, deadline: true });
+  });
 });

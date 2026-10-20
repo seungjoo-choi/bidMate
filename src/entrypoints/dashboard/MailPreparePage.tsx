@@ -17,7 +17,7 @@ import { Button, Card, ConfirmDialog, Field, InlineAlert, StatusBadge, Select, u
 import { inputClass } from '../../ui/components/Field';
 import { useRecipients, useTemplates } from '../../ui/hooks/useConfig';
 import { FsErrorAlert, type FsErrorInfo } from './FsErrorAlert';
-import { noticeHash } from './route';
+import { mailsHash, noticeHash } from './route';
 import { formatDateTime } from '../../ui/review/format';
 import { ComposeStartButton, ComposeStatus, useComposeController } from '../../ui/compose/ComposeCard';
 import { useJobs } from '../../ui/hooks/useJobs';
@@ -232,6 +232,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
     try {
       const r = await send('mail/sent-add', { noticeId });
       setNotice(r.notice);
+      void send('deadline/refresh', { reason: 'manual' }).catch(() => undefined);
     } catch (e) {
       setError(toInfo(e));
     } finally {
@@ -253,7 +254,9 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
     setAddError(null);
   };
 
-  const back = (
+  const back = from === 'mails' ? (
+    <a href={mailsHash()} className="inline-flex items-center gap-1 text-sm text-accent hover:underline"><ArrowLeft className="size-4" />메일 관리로 돌아가기</a>
+  ) : (
     <a href={`#/review/${encodeURIComponent(noticeId)}`} className="inline-flex items-center gap-1 text-sm text-accent hover:underline"><ArrowLeft className="size-4" />공고로 돌아가기</a>
   );
 
@@ -385,7 +388,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
           {tab === 'preview' && (rendered ? <MailPreviewFrame fill height={720} html={rendered.html} subject={rendered.subject} /> : <Loader2 className="size-4 animate-spin text-muted" />)}
 
           {tab === 'edit' && effective && (
-            <div className="grid items-start gap-4 @3xl:grid-cols-2">
+            <div className="grid items-start gap-4 @5xl:grid-cols-2">
             <fieldset disabled={locked} className="min-w-0 space-y-4">
               <p className="text-sm text-muted">여기서 고친 내용은 이 공고 메일에만 적용되고 원본 템플릿은 바뀌지 않습니다.</p>
               <Card title="제목과 인사말">
@@ -430,7 +433,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
               </Card>
             </fieldset>
             {/* 편집하면서 결과를 바로 보도록 옆(좁으면 아래)에 미리보기를 붙인다. */}
-            <div className="min-w-0 @3xl:sticky @3xl:top-6">
+            <div className="min-w-0 @5xl:sticky @5xl:top-6">
               {rendered ? <MailPreviewFrame fill height={640} html={rendered.html} subject={rendered.subject} /> : <Loader2 className="size-4 animate-spin text-muted" />}
             </div>
             </div>

@@ -1,6 +1,9 @@
 import { parseKoreanAmount } from '../extraction/normalize';
-import { VALUE_CHECK } from '../model/field-edit';
-import type { ExtractionKey } from '../types/extraction';
+import { REVIEW_KIND, isExtractionLeaf } from '../extraction/review-rows';
+import { docDateToIso, toIsoKst } from '../model/dates';
+import { checkLeafValue } from '../model/field-edit';
+import { parseJointVenture } from '../model/joint-venture';
+import type { AiKey } from './keys';
 import { AI_MAX_VARIANTS, AI_SCHEMA_TAGS_ACCEPTED, type AiErrorCode } from '../types/ai';
 
 export interface RawAiVariant { condition: string; value: unknown; quote: string }
@@ -59,8 +62,63 @@ export function detectClipboard(text: string): 'request' | 'response' | 'unknown
 
 export type Coerced = { ok: true; value: unknown } | { ok: false };
 
-export function coerceValue(key: ExtractionKey, v: unknown): Coerced {
+const ISO_WITH_ZONE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/;
+const ISO_NO_ZONE_RE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?::(\d{2})(?:\.\d+)?)?$/;
+
+/** 원문 표기 금액("3.7억원", "5,000만원")을 원 단위 숫자로. 해석 불가면 null. */
+function amountFromText(t: string): number | null {
+  if (/^[\d,.\s조억만천백]+원?$/.test(t) && /[\d조억만천백]/.test(t) && !DOT_THOUSANDS.test(t)) return parseKoreanAmount(t);
+  return null;
+}
+
+/**
+ * 문서 문장 표기의 공동수급 여부. parseJointVenture(API 코드값용)는 '공동'만 보면 true라
+ * "공동수급 불가", "공동계약 허용하지 않음" 같은 문장을 뒤집는다. 부정어가 있고 허용 표현이 없으면 먼저 false.
+ * 허용과 부정이 섞이면("공동이행 허용, 분담이행 불가") 허용으로 본다.
+ */
+export function jointFromDocText(raw: string): boolean | null {
+  const s = raw.replace(/\s+/g, '');
+  const neg = /불가|불허|금지|않|없음/.test(s);
+  const pos = /허용(?!하지|안)|(?<!불)가능/.test(s);
+  if (neg && !pos) return false;
+  return parseJointVenture(raw);
+}
+
+/** 공고 잎(문서 잎이 아닌 키)의 AI 값 환산. AI는 전부 문자열(문서 원문 표기)로 주고 코드가 바꾼다. */
+function coerceNoticeLeaf(key: AiKey, v: unknown): unknown {
+  switch (REVIEW_KIND[key]) {
+    case 'datetime':
+      if (typeof v === 'string') {
+        const t = v.trim();
+        if (ISO_WITH_ZONE_RE.test(t)) return t; // Z나 오프셋이 있으면 그대로
+        const nz = ISO_NO_ZONE_RE.exec(t);
+        if (nz) return `${nz[1]}:${nz[2] ?? '00'}+09:00`; // 오프셋 없는 ISO는 KST로 본다
+        return docDateToIso(t) ?? toIsoKst(t) ?? v; // 시각이 없으면 환산 실패(문자열 그대로 두어 검사에서 거부)
+      }
+      return v;
+    case 'amount':
+      if (typeof v === 'string') {
+        const n = amountFromText(v.trim().replace(/\s*[(（][^)）]*[)）]\s*$/, '').trim());
+        if (n !== null) return n;
+      }
+      return v;
+    case 'joint':
+      if (typeof v === 'string') {
+        const b = jointFromDocText(v);
+        return b === null ? v : b;
+      }
+      return v;
+    default:
+      return typeof v === 'string' ? v.trim() : v;
+  }
+}
+
+export function coerceValue(key: AiKey, v: unknown): Coerced {
   let out: unknown = v;
+  if (!isExtractionLeaf(key)) {
+    const nv = coerceNoticeLeaf(key, v);
+    return nv !== '' && checkLeafValue(key, nv) ? { ok: true, value: nv } : { ok: false };
+  }
   switch (key) {
     case 'credibilityScore': case 'managementScore': case 'performanceScore':
       if (typeof v === 'string') {
@@ -71,11 +129,8 @@ export function coerceValue(key: ExtractionKey, v: unknown): Coerced {
     case 'performanceMinAmount':
       if (typeof v === 'string') {
         // v2는 원문 표기로 받으므로 "5억원 이상"의 꼬리 "이상"은 떼고 해석한다.
-        const t = v.trim().replace(/\s*이상$/, '');
-        if (/^[\d,.\s조억만천백]+원?$/.test(t) && /[\d조억만천백]/.test(t) && !DOT_THOUSANDS.test(t)) {
-          const n = parseKoreanAmount(t);
-          if (n !== null) out = n;
-        }
+        const n = amountFromText(v.trim().replace(/\s*이상$/, ''));
+        if (n !== null) out = n;
       }
       break;
     case 'performancePeriod':
@@ -96,10 +151,10 @@ export function coerceValue(key: ExtractionKey, v: unknown): Coerced {
       break;
     default: break; // performanceCondition: 문자열 그대로
   }
-  return VALUE_CHECK[key](out) ? { ok: true, value: out } : { ok: false };
+  return checkLeafValue(key, out) ? { ok: true, value: out } : { ok: false };
 }
 
-export function parseAiResponse(text: string, ctx: { runId: string; keys: ExtractionKey[] }): ParseResult {
+export function parseAiResponse(text: string, ctx: { runId: string; keys: AiKey[] }): ParseResult {
   const bad = (code: Extract<ParseResult, { ok: false }>['code'], message: string): ParseResult => ({ ok: false, code, message });
   if (detectClipboard(text) === 'request') return bad('AI_CLIPBOARD_IS_PROMPT', '붙여넣은 내용이 프롬프트입니다. AI의 답변을 복사해 주세요.');
   const j = extractJson(text);

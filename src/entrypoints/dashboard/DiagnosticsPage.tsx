@@ -1,6 +1,7 @@
 import { InlineAlert } from '../../ui/components';
 import { CollectTestSection } from './CollectTestSection';
 import { EvalProbeSection } from './EvalProbeSection';
+import { ResultProbeSection } from './ResultProbeSection';
 import { PageTitle } from './menu';
 
 export function DiagnosticsPage() {
@@ -15,6 +16,7 @@ export function DiagnosticsPage() {
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <CollectTestSection />
         <EvalProbeSection />
+        <ResultProbeSection />
       </div>
     </>
   );

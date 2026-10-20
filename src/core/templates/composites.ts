@@ -1,3 +1,4 @@
+import { NA_VALUE_TEXT, isNotApplicableField } from '../extraction/review-count';
 import type { FieldValue } from '../types/common';
 import type { ResolvedValue } from '../types/mail';
 import type { Notice } from '../types/notice';
@@ -34,6 +35,7 @@ function scorePiece(fv: FieldValue<number> | undefined, label: string): { text: 
 
 function credibilityEval(notice: Notice): ResolvedValue {
   const e = notice.evaluation;
+  if (isNotApplicableField(e?.managementScore) && isNotApplicableField(e?.credibilityScore)) return { text: NA_VALUE_TEXT, status: 'ok', raw: null };
   const pieces = [
     scorePiece(e?.managementScore, '경영상태(신용평가등급) 평가({N}점)'),
     scorePiece(e?.credibilityScore, '대외신인도({N}점)'),
@@ -46,6 +48,7 @@ function credibilityEval(notice: Notice): ResolvedValue {
 /** 기본 템플릿 10번(실적인정기간·실적점수·인정금액 문구)과 같은 결과. 셋 다 없으면 문서 문장, 그것도 없으면 '확인 필요'. */
 function performanceEval(notice: Notice, resolveField?: (k: TemplateFieldKey) => ResolvedValue): ResolvedValue {
   if (!resolveField) return missing();
+  if (isNotApplicableField(notice.evaluation?.performanceScore)) return { text: NA_VALUE_TEXT, status: 'ok', raw: null };
   const period = resolveField('performancePeriod');
   const score = resolveField('performanceScore');
   const amount = resolveField('performanceMinAmount');

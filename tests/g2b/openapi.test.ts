@@ -25,6 +25,12 @@ describe('mapApiItem', () => {
     expect(f.priceMethod?.value).toBe('비예가');
     expect(f.projectPeriod?.status).toBe('missing');
   });
+  it('bfSpecRgstNo를 specRegNo로 매핑하고 다른 필드는 덮어쓰지 않는다', () => {
+    const g = mapApiItem({ ...item, bfSpecRgstNo: 'R26BD00246532' }, at);
+    expect(g.specRegNo?.value).toBe('R26BD00246532');
+    expect(g.title?.value).toBe(f.title?.value);
+    expect(mapApiItem({ ...item, bfSpecRgstNo: '' }, at).specRegNo?.value).toBeNull();
+  });
   it('VAT가 없으면 배정예산', () => {
     const g = mapApiItem({ ...item, VAT: '' }, at);
     expect(g.budgetAmount?.value).toBe(1923000000);

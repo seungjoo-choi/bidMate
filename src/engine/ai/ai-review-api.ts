@@ -2,15 +2,18 @@ import { buildExcerpt, buildFullText, type ExcerptFileInput } from '../../core/a
 import { EXCERPT_MAX_CHARS } from '../../core/ai/constants';
 import { parseAiResponse } from '../../core/ai/parse';
 import { buildPrompt, PROMPT_VERSION, type BuiltPrompt } from '../../core/ai/prompt';
+import { AI_KEYS, isAiKey, isDocAiKey, type AiKey } from '../../core/ai/keys';
 import { verifySuggestions, type VerifyFile } from '../../core/ai/verify';
-import { pendingKeys } from '../../core/extraction/review-count';
+import { pendingLeafKeys } from '../../core/extraction/review-rows';
+import { getField } from '../../core/model/notice-fields';
 import { normalizePath } from '../../core/model/path';
 import type { AiErrorCode, AiMode, AiProvider, AiReviewFile, AiRun, AiScope } from '../../core/types/ai';
-import { EXTRACTION_KEYS, type Extraction, type ExtractionFile, type ExtractionKey } from '../../core/types/extraction';
+import { type Extraction, type ExtractionFile } from '../../core/types/extraction';
 import type { Notice } from '../../core/types/notice';
 import type { DocKind } from '../../core/extraction/classify';
 import type { IFileStore } from '../file-store/types';
-import { editExtraction } from '../notices/notice-api';
+import { editExtraction, editNoticeField } from '../notices/notice-api';
+import { PROVIDERS } from './providers';
 import { NoticeStore } from '../notices/notice-store';
 import { callProvider, AI_MAX_TOKENS } from './ai-client';
 import { aiPromptPath, aiResponsePath, AiReviewStore } from './ai-review-store';
@@ -40,7 +43,7 @@ export interface AiApiDeps {
   isBusy?: (noticeId: string) => boolean;
   newId?: () => string;
 }
-export interface PrepareInput { noticeId: string; scope: AiScope; /** scope가 'keys'일 때 대상 항목 */ keys?: ExtractionKey[]; provider: AiProvider; mode: AiMode; model: string | null; /** API 모드에서 문서 전문 전송 여부(기본 true). manual은 무시 */ sendFullText?: boolean; /** 사용할 파일의 textPath 목록. 없으면 분석된 전체 */ files?: string[] }
+export interface PrepareInput { noticeId: string; scope: AiScope; /** scope가 'keys'일 때 대상 항목 */ keys?: AiKey[]; provider: AiProvider; mode: AiMode; model: string | null; /** API 모드에서 문서 전문 전송 여부(기본 true). manual은 무시 */ sendFullText?: boolean; /** 사용할 파일의 textPath 목록. 없으면 분석된 전체 */ files?: string[]; /** 비교 실행 id */ compareId?: string }
 export interface PreparedRun {
   notice: Notice; run: AiRun; built: BuiltPrompt; adapter: AiProviderAdapter;
   /** fullText: 전문을 보냈는가(실패 시 발췌 재시도 판단용) */
@@ -70,23 +73,23 @@ async function readFileText(store: IFileStore, notice: Notice, textPath: string)
 const isOpen = (r: AiRun) => r.status === 'awaiting' || r.status === 'requesting';
 
 /** 요청 범위를 대상 키와 저장할 scope로 푼다. auto·keys는 요청 전용이라 저장 scope는 pending | all | keys. */
-function resolveKeys(p: Pick<PrepareInput, 'scope' | 'keys'>, extraction: Extraction): { keys: ExtractionKey[]; scope: AiScope } {
+function resolveKeys(p: Pick<PrepareInput, 'scope' | 'keys'>, notice: Notice, extraction: Extraction): { keys: AiKey[]; scope: AiScope } {
   const none = () => err('NOTHING_TO_REVIEW', '확인이 필요한 항목이 없습니다.');
-  if (p.scope === 'all') return { keys: [...EXTRACTION_KEYS], scope: 'all' };
+  if (p.scope === 'all') return { keys: [...AI_KEYS], scope: 'all' };
   if (p.scope === 'pending') {
-    const keys = pendingKeys(extraction.items);
+    const keys = pendingLeafKeys(notice, extraction);
     if (keys.length === 0) throw none();
     return { keys, scope: 'pending' };
   }
   if (p.scope === 'auto') {
-    const keys = pendingKeys(extraction.items);
-    return keys.length > 0 ? { keys, scope: 'pending' } : { keys: [...EXTRACTION_KEYS], scope: 'all' };
+    const keys = pendingLeafKeys(notice, extraction);
+    return keys.length > 0 ? { keys, scope: 'pending' } : { keys: [...AI_KEYS], scope: 'all' };
   }
   if (p.scope === 'keys') {
     const req = Array.isArray(p.keys) ? p.keys : [];
     if (req.length === 0) throw none();
-    if (req.some((k) => !(EXTRACTION_KEYS as string[]).includes(k))) throw err('AI_BAD_REQUEST', '알 수 없는 항목입니다.');
-    return { keys: EXTRACTION_KEYS.filter((k) => req.includes(k)), scope: 'keys' };
+    if (req.some((k) => !isAiKey(k))) throw err('AI_BAD_REQUEST', '알 수 없는 항목입니다.');
+    return { keys: AI_KEYS.filter((k) => req.includes(k)), scope: 'keys' };
   }
   throw err('AI_BAD_REQUEST', '알 수 없는 범위입니다.');
 }
@@ -98,7 +101,7 @@ export async function prepareRun(store: IFileStore, p: PrepareInput, deps: AiApi
   const { notice, extraction } = await loadNoticeAndExtraction(store, p.noticeId);
   if (deps.isBusy?.(p.noticeId)) throw err('JOB_ALREADY_RUNNING', '같은 공고의 수집/추출 잡이 실행 중입니다.');
 
-  const { keys, scope: savedScope } = resolveKeys(p, extraction);
+  const { keys, scope: savedScope } = resolveKeys(p, notice, extraction);
 
   const inputs: ExcerptFileInput[] = [];
   const skipped: AiRun['skipped'] = [];
@@ -138,6 +141,7 @@ export async function prepareRun(store: IFileStore, p: PrepareInput, deps: AiApi
     files: excerpt.files, skipped, excerptChars: excerpt.chars, truncated: excerpt.truncated,
     warnings: [...excerpt.warnings], suggestions: {}, rejected: [],
     promptPath: aiPromptPath(notice.folder, runId),
+    ...(p.compareId ? { compareId: p.compareId } : {}),
   };
   const ai = new AiReviewStore(store);
   await ai.writePrompt(notice, runId, p.mode === 'manual' ? built.manualText : `${built.system}\n\n${built.user}`);
@@ -179,12 +183,19 @@ export async function finishRun(store: IFileStore, p: FinishInput, deps: AiApiDe
     const text = await readFileText(store, notice, ef.textPath);
     if (text !== null) files.push({ attachmentId: ef.attachmentId, sourceFile: rf.sourceFile, name: rf.name, docKind: ef.docKind, text });
   }
-  const baseline: Partial<Record<ExtractionKey, unknown>> = {};
-  for (const k of run.keys) { const it = extraction.items[k]; baseline[k] = it.userEdited ? it.userEdited.value : it.value; }
-  const candidates: Partial<Record<ExtractionKey, unknown[]>> = {};
+  const baseline: Partial<Record<AiKey, unknown>> = {};
+  const candidates: Partial<Record<AiKey, unknown[]>> = {};
+  const present = (v: unknown) => v !== null && v !== undefined;
   for (const k of run.keys) {
-    const it = extraction.items[k];
-    candidates[k] = [...(it.value !== null && it.value !== undefined ? [it.value] : []), ...(it.candidates ?? []).map((c) => c.value)];
+    if (isDocAiKey(k)) {
+      const it = extraction.items[k];
+      baseline[k] = it.userEdited ? it.userEdited.value : it.value;
+      candidates[k] = [...(present(it.value) ? [it.value] : []), ...(it.candidates ?? []).map((c) => c.value)];
+    } else {
+      const f = getField(notice, k);
+      baseline[k] = f?.value ?? null;
+      candidates[k] = [...(present(f?.value) ? [f!.value] : []), ...(f?.candidates ?? []).map((c) => c.value)];
+    }
   }
   const v = verifySuggestions(parsed.items, { files, baseline, candidates, requested: run.keys, provider: run.provider, promptVersion: run.promptVersion });
 
@@ -272,7 +283,7 @@ export async function execApiRun(store: IFileStore, x: ExecInput, deps: AiApiDep
 
 /** AI 제안을 값으로 적용한다. 검증 실패·dismissed·stale 제안은 거부한다. */
 export async function applySuggestion(
-  store: IFileStore, p: { noticeId: string; runId: string; key: ExtractionKey; note?: string; variantIndex?: number }, deps: AiApiDeps,
+  store: IFileStore, p: { noticeId: string; runId: string; key: AiKey; note?: string; variantIndex?: number }, deps: AiApiDeps,
 ): Promise<{ notice: Notice; extraction: Extraction; aiReview: AiReviewFile }> {
   const now = deps.now ?? (() => new Date());
   const { notice, extraction } = await loadNoticeAndExtraction(store, p.noticeId);
@@ -288,15 +299,28 @@ export async function applySuggestion(
   const cond = variant ? (variant.condition.trim().slice(0, 60) || `조건 ${p.variantIndex! + 1}`) : '';
   const note = variant ? `[${cond}] ${p.note ?? ''}`.trim().slice(0, 500) : p.note;
   if (run.extractionJobId !== extraction.jobId) throw err('AI_STALE', '추출 결과가 다시 만들어져 이 제안은 적용할 수 없습니다.');
-  const r = await editExtraction(store, { noticeId: p.noticeId, key: p.key, value, ...(note ? { note } : {}) }, {
-    now: deps.now, isBusy: deps.isBusy, expectJobId: run.extractionJobId,
-    origin: { kind: 'ai', runId: run.id, provider: run.provider, model: run.model, promptVersion: run.promptVersion },
-    source: {
-      ref: `ai:${run.id}`,
-      ...((variant ?? s).evidence?.evidence ? { evidence: (variant ?? s).evidence!.evidence } : {}),
-      ...((variant ?? s).page != null ? { page: (variant ?? s).page! } : {}),
-    },
-  });
+  const picked = variant ?? s;
+  const source = {
+    ref: `ai:${run.id}`,
+    ...(picked.evidence?.evidence ? { evidence: picked.evidence.evidence } : {}),
+    ...(picked.page != null ? { page: picked.page } : {}),
+  };
+  let r: { notice: Notice; extraction: Extraction };
+  if (isDocAiKey(p.key)) {
+    r = await editExtraction(store, { noticeId: p.noticeId, key: p.key, value, ...(note ? { note } : {}) }, {
+      now: deps.now, isBusy: deps.isBusy, expectJobId: run.extractionJobId,
+      origin: { kind: 'ai', runId: run.id, provider: run.provider, model: run.model, promptVersion: run.promptVersion },
+      source,
+    });
+  } else {
+    // 공고 잎: extraction.items는 건드리지 않고 notice 필드만 user_edited로 바꾼다. AI 적용 표시는 source.ref(ai:)로 파생.
+    const defNote = `AI 제안 적용(${PROVIDERS[run.provider]?.label ?? run.provider}${run.model ? ` ${run.model}` : ''})`;
+    const rawText = picked.raw;
+    const e = await editNoticeField(store, { noticeId: p.noticeId, key: p.key, value, note: note || defNote, ...(rawText ? { raw: rawText } : {}) }, {
+      now: deps.now, isBusy: deps.isBusy, source,
+    });
+    r = { notice: e.notice, extraction: e.extraction ?? extraction };
+  }
   const aiReview = await ai.mutate(notice, (f) => {
     const sug = f.runs.find((x) => x.id === run.id)?.suggestions[p.key];
     if (sug) sug.appliedAt = now().toISOString();
@@ -304,7 +328,7 @@ export async function applySuggestion(
   return { notice: r.notice, extraction: r.extraction, aiReview };
 }
 
-export async function dismissSuggestion(store: IFileStore, p: { noticeId: string; runId: string; key: ExtractionKey }, deps: AiApiDeps): Promise<AiReviewFile> {
+export async function dismissSuggestion(store: IFileStore, p: { noticeId: string; runId: string; key: AiKey }, deps: AiApiDeps): Promise<AiReviewFile> {
   const now = deps.now ?? (() => new Date());
   const notice = await new NoticeStore(store).loadNotice(p.noticeId);
   if (!notice) throw err('NOT_FOUND', '공고를 찾을 수 없습니다.');

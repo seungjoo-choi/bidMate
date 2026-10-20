@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EvidenceRef, Extraction, ExtractionFile, ExtractedItem, ExtractionKey } from '../../src/core/types/extraction';
 import { EXTRACTION_KEYS } from '../../src/core/types/extraction';
-import { NOT_RUN_TEXT, buildCard, buildCards, fileDisplayName, fileRemark, summarize } from '../../src/ui/review/view';
+import { NOT_RUN_TEXT, buildCard, evidenceMeta, buildCards, fileDisplayName, fileRemark, summarize } from '../../src/ui/review/view';
 
 const ev = (text = '원문'): EvidenceRef => ({ attachmentId: 'a', sourceFile: '공고.hwp', location: '표1 r1c1', evidence: text, ruleId: 'r', docKind: 'notice' });
 const item = (o: Partial<ExtractedItem<unknown>>): ExtractedItem<unknown> => ({ value: null, status: 'verified', ...o });
@@ -11,7 +11,23 @@ const make = (over: Partial<Record<ExtractionKey, ExtractedItem<unknown>>>): Ext
   extras: {}, files: [], warnings: [],
 });
 
+describe('evidenceMeta', () => {
+  it('prespec이면 사전규격 첨부 접두, 아니면 그대로', () => {
+    expect(evidenceMeta(ev())).toBe('공고.hwp, 표1 r1c1');
+    expect(evidenceMeta({ ...ev(), origin: 'prespec' })).toBe('사전규격 첨부: 공고.hwp, 표1 r1c1');
+    const c = buildCard('deadline' as ExtractionKey, item({ value: 1, candidates: [{ value: 1, evidence: ev() }, { value: 2, evidence: { ...ev(), origin: 'prespec' } }] }));
+    expect(c.candidates[1]!.sourceText).toBe('사전규격 첨부: 공고.hwp, 표1 r1c1');
+  });
+});
+
 describe('카드 모델', () => {
+  it('buildCards 3인자: others가 비어 있지 않을 때만 aiOthers 설정', () => {
+    const o = { suggestion: { key: 'credibilityScore', value: 1, quote: 'q', verdict: 'new', baseline: null, valueInQuote: true }, run: { id: 'r' } } as never;
+    const cards = buildCards(make({}), undefined, { credibilityScore: [o], managementScore: [] });
+    expect(cards.find((c) => c.key === 'credibilityScore')!.aiOthers).toHaveLength(1);
+    expect(cards.find((c) => c.key === 'managementScore')!.aiOthers).toBeUndefined();
+    expect('aiOthers' in buildCards(make({}))[0]!).toBe(false);
+  });
   it('확인 필요가 먼저 온다', () => {
     const ex = make({ performanceScore: item({ status: 'needs_review', reason: 'not_found' }), differentialScoring: item({ status: 'needs_review', reason: 'conflict' }) });
     const keys = buildCards(ex).map((c) => c.key);
@@ -42,7 +58,7 @@ describe('카드 모델', () => {
   });
   it('요약 카운트', () => {
     const ex = make({ performanceScore: item({ status: 'needs_review' }), credibilityScore: item({ userEdited: { value: 3, editedAt: 'x' } }) });
-    expect(summarize(ex)).toEqual({ verified: 5, needsReview: 1, edited: 1, covered: 0 });
+    expect(summarize(ex)).toEqual({ verified: 5, needsReview: 1, edited: 1, covered: 0, notApplicable: 0 });
   });
   it('그룹 충족(covered) 카드: 뱃지, 이유, 정렬, 요약', () => {
     const ex = make({
@@ -53,7 +69,7 @@ describe('카드 모델', () => {
     expect(c.badge).toBe('covered');
     expect(c.reason).toBe('문서에 없음 (경영상태 배점 항목으로 충족)');
     expect(buildCards(ex).map((x) => x.badge).slice(0, 2)).toEqual(['needs_review', 'covered']);
-    expect(summarize(ex)).toEqual({ verified: 5, needsReview: 1, edited: 0, covered: 1 });
+    expect(summarize(ex)).toEqual({ verified: 5, needsReview: 1, edited: 0, covered: 1, notApplicable: 0 });
   });
 });
 

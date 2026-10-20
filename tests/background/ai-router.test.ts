@@ -138,3 +138,61 @@ describe('AI 라우터', () => {
     expect(vi.mocked(send)).toHaveBeenLastCalledWith('ai/prepare', { noticeId: 'n', scope: 'keys', keys: ['performancePeriod'], provider: 'claude' }, expect.anything());
   });
 });
+
+describe('AI 라우터 ai/compare-run', () => {
+  const GKEY = 'AIza-GEMINI-SECRET-99';
+  function stubKeys(ai: Record<string, string>) {
+    vi.stubGlobal('chrome', {
+      runtime: { id: RID },
+      storage: { local: { get: vi.fn().mockResolvedValue({ secrets: { ai }, settingsCache: defaultSettings() }) }, session: { set: vi.fn() } },
+      permissions: { contains: vi.fn().mockResolvedValue(true) },
+    });
+  }
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stubKeys({ claude: KEY, gemini: GKEY });
+    registerRouter();
+  });
+
+  it('공급자 1개, 중복, 모르는 값은 INVALID_VALUE이고 offscreen을 띄우지 않는다', async () => {
+    for (const providers of [['claude'], ['claude', 'claude'], ['claude', 'mistral'], 'claude']) {
+      await expect(handlerOf('ai/compare-run')({ noticeId: 'n', scope: 'all', providers }, dash)).rejects.toMatchObject({ code: 'INVALID_VALUE' });
+    }
+    await expect(handlerOf('ai/compare-run')({ noticeId: 'n', scope: 'all', providers: ['claude', 'gemini'] }, tabSender)).rejects.toMatchObject({ code: 'SENDER_FORBIDDEN' });
+    expect(ensureOffscreen).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('2번째 공급자 키가 없으면 라벨 붙은 AI_KEY_MISSING, offscreen 미호출', async () => {
+    const e = await handlerOf('ai/compare-run')({ noticeId: 'n', scope: 'all', providers: ['claude', 'openai'] }, dash).catch((x: Error) => x);
+    expect(e).toMatchObject({ code: 'AI_KEY_MISSING' });
+    expect((e as Error).message.startsWith('OpenAI: ')).toBe(true);
+    expect(ensureOffscreen).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('정상: ai/compare-exec에 공급자별 key, model, sendFullText와 uuid compareId를 넣는다', async () => {
+    vi.mocked(send).mockResolvedValue({ compareId: 'c', runId: 'r1' } as never);
+    const r = await handlerOf('ai/compare-run')({ noticeId: 'n', scope: 'keys', keys: ['credibilityScore'], providers: ['gemini', 'claude'], files: ['a'] }, dash);
+    expect(r).toEqual({ compareId: 'c', runId: 'r1' });
+    const [type, payload, opts] = vi.mocked(send).mock.calls.at(-1)!;
+    expect(type).toBe('ai/compare-exec');
+    expect(payload).toMatchObject({
+      noticeId: 'n', scope: 'keys', keys: ['credibilityScore'], files: ['a'],
+      targets: [
+        { provider: 'gemini', api: { key: GKEY, model: 'gemini-3.5-flash', sendFullText: true } },
+        { provider: 'claude', api: { key: KEY, model: 'claude-sonnet-5-5', sendFullText: true } },
+      ],
+    });
+    expect((payload as { compareId: string }).compareId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(opts).toMatchObject({ target: 'offscreen', timeoutMs: 60_000 });
+  });
+
+  it('offscreen 오류 메시지의 키는 공급자 전부 가린다', async () => {
+    vi.mocked(send).mockRejectedValue(Object.assign(new Error(`boom ${KEY} ${GKEY}`), { code: 'AI_HTTP' }));
+    const e = await handlerOf('ai/compare-run')({ noticeId: 'n', scope: 'all', providers: ['claude', 'gemini'] }, dash).catch((x: Error) => x);
+    expect(e).toMatchObject({ code: 'AI_HTTP' });
+    expect((e as Error).message).not.toContain(KEY);
+    expect((e as Error).message).not.toContain(GKEY);
+  });
+});

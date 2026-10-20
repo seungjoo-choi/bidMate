@@ -22,6 +22,8 @@ export interface SummaryInput {
   notice: Pick<Notice, 'id' | 'folder' | 'attachments' | 'collect'>;
   /** buildAiCards 결과. 없으면 배지 없음 */
   ai?: Partial<Record<ExtractionKey, Pick<AiCardInfo, 'suggestion'>>>;
+  /** 검수 버튼 배지. 공고 상세 검토 탭과 같은 13행 기준(noticeReviewCount). 없으면 문서 항목 수 */
+  reviewCount?: number;
 }
 export interface SummaryView {
   kind: NoticeKind;
@@ -103,7 +105,7 @@ export function summaryView(input: SummaryInput, now: Date = new Date()): Summar
       ] as const).map(([label, key, fmt]): SummaryRow => {
         const verdict = ai?.[key]?.suggestion.verdict;
         return {
-          label, value: dash((fmt as (v: unknown) => string)(ev.items[key].value)), check: ev.items[key].needsCheck,
+          label, value: ev.items[key].notApplicable ? '해당 없음' : dash((fmt as (v: unknown) => string)(ev.items[key].value)), check: ev.items[key].needsCheck,
           ...(verdict === 'new' || verdict === 'differs' ? { ai: true as const } : {}),
         };
       }),
@@ -123,6 +125,6 @@ export function summaryView(input: SummaryInput, now: Date = new Date()): Summar
     status: statusChip(null, notice.collect) ?? { tone: 'ok', text: '수집 완료' },
     key3, basic, evaluation,
     attachments: { title: `첨부 ${saved}/${atts.length}`, files },
-    actions: { noticeId: notice.id, folder: notice.folder, reviewCount: ev.reviewCount },
+    actions: { noticeId: notice.id, folder: notice.folder, reviewCount: input.reviewCount ?? ev.reviewCount },
   };
 }

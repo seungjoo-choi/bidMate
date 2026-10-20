@@ -72,6 +72,7 @@ export function HistoryTab({ notice, index, onNoticeChange }: { notice: Notice; 
       const r = await send('mail/sent-add', { noticeId: id, sentAt: Number.isNaN(t.getTime()) ? undefined : t.toISOString(), ...(note.trim() ? { note: note.trim() } : {}) });
       if (idRef.current !== id) return;
       onNoticeChange?.(r.notice);
+      void send('deadline/refresh', { reason: 'manual' }).catch(() => undefined);
       setFormOpen(false);
       setNote('');
       await loadRecords();

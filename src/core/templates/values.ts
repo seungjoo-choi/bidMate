@@ -1,6 +1,8 @@
 import { formatAmountComma, formatAmountShort, formatDateSlash, formatDateTimeSlash, formatJoint, formatPeriod, formatScore, formatDifferential } from '../model/format';
 import { ALL_FIELD_KEYS, getField } from '../model/notice-fields';
+import { NA_VALUE_TEXT, fieldCoveringKey, isNotApplicableField } from '../extraction/review-count';
 import type { FieldValue } from '../types/common';
+import type { ExtractionKey } from '../types/extraction';
 import type { ResolvedValue } from '../types/mail';
 import type { Notice, NoticeFieldKey } from '../types/notice';
 import type { TemplateFieldKey } from '../types/template';
@@ -8,6 +10,11 @@ import { jointVentureText, resolveComposite } from './composites';
 import { VARIABLE_BY_KEY, type VariableKind } from './variables';
 
 export const NEEDS_REVIEW_TEXT = '확인 필요';
+
+/** 그룹 충족인데 추출 설명(note)이 없을 때 쓰는 사유. */
+export const COVERED_TEXT = '별도 배점 없음';
+
+const NA_KEYS: string[] = ['performanceScore', 'performancePeriod', 'performanceMinAmount', 'performanceCondition', 'credibilityScore', 'managementScore'];
 
 const MISSING: ResolvedValue = { text: NEEDS_REVIEW_TEXT, status: 'missing', raw: null };
 
@@ -79,7 +86,15 @@ export function resolveValue(notice: Notice, fieldKey: TemplateFieldKey, now: Da
     default: {
       if (!(ALL_FIELD_KEYS as string[]).includes(fieldKey)) return { ...MISSING };
       const kind = VARIABLE_BY_KEY.get(fieldKey)?.kind ?? 'text';
-      return fromFieldValue(getField(notice, fieldKey as NoticeFieldKey), kind);
+      const fv = getField(notice, fieldKey as NoticeFieldKey);
+      if (NA_KEYS.includes(fieldKey) && isNotApplicableField(fv)) return { text: NA_VALUE_TEXT, status: 'ok', raw: null };
+      // 대외신인도/경영상태 중 한쪽 배점만 있으면 다른 쪽은 확인 필요 대신 사유를 쓴다(검토 탭의 그룹 충족과 같은 뜻).
+      if (fieldKey === 'credibilityScore' || fieldKey === 'managementScore') {
+        if (fieldCoveringKey(notice.evaluation as Partial<Record<ExtractionKey, FieldValue<unknown>>>, fieldKey)) {
+          return { text: fv?.note?.trim() || COVERED_TEXT, status: 'ok', raw: fv?.value ?? null };
+        }
+      }
+      return fromFieldValue(fv, kind);
     }
   }
 }

@@ -1,15 +1,17 @@
 import type { SettingsSection } from '../../messaging/protocol';
 
-export type Page = 'home' | 'notices' | 'sent' | 'evaluations' | 'recipients' | 'templates' | 'settings' | 'diagnostics';
+export type Page = 'home' | 'notices' | 'mails' | 'evaluations' | 'stats' | 'recipients' | 'templates' | 'settings' | 'diagnostics';
 export const NOTICE_TABS = ['overview', 'files', 'history', 'review'] as const;
 export type NoticeTab = (typeof NOTICE_TABS)[number];
+export type MailsTab = 'drafts' | 'sent';
 export type Route =
   | { page: 'grant' }
   | { page: 'notice'; noticeId: string; tab: NoticeTab; query: Record<string, string> }
   | { page: 'mail'; noticeId: string; query: Record<string, string> }
   | { page: 'template'; id: string }
   | { page: 'evaluation'; noticeId: string }
-  | { page: Page };
+  | { page: 'mails'; tab: MailsTab }
+  | { page: Exclude<Page, 'mails'> };
 
 /** `?` 뒤를 query로 분리한다. */
 function splitQuery(rest: string): { path: string; query: Record<string, string> } {
@@ -28,6 +30,9 @@ export function noticeHash(noticeId: string, tab?: NoticeTab, query?: Record<str
   return qs ? `${path}?${qs}` : path;
 }
 
+/** 메일 관리 해시. 초안 탭이 기본 */
+export const mailsHash = (tab: MailsTab = 'drafts'): string => (tab === 'sent' ? '#/mails/sent' : '#/mails');
+
 /** 평가분석 상세 해시 */
 export const evaluationHash = (noticeId: string): string => `#/evaluations/${encodeURIComponent(noticeId)}`;
 
@@ -35,7 +40,7 @@ export const evaluationHash = (noticeId: string): string => `#/evaluations/${enc
 export function settingsSectionOf(hash: string): SettingsSection | undefined {
   if (!hash.startsWith('#/settings?')) return undefined;
   const s = splitQuery(hash.slice('#/settings'.length)).query.section;
-  return s === 'storage' || s === 'mail-service' || s === 'auto-compose' || s === 'g2b' || s === 'company' || s === 'ai' ? s : undefined;
+  return s === 'storage' || s === 'mail-service' || s === 'auto-compose' || s === 'g2b' || s === 'company' || s === 'performances' || s === 'ai' || s === 'notify' ? s : undefined;
 }
 
 export function parseRoute(hash: string): Route {
@@ -71,7 +76,9 @@ export function parseRoute(hash: string): Route {
   if (hash === '#/evaluations') return { page: 'evaluations' };
   if (hash === '#/home' || hash === '' || hash === '#' || hash === '#/') return { page: 'home' };
   if (hash === '#/notices') return { page: 'notices' };
-  if (hash === '#/sent') return { page: 'sent' };
+  if (hash === '#/mails') return { page: 'mails', tab: 'drafts' };
+  if (hash === '#/mails/sent' || hash === '#/sent') return { page: 'mails', tab: 'sent' };
+  if (hash === '#/stats') return { page: 'stats' };
   if (hash === '#/recipients') return { page: 'recipients' };
   if (hash === '#/templates') return { page: 'templates' };
   if (hash === '#/settings' || hash.startsWith('#/settings?')) return { page: 'settings' };

@@ -4,7 +4,7 @@ import { kindOf } from '../../core/model/ids';
 import { fillMissingFields } from '../../core/model/notice-fields';
 import { computeStatus } from '../../core/extraction/decide';
 import { EXTRACTION_KEYS, type Extraction, type ExtractionStatus } from '../../core/types/extraction';
-import type { IndexEntry, IndexFile } from '../../core/types/index-file';
+import { INDEX_VERSION, type IndexEntry, type IndexFile } from '../../core/types/index-file';
 import type { Notice } from '../../core/types/notice';
 import { readJson, writeJson } from '../file-store/json-store';
 import type { IFileStore } from '../file-store/types';
@@ -12,10 +12,22 @@ import type { IFileStore } from '../file-store/types';
 const INDEX_PATH = 'index.json';
 const NOTICES_DIR = 'notices';
 
+/** 입찰공고 일정 파생값. 사전규격이거나 값이 하나도 없으면 undefined. */
+function scheduleOf(n: Notice): IndexEntry['schedule'] {
+  if (kindOf(n.ref) === 'prespec') return undefined;
+  const schedule: NonNullable<IndexEntry['schedule']> = {};
+  for (const k of ['registrationDeadline', 'proposalEvalAt', 'openingAt'] as const) {
+    const v = n.schedule[k].value;
+    if (typeof v === 'string') schedule[k] = v;
+  }
+  return Object.keys(schedule).length > 0 ? schedule : undefined;
+}
+
 export function entryOf(n: Notice, prev?: IndexEntry, extractionStatus?: ExtractionStatus): IndexEntry {
   const att = n.attachments;
   const str = (v: unknown): string => (typeof v === 'string' ? v : '');
   const isPrespec = kindOf(n.ref) === 'prespec';
+  const schedule = scheduleOf(n);
   return {
     ...(kindOf(n.ref) !== 'bid' ? { kind: kindOf(n.ref) } : {}),
     noticeId: n.id,
@@ -38,6 +50,7 @@ export function entryOf(n: Notice, prev?: IndexEntry, extractionStatus?: Extract
     lastComposedAt: n.mail.lastComposedAt,
     isCorrection: n.isCorrection,
     supersededBy: prev?.supersededBy,
+    ...(schedule ? { schedule } : {}),
   };
 }
 
@@ -52,15 +65,38 @@ export class NoticeStore {
     return this.store.ensureDir('config');
   }
 
-  /** index.json을 읽는다. 없거나 손상되면 notice.json을 스캔해 재생성한다. */
+  /** index.json을 읽는다. 없거나 손상되면 notice.json을 스캔해 재생성하고, 옛 버전이면 항목을 유지한 채 보충한다. */
   async loadIndex(): Promise<IndexFile> {
     try {
       const idx = await readJson<IndexFile>(this.store, INDEX_PATH);
-      if (idx && idx.schemaVersion === 1 && Array.isArray(idx.notices)) return idx;
+      if (idx && idx.schemaVersion === 1 && Array.isArray(idx.notices)) {
+        return idx.indexVersion === INDEX_VERSION ? idx : this.migrateIndex();
+      }
     } catch (e) {
       if ((e as { code?: string }).code === 'NEEDS_FS_PERMISSION' || (e as { code?: string }).code === 'DISK_FULL') throw e;
     }
     return this.rebuildIndex();
+  }
+
+  /** 옛 index에 schedule을 보충한다. 항목은 지우지 않고, notice.json을 못 읽은 항목은 그대로 둔다. */
+  private migrateIndex(): Promise<IndexFile> {
+    return this.store.withLock(INDEX_PATH, async () => {
+      const idx = await this.loadIndexRaw();
+      if (idx.indexVersion === INDEX_VERSION) return idx;
+      for (let i = 0; i < idx.notices.length; i++) {
+        const e = idx.notices[i]!;
+        if (e.kind === 'prespec' || e.schedule) continue;
+        try {
+          const schedule = scheduleOf(fillMissingFields(await readJson<Notice>(this.store, `${e.folder}/notice.json`)));
+          if (schedule) idx.notices[i] = { ...e, schedule };
+        } catch (err) {
+          if ((err as { code?: string }).code === 'NEEDS_FS_PERMISSION') throw err;
+        }
+      }
+      idx.indexVersion = INDEX_VERSION;
+      await writeJson(this.store, INDEX_PATH, idx);
+      return idx;
+    });
   }
 
   async rebuildIndex(): Promise<IndexFile> {
@@ -90,9 +126,9 @@ export class NoticeStore {
     }
   }
 
-  /** notice.json → index.json 순서로 쓴다. raw가 있으면 source/api-<operation>.json도 쓴다. */
-  async saveNotice(n: Notice, raw?: { operation: string; item: unknown }, opts?: { extractionStatus?: ExtractionStatus }): Promise<void> {
-    if (raw) await writeJson(this.store, `${n.folder}/source/api-${raw.operation}.json`, raw.item);
+  /** notice.json → index.json 순서로 쓴다. raw(배열 가능)가 있으면 각각 source/api-<operation>.json도 쓴다. */
+  async saveNotice(n: Notice, raw?: { operation: string; item: unknown } | Array<{ operation: string; item: unknown }>, opts?: { extractionStatus?: ExtractionStatus }): Promise<void> {
+    for (const r of raw === undefined ? [] : Array.isArray(raw) ? raw : [raw]) await writeJson(this.store, `${n.folder}/source/api-${r.operation}.json`, r.item);
     await this.store.withLock(`${n.folder}/notice.json`, () => writeJson(this.store, `${n.folder}/notice.json`, n));
     await this.store.withLock(INDEX_PATH, async () => {
       const idx = await this.loadIndexRaw();
@@ -101,6 +137,7 @@ export class NoticeStore {
       if (i >= 0) idx.notices[i] = entry;
       else idx.notices.push(entry);
       idx.generatedAt = new Date().toISOString();
+      // 옛 버전 index는 버전을 올리지 않는다. 다음 loadIndex의 migrateIndex가 나머지 항목을 보충한다.
       await writeJson(this.store, INDEX_PATH, idx);
     });
   }
@@ -201,6 +238,6 @@ export class NoticeStore {
         } catch { /* 손상된 항목은 건너뜀 */ }
       }
     }
-    return { schemaVersion: 1, generatedAt: new Date().toISOString(), notices };
+    return { schemaVersion: 1, indexVersion: INDEX_VERSION, generatedAt: new Date().toISOString(), notices };
   }
 }

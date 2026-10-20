@@ -8,7 +8,8 @@ import { runRules as runRulesFull, type RuleDocInput } from '../../src/core/extr
 import { validateRule, type RuleSet } from '../../src/core/extraction/rules/schema';
 import { computeStatus, decide, type Candidate } from '../../src/core/extraction/decide';
 import type { DocKind } from '../../src/core/extraction/classify';
-import type { EvidenceRef } from '../../src/core/types/extraction';
+import { reviewCountOf } from '../../src/core/extraction/review-count';
+import type { EvidenceRef, Extraction } from '../../src/core/types/extraction';
 
 const runRules = (i: RuleDocInput[], r: RuleSet) => runRulesFull(i, r).candidates;
 const DIR = 'tests/fixtures/docs/R26BK01722175';
@@ -61,6 +62,11 @@ describe('실제 문서 f1+f3', () => {
     expect(items.differentialScoring.evidence!.line).toBeGreaterThan(0);
   });
 
+  it('실제 문서 f1+f3의 어떤 항목도 reason not_applicable이 아니다', () => {
+    const rules = loadRules();
+    const { items } = decide(runRules([f1, f3], rules), rules);
+    for (const k of Object.keys(items) as Array<keyof typeof items>) expect(items[k].reason).not.toBe('not_applicable');
+  });
   it('evidence 300자/context 400자 이내, 원문(공백 보존)', () => {
     const cands = runRules([f1, f3], loadRules());
     for (const c of cands) {
@@ -315,6 +321,14 @@ describe('perf.period', () => {
     expect(runOne('perf.period', 'ㆍ최근 3년 이내 행사 기획 및 운영실적 작성')).toEqual([]);
     expect(runOne('perf.period', '〔붙임 6〕주요사업실적(최근 5년간) 36')).toEqual([]);
     expect(runOne('perf.period', '❍ 주요사업 실적(최근 3년간)증명서 및 재무상태 관련 자료 1부')).toEqual([]);
+    // 축산물품질평가원 전자출하 제안요청서 실측: 정성평가 제안서 작성 안내
+    expect(runOne('perf.period', '- 본 사업과 관련이 있는 3년 이내의 유사사업실적(개발) 제시')).toEqual([]);
+  });
+  it('하도급 평가의 하수급인 실적 기간은 입찰자 실적 인정기간이 아니다(전자출하 제안요청서)', () => {
+    expect(runOne('perf.period', '하수급인의 최근 3년간 유사사업 수행실적')).toEqual([]);
+    expect(runOne('perf.period', '※ 하도급 계약금액 대비 하수급인 최근 3년간 유사사업 수행실적 합산액의 비율')).toEqual([]);
+    expect(runOne('perf.period', '※ 하도급 계약금액 대비 최근 3년간 유사사업 수행실적 합산액의 비율을 기준으로 평가')).toEqual([]);
+    expect(runOne('perf.period', '최근 3년 이내 유사사업 수행실적을 제시하되 실적증명서로 인정되는 것에 한함').map((x) => x.value)).toEqual(['3년']);
   });
   it('"…실적만 작성"은 인정 범위를 제한하는 기준이다(카라바오 공고문)', () => {
     expect(runOne('perf.period', '① 입찰공고일 기준 5년 이내 국내외 용역 수행 완료 실적 중 유사사업 수행실적만 작성').map((x) => x.value)).toEqual(['5년']);
@@ -443,6 +457,7 @@ describe('규칙 격리', () => {
       proposalPeriod: { value: null, status: 'needs_review', reason: 'not_found' },
       proposalEvalAt: { value: null, status: 'needs_review', reason: 'not_found' },
       quantEvalDoc: { value: null, status: 'needs_review', reason: 'not_found' },
+      quantTable: { value: null, status: 'needs_review', reason: 'not_found' },
     });
   });
 });
@@ -603,5 +618,22 @@ describe('평가방식 원문 규칙(eval.methodDoc)', () => {
   });
   it('"평가방법 : 제안요청서 참조"는 후보 아님', () => {
     expect(evalDoc('평가방법 : 제안요청서 참조')).toMatchObject({ reason: 'not_found' });
+  });
+});
+
+describe('실제 문서: 정량평가 표 해당 없음(R26BK01631407)', () => {
+  it('경영상태 한 행뿐인 정량평가 표 -> 실적/신인도 해당 없음', async () => {
+    const n = '(붙임2) 제안요청서(전자출하시스템 활성화 및 유지보수 사업).hwp';
+    const r = await hwp5Parser.parse({ name: n, bytes: new Uint8Array(readFileSync(`tests/fixtures/docs/R26BK01631407/${n}`)), deadlineAt: Date.now() + 20000 });
+    if (!r.ok) throw new Error(`${r.reason}: ${r.message}`);
+    const rules = loadRules();
+    const { items } = decide(runRules([{ doc: r.doc, attachmentId: 'p', sourceFile: n, docKind: 'rfp', priority: 3 }], rules), rules);
+    expect(items.managementScore).toMatchObject({ value: 10, status: 'verified' });
+    for (const k of ['performanceScore', 'performancePeriod', 'credibilityScore'] as const) {
+      expect(items[k]).toMatchObject({ value: null, status: 'verified', reason: 'not_applicable' });
+    }
+    expect(items.performanceScore.evidence!.location).toMatch(/^표119 /);
+    expect(computeStatus(items, ['parsed'])).toBe('verified');
+    expect(reviewCountOf({ items } as Extraction)).toBe(0);
   });
 });

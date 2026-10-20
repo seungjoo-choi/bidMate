@@ -15,19 +15,23 @@ export interface MenuItem {
  * 분할 버튼: 주 버튼(누르면 바로 실행) + ▾(드롭다운 메뉴).
  * tone='ai'는 AI 전용 연보라 면, 'neutral'은 기본 테두리 버튼. Escape·바깥 클릭·선택 시 닫힌다.
  */
-export function MenuButton({ icon, label, hint, items, onMain, disabled, tone = 'neutral', title, caretLabel = '다른 방법으로 실행' }: {
+export function MenuButton({ icon, label, hint, items, header, onOpenChange, onMain, disabled, tone = 'neutral', title, caretLabel = '다른 방법으로 실행' }: {
   icon?: ReactNode;
   label: ReactNode;
   /** 라벨 뒤 세로선 다음에 붙는 작은 글씨 */
   hint?: ReactNode;
   items: MenuItem[];
+  /** 메뉴 맨 위, 항목 앞에 붙는 영역(예: 공급자 탭). 메뉴 항목이 아니라 화살표 키 이동에서 빠진다 */
+  header?: ReactNode;
+  onOpenChange?: (open: boolean) => void;
   onMain: () => void;
   disabled?: boolean;
   tone?: 'ai' | 'neutral';
   title?: string;
   caretLabel?: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
+  const setOpen = (v: boolean) => { setOpenState(v); onOpenChange?.(v); };
   const rootRef = useRef<HTMLDivElement>(null);
   const caretRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -76,6 +80,7 @@ export function MenuButton({ icon, label, hint, items, onMain, disabled, tone = 
       </button>
       {open && (
         <div ref={menuRef} role="menu" onKeyDown={onMenuKey} className="absolute top-full right-0 z-30 mt-1.5 min-w-70 rounded-card border border-line bg-surface p-1.5 shadow-overlay">
+          {header}
           {items.map((it) => (
             <div key={it.key}>
               {it.dividerBefore && <hr className="mx-1.5 my-1 border-line" />}

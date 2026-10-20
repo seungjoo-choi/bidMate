@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { loadRules } from '../../src/core/extraction/rules/load';
 import { pendingKeys } from '../../src/core/extraction/review-count';
+import { REVIEW_LEAF_KEYS, isExtractionLeaf, pendingLeafKeys } from '../../src/core/extraction/review-rows';
+import { getField } from '../../src/core/model/notice-fields';
 import type { AiReviewFile } from '../../src/core/types/ai';
 import type { Extraction } from '../../src/core/types/extraction';
 import type { Notice } from '../../src/core/types/notice';
@@ -46,14 +48,16 @@ async function review(store: MemoryStore, noticeId: string): Promise<AiReviewFil
 }
 
 describe('prepareRun', () => {
-  it('pending은 확인 필요 키만, all은 7개 전부를 대상으로 한다', async () => {
+  it('pending은 확인 필요 키만, all은 16개 전부를 대상으로 한다', async () => {
     const { store, noticeId, deps } = await setup();
     const x = readJsonFile<Extraction>(store, '/extraction.json');
     const p = await prepareRun(store, { noticeId, scope: 'pending', provider: 'claude', mode: 'api', model: 'm' }, deps);
-    expect(p.run.keys).toEqual(pendingKeys(x.items));
+    const n0 = readJsonFile<Notice>(store, '/notice.json');
+    expect(p.run.keys).toEqual(pendingLeafKeys(n0, x));
+    expect(p.run.keys.some((k) => !isExtractionLeaf(k))).toBe(true);
     expect(p.run).toMatchObject({ status: 'requesting', model: 'm', provider: 'claude', extractionJobId: x.jobId });
     const a = await prepareRun(store, { noticeId, scope: 'all', provider: 'claude', mode: 'api', model: 'm' }, deps);
-    expect(a.run.keys).toHaveLength(7);
+    expect(a.run.keys).toEqual([...REVIEW_LEAF_KEYS]);
     expect(await store.readText(a.run.promptPath)).toContain('신용평가 배점 10점');
     expect((await review(store, noticeId)).runs.map((r) => r.id)).toEqual(['run-2', 'run-1']);
   });
@@ -87,6 +91,13 @@ describe('prepareRun', () => {
     await expect(prepareRun(store, { noticeId, scope: 'all', provider: 'claude', mode: 'api', model: 'm', files: [] }, deps)).rejects.toMatchObject({ code: 'NO_DOCUMENTS' });
     await expect(prepareRun(store, { noticeId, scope: 'all', provider: 'claude', mode: 'api', model: 'm' }, { ...deps, isBusy: () => true })).rejects.toMatchObject({ code: 'JOB_ALREADY_RUNNING' });
     await expect(prepareRun(store, { noticeId: 'none', scope: 'all', provider: 'claude', mode: 'api', model: 'm' }, deps)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+  it('compareId를 주면 run.compareId에 저장하고, 없으면 필드가 없다', async () => {
+    const { store, noticeId, deps } = await setup();
+    const a = await prepareRun(store, { noticeId, scope: 'all', provider: 'claude', mode: 'api', model: 'm', compareId: 'cmp-1' }, deps);
+    expect(a.run.compareId).toBe('cmp-1');
+    const b = await prepareRun(store, { noticeId, scope: 'all', provider: 'claude', mode: 'api', model: 'm' }, deps);
+    expect('compareId' in b.run).toBe(false);
   });
 });
 
@@ -172,7 +183,7 @@ describe('applySuggestion / dismissSuggestion', () => {
     const { store, noticeId, deps, runId } = await done();
     const r = await applySuggestion(store, { noticeId, runId, key: 'credibilityScore' }, deps);
     const item = r.extraction.items.credibilityScore;
-    expect(item.userEdited).toMatchObject({ value: 10, origin: { kind: 'ai', runId, provider: 'claude', model: null, promptVersion: '2.1.0' } });
+    expect(item.userEdited).toMatchObject({ value: 10, origin: { kind: 'ai', runId, provider: 'claude', model: null, promptVersion: '2.2.0' } });
     expect(item.userEdited!.note).toContain('AI 제안 적용(Claude');
     expect(r.notice.evaluation.credibilityScore).toMatchObject({ value: 10, status: 'user_edited', source: { kind: 'user', ref: `ai:${runId}` } });
     expect(r.aiReview.runs[0]!.suggestions.credibilityScore!.appliedAt).toBeTruthy();
@@ -328,6 +339,13 @@ describe('범위 모델(auto·keys)', () => {
     const x = JSON.parse(store.files.get(k) as string) as Extraction;
     for (const item of Object.values(x.items)) { item.status = 'verified'; delete item.userEdited; }
     store.files.set(k, JSON.stringify(x));
+    const nk = fileKey(store, '/notice.json');
+    const n = JSON.parse(store.files.get(nk) as string) as Notice;
+    for (const key of REVIEW_LEAF_KEYS.filter((l) => !isExtractionLeaf(l))) {
+      const f = getField(n, key as never);
+      if (f) Object.assign(f, { value: 'x', status: 'verified' });
+    }
+    store.files.set(nk, JSON.stringify(n));
   };
   const prep = (ctx: Awaited<ReturnType<typeof setup>>, extra: object) =>
     prepareRun(ctx.store, { noticeId: ctx.noticeId, provider: 'claude', mode: 'manual', model: null, ...extra } as never, ctx.deps);
@@ -335,18 +353,18 @@ describe('범위 모델(auto·keys)', () => {
   it('auto: 확인 필요가 있으면 그것만(저장 scope pending)', async () => {
     const ctx = await setup();
     const x = readJsonFile<Extraction>(ctx.store, '/extraction.json');
-    const expected = pendingKeys(x.items);
+    const expected = pendingLeafKeys(readJsonFile<Notice>(ctx.store, '/notice.json'), x);
     expect(expected.length).toBeGreaterThan(0);
     const p = await prep(ctx, { scope: 'auto' });
     expect(p.run.keys).toEqual(expected);
     expect(p.run.scope).toBe('pending');
   });
 
-  it('auto: 확인 필요가 없으면 7개 전체(저장 scope all), 파일에 auto가 저장되지 않는다', async () => {
+  it('auto: 확인 필요가 없으면 16개 전체(저장 scope all), 파일에 auto가 저장되지 않는다', async () => {
     const ctx = await setup();
     allVerified(ctx.store);
     const p = await prep(ctx, { scope: 'auto' });
-    expect(p.run.keys).toHaveLength(7);
+    expect(p.run.keys).toHaveLength(16);
     expect(p.run.scope).toBe('all');
     expect(JSON.stringify(await review(ctx.store, ctx.noticeId))).not.toContain('"scope": "auto"');
     await expect(prep(ctx, { scope: 'pending' })).rejects.toMatchObject({ code: 'NOTHING_TO_REVIEW' });
@@ -377,5 +395,59 @@ describe('범위 모델(auto·keys)', () => {
     const f = await finishRun(ctx.store, { noticeId: ctx.noticeId, runId: p.run.id, responseText: resp(p.run.id, goodItems) }, ctx.deps);
     expect(Object.keys(f.runs[0]!.suggestions)).toEqual(['credibilityScore']);
     expect(f.runs[0]!.rejected).toEqual([expect.objectContaining({ key: 'managementScore', reason: 'unknown_key' })]);
+  });
+});
+
+describe('공고 잎 AI 재검토', () => {
+  const JOINT = '공동수급 : 공동이행방식 허용';
+  async function setupNotice() {
+    const { store } = await runCollect({ files, parsers: fakeParsers(async () => docOf(...LINES, JOINT, '예정가격 결정방법 : 복수예비가격 추첨')) });
+    const noticeId = readJsonFile<Notice>(store, '/notice.json').id;
+    let n = 0;
+    const deps: AiApiDeps = { rules: loadRules(), newId: () => `run-${++n}` };
+    return { store, noticeId, deps };
+  }
+  const jointItems = [{ key: 'jointVentureAllowed', value: '공동이행방식 허용', quote: JOINT, file: '1. 입찰공고문.hwp', page: null, note: '' }];
+
+  it('keys에 postedAt 허용, noticeNo는 AI_BAD_REQUEST', async () => {
+    const { store, noticeId, deps } = await setupNotice();
+    const p = await prepareRun(store, { noticeId, scope: 'keys', keys: ['postedAt'], provider: 'claude', mode: 'manual', model: null }, deps);
+    expect(p.run.keys).toEqual(['postedAt']);
+    await expect(prepareRun(store, { noticeId, scope: 'keys', keys: ['noticeNo' as never], provider: 'claude', mode: 'manual', model: null }, deps)).rejects.toMatchObject({ code: 'AI_BAD_REQUEST' });
+  });
+
+  it('finishRun 기준값은 공고 잎이 notice 값', async () => {
+    const { store, noticeId, deps } = await setupNotice();
+    const notice = readJsonFile<Notice>(store, '/notice.json');
+    const p = await prepareRun(store, { noticeId, scope: 'keys', keys: ['jointVentureAllowed'], provider: 'claude', mode: 'manual', model: null }, deps);
+    const f = await finishRun(store, { noticeId, runId: p.run.id, responseText: resp(p.run.id, jointItems) }, deps);
+    const sg = f.runs[0]!.suggestions.jointVentureAllowed!;
+    expect(sg.baseline).toBe(notice.basic.jointVentureAllowed.value ?? null);
+    expect(sg).toMatchObject({ value: true, raw: '공동이행방식 허용' });
+  });
+
+  it('적용: user_edited, source.ref ai:runId, raw 보존, extraction.items 무변경, appliedAt', async () => {
+    const { store, noticeId, deps } = await setupNotice();
+    const before = JSON.stringify(readJsonFile<Extraction>(store, '/extraction.json').items);
+    const p = await prepareRun(store, { noticeId, scope: 'keys', keys: ['jointVentureAllowed'], provider: 'claude', mode: 'manual', model: null }, deps);
+    await finishRun(store, { noticeId, runId: p.run.id, responseText: resp(p.run.id, jointItems) }, deps);
+    const r = await applySuggestion(store, { noticeId, runId: p.run.id, key: 'jointVentureAllowed' }, deps);
+    expect(r.notice.basic.jointVentureAllowed).toMatchObject({
+      value: true, raw: '공동이행방식 허용', status: 'user_edited', source: { kind: 'user', ref: `ai:${p.run.id}` },
+    });
+    expect(r.notice.basic.jointVentureAllowed.userEdit?.note).toContain('AI 제안 적용(Claude');
+    expect(JSON.stringify(r.extraction.items)).toBe(before);
+    expect(r.aiReview.runs[0]!.suggestions.jointVentureAllowed!.appliedAt).toBeTruthy();
+  });
+
+  it('공고 잎도 추출이 다시 만들어지면 AI_STALE', async () => {
+    const { store, noticeId, deps } = await setupNotice();
+    const p = await prepareRun(store, { noticeId, scope: 'keys', keys: ['jointVentureAllowed'], provider: 'claude', mode: 'manual', model: null }, deps);
+    await finishRun(store, { noticeId, runId: p.run.id, responseText: resp(p.run.id, jointItems) }, deps);
+    const k = fileKey(store, '/extraction.json');
+    const x = JSON.parse(store.files.get(k) as string) as Extraction;
+    x.jobId = 'other-job';
+    store.files.set(k, JSON.stringify(x));
+    await expect(applySuggestion(store, { noticeId, runId: p.run.id, key: 'jointVentureAllowed' }, deps)).rejects.toMatchObject({ code: 'AI_STALE' });
   });
 });

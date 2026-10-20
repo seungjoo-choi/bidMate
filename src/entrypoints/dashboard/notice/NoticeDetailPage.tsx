@@ -1,6 +1,6 @@
 import { ArrowLeft, ClipboardCopy, ExternalLink, Loader2, Mail, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { Extraction, ExtractionKey } from '../../../core/types/extraction';
+import type { Extraction } from '../../../core/types/extraction';
 import { handoffReasonLabel } from '../../../core/model/handoff';
 import type { IndexEntry } from '../../../core/types/index-file';
 import type { HandoffReason } from '../../../core/types/job';
@@ -11,13 +11,18 @@ import { Button, InlineAlert, StatusBadge, useToast } from '../../../ui/componen
 import { useJobs } from '../../../ui/hooks/useJobs';
 import { COLLECT_BADGE, detailTabs, effectiveTab, folderRelPath } from '../../../ui/notice-detail/view';
 import { dDayLevel, formatDDay, formatDateTime } from '../../../ui/review/format';
-import type { EditError } from '../review/ItemCard';
+import type { ReviewLeafKey } from '../../../core/extraction/review-rows';
+import type { EditError } from '../review/ReviewRows';
 import type { NoticeTab } from '../route';
 import { FilesTab } from './FilesTab';
 import { HistoryTab } from './HistoryTab';
 import { OverviewTab } from './OverviewTab';
 import { ReviewTab } from './ReviewTab';
 import { TabBar } from './TabBar';
+import { FollowMenu, useFollowToggle } from '../FollowToggle';
+import { WonCard } from './ResultStrip';
+import { followButton, isWon, type FollowAction } from '../../../ui/notices/result-view';
+import { useSettings } from '../../../ui/hooks/useSettings';
 
 const ACTIVE = new Set(['queued', 'running', 'cancelling']);
 
@@ -31,6 +36,9 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
   const jobs = useJobs();
   const running = jobs.find((j) => j.type !== 'compose' && j.noticeId === noticeId && ACTIVE.has(j.status));
   const wasRunning = useRef(false);
+  const follow = useFollowToggle();
+  const { settings } = useSettings();
+  const notify = settings?.notify ?? { rank: true, final: true };
 
   const load = async () => {
     try {
@@ -68,15 +76,24 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
     }
   };
 
-  const edit = async (key: ExtractionKey, value: unknown | null, note?: string): Promise<EditError | null> => {
+  const edit = async (key: ReviewLeafKey, value: unknown | null, note?: string, raw?: string): Promise<EditError | null> => {
     try {
-      const r = await send('extraction/edit', { noticeId, key, value, note });
+      const r = await send('notice/field-edit', { noticeId, key, value, ...(raw ? { raw } : {}), ...(note ? { note } : {}) });
       setData(r);
       toast.show('저장됨');
       return null;
     } catch (e) {
       return { code: (e as { code?: string }).code, message: e instanceof Error ? e.message : String(e) };
     }
+  };
+
+  const entry = index.find((e) => e.noticeId === noticeId);
+  const applyFollow = async (action: FollowAction) => {
+    if (!entry) return;
+    const r = await follow.apply(noticeId, action, entry.following ?? null);
+    if (r.ok) toast.show(r.body, { mascot: r.mood, title: r.title });
+    else toast.show(r.text);
+    if (r.ok) void load();
   };
 
   const copyPath = async () => {
@@ -108,6 +125,7 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
   const cb = COLLECT_BADGE[notice.collect.status];
   const active = effectiveTab(tab, notice);
   const tabs = detailTabs(notice, extraction);
+  const fb = entry ? followButton(entry) : ({ visible: false } as const);
 
   return (
     <div className="space-y-6">
@@ -115,20 +133,33 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
       <header className="flex items-start justify-between gap-6">
         <div className="min-w-0">
           <h1 className="title-mark text-2xl leading-snug font-bold tracking-tight text-balance">{title}</h1>
-          <div className="mt-2 flex flex-wrap items-baseline gap-x-6 pl-[calc(3px+0.75rem)] gap-y-1 text-sm text-muted">
-            <span className="font-mono text-sm">{noticeNo}</span>
-            {isPrespec && <StatusBadge status="idle">사전규격</StatusBadge>}
-            {notice.isCorrection && <StatusBadge status="warn">정정공고</StatusBadge>}
-            <StatusBadge status={cb.tone}>{cb.text}</StatusBadge>
-            {notice.basic.orderingOrg.value && <span>{notice.basic.orderingOrg.value}</span>}
-            <span>
-              {isPrespec ? '의견등록마감' : '입찰마감'}{' '}<b className="font-mono text-sm font-semibold text-ink tabular-nums">{formatDateTime(closeAt)}</b>
-              {dday && dday !== '마감' && <b className={`ml-2 font-mono text-sm ${dDayLevel(dday) === 'urgent' ? 'text-danger' : dDayLevel(dday) === 'soon' ? 'text-warn' : 'text-muted'}`}>{dday}</b>}
-              {dday === '마감' && <span className="ml-1.5 text-faint">마감됨</span>}
-            </span>
+          <div className="mt-3 space-y-2 pl-[calc(3px+0.75rem)] text-sm">
+            {/* 정보: 이름표 + 값, 가는 세로선으로 구분 */}
+            <dl className="flex flex-wrap items-baseline gap-y-1 [&>div+div]:ml-4 [&>div+div]:border-l [&>div+div]:border-line [&>div+div]:pl-4">
+              {notice.basic.orderingOrg.value && (
+                <div className="flex items-baseline gap-2"><dt className="text-muted">발주기관</dt><dd className="text-ink">{notice.basic.orderingOrg.value}</dd></div>
+              )}
+              <div className="flex items-baseline gap-2"><dt className="text-muted">공고번호</dt><dd className="font-mono text-ink tabular-nums">{noticeNo}</dd></div>
+              <div className="flex items-baseline gap-2">
+                <dt className="text-muted">{isPrespec ? '의견등록마감' : '입찰마감'}</dt>
+                <dd className="flex items-baseline gap-2">
+                  <span className="font-mono text-ink tabular-nums">{formatDateTime(closeAt)}</span>
+                  {dday && dday !== '마감' && <b className={`font-mono ${dDayLevel(dday) === 'urgent' ? 'text-danger' : dDayLevel(dday) === 'soon' ? 'text-warn' : 'text-muted'}`}>{dday}</b>}
+                  {dday === '마감' && <span className="text-faint">마감됨</span>}
+                </dd>
+              </div>
+            </dl>
+            {/* 상태: 같은 모양의 배지만 */}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+              <StatusBadge status={cb.tone}>{cb.text}</StatusBadge>
+              {isPrespec && <StatusBadge status="idle">사전규격</StatusBadge>}
+              {notice.isCorrection && <StatusBadge status="warn">정정공고</StatusBadge>}
+              {entry && isWon(entry) && <StatusBadge status="ok"><span className="font-semibold">낙찰</span></StatusBadge>}
+            </div>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
+          {entry && fb.visible && !fb.disabled && <FollowMenu variant="button" following={entry.following ?? null} rankDone={entry.result?.status === 'ranked'} notify={notify} busy={follow.isBusy(noticeId)} title={title} onSelect={(a) => void applyFollow(a)} />}
           {safeUrl && <Button variant="ghost" icon={<ExternalLink />} onClick={() => window.open(safeUrl, '_blank', 'noopener')}>원문 보기</Button>}
           <Button variant="ghost" icon={<ClipboardCopy />} onClick={() => void copyPath()}>폴더 경로 복사</Button>
           <Button icon={<Mail />} onClick={() => { window.location.hash = `#/mail/${encodeURIComponent(noticeId)}`; }}>
@@ -141,6 +172,7 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
           )}
         </div>
       </header>
+      {entry?.result && isWon(entry) && <WonCard result={entry.result} />}
       {handoff && handoff.length > 0 && (
         <InlineAlert tone="warn">
           <div className="flex items-center justify-between gap-4">
@@ -154,11 +186,11 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
 
       <TabBar noticeId={noticeId} tabs={tabs} active={active} query={handoff && handoff.length > 0 ? { handoff: handoff.join(',') } : undefined} />
 
-      {active === 'overview' && <OverviewTab notice={notice} index={index} />}
+      {active === 'overview' && <OverviewTab notice={notice} index={index} extraction={extraction} />}
       {active === 'files' && <FilesTab notice={notice} extraction={extraction} toast={toast} />}
       {active === 'history' && <HistoryTab notice={notice} index={index} onNoticeChange={(n) => setData((d) => (d ? { ...d, notice: n } : d))} />}
       {active === 'review' && (
-        <ReviewTab noticeId={noticeId} extraction={extraction} busy={busy} onExtract={() => void extract()} onEdit={edit} onApplied={(r) => setData((d) => (d ? { ...d, ...r } : d))} toast={toast} />
+        <ReviewTab noticeId={noticeId} notice={notice} extraction={extraction} busy={busy} onExtract={() => void extract()} onEdit={edit} onApplied={(r) => setData((d) => (d ? { ...d, ...r } : d))} toast={toast} />
       )}
 
       {toast.node}

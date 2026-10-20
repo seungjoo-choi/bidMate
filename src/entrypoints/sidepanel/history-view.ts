@@ -98,7 +98,7 @@ function basicRows(f: BasicFacts, now: Date): FactRow[] {
 function evalRows(f: EvalFacts): FactRow[] {
   const it = f.items;
   const r = (label: string, k: keyof EvalFacts['items'], fmt: (v: any) => string) =>
-    row(label, fmt(it[k].value), it[k].needsCheck ? { check: true } : {});
+    row(label, it[k].notApplicable ? '해당 없음' : fmt(it[k].value), it[k].needsCheck ? { check: true } : {});
   return [
     ...r('실적 점수', 'performanceScore', formatScore),
     ...r('경영상태', 'managementScore', formatScore),

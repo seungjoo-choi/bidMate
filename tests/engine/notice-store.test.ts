@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { emptyNotice } from '../../src/core/model/notice-fields';
-import { NoticeStore } from '../../src/engine/notices/notice-store';
+import { entryOf, NoticeStore } from '../../src/engine/notices/notice-store';
 import { MemoryStore } from '../helpers/memory-store';
 
 const mk = (id: string, title: string, folder: string) => {
@@ -37,5 +37,59 @@ describe('NoticeStore', () => {
     expect(mem.files.has('notices/2026/R1-000_가/notice.json')).toBe(true);
     expect(mem.files.has('notices/2026/R1-000_가/source/api-Servc.json')).toBe(true);
     expect((await ns.loadNotice('R1-000'))?.id).toBe('R1-000');
+  });
+  it('entryOf는 bid에서 schedule을 넣고 없으면 키를 생략한다', () => {
+    const n = mk('R1-000', '가', 'f');
+    expect('schedule' in entryOf(n)).toBe(false);
+    n.schedule.registrationDeadline = { value: '2026-10-20T10:00:00+09:00', status: 'verified' };
+    n.schedule.openingAt = { value: '2026-10-25T10:00:00+09:00', status: 'verified' };
+    expect(entryOf(n).schedule).toEqual({ registrationDeadline: '2026-10-20T10:00:00+09:00', openingAt: '2026-10-25T10:00:00+09:00' });
+  });
+  it('entryOf는 사전규격에 schedule을 넣지 않는다', () => {
+    const n = emptyNotice('P1', { noticeNo: 'P1', origin: 'g2b', kind: 'prespec' }, 'f', '2026-10-17T00:00:00Z');
+    n.schedule.openingAt = { value: '2026-10-25T10:00:00+09:00', status: 'verified' };
+    expect('schedule' in entryOf(n)).toBe(false);
+  });
+  it('indexVersion 없는 index는 loadIndex가 재생성한다', async () => {
+    const mem = new MemoryStore();
+    const ns = new NoticeStore(mem);
+    const n = mk('R1-000', '가', 'notices/2026/R1-000_가');
+    n.schedule.openingAt = { value: '2026-10-25T10:00:00+09:00', status: 'verified' };
+    await ns.saveNotice(n);
+    const raw = JSON.parse(await mem.readText('index.json'));
+    delete raw.indexVersion;
+    delete raw.notices[0].schedule;
+    await mem.writeText('index.json', JSON.stringify(raw));
+    const idx = await ns.loadIndex();
+    expect(idx.indexVersion).toBe(2);
+    expect(idx.notices[0]?.schedule?.openingAt).toBe('2026-10-25T10:00:00+09:00');
+    expect(JSON.parse(await mem.readText('index.json')).indexVersion).toBe(2);
+  });
+  it('옛 index 보충은 notice.json을 못 읽은 항목도 지우지 않는다', async () => {
+    const mem = new MemoryStore();
+    const ns = new NoticeStore(mem);
+    await ns.saveNotice(mk('R1-000', '가', 'notices/2026/R1-000_가'));
+    const raw = JSON.parse(await mem.readText('index.json'));
+    delete raw.indexVersion;
+    raw.notices.push({ ...raw.notices[0], noticeId: 'R2-000', folder: 'notices/2026/R2-000_없음' });
+    await mem.writeText('index.json', JSON.stringify(raw));
+    const idx = await ns.loadIndex();
+    expect(idx.notices.map((e) => e.noticeId)).toEqual(['R1-000', 'R2-000']);
+    expect(idx.indexVersion).toBe(2);
+  });
+  it('옛 버전 index에 saveNotice해도 버전을 올리지 않는다', async () => {
+    const mem = new MemoryStore();
+    const ns = new NoticeStore(mem);
+    await ns.saveNotice(mk('R1-000', '가', 'notices/2026/R1-000_가'));
+    const raw = JSON.parse(await mem.readText('index.json'));
+    delete raw.indexVersion;
+    await mem.writeText('index.json', JSON.stringify(raw));
+    await ns.saveNotice(mk('R2-000', '나', 'notices/2026/R2-000_나'));
+    expect(JSON.parse(await mem.readText('index.json')).indexVersion).toBeUndefined();
+  });
+  it('saveNotice 결과 index에 indexVersion 2', async () => {
+    const mem = new MemoryStore();
+    await new NoticeStore(mem).saveNotice(mk('R1-000', '가', 'notices/2026/R1-000_가'));
+    expect(JSON.parse(await mem.readText('index.json')).indexVersion).toBe(2);
   });
 });

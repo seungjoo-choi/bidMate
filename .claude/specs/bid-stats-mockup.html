@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ko" class="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>실적 화면 목업</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --canvas:#111110; --surface:#1c1c1b; --sunken:#171716; --line:#2e2e2b; --line-strong:#3a3a37;
+    --ink:#e9e9e5; --muted:#9b9b95; --faint:#6a6a65; --primary:#3b6fd6;
+    --ok:#6cc08e; --ok-wash:#18241c; --ok-line:#2b4a36; --info-wash:#1b222d;
+    --bar:#4a4a46; --bar-soft:#34342f;
+    --shadow-card: 0 1px 2px rgb(0 0 0/.45), 0 2px 8px -2px rgb(0 0 0/.35);
+    --shadow-raised: 0 2px 6px rgb(0 0 0/.5), 0 10px 24px -6px rgb(0 0 0/.5);
+  }
+  :root.light {
+    --canvas:#ebebe7; --surface:#fff; --sunken:#efefeb; --line:#e2e2dd; --line-strong:#cfcfc9;
+    --ink:#1b1b19; --muted:#65655f; --faint:#a1a19b; --primary:#2b5cb0;
+    --ok:#2f7a4f; --ok-wash:#ecf5ef; --ok-line:#c4e0cd; --info-wash:#eef2f8;
+    --bar:#cfcfc9; --bar-soft:#e2e2dd;
+    --shadow-card: 0 1px 2px rgb(27 27 25/.06), 0 2px 8px -2px rgb(27 27 25/.09);
+    --shadow-raised: 0 2px 6px rgb(27 27 25/.08), 0 10px 24px -6px rgb(27 27 25/.16);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--canvas); color:var(--ink); font:15px/1.6 'Pretendard Variable', Pretendard, 'Malgun Gothic', sans-serif;
+    letter-spacing:-0.01em; word-break:keep-all; -webkit-font-smoothing:antialiased; }
+  .page { max-width:1180px; margin:0 auto; padding:32px 24px 80px; }
+  h1.sec { font-size:13px; font-weight:600; color:var(--muted); margin:56px 0 6px; }
+  h1.sec:first-of-type { margin-top:8px; }
+  .note { font-size:14px; color:var(--muted); margin:0 0 16px; max-width:780px; }
+  .note b { color:var(--ink); }
+  .mono { font-family:ui-monospace,'SF Mono',Menlo,monospace; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow-card); }
+  .muted { color:var(--muted); } .faint { color:var(--faint); }
+  .toggle-theme { position:fixed; top:14px; right:16px; z-index:50; background:var(--surface); color:var(--ink); border:1px solid var(--line);
+    border-radius:8px; padding:6px 12px; font:inherit; font-size:13px; cursor:pointer; box-shadow:var(--shadow-card); }
+  svg.i { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px; border-radius:8px; font:inherit; font-size:14px; font-weight:500;
+    border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgb(0 0 0/.06); cursor:pointer; white-space:nowrap; }
+
+  /* 머리 */
+  .head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .head h2 { margin:0; font-size:24px; font-weight:700; letter-spacing:-0.02em; }
+  .scope { margin-top:4px; font-size:14px; color:var(--muted); display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .scope .miss { display:inline-flex; align-items:center; gap:6px; color:var(--ink); }
+  .scope .miss::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--faint); }
+  .seg { display:inline-flex; padding:3px; border-radius:8px; background:var(--sunken); border:1px solid var(--line); }
+  .seg button { font:inherit; font-size:14px; border:0; background:transparent; color:var(--muted); padding:4px 14px; border-radius:6px; cursor:pointer; }
+  .seg button.on { background:var(--surface); color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgb(0 0 0/.1); }
+  .seg.sm button { font-size:13px; padding:2px 10px; }
+
+  /* KPI */
+  .kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin-top:24px; }
+  .kpi { padding:18px 20px 16px; }
+  .kpi .lab { font-size:14px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .kpi .val { margin-top:6px; font-size:30px; font-weight:700; line-height:1.15; }
+  .kpi .val small { font-size:16px; font-weight:500; color:var(--muted); margin-left:2px; font-family:inherit; }
+  .kpi .sub { margin-top:6px; font-size:13px; color:var(--muted); }
+  .kpi.win { background:linear-gradient(160deg, var(--ok-wash), var(--surface) 70%); border-color:var(--ok-line); }
+  .kpi.win .val { color:var(--ok); }
+  .meter { margin-top:10px; height:6px; border-radius:99px; background:var(--bar-soft); overflow:hidden; }
+  .meter > i { display:block; height:100%; background:var(--ok); border-radius:99px; }
+
+  /* 섹션 */
+  .sec-card { margin-top:16px; padding:20px 22px; }
+  .sec-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+  .sec-head h3 { margin:0; font-size:16px; font-weight:600; }
+  .legend { display:flex; gap:14px; font-size:13px; color:var(--muted); align-items:center; }
+  .legend span { display:inline-flex; align-items:center; gap:6px; }
+  .legend span::before { content:''; width:10px; height:10px; border-radius:2px; background:var(--c); }
+
+  /* 월별 막대 */
+  .bars { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:8px; height:220px; align-items:end; padding-top:22px;
+    border-bottom:1px solid var(--line); position:relative; }
+  .col { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; position:relative; }
+  .col .nums { font-size:12px; color:var(--muted); margin-bottom:4px; white-space:nowrap; }
+  .col .nums b { color:var(--ok); font-weight:600; }
+  .col .pair { display:flex; gap:3px; align-items:flex-end; width:100%; justify-content:center; height:calc(100% - 22px); }
+  .col .b { width:min(18px,40%); border-radius:3px 3px 0 0; min-height:2px; transition:height .25s ease; }
+  .col .b.all { background:var(--bar); }
+  .col .b.won { background:var(--ok); }
+  .col.empty .nums { color:var(--faint); }
+  .col:hover .b.all { filter:brightness(.92); }
+  .col .tip { display:none; position:absolute; bottom:calc(100% - 10px); left:50%; transform:translateX(-50%); z-index:5;
+    background:var(--ink); color:var(--surface); font-size:12px; padding:6px 10px; border-radius:6px; white-space:nowrap; box-shadow:var(--shadow-raised); }
+  .col:hover .tip { display:block; }
+  .months { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:8px; margin-top:8px; font-size:13px; color:var(--muted); text-align:center; }
+  .months .now { color:var(--ink); font-weight:600; }
+
+  /* 두 열 */
+  .two { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,3fr); gap:16px; margin-top:16px; }
+  .two .sec-card { margin-top:0; }
+  .stack { display:flex; height:28px; border-radius:6px; overflow:hidden; gap:2px; }
+  .stack > i { display:block; height:100%; }
+  .rank-list { margin-top:16px; display:grid; gap:10px; }
+  .rank-row { display:grid; grid-template-columns:12px 1fr auto 44px; align-items:center; gap:10px; font-size:14px; }
+  .rank-row .sw { width:12px; height:12px; border-radius:3px; }
+  .rank-row .cnt { font-weight:600; }
+  .rank-row .pct { color:var(--muted); text-align:right; font-size:13px; }
+  .avg { margin-top:18px; padding-top:14px; border-top:1px solid var(--line); display:flex; justify-content:space-between; font-size:14px; color:var(--muted); }
+  .avg b { color:var(--ink); font-size:16px; }
+
+  /* 기관 표 */
+  .tbl-wrap { max-height:340px; overflow:auto; margin:0 -22px -20px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th { position:sticky; top:0; background:var(--sunken); color:var(--muted); font-weight:500; text-align:right; padding:9px 14px; white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; padding-left:22px; }
+  th:last-child, td:last-child { padding-right:22px; }
+  td { border-top:1px solid var(--line); padding:10px 14px; text-align:right; white-space:nowrap; }
+  td.org { white-space:normal; font-weight:500; max-width:200px; }
+  tr:hover td { background:var(--sunken); }
+  .rate { display:inline-flex; align-items:center; gap:8px; justify-content:flex-end; }
+  .rate .track { width:44px; height:5px; border-radius:99px; background:var(--bar-soft); overflow:hidden; }
+  .rate .track i { display:block; height:100%; background:var(--ok); }
+  td .zero { color:var(--faint); }
+
+  /* 공고목록 띠 */
+  .list-frame { padding:20px 22px; }
+  .tabs { display:flex; gap:28px; border-bottom:1px solid var(--line); margin-top:14px; }
+  .tab { padding-bottom:10px; margin-bottom:-1px; border-bottom:2px solid transparent; color:var(--muted); font-weight:500; font-size:15px; }
+  .tab.on { border-color:var(--ink); color:var(--ink); font-weight:600; }
+  .strip { display:flex; align-items:center; gap:18px; height:44px; padding:0 16px; border-radius:8px; background:var(--sunken); border:1px solid var(--line);
+    font-size:14px; color:var(--muted); text-decoration:none; transition:border-color .15s; }
+  .strip:hover { border-color:var(--line-strong); }
+  .strip .yr { color:var(--ink); font-weight:600; }
+  .strip .it { display:inline-flex; align-items:baseline; gap:6px; }
+  .strip .it b { color:var(--ink); font-size:15px; }
+  .strip .it.win b { color:var(--ok); }
+  .strip .dot { width:3px; height:3px; border-radius:50%; background:var(--faint); }
+  .strip .go { margin-left:auto; color:var(--primary); font-weight:500; display:inline-flex; align-items:center; gap:4px; }
+  .fake-row { height:58px; border-top:1px solid var(--line); display:flex; align-items:center; gap:14px; color:var(--faint); font-size:14px; }
+  .fake-row i { display:block; height:10px; border-radius:4px; background:var(--bar-soft); }
+
+  .empty { text-align:center; padding:48px 20px; }
+  .empty .ic { width:44px; height:44px; border-radius:12px; background:var(--sunken); display:inline-flex; align-items:center; justify-content:center; color:var(--muted); }
+  .empty h4 { margin:12px 0 4px; font-size:16px; }
+  .empty p { margin:0; color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+<button class="toggle-theme" onclick="document.documentElement.classList.toggle('light')">밝게 / 어둡게</button>
+<div class="page">
+
+<h1 class="sec">1. 실적 페이지 (대시보드 메뉴 "실적")</h1>
+<p class="note">위에서부터 <b>기간 선택</b> → <b>핵심 숫자 4개</b> → <b>월별 흐름</b> → <b>순위와 기관</b> 순서로, 위로 갈수록 요약, 아래로 갈수록 자세하게. 색은 두 가지 뜻만 씁니다: <b style="color:var(--ok)">초록 = 낙찰</b>, 회색 = 전체 투찰. 탈락에 빨간색을 쓰지 않아 경고판처럼 보이지 않게 했습니다.</p>
+
+<div class="head">
+  <div>
+    <h2>실적</h2>
+    <div class="scope">앱에 등록해 결과를 추적한 공고만 집계합니다.
+      <span class="miss">투찰금액 미확인 3건</span>
+      <button class="btn" style="height:28px;font-size:13px"><svg class="i" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>결과 다시 확인</button>
+    </div>
+  </div>
+  <div class="seg" id="yearSeg">
+    <button class="on" data-y="2026">2026</button><button data-y="2025">2025</button><button data-y="all">전체</button>
+  </div>
+</div>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="card sec-card">
+  <div class="sec-head">
+    <h3 id="barTitle">월별 투찰과 낙찰</h3>
+    <div style="display:flex;gap:16px;align-items:center">
+      <div class="legend"><span style="--c:var(--bar)">투찰</span><span style="--c:var(--ok)">낙찰</span></div>
+      <div class="seg sm" id="modeSeg"><button class="on" data-m="cnt">건수</button><button data-m="amt">금액</button></div>
+    </div>
+  </div>
+  <div class="bars" id="bars"></div>
+  <div class="months" id="months"></div>
+</div>
+
+<div class="two">
+  <div class="card sec-card">
+    <div class="sec-head"><h3>순위 분포</h3><span class="faint" style="font-size:13px" id="rankBase"></span></div>
+    <div class="stack" id="stack"></div>
+    <div class="rank-list" id="rankList"></div>
+    <div class="avg"><span>평균 참여업체</span><span><b class="mono" id="avgB"></b> 개사</span></div>
+  </div>
+  <div class="card sec-card">
+    <div class="sec-head"><h3>발주기관별</h3><span class="faint" style="font-size:13px" id="orgCount"></span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>기관</th><th>투찰</th><th>낙찰</th><th>낙찰률</th><th>투찰금액</th><th>낙찰금액</th></tr></thead>
+      <tbody id="orgBody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<h1 class="sec">2. 홈 화면: 숫자 카드 5개 바로 아래 한 줄 띠</h1>
+<p class="note">기존 카드는 그대로 두고 아래에 낮은 띠 한 줄만 들어갑니다. 공고목록 위 띠와 같은 컴포넌트입니다.</p>
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin-bottom:16px">
+  <div class="card kpi"><div class="lab">전체 공고</div><div class="val mono">42</div></div>
+  <div class="card kpi"><div class="lab">최근 수집 7일</div><div class="val mono">5</div></div>
+  <div class="card kpi"><div class="lab">메일 작성 대기</div><div class="val mono">2</div></div>
+  <div class="card kpi"><div class="lab">수집 실패</div><div class="val mono">0</div></div>
+  <div class="card kpi"><div class="lab">입찰마감 예정 7일</div><div class="val mono">3</div></div>
+</div>
+<a class="strip" href="#">
+  <span class="yr">2026년</span>
+  <span class="it">투찰 <b class="mono">24</b>건</span><span class="dot"></span>
+  <span class="it win">낙찰 <b class="mono">6</b>건 <span class="mono">(30%)</span></span><span class="dot"></span>
+  <span class="it">낙찰금액 <b class="mono">9.8</b>억원</span>
+  <span class="go">실적 보기<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+</a>
+
+<h1 class="sec">3. 공고목록 위 요약 띠</h1>
+<p class="note">목록 카드와 위계가 섞이지 않게 그림자 없는 낮은 띠로 둡니다. 띠 어디를 눌러도 실적 페이지로 갑니다. 올해 투찰이 0건이면 띠를 숨깁니다.</p>
+<div class="card list-frame">
+  <a class="strip" href="#">
+    <span class="yr">2026년</span>
+    <span class="it">투찰 <b class="mono">24</b>건</span><span class="dot"></span>
+    <span class="it win">낙찰 <b class="mono">6</b>건 <span class="mono">(30%)</span></span><span class="dot"></span>
+    <span class="it">낙찰금액 <b class="mono">9.8</b>억원</span>
+    <span class="go">실적 보기<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+  </a>
+  <div class="tabs"><span class="tab on">전체 42</span><span class="tab">진행 중 11</span><span class="tab">결과 대기 4</span><span class="tab">낙찰 6</span></div>
+  <div class="fake-row"><i style="width:40%"></i><i style="width:14%;margin-left:auto"></i><i style="width:8%"></i></div>
+  <div class="fake-row"><i style="width:52%"></i><i style="width:12%;margin-left:auto"></i><i style="width:8%"></i></div>
+</div>
+
+<h1 class="sec">4. 빈 상태 (그 해 투찰 0건)</h1>
+<div class="card empty">
+  <div class="ic"><svg class="i" viewBox="0 0 24 24" style="width:22px;height:22px"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div>
+  <h4>아직 집계할 결과가 없습니다</h4>
+  <p>공고를 수집하고 개찰이 끝나면 여기에 쌓입니다.</p>
+</div>
+
+</div>
+<script>
+const DATA = {
+  2026: { m:[[2,0,4.1,0],[3,1,6.2,1.9],[1,0,1.5,0],[4,2,7.8,3.4],[2,0,3.0,0],[3,1,5.6,2.1],[0,0,0,0],[2,1,3.3,1.2],[4,1,6.0,1.2],[3,0,3.8,0],[0,0,0,0],[0,0,0,0]],
+          lost:14, pending:4, rk:[6,5,11,2], avg:4.6 },
+  2025: { m:[[1,0,1.2,0],[2,1,3.1,1.5],[3,0,4.4,0],[2,1,2.8,1.4],[1,0,2.0,0],[4,1,6.1,1.6],[2,0,2.2,0],[3,1,5.0,1.7],[2,0,3.3,0],[3,2,4.6,3.0],[2,0,2.5,0],[1,0,1.4,0]],
+          lost:20, pending:0, rk:[6,7,12,1], avg:5.1 },
+};
+const ORGS = [
+  ['한국지능정보사회진흥원',6,2,11.8,3.7],['서울특별시',4,1,6.4,1.2],['행정안전부',3,1,5.2,1.9],['한국교육학술정보원',3,1,4.9,1.4],
+  ['조달청',2,1,3.6,1.6],['경기도',2,0,3.0,0],['국가정보자원관리원',2,0,4.1,0],['부산광역시',1,0,1.2,0],['한국전력공사',1,0,1.3,0],
+];
+let year = '2026', mode = 'cnt';
+const fmt = v => v >= 1 ? v.toFixed(1).replace(/\.0$/,'') + '억원' : Math.round(v*10000).toLocaleString() + '만원';
+function agg(y){
+  if (y !== 'all') return DATA[y];
+  const a = DATA[2026], b = DATA[2025];
+  const yr = d => d.m.reduce((s,r)=>[s[0]+r[0],s[1]+r[1],s[2]+r[2],s[3]+r[3]],[0,0,0,0]);
+  return { years:[['2025',yr(b)],['2026',yr(a)]], lost:a.lost+b.lost, pending:a.pending+b.pending, rk:a.rk.map((v,i)=>v+b.rk[i]), avg:4.8 };
+}
+function render(){
+  const d = agg(year);
+  const rows = year==='all' ? d.years.map(([k,v])=>[k+'년',...v]) : d.m.map((r,i)=>[(i+1)+'월',...r]);
+  const bids = rows.reduce((s,r)=>s+r[1],0), won = rows.reduce((s,r)=>s+r[2],0);
+  const bAmt = rows.reduce((s,r)=>s+r[3],0), wAmt = rows.reduce((s,r)=>s+r[4],0);
+  const rate = Math.round(won/(won+d.lost)*100), amtRate = Math.round(wAmt/bAmt*100);
+  const yl = year==='all' ? '전체' : year+'년';
+  document.getElementById('kpis').innerHTML = `
+    <div class="card kpi"><div class="lab">투찰</div><div class="val mono">${bids}<small>건</small></div><div class="sub">진행 중 ${d.pending}건 포함</div></div>
+    <div class="card kpi win"><div class="lab">낙찰</div><div class="val mono">${won}<small>건</small></div><div class="sub">탈락 ${d.lost}건</div></div>
+    <div class="card kpi"><div class="lab">낙찰률</div><div class="val mono">${rate}<small>%</small></div><div class="meter"><i style="width:${rate}%"></i></div><div class="sub">결과 확정 ${won+d.lost}건 기준</div></div>
+    <div class="card kpi"><div class="lab">낙찰금액</div><div class="val mono">${fmt(wAmt).replace(/(억원|만원)$/,'<small>$1</small>')}</div><div class="meter"><i style="width:${amtRate}%"></i></div><div class="sub">투찰 ${fmt(bAmt)}의 ${amtRate}%</div></div>`;
+  const n = rows.length, now = year==='2026' ? 9 : -1;
+  const max = Math.max(...rows.map(r=> mode==='cnt' ? r[1] : r[3]), 1);
+  document.getElementById('barTitle').textContent = (year==='all'?'연도별':'월별') + ' 투찰과 낙찰';
+  const cols = 'repeat('+n+',minmax(0,1fr))';
+  const bars = document.getElementById('bars'), months = document.getElementById('months');
+  bars.style.gridTemplateColumns = months.style.gridTemplateColumns = cols;
+  bars.innerHTML = rows.map(r=>{
+    const a = mode==='cnt'?r[1]:r[3], w = mode==='cnt'?r[2]:r[4];
+    const lab = mode==='cnt' ? `${a}<span class="faint">/</span><b>${w}</b>` : (a ? `${a.toFixed(1)}<span class="faint">/</span><b>${w.toFixed(1)}</b>` : '0');
+    return `<div class="col ${a?'':'empty'}"><div class="nums mono">${a?lab:''}</div>
+      <div class="pair"><i class="b all" style="height:${a/max*100}%"></i><i class="b won" style="height:${w/max*100}%"></i></div>
+      <div class="tip">${year==='all'?'':year+'년 '}${r[0]}, 투찰 ${r[1]}건 ${r[3]?fmt(r[3]):''}, 낙찰 ${r[2]}건 ${r[4]?fmt(r[4]):''}</div></div>`;
+  }).join('');
+  months.innerHTML = rows.map((r,i)=>`<span class="${i===now?'now':''}">${r[0]}</span>`).join('');
+  const rk = d.rk, tot = rk.reduce((a,b)=>a+b,0);
+  const C = ['var(--ok)','var(--bar)','var(--bar-soft)','transparent'];
+  document.getElementById('rankBase').textContent = '투찰 '+tot+'건';
+  document.getElementById('stack').innerHTML = rk.map((v,i)=>`<i style="width:${v/tot*100}%;background:${C[i]};${i===3?'border:1px dashed var(--line-strong)':''}"></i>`).join('');
+  document.getElementById('rankList').innerHTML = ['1위','2위','3위 이하','순위 없음'].map((l,i)=>`
+    <div class="rank-row"><span class="sw" style="background:${C[i]};${i===3?'border:1px dashed var(--line-strong)':''}"></span><span>${l}</span>
+    <span class="cnt mono">${rk[i]}건</span><span class="pct mono">${Math.round(rk[i]/tot*100)}%</span></div>`).join('');
+  document.getElementById('avgB').textContent = d.avg.toFixed(1);
+  document.getElementById('orgCount').textContent = ORGS.length+'개 기관';
+  document.getElementById('orgBody').innerHTML = ORGS.map(o=>{
+    const r = Math.round(o[2]/o[1]*100);
+    return `<tr><td class="org">${o[0]}</td><td class="mono">${o[1]}</td><td class="mono">${o[2]?`<b style="color:var(--ok)">${o[2]}</b>`:'<span class="zero">0</span>'}</td>
+      <td><span class="rate"><span class="mono">${r}%</span><span class="track"><i style="width:${r}%"></i></span></span></td>
+      <td class="mono">${(o[3]*1e8).toLocaleString()}</td><td class="mono">${o[4]?(o[4]*1e8).toLocaleString():'<span class="zero">0</span>'}</td></tr>`;
+  }).join('');
+}
+document.getElementById('yearSeg').onclick = e => { if(!e.target.dataset.y) return; year = e.target.dataset.y;
+  [...e.currentTarget.children].forEach(b=>b.classList.toggle('on', b===e.target)); render(); };
+document.getElementById('modeSeg').onclick = e => { if(!e.target.dataset.m) return; mode = e.target.dataset.m;
+  [...e.currentTarget.children].forEach(b=>b.classList.toggle('on', b===e.target)); render(); };
+render();
+</script>
+</body>
+</html>

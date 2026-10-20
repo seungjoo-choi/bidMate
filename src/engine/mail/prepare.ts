@@ -156,7 +156,8 @@ export async function prepareMail(
       if (a.status === 'saved' && a.savedName) {
         if (excludedIds.has(a.id)) { excludedAttachments.push({ attachmentId: a.id, name: a.originalName }); continue; }
         attachments.push({ attachmentId: a.id, name: a.originalName, path: `${notice.folder}/attachments/${a.savedName}`, size: a.savedSize ?? a.expectedSize ?? 0 });
-      } else {
+      } else if (!a.duplicateOf) {
+        // 입찰공고 첨부와 중복이라 일부러 지운 사전규격 행은 누락이 아니다.
         skippedAttachments.push({ attachmentId: a.id, name: a.originalName, status: a.status });
       }
     }

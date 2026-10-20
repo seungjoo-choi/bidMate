@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mergeDocumentLayer, mergeFields, type MergeLayer } from '../../src/core/model/merge';
+import { isNotApplicableField, NA_NOTE } from '../../src/core/extraction/review-count';
 import { emptyNotice } from '../../src/core/model/notice-fields';
 import type { FieldValue } from '../../src/core/types/common';
 import type { Notice } from '../../src/core/types/notice';
@@ -175,5 +176,30 @@ describe('mergeDocumentLayer', () => {
     const again = mergeDocumentLayer(ex, {}).credibilityScore;
     expect(again).toMatchObject({ value: 4, status: 'needs_review', note: '최근 수집에서 값이 확인되지 않음' });
     expect(again?.candidates).toBeUndefined();
+  });
+});
+
+describe('mergeFields: 해당 없음', () => {
+  const na: FieldValue<unknown> = {
+    value: null, status: 'verified', note: NA_NOTE, raw: '정량평가 10점: 경영상태 10',
+    source: { kind: 'document', ref: 'a#표1', fetchedAt: 't' },
+  };
+  const doc = (fields: MergeLayer['fields']): MergeLayer => ({ kinds: ['document'], fields });
+
+  it('해당 없음만 있으면 verified와 NA_NOTE 그대로', () => {
+    const out = mergeFields(null, [doc({ performanceScore: na })]);
+    expect(out.performanceScore?.status).toBe('verified');
+    expect(out.performanceScore?.note).toBe(NA_NOTE);
+    expect(isNotApplicableField(out.performanceScore)).toBe(true);
+  });
+  it('이전 값이 숫자여도 해당 없음이 반환된다', () => {
+    const ex = notice();
+    ex.evaluation.performanceScore = { value: 6, status: 'verified', source: { kind: 'document', ref: 'old', fetchedAt: 't' } };
+    const out = mergeFields(ex, [doc({ performanceScore: na })]);
+    expect(isNotApplicableField(out.performanceScore)).toBe(true);
+  });
+  it('상위 레이어에 값이 있으면 그 값이 이긴다', () => {
+    const out = mergeFields(null, [api({ performanceScore: fv(6) }), doc({ performanceScore: na })]);
+    expect(out.performanceScore?.value).toBe(6);
   });
 });

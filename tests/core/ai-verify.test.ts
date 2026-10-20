@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { quoteStrength, locateQuote, normalizeForMatch, verifySuggestions, type VerifyContext, type VerifyFile } from '../../src/core/ai/verify';
+import { quoteStrength, locateQuote, normalizeForMatch, sameValue, verifySuggestions, type VerifyContext, type VerifyFile } from '../../src/core/ai/verify';
 import { coerceValue, type RawAiItem } from '../../src/core/ai/parse';
 
 const TEXT = [
@@ -359,5 +359,44 @@ describe('variants 검증', () => {
     expect(rel({ credibilityScore: [10] }, multi)).toBe('in_candidates');
     const two = [item({ key: 'credibilityScore', value: 10, quote: '신용평가 | 10점', variants: [v('A', 15, '경영상태 평가 15점')] })];
     expect(rel({ credibilityScore: [10] }, two)).toBe('differs_from_candidates');
+  });
+});
+
+describe('공고 잎 검증', () => {
+  const NT = '[p 1]\n공고일시 : 2026. 10. 21.(수) 14:00\n공동수급 : 공동이행방식 허용\n예정가격 결정방법 : 복수예비가격 추첨';
+  const nf: VerifyFile = { attachmentId: 'n1', sourceFile: 'n1.hwp', name: '공고문.hwp', docKind: 'notice', text: NT };
+  const nctx = (over: Partial<VerifyContext> = {}): VerifyContext => ctx({ files: [nf], requested: ['postedAt', 'jointVentureAllowed', 'priceMethod'], ...over });
+
+  it('datetime: 기준값과 분 단위가 같으면 match, raw 기록', () => {
+    const r = verifySuggestions([item({ key: 'postedAt', value: '2026. 10. 21.(수) 14:00', quote: '공고일시 : 2026. 10. 21.(수) 14:00' })], nctx({ baseline: { postedAt: '2026-10-21T14:00:30+09:00' } }));
+    expect(r.rejected).toEqual([]);
+    expect(r.suggestions.postedAt).toMatchObject({ value: '2026-10-21T14:00:00+09:00', verdict: 'match', valueInQuote: true, raw: '2026. 10. 21.(수) 14:00' });
+  });
+  it('text: 포함 관계면 match', () => {
+    const r = verifySuggestions([item({ key: 'priceMethod', value: '복수예비가격 추첨', quote: '예정가격 결정방법 : 복수예비가격 추첨' })], nctx({ baseline: { priceMethod: '복수예비가격' } }));
+    expect(r.suggestions.priceMethod).toMatchObject({ verdict: 'match' });
+  });
+  it('joint: 값 true, raw 기록, 인용에 관련 단어가 없으면 거부', () => {
+    const ok = verifySuggestions([item({ key: 'jointVentureAllowed', value: '공동이행방식 허용', quote: '공동수급 : 공동이행방식 허용' })], nctx());
+    expect(ok.suggestions.jointVentureAllowed).toMatchObject({ value: true, raw: '공동이행방식 허용', verdict: 'new', valueInQuote: true });
+    const bad = verifySuggestions([item({ key: 'jointVentureAllowed', value: '공동이행방식 허용', quote: '예정가격 결정방법 : 복수예비가격 추첨' })], nctx());
+    expect(bad.suggestions.jointVentureAllowed).toMatchObject({ valueInQuote: false });
+    const short = verifySuggestions([item({ key: 'jointVentureAllowed', value: '공동이행방식 허용', quote: '복수예비가격' })], nctx());
+    expect(short.suggestions).toEqual({});
+    expect(short.rejected[0]).toMatchObject({ key: 'jointVentureAllowed' });
+  });
+});
+
+describe('sameValue', () => {
+  it('문서 잎 text(실적 인정조건)는 포함 관계여도 다른 값', () => {
+    expect(sameValue('performanceCondition', '유사 용역 실적', '유사 용역 실적(하도급 제외)')).toBe(false);
+    expect(sameValue('performanceCondition', '유사 용역 실적', '유사용역 실적')).toBe(true);
+  });
+  it('공고 잎 text는 포함 관계(짧은 쪽 4자 이상)면 같은 값', () => {
+    expect(sameValue('evalMethod', '협상에 의한 계약', '협상에 의한 계약(기술 80, 가격 20)')).toBe(true);
+    expect(sameValue('evalMethod', '협상', '협상에 의한 계약')).toBe(false);
+  });
+  it('datetime은 분 단위 같으면 같은 값', () => {
+    expect(sameValue('postedAt', '2026-10-21T14:00:00+09:00', '2026-10-21T05:00:30Z')).toBe(true);
   });
 });

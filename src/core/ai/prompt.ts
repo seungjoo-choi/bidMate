@@ -1,7 +1,7 @@
-import { EXTRACTION_KEYS, type ExtractionKey } from '../types/extraction';
+import { AI_KEYS, type AiKey } from './keys';
 import { AI_SCHEMA_TAG, type OutputSpec } from '../types/ai';
 
-export const PROMPT_VERSION = '2.1.0';
+export const PROMPT_VERSION = '2.2.0';
 export const REQUEST_MARKER = (runId: string): string => `<<BIDMATE-AI-REQUEST runId=${runId} v=${PROMPT_VERSION}>>`;
 
 /** 프롬프트 본문에 허용하는 숫자 토큰(예시 숫자 + 형식 안내용 상수). 린트 테스트가 이 목록 밖의 숫자를 막는다. */
@@ -16,9 +16,76 @@ export interface ItemDef {
   multi?: string;
 }
 
+const DATETIME_FORMAT = 'string (문서 원문 표기 그대로. 연, 월, 일과 시:분이 모두 있어야 값이며 시각이 없으면 value null, note에 날짜만 적음)';
 const NUMBER_FORMAT = 'number (문서에 적힌 점수, (가상 예) 11)';
 
-export const ITEM_DEFS: Record<ExtractionKey, ItemDef> = {
+export const ITEM_DEFS: Record<AiKey, ItemDef> = {
+  postedAt: {
+    name: '공고게시일시',
+    concept: '이 공고가 나라장터에 게시(공고)된 날짜와 시각.',
+    howToSpot: ['공고문 머리나 꼬리의 공고일자 줄', '입찰공고 알림 표의 공고일시 칸'],
+    notThis: ['입찰서 또는 제안서 마감일시', '사전규격 공개일', '정정공고의 원 공고일(정정공고문이면 정정 게시일)'],
+    valueFormat: DATETIME_FORMAT,
+  },
+  registrationDeadline: {
+    name: '입찰참가자격등록 마감',
+    concept: '입찰참가자격 등록(또는 입찰참가등록)의 마감 일시.',
+    howToSpot: ['입찰참가자격 등록 마감 또는 입찰참가등록 기한 줄', '일정 표의 해당 행'],
+    notThis: ['입찰서 또는 제안서 제출 마감', '현장설명회 일시', '공동수급협정서 제출 기한(별도 항목이면 note)'],
+    valueFormat: DATETIME_FORMAT,
+  },
+  proposalPeriod: {
+    name: '제안서 제출기간',
+    concept: '제안서(협상 공고에서는 입찰서) 전자 제출의 시작과 마감.',
+    howToSpot: ['제안서 제출기간, 입찰서 제출기간, 제안서 접수 줄과 일정 표 행'],
+    notThis: ['제안서 평가일', '입찰참가자격 등록 마감', '제출 장소나 방법 설명'],
+    valueFormat: 'string (원문 표기 그대로, 시작과 끝을 한 줄로)',
+    multi: '제출 서류 종류별로 기간이 다르면 조건별 값을 모두 적습니다.',
+  },
+  proposalEvalAt: {
+    name: '제안서 평가일자',
+    concept: '제안서 평가(기술평가, 발표평가)가 열리는 일시.',
+    howToSpot: ['제안서 평가 일시, 평가위원회 개최, 발표평가 일정 줄'],
+    notThis: ['제안서 제출 마감', '가격 개찰 일시', '별도 통보 예정 문구(이 경우 value null, note에 그 문구)'],
+    valueFormat: DATETIME_FORMAT,
+  },
+  budgetAmount: {
+    name: '사업금액',
+    concept: '이 사업의 사업금액(사업예산, 총 사업비, 배정예산). 부가세 포함 여부가 적혀 있으면 note에 적습니다.',
+    howToSpot: ['사업금액, 사업예산, 총사업비, 배정예산 줄 또는 표 칸'],
+    notThis: ['추정가격(부가세 제외 기준금액, 별도면 note)', '기초금액, 예정가격', '실적 인정 하한 금액', '연차별 분할 금액(총액이 있으면 총액)'],
+    valueFormat: 'string (문서 원문 표기 그대로, (가상 예) 300백만원)',
+    multi: '연차별 또는 사업 유형별로 금액이 나뉘고 총액이 없으면 조건별 값을 적고 value는 null입니다.',
+  },
+  projectPeriod: {
+    name: '사업기간',
+    concept: '이 사업(용역)의 수행 기간. 계약일부터 몇 개월 또는 시작일과 종료일.',
+    howToSpot: ['사업기간, 용역기간, 계약기간, 과업기간, 수행기간 줄과 표 칸'],
+    notThis: ['단계별 또는 연차별 기간(총 기간이 있으면 총 기간)', '실적 인정기간', '제안서 제출기간', '하자보수 또는 유지보수 기간'],
+    valueFormat: 'string (원문 표기 그대로)',
+    multi: '단계별로 나뉘고 총 기간이 없으면 조건별 값을 적습니다.',
+  },
+  evalMethod: {
+    name: '평가방법',
+    concept: '낙찰자 결정 방법(협상에 의한 계약, 적격심사, 최저가 등)과 기술 가격 배분 비율이 있으면 그 비율.',
+    howToSpot: ['낙찰자 결정 방법, 계약 방법, 평가 방법 줄', '기술평가와 가격평가 배점 비율 문구'],
+    notThis: ['평가항목별 배점표 내용', '차등점수제 적용 여부(별도 항목)', '입찰 방식(전자입찰 등 절차 설명)'],
+    valueFormat: 'string (원문 표기 그대로, 한 줄로)',
+  },
+  jointVentureAllowed: {
+    name: '공동수급 여부',
+    concept: '공동수급(공동계약, 컨소시엄)을 허용하는지와 허용 시 방식(공동이행, 분담이행, 주계약자).',
+    howToSpot: ['공동수급 허용, 공동계약 가능, 공동수급체 구성 가능 또는 불가 줄', '공동계약 방식 칸'],
+    notThis: ['하도급 허용 여부', '공동수급협정서 제출 절차 설명', '지역업체 참여 의무 비율만 있는 문장(방식 명시 없으면 note)'],
+    valueFormat: 'string (문서 원문 표기 그대로. (가상 예) 공동이행방식 허용, 공동수급 불가)',
+  },
+  priceMethod: {
+    name: '예가방법',
+    concept: '예정가격 결정 방법(복수예비가격 추첨, 단일 예가, 예가 미작성 등).',
+    howToSpot: ['예정가격 결정 방법, 예가 산정, 복수예비가격 줄'],
+    notThis: ['낙찰 하한율 숫자만 있는 문장(note에)', '가격평가 산식', '기초금액 자체'],
+    valueFormat: 'string (원문 표기 그대로)',
+  },
   credibilityScore: {
     name: '대외신인도 배점',
     concept: '정량평가의 "신인도/대외신인도" 항목(제재·표창·고용·사회적기업 등 가점·감점 성격 항목 묶음)의 만점 또는 합계 한도.',
@@ -90,16 +157,19 @@ export const ITEM_DEFS: Record<ExtractionKey, ItemDef> = {
   },
 };
 
-const KIND_OF: Record<ExtractionKey, 'number' | 'string' | 'boolean'> = {
+const KIND_OF: Record<AiKey, 'number' | 'string' | 'boolean'> = {
+  postedAt: 'string', registrationDeadline: 'string', proposalPeriod: 'string', proposalEvalAt: 'string', budgetAmount: 'string',
+  projectPeriod: 'string', evalMethod: 'string', jointVentureAllowed: 'string', priceMethod: 'string',
   credibilityScore: 'number', managementScore: 'number', performanceScore: 'number',
   performancePeriod: 'string', performanceMinAmount: 'string', performanceCondition: 'string', differentialScoring: 'boolean',
 };
 
 export const SYSTEM_PROMPT = [
-  '당신은 공공입찰 첨부문서에서 정량평가 기준을 찾는 검토자입니다.',
+  '당신은 공공입찰 공고문과 첨부문서에서 공고 핵심 정보(일정, 금액, 계약 조건)와 정량평가 기준을 찾는 검토자입니다.',
   '[근거]',
   '- 아래 문서에 적힌 내용만 근거로 삼습니다. 추정·계산·외부 지식·일반 관행은 쓰지 않습니다.',
   '- 금액·기간·점수는 문서에 적힌 표기 그대로 씁니다. (가상 예) "3.7억원", "7년". 단위 환산·합산·반올림을 하지 않습니다.',
+  '- 날짜는 연, 월, 일, 시:분이 문서에 적힌 표기 그대로 씁니다. 다른 형식으로 바꾸지 않습니다.',
   '[표와 주석]',
   '- 표 셀의 *, **, ※, 주1) 같은 기호는 같은 기호로 시작하는 줄에 정의가 있습니다. 그 줄은 표 바로 아래에도, 같은 문서의 서식·별지 쪽에 멀리 떨어져 있을 수도 있습니다. 표 안 값과 그 주석은 한 몸으로 읽습니다.',
   '- 같은 용어라도 역할이 다를 수 있습니다. 각 항목의 "정의"에 적힌 역할(배점, 하한, 분모, 기간 등)에 맞는 값만 고릅니다. 표 안에 있다는 이유로 고르지 않습니다.',
@@ -114,12 +184,12 @@ export const SYSTEM_PROMPT = [
   '[형식] 요청 항목 외 key 금지, JSON 외 텍스트 금지, schema·runId는 요청 값 그대로.',
 ].join('\n');
 
-export interface BuildPromptInput { runId: string; keys: ExtractionKey[]; excerpt: string; skippedFiles: string[] }
+export interface BuildPromptInput { runId: string; keys: AiKey[]; excerpt: string; skippedFiles: string[] }
 export interface BuiltPrompt { system: string; user: string; manualText: string; spec: OutputSpec }
 
 /** 기존 추출값·후보·수정값·확인 필요 사유는 입력으로 받지도 넣지도 않는다(앵커링 방지). */
 export function buildPrompt(input: BuildPromptInput): BuiltPrompt {
-  const keys = EXTRACTION_KEYS.filter((k) => input.keys.includes(k));
+  const keys = AI_KEYS.filter((k) => input.keys.includes(k));
   const spec: OutputSpec = { tag: AI_SCHEMA_TAG, runId: input.runId, keys, kindOf: { ...KIND_OF } };
   const defs = keys.map((k) => {
     const d = ITEM_DEFS[k];

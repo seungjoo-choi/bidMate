@@ -2,10 +2,10 @@ import type { DocModel } from '../../core/doc/model';
 import { renderText } from '../../core/doc/render-text';
 import { classifyName, extOf, planFiles, twinKey, type DocKind } from '../../core/extraction/classify';
 import { computeStatus, decide } from '../../core/extraction/decide';
-import { conflictCountOf, reviewCountOf } from '../../core/extraction/review-count';
+import { conflictCountOf, isNotApplicable, NA_NOTE, reviewCountOf } from '../../core/extraction/review-count';
 import { runRules, type RuleDocInput } from '../../core/extraction/run-rules';
 import type { RuleSet } from '../../core/extraction/rules/schema';
-import { toIsoKst } from '../../core/model/dates';
+import { docDateToIso } from '../../core/model/dates';
 import { mergeDocumentLayer } from '../../core/model/merge';
 import { EVALUATION_KEYS, getField, setFields, type FieldMap } from '../../core/model/notice-fields';
 import { sanitizeSegment } from '../../core/model/sanitize';
@@ -72,6 +72,9 @@ const docSourceOf = (ev: EvidenceRef, fetchedAt: string): FieldSourceDoc =>
 function fieldOfItem(it: ExtractedItem<unknown>, fetchedAt: string, conflictValue: boolean): FieldValue<unknown> | undefined {
   const ev = it.evidence;
   const source = ev ? docSourceOf(ev, fetchedAt) : undefined;
+  if (isNotApplicable(it) && source) {
+    return { value: null, status: 'verified', note: NA_NOTE, raw: it.raw, source } as FieldValue<unknown>;
+  }
   if (it.status === 'verified' && it.value !== null && source) {
     return { value: it.value, raw: it.raw, status: 'verified', source } as FieldValue<unknown>;
   }
@@ -110,20 +113,7 @@ export function docFieldsOf(items: Record<ExtractionKey, ExtractedItem<unknown>>
 /** 문서 전용 보충 필드(공고정보/API에 없을 때만 문서 값으로 채운다). */
 export const DOC_FILL_KEYS = ['projectPeriod', 'evalMethodDoc', 'proposalPeriod', 'proposalEvalAt', 'quantEvalDoc'] as const;
 
-/** 문서 날짜 원문("2024/10/08 09:30", "2024. 3. 7.(목) 13:30")을 ISO(+09:00)로 바꾼다. 날짜·시각 중 하나라도 없거나 범위를 벗어나면 null. */
-export function docDateToIso(text: string): string | null {
-  const t = text;
-  const d = /(\d{4})\s*(?:[./-]\s*(\d{1,2})\s*[./-]|년\s*(\d{1,2})\s*월)\s*(\d{1,2})/.exec(t);
-  if (!d) return null;
-  const tm = /(\d{1,2}):(\d{2})/.exec(t.slice(d.index + d[0].length));
-  if (!tm) return null;
-  const [y, mo, da, hh, mi] = [Number(d[1]), Number(d[2] ?? d[3]), Number(d[4]), Number(tm[1]), Number(tm[2])];
-  if (hh > 23 || mi > 59) return null;
-  const cal = new Date(Date.UTC(y, mo - 1, da)); // 실제 달력 날짜만(2024.02.30 거부)
-  if (cal.getUTCFullYear() !== y || cal.getUTCMonth() !== mo - 1 || cal.getUTCDate() !== da) return null;
-  const p2 = (n: number) => String(n).padStart(2, '0');
-  return toIsoKst(`${d[1]}-${p2(mo)}-${p2(da)} ${p2(hh)}:${p2(mi)}`);
-}
+export { docDateToIso } from '../../core/model/dates';
 
 /** 같은 줄 규칙(extras[key])에 값이 없을 때만 쓰는 보조 규칙의 extras 키. 같은 target으로 두면 표기가 다른 같은 값끼리 충돌해 verified가 needs_review가 된다. */
 const DOC_FALLBACK: Partial<Record<(typeof DOC_FILL_KEYS)[number], string[]>> = { projectPeriod: ['projectPeriodParen', 'projectPeriodCell'] };
@@ -180,7 +170,8 @@ export async function runExtractStep(job: Job, notice: Notice, prior: Extraction
   for (const p of plan) p.attachment.docKind = p.classified.kind;
 
   const order = plan.map((p, i) => ({ p, i })).filter((x) => x.p.action === 'parse')
-    .sort((a, b) => a.p.classified.priority - b.p.classified.priority || a.i - b.i);
+    .sort((a, b) => a.p.classified.priority - b.p.classified.priority
+      || (a.p.attachment.origin === 'prespec' ? 1 : 0) - (b.p.attachment.origin === 'prespec' ? 1 : 0) || a.i - b.i);
   const total = order.length;
   const slots: ExtractionFile[][] = plan.map(() => []);
   const inputs: RuleDocInput[] = [];
@@ -202,6 +193,7 @@ export async function runExtractStep(job: Job, notice: Notice, prior: Extraction
   };
   const baseRow = (att: Attachment, kind: DocKind, priority: number, innerPath?: string): ExtractionFile => {
     const r: ExtractionFile = { attachmentId: att.id, name: att.originalName, docKind: kind, priority, status: 'skipped' };
+    if (att.origin) r.origin = att.origin;
     if (innerPath !== undefined) r.innerPath = innerPath;
     return r;
   };
@@ -244,7 +236,7 @@ export async function runExtractStep(job: Job, notice: Notice, prior: Extraction
     await deps.store.writeText(path, capText(renderText(doc)));
     row.textPath = path;
     for (const w of doc.warnings) warnings.push(`${innerPath ?? name}: ${w}`);
-    inputs.push({ doc, attachmentId: att.id, sourceFile: innerPath ? `${att.originalName}/${innerPath}` : att.originalName, docKind: kind, priority });
+    inputs.push({ doc, attachmentId: att.id, sourceFile: innerPath ? `${att.originalName}/${innerPath}` : att.originalName, docKind: kind, priority, ...(att.origin ? { origin: att.origin } : {}) });
     return row;
   };
 

@@ -15,9 +15,9 @@ describe('outputSchema', () => {
     expect(s.required).toEqual(['schema', 'runId', 'items']);
   });
 
-  it('여러 키면 키마다 alternative, 순서는 정의 순서', () => {
+  it('여러 키면 키마다 alternative, 순서는 AI_KEYS 순서', () => {
     const { spec } = buildPrompt({ runId: 'r1', keys: ['differentialScoring', 'credibilityScore'], excerpt: 'x', skippedFiles: [] });
     const alts = (outputSchema(spec) as Schema).properties.items.items.anyOf;
-    expect(alts.map((a) => a.properties.key.enum[0])).toEqual(['credibilityScore', 'differentialScoring']);
+    expect(alts.map((a) => a.properties.key.enum[0])).toEqual(['differentialScoring', 'credibilityScore']);
   });
 });

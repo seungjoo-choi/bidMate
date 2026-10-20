@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { evaluationHash, noticeHash, parseRoute } from '../../src/entrypoints/dashboard/route';
 
 describe('parseRoute 발송 이력', () => {
-  it('#/sent', () => {
-    expect(parseRoute('#/sent')).toEqual({ page: 'sent' });
+  it('#/mails', () => {
+    expect(parseRoute('#/mails')).toEqual({ page: 'mails', tab: 'drafts' });
+    expect(parseRoute('#/mails/sent')).toEqual({ page: 'mails', tab: 'sent' });
+    expect(parseRoute('#/sent')).toEqual({ page: 'mails', tab: 'sent' });
   });
 });
 

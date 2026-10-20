@@ -1,6 +1,7 @@
 import { VARIABLE_BY_KEY } from '../templates/variables';
 import type { FieldValue } from '../types/common';
-import type { ExtractionKey } from '../types/extraction';
+import { EXTRACTION_KEYS, type ExtractionKey } from '../types/extraction';
+import type { ReviewLeafKey } from '../extraction/review-rows';
 import type { NoticeFieldKey } from '../types/notice';
 import type { TemplateFieldKey } from '../types/template';
 import { parseAmount } from './amount';
@@ -75,7 +76,7 @@ export function editTargetsOf(fieldKey: TemplateFieldKey): EditableKey[] {
 }
 
 /** 사용자 수정을 적용한다. before에는 수정 직전 자동값(이미 수정된 값이면 최초 자동값)을 userEdit 없이 보존한다. */
-export function applyUserEdit<T>(prev: FieldValue<T> | undefined, value: T, nowIso: string, o: { raw?: string; note?: string }): FieldValue<T> {
+export function applyUserEdit<T>(prev: FieldValue<T> | undefined, value: T, nowIso: string, o: { raw?: string; note?: string; source?: { ref: string; evidence?: string; page?: number } }): FieldValue<T> {
   const base = prev?.status === 'user_edited' ? prev.userEdit?.before : prev;
   let before: FieldValue<T> | undefined;
   if (base) {
@@ -86,9 +87,18 @@ export function applyUserEdit<T>(prev: FieldValue<T> | undefined, value: T, nowI
     value,
     ...(o.raw && { raw: o.raw }),
     status: 'user_edited',
-    source: { kind: 'user', ref: 'dashboard', fetchedAt: nowIso },
+    source: {
+      kind: 'user', ref: o.source?.ref ?? 'dashboard',
+      ...(o.source?.evidence ? { evidence: o.source.evidence } : {}), ...(o.source?.page !== undefined ? { page: o.source.page } : {}),
+      fetchedAt: nowIso,
+    },
     userEdit: { editedAt: nowIso, ...(o.note && { note: o.note }), ...(before && { before }) },
   };
+}
+
+/** 검토 탭 잎 값 검사. 문서 잎은 VALUE_CHECK, 공고 잎은 validateFieldValue. */
+export function checkLeafValue(key: ReviewLeafKey, v: unknown): boolean {
+  return (EXTRACTION_KEYS as string[]).includes(key) ? VALUE_CHECK[key as ExtractionKey](v) : validateFieldValue(key, v).ok;
 }
 
 /** 수정 전 자동값으로 되돌린다. 수정되지 않은 값은 그대로, before가 없으면 undefined. */

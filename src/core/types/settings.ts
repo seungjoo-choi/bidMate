@@ -41,6 +41,8 @@ export interface Settings {
   company: { bizNo: string; name?: string };
   /** AI 재검토. models는 공급자별 모델 ID(비면 실행 시 AI_MODEL_MISSING) */
   ai: { provider: AiProvider; mode: AiMode; models: Partial<Record<AiProvider, string>>; /** API 실행 시 문서 전문 전송(기본 true). false면 관련 구간만 */ sendFullText: boolean };
+  /** 결과 추적 알림(팔로우 공고). expired도 final에 묶는다 */
+  notify: { rank: boolean; final: boolean; deadline: boolean };
   updatedAt: ISODate;
 }
 // chrome.storage.local: { secrets: { g2bServiceKey?: string; ai?: Partial<Record<AiProvider, string>> }, settingsCache: Settings, registeredSites }

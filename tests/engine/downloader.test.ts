@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { downloadAttachments } from '../../src/engine/downloader/downloader';
+import { downloadAttachments, fileNameFromDisposition } from '../../src/engine/downloader/downloader';
 import type { Attachment } from '../../src/core/types/notice';
 import { MemoryStore } from '../helpers/memory-store';
 
@@ -121,5 +121,52 @@ describe('downloadAttachments', () => {
       ...base(store, f), sleep: (ms) => new Promise((r) => setTimeout(r, ms)), settings: { ...settings, backoffMs: 5000 }, signal: ac.signal,
     })).rejects.toMatchObject({ code: 'JOB_CANCELLED' });
     expect(Date.now() - started).toBeLessThan(1000);
+  });
+});
+
+describe('fileNameFromDisposition', () => {
+  it('실측 헤더(퍼센트 인코딩, 따옴표 없음, 끝 세미콜론)', () => {
+    const h = 'attachment;filename=2.%20%EC%84%B8%EB%B6%80%EC%82%AC%EC%96%91%EC%84%9C%28%EC%BD%94%ED%8A%B8%EB%94%94%EB%B6%80%EC%95%84%EB%A5%B4_Project%20Contractor%202%29.hwp;';
+    expect(fileNameFromDisposition(h)).toBe('2. 세부사양서(코트디부아르_Project Contractor 2).hwp');
+  });
+  it("filename*=UTF-8''가 filename=보다 우선", () => {
+    expect(fileNameFromDisposition("attachment; filename=\"old.hwp\"; filename*=UTF-8''%EC%83%88.hwp")).toBe('새.hwp');
+  });
+  it('따옴표로 감싼 filename', () => {
+    expect(fileNameFromDisposition('attachment; filename="a b.pdf"')).toBe('a b.pdf');
+  });
+  it('null/빈 값이면 null', () => {
+    expect(fileNameFromDisposition(null)).toBeNull();
+    expect(fileNameFromDisposition('')).toBeNull();
+  });
+  it('잘못된 퍼센트 인코딩은 원문', () => {
+    expect(fileNameFromDisposition('attachment;filename=100%.hwp;')).toBe('100%.hwp');
+  });
+});
+
+describe('downloadAttachments: 서버 파일명 반영', () => {
+  const disp = (name: string) => ({ 'content-disposition': `attachment;filename=${encodeURIComponent(name)};` });
+  it('확장자 없는 이름은 헤더 파일명으로 originalName/savedName/저장 경로가 바뀐다', async () => {
+    const store = new MemoryStore();
+    const [a] = await downloadAttachments([att('규격서1')], base(store, async () => body('hello', disp('제안요청서.hwp'))));
+    expect(a).toMatchObject({ originalName: '제안요청서.hwp', savedName: '제안요청서.hwp', status: 'saved' });
+    expect(store.files.has('notices/2026/n/attachments/제안요청서.hwp')).toBe(true);
+    expect(store.files.has('notices/2026/n/attachments/규격서1')).toBe(false);
+  });
+  it('확장자 있는 이름은 헤더가 있어도 유지', async () => {
+    const store = new MemoryStore();
+    const [a] = await downloadAttachments([att('a.pdf')], base(store, async () => body('hello', disp('other.hwp'))));
+    expect(a).toMatchObject({ originalName: 'a.pdf', savedName: 'a.pdf' });
+    expect(store.files.has('notices/2026/n/attachments/a.pdf')).toBe(true);
+  });
+  it('새 이름이 기존 savedName과 겹치면 uniqueName으로 구분', async () => {
+    const store = new MemoryStore();
+    const out = await downloadAttachments(
+      [att('a.hwp', { id: '1' }), att('규격서1', { id: '2' })],
+      { ...base(store, async () => body('z', disp('a.hwp'))), settings: { ...settings, concurrency: 1 } },
+    );
+    expect(out.map((x) => x.savedName)).toEqual(['a.hwp', 'a (2).hwp']);
+    expect(out[1]?.originalName).toBe('a.hwp');
+    expect(store.files.has('notices/2026/n/attachments/a (2).hwp')).toBe(true);
   });
 });

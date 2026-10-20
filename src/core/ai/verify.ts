@@ -1,9 +1,11 @@
 import type { DocKind } from '../extraction/classify';
 import { valueKey } from '../extraction/decide';
 import { compact, parseKoreanAmount } from '../extraction/normalize';
-import { VALUE_CHECK } from '../model/field-edit';
-import { EXTRACTION_KEYS, type EvidenceRef, type ExtractionKey } from '../types/extraction';
+import { REVIEW_KIND, type ReviewValueKind } from '../extraction/review-rows';
+import { checkLeafValue } from '../model/field-edit';
+import type { EvidenceRef } from '../types/extraction';
 import type { AiProvider, AiRejectReason, AiRuleRelation, AiRun, AiSuggestion, AiVariant } from '../types/ai';
+import { isAiKey, isDocAiKey, type AiKey } from './keys';
 import { DOT_THOUSANDS, coerceValue, type RawAiItem } from './parse';
 
 export interface VerifyFile { attachmentId: string; sourceFile: string; name: string; docKind: DocKind; text: string }
@@ -11,15 +13,15 @@ export interface VerifyContext {
   /** 파일 전체 텍스트(발췌가 아님) */
   files: VerifyFile[];
   /** 비교 당시 효과값(userEdited.value 우선, 없으면 item.value) */
-  baseline: Partial<Record<ExtractionKey, unknown | null>>;
-  requested: ExtractionKey[];
+  baseline: Partial<Record<AiKey, unknown | null>>;
+  requested: AiKey[];
   /** 규칙 후보 값(extraction.items[key].candidates[].value + value). 주면 ruleRelation을 계산한다 */
-  candidates?: Partial<Record<ExtractionKey, unknown[]>>;
+  candidates?: Partial<Record<AiKey, unknown[]>>;
   provider: AiProvider;
   promptVersion: string;
 }
 export interface VerifyResult {
-  suggestions: Partial<Record<ExtractionKey, AiSuggestion>>;
+  suggestions: Partial<Record<AiKey, AiSuggestion>>;
   rejected: AiRun['rejected'];
   warnings: string[];
 }
@@ -204,8 +206,27 @@ function findFileByName(files: VerifyFile[], name: string): VerifyFile | undefin
   return files.find((f) => f.name === name) ?? files.find((f) => f.name.endsWith(name));
 }
 
+/**
+ * 같은 값인가. datetime은 시각 동일(분 단위), 공고 잎 text는 compact 후 한쪽이 다른 쪽을 포함(짧은 쪽 4자 이상), 그 외는 valueKey 비교.
+ * 포함 규칙은 API 값과 문서 표기의 형식 차이를 흡수하려는 것이라 공고 잎에만 쓴다. 문서 잎(실적 인정조건 등)은
+ * "유사 용역 실적"과 "유사 용역 실적(하도급 제외)"처럼 덧붙은 말이 뜻을 바꾸므로 기존 valueKey 비교를 유지한다.
+ */
+export function sameValue(key: AiKey, a: unknown, b: unknown): boolean {
+  const kind: ReviewValueKind = REVIEW_KIND[key];
+  if (kind === 'datetime' && typeof a === 'string' && typeof b === 'string') {
+    const [x, y] = [Date.parse(a), Date.parse(b)];
+    return !Number.isNaN(x) && Math.floor(x / 60_000) === Math.floor(y / 60_000);
+  }
+  if (kind === 'text' && !isDocAiKey(key) && typeof a === 'string' && typeof b === 'string') {
+    const [x, y] = [compact(a), compact(b)];
+    const [short, long] = x.length <= y.length ? [x, y] : [y, x];
+    return short.length >= 4 && long.includes(short);
+  }
+  return valueKey(a) === valueKey(b);
+}
+
 /** quote는 AI가 준 문장이 아니라 매치된 원문 줄 텍스트다. */
-function valueInQuote(key: ExtractionKey, value: unknown, quote: string): boolean {
+function valueInQuote(key: AiKey, value: unknown, quote: string): boolean {
   switch (key) {
     case 'credibilityScore': case 'managementScore': case 'performanceScore':
       return (quote.match(/\d+(?:\.\d+)?/g) ?? []).some((n) => parseFloat(n) === value);
@@ -213,10 +234,20 @@ function valueInQuote(key: ExtractionKey, value: unknown, quote: string): boolea
       const y = parseInt(String(value), 10);
       return (quote.match(/\d+/g) ?? []).some((n) => parseInt(n, 10) === y);
     }
-    case 'performanceMinAmount':
-      return amountsIn(quote).includes(value as number);
     case 'differentialScoring':
       return /적용|차등/.test(quote);
+    default:
+  }
+  switch (REVIEW_KIND[key]) {
+    case 'datetime': {
+      if (typeof value !== 'string' || value.length < 16) return false;
+      const [hh, mm] = [value.slice(11, 13), value.slice(14, 16)];
+      return quote.includes(value.slice(0, 4)) && new RegExp(`(?<!\\d)0?${Number(hh)}:${mm}`).test(quote);
+    }
+    case 'amount':
+      return amountsIn(quote).includes(value as number);
+    case 'joint':
+      return /공동|단독|컨소시엄|분담|이행/.test(quote);
     default:
       return true;
   }
@@ -226,13 +257,14 @@ type Checked =
   | { ok: true; value: unknown; found: { file: VerifyFile; loc: QuoteLocation }; inSource: boolean }
   | { ok: false; reason: AiRejectReason };
 
-const RAW_KEYS = new Set<ExtractionKey>(['performanceMinAmount', 'performancePeriod']);
+/** 환산 전 원문 표기(raw)를 남기는 값 종류 */
+const RAW_KINDS = new Set<ReviewValueKind>(['amount', 'period', 'datetime', 'joint']);
 
 export function verifySuggestions(raw: RawAiItem[], ctx: VerifyContext): VerifyResult {
   const suggestions: VerifyResult['suggestions'] = {};
   const rejected: VerifyResult['rejected'] = [];
   const warnings: string[] = [];
-  const seen = new Set<ExtractionKey>();
+  const seen = new Set<AiKey>();
   type Src = { key: string; value?: unknown; quote: string; file: string | null };
   const reject = (it: Src, reason: AiRejectReason): void => {
     rejected.push({
@@ -259,9 +291,9 @@ export function verifySuggestions(raw: RawAiItem[], ctx: VerifyContext): VerifyR
     return null;
   };
   /** 값(null 아님)과 인용 검증. 본 항목과 variant가 같은 규칙을 쓴다. */
-  const check = (key: ExtractionKey, it: Src): Checked => {
+  const check = (key: AiKey, it: Src): Checked => {
     const c = coerceValue(key, it.value);
-    if (!c.ok || !VALUE_CHECK[key](c.value) || it.quote.length > QUOTE_MAX) return { ok: false, reason: 'bad_format' };
+    if (!c.ok || !checkLeafValue(key, c.value) || it.quote.length > QUOTE_MAX) return { ok: false, reason: 'bad_format' };
     if (!it.quote.trim()) return { ok: false, reason: 'quote_missing' };
     const strength = quoteStrength(it.quote);
     if (strength === 'too_short') return { ok: false, reason: 'quote_too_short' };
@@ -269,7 +301,7 @@ export function verifySuggestions(raw: RawAiItem[], ctx: VerifyContext): VerifyR
     if (!found) return { ok: false, reason: strength === 'exact_only' ? 'quote_too_short' : 'quote_not_found' };
     let value = c.value;
     let inSource = valueInQuote(key, value, found.loc.sourceText);
-    if (key === 'performanceMinAmount' && !inSource) {
+    if (REVIEW_KIND[key] === 'amount' && !inSource) {
       // AI가 억·만 단위를 원으로 바꾸며 자릿수만 틀린 경우(10의 거듭제곱 배): 인용 원문에 단위 금액이 하나뿐이면 그 값을 쓴다.
       const amounts = amountsIn(found.loc.sourceText, true);
       if (amounts.length === 1 && typeof value === 'number' && powerOf10Apart(amounts[0]!, value)) {
@@ -292,17 +324,17 @@ export function verifySuggestions(raw: RawAiItem[], ctx: VerifyContext): VerifyR
     if (found.loc.partial) warnings.push(`${it.key}: 인용문이 길어 앞 ${PARTIAL_LEN}자만 일치했습니다(partial).`);
     return { ok: true, value, found, inSource };
   };
-  const relationOf = (key: ExtractionKey, values: unknown[]): AiRuleRelation | undefined => {
+  const relationOf = (key: AiKey, values: unknown[]): AiRuleRelation | undefined => {
     if (!ctx.candidates || !values.length) return undefined;
     const cands = ctx.candidates[key] ?? [];
     if (!cands.length) return 'no_candidates';
-    const set = new Set(cands.map(valueKey));
-    return values.every((v) => set.has(valueKey(v))) ? 'in_candidates' : 'differs_from_candidates';
+    return values.every((v) => cands.some((c) => sameValue(key, c, v))) ? 'in_candidates' : 'differs_from_candidates';
   };
 
   for (const it of raw) {
-    if (!(EXTRACTION_KEYS as string[]).includes(it.key) || !ctx.requested.includes(it.key as ExtractionKey)) { reject(it, 'unknown_key'); continue; }
-    const key = it.key as ExtractionKey;
+    if (!isAiKey(it.key) || !ctx.requested.includes(it.key)) { reject(it, 'unknown_key'); continue; }
+    const key = it.key;
+    const kind = REVIEW_KIND[key];
     if (seen.has(key)) { warnings.push(`${key}: 같은 항목이 여러 번 와서 첫 번째만 썼습니다.`); continue; }
     seen.add(key); // 첫 항목이 거부돼도 두 번째는 쓰지 않는다
     const baseline = ctx.baseline[key] ?? null;
@@ -313,7 +345,7 @@ export function verifySuggestions(raw: RawAiItem[], ctx: VerifyContext): VerifyR
       evidence: quote.slice(0, 300), ruleId: `ai:${ctx.provider}:${ctx.promptVersion}`, docKind: found.file.docKind,
     });
     /** 금액·기간은 AI가 원문 표기 문자열로 주므로(v2) 환산 전 표기를 함께 남긴다. */
-    const rawOf = (v: unknown): { raw?: string } => (RAW_KEYS.has(key) && typeof v === 'string' && v.trim() ? { raw: v.trim().slice(0, 40) } : {});
+    const rawOf = (v: unknown): { raw?: string } => (RAW_KINDS.has(kind) && typeof v === 'string' && v.trim() ? { raw: v.trim().slice(0, 40) } : {});
     /** 조건별 값 검증. 실패한 variant는 `<key>#<i>`로 rejected에 기록하고 제외한다. */
     const runVariants = (): AiVariant[] => {
       const out: AiVariant[] = [];
@@ -353,7 +385,7 @@ export function verifySuggestions(raw: RawAiItem[], ctx: VerifyContext): VerifyR
     suggestions[key] = {
       key, value, ...rawOf(it.value), quote: it.quote, ...(it.note ? { note: it.note } : {}),
       file: found.file.name, page: found.loc.page, evidence: evidenceOf(found, it.quote),
-      verdict: baseline === null ? 'new' : valueKey(baseline) === valueKey(value) ? 'match' : 'differs',
+      verdict: baseline === null ? 'new' : sameValue(key, baseline, value) ? 'match' : 'differs',
       baseline, valueInQuote: inSource,
       ...(variants.length ? { variants } : {}),
       ...(relation ? { ruleRelation: relation } : {}),

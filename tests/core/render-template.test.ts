@@ -292,6 +292,13 @@ describe('합성 항목과 공동수급 표기', () => {
     return n;
   };
 
+  it('단독 대외신인도 변수: 경영상태로 충족이면 확인 필요 대신 사유', () => {
+    const note = { ...fv<number>(null, 'needs_review', '가점 6항목, 감점 2항목'), note: '가감점 표만 있음, 합계 배점 없음' };
+    expect(resolveValue(withEval({ managementScore: fv(4), credibilityScore: note }), 'credibilityScore')).toMatchObject({ text: '가감점 표만 있음, 합계 배점 없음', status: 'ok' });
+    expect(resolveValue(withEval({ managementScore: fv(4) }), 'credibilityScore')).toMatchObject({ text: '별도 배점 없음', status: 'ok' });
+    expect(resolveValue(withEval({ credibilityScore: note }), 'credibilityScore').status).toBe('missing');
+    expect(resolveValue(withEval({ managementScore: fv(4, 'needs_review') }), 'credibilityScore').status).toBe('missing');
+  });
   it('경영상태만 있으면 경영상태 조각만', () => {
     expect(resolveValue(withEval({ managementScore: fv(4) }), 'credibilityEval')).toMatchObject({ text: '경영상태(신용평가등급) 평가(4점)', status: 'ok' });
   });

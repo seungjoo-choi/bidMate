@@ -190,6 +190,7 @@ export function mapApiItem(item: ApiItem, fetchedAt: string): FieldMap {
   set('bidStartAt', date('bidBeginDt'));
   set('bidCloseAt', date('bidClseDt'));
   set('openingAt', date('opengDt'));
+  set('specRegNo', text('bfSpecRgstNo'));   // 연계 사전규격 등록번호(사전규격 응답 매핑은 bid에 적용하지 않는다)
 
   // 예산: 추정가격 + VAT, 없으면 배정예산
   const price = toNumber(str(item, 'presmptPrce'));

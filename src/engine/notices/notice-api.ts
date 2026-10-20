@@ -9,6 +9,8 @@ import type { Notice, NoticeFieldKey } from '../../core/types/notice';
 import { missing, type FieldValue } from '../../core/types/common';
 import { docFieldsOf } from '../extraction/extract-step';
 import { PROVIDERS } from '../ai/providers';
+import type { FollowFile, FollowTarget, ResultEntry, ResultFile } from '../../core/types/result';
+import { readJson } from '../file-store/json-store';
 import type { IFileStore } from '../file-store/types';
 import { editLockKey, NoticeStore } from './notice-store';
 
@@ -16,7 +18,38 @@ const TEXT_MAX_BYTES = 2 * 1024 * 1024;
 const err = (code: string, message: string) => Object.assign(new Error(message), { code });
 
 export async function listNotices(store: IFileStore): Promise<IndexEntry[]> {
-  return (await new NoticeStore(store).loadIndex()).notices;
+  const notices = (await new NoticeStore(store).loadIndex()).notices;
+  // 결과 추적 파생 필드. 파일이 없거나 손상이면 무시한다(권한 오류도 목록은 보여 준다).
+  let results: Record<string, ResultEntry> = {};
+  let follows: Record<string, unknown> = {};
+  try { results = (await readJson<ResultFile>(store, 'results.json')).entries ?? {}; } catch { /* 없음/손상 */ }
+  try { follows = (await readJson<FollowFile>(store, 'follows.json')).entries ?? {}; } catch { /* 없음/손상 */ }
+  if (typeof results !== 'object' || results === null) results = {};
+  if (typeof follows !== 'object' || follows === null) follows = {};
+  return notices.map((n) => {
+    const r = Object.hasOwn(results, n.noticeId) ? results[n.noticeId] : undefined;
+    const following: FollowTarget | undefined = Object.hasOwn(follows, n.noticeId)
+      ? ((follows[n.noticeId] as { target?: unknown } | null)?.target === 'rank' ? 'rank' : 'final')
+      : undefined;
+    if (!r?.status && !following) return n;
+    return {
+      ...n,
+      ...(r?.status ? {
+        result: {
+          status: r.status,
+          ...(r.rank !== undefined ? { rank: r.rank } : {}),
+          ...(r.bidders !== undefined ? { bidders: r.bidders } : {}),
+          ...(r.awardedAt ? { awardedAt: r.awardedAt } : {}),
+          ...(r.amount !== undefined ? { amount: r.amount } : {}),
+          ...(r.startAt ? { startAt: r.startAt } : {}),
+          ...(r.nextCheckAt ? { nextCheckAt: r.nextCheckAt } : {}),
+          ...(r.ourAmount !== undefined ? { ourAmount: r.ourAmount } : {}),
+          ...(r.openingAt ? { openingAt: r.openingAt } : {}),
+        },
+      } : {}),
+      ...(following ? { following } : {}),
+    };
+  });
 }
 
 export async function getNotice(store: IFileStore, noticeId: string): Promise<{ notice: Notice; extraction: Extraction | null } | null> {
@@ -91,14 +124,14 @@ export async function editExtraction(
 export async function editNoticeField(
   store: IFileStore,
   p: { noticeId: string; key: string; value: unknown | null; raw?: string; note?: string },
-  opts: { now?: () => Date; isBusy?: (noticeId: string) => boolean } = {},
+  opts: { now?: () => Date; isBusy?: (noticeId: string) => boolean; source?: { ref: string; evidence?: string; page?: number } } = {},
 ): Promise<{ notice: Notice; extraction: Extraction | null }> {
   const key = p.key;
   if (!isEditableKey(key)) throw err('INVALID_KEY', `수정할 수 없는 항목: ${String(key)}`);
   if (p.note !== undefined && (typeof p.note !== 'string' || p.note.length > 500)) throw err('INVALID_VALUE', 'note는 500자 이하 문자열이어야 합니다.');
   const ns = new NoticeStore(store);
   if ((EXTRACTION_KEYS as string[]).includes(key)) {
-    if (await ns.loadExtraction(p.noticeId)) return editExtraction(store, { ...p, key: key as ExtractionKey }, opts);
+    if (await ns.loadExtraction(p.noticeId)) return editExtraction(store, { ...p, key: key as ExtractionKey }, { ...opts, source: opts.source });
   }
   const value = p.value === undefined ? null : p.value;
   if (value !== null) {
@@ -121,7 +154,7 @@ export async function editNoticeField(
     const nowIso = now().toISOString();
     let next: FieldValue<unknown> | undefined;
     if (value !== null) {
-      next = applyUserEdit(prev, value, nowIso, { raw: p.raw, note: p.note });
+      next = applyUserEdit(prev, value, nowIso, { raw: p.raw, note: p.note, ...(opts.source ? { source: opts.source } : {}) });
     } else {
       if (prev?.status !== 'user_edited') return { notice, extraction };
       next = revertUserEdit(prev);

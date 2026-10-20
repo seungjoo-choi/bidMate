@@ -13,6 +13,11 @@ const input = (n: Notice, ev = evalFacts(n, null)) => ({ facts: basicFacts(n), e
 const job = (status: Job['status']): Job => ({ id: 'j', type: 'collect', status, steps: [], attempt: 1, createdAt: '', updatedAt: '', errors: [] });
 
 describe('summaryView', () => {
+  it('검수 배지는 넘겨준 13행 기준 숫자를 쓰고, 없으면 문서 항목 수', () => {
+    const n = mk();
+    expect(summaryView({ ...input(n), reviewCount: 9 }, now).actions.reviewCount).toBe(9);
+    expect(summaryView(input(n), now).actions.reviewCount).toBe(0);
+  });
   it('bid: 핵심 3칸 순서와 입찰마감만 강조, null은 -', () => {
     const n = mk();
     n.schedule.bidCloseAt = { value: close, status: 'verified' };

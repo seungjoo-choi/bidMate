@@ -281,3 +281,107 @@ describe('AiRunner 전문 전송 실패', () => {
     expect(runs[0]).toMatchObject({ status: 'failed' });
   });
 });
+
+describe('AiRunner 비교 실행', () => {
+  const okFor = (url: string, text: string): Response => {
+    if (url.includes('openai')) return new Response(JSON.stringify({ choices: [{ message: { content: text }, finish_reason: 'stop' }] }), { status: 200 });
+    if (url.includes('generativelanguage')) return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] }, finishReason: 'STOP' }] }), { status: 200 });
+    return claudeOk(text);
+  };
+  /** 지금 실행 중인 run = 마지막 preparing push의 runId */
+  let pushedRef: AiRunState[] = [];
+  const runIdOf = (_init: RequestInit) => pushedRef.filter((s) => s.status === 'preparing').at(-1)!.runId;
+  const targets = (ps: Array<'claude' | 'openai' | 'gemini'>) => ps.map((provider) => ({ provider, api: { key: KEY, model: 'm' } }));
+  const creq = (noticeId: string, ps: Array<'claude' | 'openai' | 'gemini'> = ['claude', 'openai', 'gemini']) =>
+    ({ noticeId, scope: 'all' as const, compareId: 'cmp-1', targets: targets(ps) });
+
+  it('공급자를 순차 실행하고 각 run에 compareId, 2번째부터는 첫 run의 keys로 고정, push의 compare.index가 0,1,2', async () => {
+    const { noticeId, pushed, make, review } = await setup();
+    pushedRef = pushed;
+    let open = 0; let maxOpen = 0; const order: string[] = [];
+    const runner = make((async (url: string, init: RequestInit) => {
+      open++; maxOpen = Math.max(maxOpen, open); order.push(url);
+      await new Promise((r) => setTimeout(r, 5));
+      open--;
+      return okFor(url, resp(runIdOf(init)));
+    }) as unknown as typeof fetch);
+    const { compareId, runId, done } = await runner.execCompare(creq(noticeId));
+    expect(compareId).toBe('cmp-1');
+    const outs = await done;
+    expect(outs.map((o) => o.status)).toEqual(['done', 'done', 'done']);
+    expect(maxOpen).toBe(1);
+    expect(order.map((u) => (u.includes('anthropic') ? 'claude' : u.includes('openai') ? 'openai' : 'gemini'))).toEqual(['claude', 'openai', 'gemini']);
+    const ours = (await review()).runs.filter((r) => r.compareId === 'cmp-1');
+    expect(ours).toHaveLength(3);
+    const first = ours.find((r) => r.id === runId)!;
+    expect(first.provider).toBe('claude');
+    for (const r of ours.filter((x) => x.id !== runId)) expect(r).toMatchObject({ scope: 'keys', keys: first.keys });
+    expect([...new Set(pushed.map((s) => s.compare?.index))]).toEqual([0, 1, 2]);
+    expect(pushed.every((s) => s.compare?.id === 'cmp-1' && s.compare.providers.join() === 'claude,openai,gemini')).toBe(true);
+    expect(runner.isRunning(noticeId)).toBe(false);
+  });
+
+  it('2번째 공급자 API 실패여도 3번째를 실행한다(outcomes 3개)', async () => {
+    const { noticeId, pushed, make } = await setup();
+    pushedRef = pushed;
+    const runner = make((async (url: string, init: RequestInit) => {
+      if (url.includes('openai')) return new Response(JSON.stringify({ error: { message: 'no' } }), { status: 401 });
+      return okFor(url, resp(runIdOf(init)));
+    }) as unknown as typeof fetch);
+    const outs = await (await runner.execCompare(creq(noticeId))).done;
+    expect(outs.map((o) => o.status)).toEqual(['done', 'failed', 'done']);
+    expect(outs[1]!.error!.code).toBe('AI_AUTH');
+  });
+
+  it('시리즈 중 exec, prepare, execCompare는 AI_RUN_BUSY, 끝나면 Map을 비운다', async () => {
+    const { noticeId, pushed, make } = await setup();
+    pushedRef = pushed;
+    const g = gate();
+    const runner = make((async (url: string, init: RequestInit) => { await g.p; return okFor(url, resp(runIdOf(init))); }) as unknown as typeof fetch);
+    const { done } = await runner.execCompare(creq(noticeId, ['claude', 'gemini']));
+    await expect(runner.exec(req(noticeId))).rejects.toMatchObject({ code: 'AI_RUN_BUSY' });
+    await expect(runner.prepare({ noticeId, scope: 'all', provider: 'claude' })).rejects.toMatchObject({ code: 'AI_RUN_BUSY' });
+    await expect(runner.execCompare(creq(noticeId, ['claude', 'gemini']))).rejects.toMatchObject({ code: 'AI_RUN_BUSY' });
+    g.release();
+    await done;
+    expect(runner.isRunning(noticeId)).toBe(false);
+  });
+
+  it('1번째 실행 중 cancel하면 1번째 cancelled, 나머지 run은 만들지 않는다', async () => {
+    const { noticeId, make, review } = await setup();
+    const runner = make(((_u: string, init: RequestInit) => new Promise<Response>((_r, rej) => {
+      (init.signal as AbortSignal).addEventListener('abort', () => rej(new DOMException('aborted', 'AbortError')));
+    })) as unknown as typeof fetch);
+    const { runId, done } = await runner.execCompare(creq(noticeId));
+    await new Promise((r) => setTimeout(r, 20));
+    await runner.cancel({ noticeId, runId });
+    const outs = await done;
+    expect(outs.map((o) => o.status)).toEqual(['cancelled']);
+    expect((await review()).runs.filter((r) => r.compareId === 'cmp-1').map((r) => r.id)).toEqual([runId]);
+    expect(runner.isRunning(noticeId)).toBe(false);
+  });
+
+  it('공급자 1개, 4개, 중복이면 AI_BAD_REQUEST이고 Map을 건드리지 않는다', async () => {
+    const { noticeId, make } = await setup();
+    const runner = make((async () => claudeOk('')) as unknown as typeof fetch);
+    await expect(runner.execCompare(creq(noticeId, ['claude']))).rejects.toMatchObject({ code: 'AI_BAD_REQUEST' });
+    await expect(runner.execCompare(creq(noticeId, ['claude', 'claude']))).rejects.toMatchObject({ code: 'AI_BAD_REQUEST' });
+    await expect(runner.execCompare({ ...creq(noticeId), targets: [...targets(['claude', 'openai', 'gemini']), ...targets(['claude'])] })).rejects.toMatchObject({ code: 'AI_BAD_REQUEST' });
+    expect(runner.isRunning(noticeId)).toBe(false);
+  });
+
+  it('2번째 실행 중 get이 와도 비교 소속 requesting run을 고아로 닫지 않는다', async () => {
+    const { noticeId, pushed, make, review } = await setup();
+    pushedRef = pushed;
+    let runnerRef!: AiRunner;
+    let swept = false;
+    const runner = make((async (url: string, init: RequestInit) => {
+      if (!swept && url.includes('generativelanguage')) { swept = true; await runnerRef.get(noticeId); }
+      return okFor(url, resp(runIdOf(init)));
+    }) as unknown as typeof fetch);
+    runnerRef = runner;
+    const outs = await (await runner.execCompare(creq(noticeId, ['claude', 'gemini']))).done;
+    expect(outs.map((o) => o.status)).toEqual(['done', 'done']);
+    expect((await review()).runs.filter((r) => r.compareId === 'cmp-1').every((r) => r.status === 'done')).toBe(true);
+  });
+});

@@ -17,6 +17,8 @@ export interface NoticeSource {
   attachments(item: ApiItem): NewAttachment[];
   sourceUrl(item: ApiItem, ref: NoticeRef, fetchedAt: string): FieldValue<string>;
   isCorrection(item: ApiItem): boolean;
+  /** 연계 사전규격 등록번호. 없으면 null. bid만 구현한다. */
+  linkedPrespecNo?(item: ApiItem): string | null;
   extract: boolean;
   acceptsHtml: boolean;
 }
@@ -30,6 +32,7 @@ export const bidSource: NoticeSource = {
   attachments: listAttachments,
   sourceUrl: (item, _ref, fetchedAt) => sourceUrlOf(item, fetchedAt),
   isCorrection: isCorrectionOf,
+  linkedPrespecNo: (item) => (item.bfSpecRgstNo ?? '').trim() || null,
   extract: true,
   acceptsHtml: true,
 };

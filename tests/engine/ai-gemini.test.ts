@@ -1,10 +1,11 @@
+import { NOTICE_KINDS } from '../helpers/ai-notice-kinds';
 import { describe, expect, it } from 'vitest';
 import type { OutputSpec } from '../../src/core/types/ai';
 import { geminiAdapter } from '../../src/engine/ai/providers/gemini';
 
 const spec: OutputSpec = {
   tag: 'bidmate-ai-review/2', runId: 'r1', keys: ['credibilityScore', 'performancePeriod'],
-  kindOf: { credibilityScore: 'number', managementScore: 'number', performanceScore: 'number', performancePeriod: 'string', performanceMinAmount: 'number', performanceCondition: 'string', differentialScoring: 'boolean' },
+  kindOf: { credibilityScore: 'number', managementScore: 'number', performanceScore: 'number', performancePeriod: 'string', performanceMinAmount: 'number', performanceCondition: 'string', differentialScoring: 'boolean', ...NOTICE_KINDS },
 };
 const KEY = 'AQ.test-key-1234567890';
 const ok = (parts: unknown[], finishReason = 'STOP', extra: object = {}) => ({

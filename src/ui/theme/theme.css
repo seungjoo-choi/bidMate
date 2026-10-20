@@ -1,12 +1,12 @@
 @import 'tailwindcss';
 
-/* 본문 폰트. 시스템에 Pretendard가 없으면 Windows에서 맑은 고딕으로 떨어져 글자가 아래로 쏠리므로 확장에 번들한다(OFL, fonts/LICENSE.txt). */
+/* 본문 폰트. 시스템에 Pretendard가 없으면 Windows에서 맑은 고딕으로 떨어져 글자가 아래로 쏠리므로 확장에 번들한다(OFL, public/fonts/LICENSE.txt). */
 @font-face {
   font-family: 'Pretendard Variable';
   font-weight: 45 920;
   font-style: normal;
   font-display: swap;
-  src: url('./fonts/PretendardVariable.woff2') format('woff2-variations');
+  src: url('/fonts/PretendardVariable.woff2') format('woff2-variations');
 }
 
 /* 색은 모두 토큰으로 쓴다. 다크 값은 아래 media 블록이 같은 변수를 덮어쓴다(시스템 설정을 따름). */
@@ -51,6 +51,11 @@
   --color-claude: #d97757;
   --color-mark: #fde9a8;
   --color-mark-strong: #f6c945;
+  /* 팔로우 별, 낙찰 강조 */
+  --color-star: #d9a514;
+  --color-star-wash: #fdf5dc;
+  --color-ok-line: #c4e0cd;
+  --color-ok-ink: #ffffff;
   /* 글자 단계. 본문은 base(15px). rem이 아니라 px로 고정해 html 크기와 무관하게 한다. */
   --text-xs: 0.8125rem;
   --text-xs--line-height: 1.5;
@@ -121,6 +126,10 @@
     --color-ai-surface: #19161f;
     --color-mark: #4a3d12;
     --color-mark-strong: #7a6213;
+    --color-star: #f2c443;
+    --color-star-wash: #2c2614;
+    --color-ok-line: #2b4a36;
+    --color-ok-ink: #0f1a13;
     --color-shade-1: rgb(0 0 0 / 0.45);
     --color-shade-2: rgb(0 0 0 / 0.35);
     --color-shade-3: rgb(0 0 0 / 0.6);
@@ -129,14 +138,14 @@
 }
 
 /* AI 영역은 공급자 대표색으로 칠한다. data-ai를 단 요소 아래에서 ai-* 토큰을 덮어쓴다(없으면 위 보라 기본값).
-   claude=Claude 로고 주황, openai=흑백(그래파이트, OpenAI 로고), gemini=보라(기본값과 같음). */
+   claude=Claude 로고 주황, openai=흑백(그래파이트, OpenAI 로고), gemini=파랑(2025 새 로고). */
 [data-ai='claude'] { --color-ai-wash: #fbf1ec; --color-ai-line: #f0d3c5; --color-ai-ink: #a5492a; }
 [data-ai='openai'] { --color-ai-wash: #f1f1ef; --color-ai-line: #d6d6d2; --color-ai-ink: #2b2b29; }
-[data-ai='gemini'] { --color-ai-wash: #f3f0fa; --color-ai-line: #ddd5ee; --color-ai-ink: #5b4a8a; }
+[data-ai='gemini'] { --color-ai-wash: #eef4ff; --color-ai-line: #cfdffb; --color-ai-ink: #1f5fcc; }
 @media (prefers-color-scheme: dark) {
   [data-ai='claude'] { --color-ai-wash: #2a1d18; --color-ai-line: #4d3026; --color-ai-ink: #eba98f; --color-ai-surface: #1f1613; }
   [data-ai='openai'] { --color-ai-wash: #232322; --color-ai-line: #3d3d3a; --color-ai-ink: #dcdcd7; --color-ai-surface: #1a1a19; }
-  [data-ai='gemini'] { --color-ai-wash: #211d2b; --color-ai-line: #3a3150; --color-ai-ink: #c3b5ea; --color-ai-surface: #19161f; }
+  [data-ai='gemini'] { --color-ai-wash: #18202e; --color-ai-line: #2a3a55; --color-ai-ink: #9fc0f7; --color-ai-surface: #141a24; }
 }
 
 /* AI 색 바탕 블록 안에서는 회색 면·테두리 대신 공급자 색을 쓴다(카드·버튼·입력창이 바탕 위에 뜨지 않게). */

@@ -93,7 +93,7 @@ export function ResolveDialog({ noticeId, notice, extraction, item, fieldKey, on
   const files = (extraction?.files ?? []).filter((f) => f.textPath);
   const openEvidence = (e: EvidenceRef) => {
     const textPath = extraction ? findTextPath(extraction.files, e) : undefined;
-    if (textPath) setDrawer({ textPath, line: e.line, title: e.sourceFile });
+    if (textPath) setDrawer({ textPath, line: e.line, title: e.sourceFile, quote: e.evidence });
   };
   const evidence = ex?.evidence;
   const value = text.trim();

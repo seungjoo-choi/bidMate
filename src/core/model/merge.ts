@@ -1,5 +1,6 @@
 import type { FieldSource, FieldValue, SourceKind } from '../types/common';
 import type { Notice } from '../types/notice';
+import { isNotApplicableField } from '../extraction/review-count';
 import { ALL_FIELD_KEYS, EVALUATION_KEYS, getField, type FieldMap } from './notice-fields';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
@@ -10,7 +11,7 @@ function normalize(v: unknown): unknown {
   return v;
 }
 
-const sameKey = (v: unknown): string => JSON.stringify(normalize(v));
+export const sameKey = (v: unknown): string => JSON.stringify(normalize(v));
 
 /** 충돌 직전 상태. first가 이미 충돌 상태(basis 보유)면 그 basis를 이어받는다. */
 const basisOf = (v: FieldValue<unknown>): NonNullable<FieldValue<unknown>['basis']> =>
@@ -56,9 +57,12 @@ export function mergeFields(existing: Notice | null, layers: MergeLayer[]): Fiel
 function mergeKey(prev: FieldValue<unknown> | undefined, candidates: Array<FieldValue<unknown> | undefined>, queried: Set<SourceKind>): FieldValue<unknown> {
   const present = candidates.filter(hasValue);
   const unparsed = candidates.filter(
-    (v): v is FieldValue<unknown> => !!v && (v.value === null || v.value === undefined) && typeof v.raw === 'string' && v.raw.trim() !== '',
+    (v): v is FieldValue<unknown> => !!v && !isNotApplicableField(v) && (v.value === null || v.value === undefined) && typeof v.raw === 'string' && v.raw.trim() !== '',
   );
   if (present.length === 0) {
+    // "해당 없음"은 값 없음이 아니라 판정 결과다. 해석 실패로 돌리지 않고 그대로 둔다.
+    const na = candidates.find(isNotApplicableField);
+    if (na) return na;
     if (unparsed[0]) return { ...unparsed[0], status: 'needs_review', note: unparsed[0].note ?? '값을 해석하지 못함' };
     if (hasValue(prev)) {
       return prev.source && queried.has(prev.source.kind)

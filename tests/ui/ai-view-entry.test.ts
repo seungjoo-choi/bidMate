@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EXTRACTION_KEYS } from '../../src/core/types/extraction';
+import { AI_KEYS } from '../../src/core/ai/keys';
 import { aiErrorText, aiSetupBlock, isFindingKey, scopeKeys } from '../../src/ui/review/ai-view';
 
 const ai = (over: Partial<{ provider: 'claude' | 'openai' | 'gemini'; mode: 'api' | 'manual'; models: Record<string, string> }> = {}) =>
@@ -19,12 +19,12 @@ describe('aiSetupBlock', () => {
 describe('scopeKeys', () => {
   it('auto는 확인 필요가 있으면 그것만, 없으면 전체', () => {
     expect(scopeKeys('auto', undefined, ['managementScore'])).toEqual(['managementScore']);
-    expect(scopeKeys('auto', undefined, [])).toEqual([...EXTRACTION_KEYS]);
+    expect(scopeKeys('auto', undefined, [])).toEqual([...AI_KEYS]);
   });
   it('keys·pending·all', () => {
     expect(scopeKeys('keys', ['credibilityScore'], [])).toEqual(['credibilityScore']);
     expect(scopeKeys('pending', undefined, ['managementScore'])).toEqual(['managementScore']);
-    expect(scopeKeys('all', undefined, [])).toHaveLength(EXTRACTION_KEYS.length);
+    expect(scopeKeys('all', undefined, [])).toHaveLength(AI_KEYS.length);
   });
 });
 

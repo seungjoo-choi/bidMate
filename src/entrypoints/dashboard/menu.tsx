@@ -1,11 +1,12 @@
-import { BarChart3, FileText, LayoutDashboard, ListChecks, Send, Settings as SettingsIcon, Stethoscope, Users } from 'lucide-react';
+import { BarChart3, FileText, LayoutDashboard, ListChecks, Mail, Settings as SettingsIcon, Stethoscope, Trophy, Users } from 'lucide-react';
 import type { Page } from './route';
 
 export const MENU: Array<{ id: Page; label: string; Icon: typeof SettingsIcon }> = [
   { id: 'home', label: '홈', Icon: LayoutDashboard },
   { id: 'notices', label: '공고', Icon: ListChecks },
-  { id: 'sent', label: '발송 이력', Icon: Send },
+  { id: 'mails', label: '메일 관리', Icon: Mail },
   { id: 'evaluations', label: '평가분석', Icon: BarChart3 },
+  { id: 'stats', label: '실적', Icon: Trophy },
   { id: 'recipients', label: '수신자', Icon: Users },
   { id: 'templates', label: '템플릿', Icon: FileText },
   { id: 'settings', label: '설정', Icon: SettingsIcon },

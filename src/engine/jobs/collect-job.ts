@@ -1,6 +1,6 @@
 import { parseHtmlField } from '../../adapters/g2b/html-parse';
 import { redactKey } from '../../adapters/g2b/openapi';
-import { sourceFor } from '../../adapters/g2b/source';
+import { prespecSource, sourceFor } from '../../adapters/g2b/source';
 import { kindOf } from '../../core/model/ids';
 import { mergeFields, type MergeLayer } from '../../core/model/merge';
 import { emptyNotice, setFields, type FieldMap } from '../../core/model/notice-fields';
@@ -8,7 +8,7 @@ import type { FieldValue } from '../../core/types/common';
 import type { RuleSet } from '../../core/extraction/rules/schema';
 import type { Extraction } from '../../core/types/extraction';
 import type { CollectResult, HtmlFields, Job, JobError, JobProgress, JobStatus, StepId } from '../../core/types/job';
-import type { Attachment, Notice } from '../../core/types/notice';
+import type { Attachment, LinkedPrespec, Notice } from '../../core/types/notice';
 import type { Settings } from '../../core/types/settings';
 import { DownloadAbort, downloadAttachments } from '../downloader/downloader';
 import type { IFileStore } from '../file-store/types';
@@ -16,7 +16,8 @@ import { conflictCountOf, reviewCountOf, runExtractStep } from '../extraction/ex
 import { basicFacts, evalFacts } from '../../core/model/notice-summary';
 import type { ParserRegistry } from '../parsers/types';
 import { NoticeStore } from '../notices/notice-store';
-import { matchAttachments } from './attachments';
+import { matchAttachments, type NewAttachment } from './attachments';
+import { dedupePrespec } from './prespec-dedupe';
 
 export interface CollectJobInput {
   job: Job;
@@ -48,6 +49,9 @@ export interface CollectJobDeps {
 export interface CollectOutcome { status: JobStatus; result?: CollectResult; error?: JobError }
 
 const fmtMB = (n: number): string => `${(n / 1048576).toFixed(1)}MB`;
+
+const prespecFailedError = (message: string): JobError =>
+  ({ code: 'PRESPEC_FETCH_FAILED', message: `${message} 다시 수집하면 다시 조회합니다.`, step: 'fetch_basic', retryable: false });
 
 const FAILED_ATT = (a: Attachment) => a.status === 'failed' || a.status === 'size_mismatch';
 
@@ -103,6 +107,7 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
   const { job, settings } = input;
   let html = input.html;
   let detailError: JobError | undefined;
+  let prespecError: JobError | undefined;
   const key = input.secrets.g2bServiceKey;
   const now = deps.now ?? (() => new Date());
   const ns = new NoticeStore(deps.store);
@@ -157,6 +162,8 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
     // ---- fetch_basic ----
     if (isDone('fetch_basic') && job.noticeId) {
       notice = await ns.loadNotice(job.noticeId);
+      // 재시도에서는 사전규격을 다시 조회하지 않으므로, 이전 실패를 오류로 복원해 collected로 넘어가지 않게 한다.
+      if (notice?.linkedPrespec?.status === 'failed') prespecError = prespecFailedError(notice.linkedPrespec.error ?? '연계 사전규격 조회에 실패했습니다.');
       if (notice && !isDone('fetch_html') && (await acquireHtml())) return cancelled(notice);
       // 재시도 요청에 html이 있으면 불러온 notice에 병합한다.
       if (notice && html && src.acceptsHtml) {
@@ -175,6 +182,27 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
       }
       if (await acquireHtml()) return cancelled();
       const { item, operation, fetchedAt } = r;
+      // 연계 사전규격 조회: 실패해도 입찰공고 수집은 계속한다(NOT_FOUND는 오류 아님, 그 외는 partial).
+      let linked: LinkedPrespec | undefined;
+      const prespecAtts: NewAttachment[] = [];
+      const prespecRaw: Array<{ operation: string; item: unknown }> = [];
+      const regNo = src.linkedPrespecNo?.(item) ?? null;
+      if (regNo) {
+        step('fetch_basic', 'running', '연계 사전규격 조회 중');
+        const pr = await prespecSource.fetch({ kind: 'prespec', noticeNo: regNo, origin: ref.origin }, { serviceKey: key, fetch: deps.fetch, signal: deps.signal });
+        if (!pr.ok && pr.error.code === 'JOB_CANCELLED') return cancelled();
+        if (pr.ok) {
+          const list = prespecSource.attachments(pr.item);
+          for (const a of list) prespecAtts.push({ ...a, origin: 'prespec' });
+          prespecRaw.push({ operation: `prespec-${pr.operation}`, item: pr.item });
+          linked = { regNo, status: 'linked', fetchedAt: pr.fetchedAt, attachmentCount: list.length };
+        } else if (pr.error.code === 'G2B_NOT_FOUND') {
+          linked = { regNo, status: 'not_found', fetchedAt: now().toISOString(), attachmentCount: 0 };
+        } else {
+          linked = { regNo, status: 'failed', fetchedAt: now().toISOString(), attachmentCount: 0, error: pr.error.message };
+          prespecError = prespecFailedError(pr.error.message);
+        }
+      }
       const id = src.idOf(ref, item);
       const existing = await ns.loadNotice(id);
       const fields = src.mapFields(item, fetchedAt);
@@ -189,13 +217,14 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
       setFields(notice, merged);
       notice.sourceUrl = src.sourceUrl(item, ref, fetchedAt);
       notice.isCorrection = src.isCorrection(item);
-      notice.attachments = matchAttachments(notice.attachments, src.attachments(item), id);
+      notice.attachments = matchAttachments(notice.attachments, [...src.attachments(item), ...prespecAtts], id);
+      if (linked) notice.linkedPrespec = linked; else delete notice.linkedPrespec;
       notice.collect = { status: 'partial', collectedAt: now().toISOString(), lastJobId: job.id, errors: [] };
       notice.updatedAt = now().toISOString();
-      await ns.saveNotice(notice, { operation, item });
+      await ns.saveNotice(notice, [{ operation, item }, ...prespecRaw]);
       basicMs = Math.max(0, Date.now() - basicStart - detailMs);
     }
-    step('fetch_basic', 'done', '공고정보 조회 완료', {
+    step('fetch_basic', 'done', notice.linkedPrespec?.status === 'linked' ? `공고정보 조회 완료, 사전규격 첨부 ${notice.linkedPrespec.attachmentCount}건` : '공고정보 조회 완료', {
       event: { kind: 'facts', step: 'fetch_basic', facts: basicFacts(notice) }, ...(basicMs !== undefined ? { ms: basicMs } : {}),
     });
     if (deps.signal?.aborted) return cancelled(notice);
@@ -263,6 +292,8 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
           },
         });
         dropBytes();
+        // 사전규격 첨부 중복 판정(입찰공고 첨부와 같은 파일은 지우고 건너뜀 처리)
+        if (await dedupePrespec(notice, deps.store)) await ns.saveNotice(notice);
         await saver.flush();
       } catch (e) {
         dropBytes();
@@ -330,19 +361,19 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
     // ---- 저장 ----
     if (deps.signal?.aborted) return cancelled(notice);
     notice.collect = {
-      status: failedAtts.length || extractError || detailError ? 'partial' : 'collected',
+      status: failedAtts.length || extractError || detailError || prespecError ? 'partial' : 'collected',
       collectedAt: now().toISOString(),
       lastJobId: job.id,
       errors: failedAtts.map((a): JobError => ({
         code: a.status === 'size_mismatch' ? 'ATTACH_SIZE_MISMATCH' : 'ATTACH_FAILED',
         message: `${a.originalName}: ${a.lastError ?? '실패'}`, step: 'download_attachments', retryable: true,
-      })).concat(extractError ? [extractError] : [], detailError ? [detailError] : []),
+      })).concat(extractError ? [extractError] : [], detailError ? [detailError] : [], prespecError ? [prespecError] : []),
     };
     notice.updatedAt = now().toISOString();
     await ns.saveNotice(notice);
     const result = resultOf(notice);
     if (extraction) result.extraction = { status: extraction.status, reviewCount: reviewCountOf(extraction), conflictCount: conflictCountOf(extraction) };
-    return { status: failedAtts.length || extractError || detailError ? 'partial' : 'completed', result, error: extractError ?? detailError };
+    return { status: failedAtts.length || extractError || detailError || prespecError ? 'partial' : 'completed', result, error: extractError ?? detailError ?? prespecError };
   } catch (e) {
     const err = toError(e, current, key);
     step(current, 'failed', err.message);

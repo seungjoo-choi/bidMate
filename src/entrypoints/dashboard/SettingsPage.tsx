@@ -1,4 +1,4 @@
-import { Building2, FolderOpen, Landmark, Mail, Send, Sparkles, type LucideIcon } from 'lucide-react';
+import { Bell, Building2, ClipboardList, FolderOpen, Landmark, Mail, Send, Sparkles, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { SettingsSection } from '../../messaging/protocol';
 import { statusTone } from '../../ui/theme';
@@ -7,6 +7,8 @@ import { MailServiceCard } from './MailServiceCard';
 import { G2bCard } from './G2bCard';
 import { AiCard } from './AiCard';
 import { CompanyCard } from './CompanyCard';
+import { PerformancesCard } from './PerformancesCard';
+import { NotifyCard } from './NotifyCard';
 import { AutoComposeCard } from './AutoComposeCard';
 import { PageTitle } from './menu';
 import { useSettingsStatus, type SectionHealth } from './useSettingsStatus';
@@ -43,6 +45,8 @@ const GROUPS: Group[] = [
     items: [
       { id: 'ai', label: 'AI로 다시 찾기', Icon: Sparkles, card: () => <AiCard /> },
       { id: 'company', label: '우리 회사', Icon: Building2, card: () => <CompanyCard /> },
+      { id: 'performances', label: '실적 목록', Icon: ClipboardList, card: () => <PerformancesCard /> },
+      { id: 'notify', label: '알림', Icon: Bell, card: () => <NotifyCard /> },
     ],
   },
 ];

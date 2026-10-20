@@ -1,3 +1,4 @@
+import { NOTICE_KINDS } from '../helpers/ai-notice-kinds';
 import { describe, expect, it } from 'vitest';
 import type { OutputSpec } from '../../src/core/types/ai';
 import { claudeAdapter } from '../../src/engine/ai/providers/claude';
@@ -5,7 +6,7 @@ import { getAdapter, PROVIDERS } from '../../src/engine/ai/providers';
 
 const spec: OutputSpec = {
   tag: 'bidmate-ai-review/2', runId: 'r1', keys: ['credibilityScore', 'differentialScoring'],
-  kindOf: { credibilityScore: 'number', managementScore: 'number', performanceScore: 'number', performancePeriod: 'string', performanceMinAmount: 'number', performanceCondition: 'string', differentialScoring: 'boolean' },
+  kindOf: { credibilityScore: 'number', managementScore: 'number', performanceScore: 'number', performancePeriod: 'string', performanceMinAmount: 'number', performanceCondition: 'string', differentialScoring: 'boolean', ...NOTICE_KINDS },
 };
 
 describe('Claude 어댑터', () => {

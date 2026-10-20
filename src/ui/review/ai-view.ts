@@ -1,10 +1,14 @@
 /** AI 재검토 화면용 순수 함수. 제안은 run 파일(ai-review.json)에서 읽고, 항목 값은 건드리지 않는다. */
 import type { AiMode, AiProvider, AiRejectReason, AiReviewFile, AiRun, AiScope, AiSuggestion } from '../../core/types/ai';
-import type { Extraction, ExtractionFile, ExtractionKey } from '../../core/types/extraction';
-import { EXTRACTION_KEYS } from '../../core/types/extraction';
+import type { Extraction, ExtractionFile } from '../../core/types/extraction';
+import { AI_KEYS, type AiKey } from '../../core/ai/keys';
+import { sameValue } from '../../core/ai/verify';
+import { valueKey } from '../../core/extraction/decide';
+import { REVIEW_LABEL } from '../../core/extraction/review-rows';
+import { AI_PROVIDERS } from '../../core/types/ai';
 import { runSummary, type AiRunSummary } from '../../core/ai/summary';
 import type { AiRunState } from '../../core/types/ai';
-import { DOC_KIND_LABEL, FILE_STATUS_LABEL, ITEM_LABEL, fileDisplayName, type CardBadge } from './view';
+import { DOC_KIND_LABEL, FILE_STATUS_LABEL, fileDisplayName, type CardBadge } from './view';
 
 export { runSummary, type AiRunSummary };
 /** 기존 이름(호환) */
@@ -35,12 +39,17 @@ export interface AiCardInfo { suggestion: AiSuggestion; run: AiRun }
  * 되돌아가지 않고 빈칸, 무시(dismissed)됐어도 마찬가지. 요청하지 않은 run은 건너뛴다.
  * keys가 빈 옛 run은 제안이 있는 키를 요청한 것으로 본다(방어).
  */
-export function buildAiCards(review: AiReviewFile | null | undefined, extraction: Pick<Extraction, 'jobId'>): Partial<Record<ExtractionKey, AiCardInfo>> {
-  const out: Partial<Record<ExtractionKey, AiCardInfo>> = {};
-  const handled = new Set<ExtractionKey>();
-  for (const run of review?.runs ?? []) {
+export function buildAiCards(review: AiReviewFile | null | undefined, extraction: Pick<Extraction, 'jobId'>): Partial<Record<AiKey, AiCardInfo>> {
+  return pick(review?.runs ?? [], extraction);
+}
+
+/** buildAiCards 본문. runs는 최신 먼저. */
+function pick(runs: AiRun[], extraction: Pick<Extraction, 'jobId'>): Partial<Record<AiKey, AiCardInfo>> {
+  const out: Partial<Record<AiKey, AiCardInfo>> = {};
+  const handled = new Set<AiKey>();
+  for (const run of runs) {
     if (run.status !== 'done' || isStale(run, extraction)) continue;
-    for (const key of EXTRACTION_KEYS) {
+    for (const key of AI_KEYS) {
       if (handled.has(key)) continue;
       const has = Object.hasOwn(run.suggestions, key);
       const requested = run.keys.length > 0 ? run.keys.includes(key) : has;
@@ -53,8 +62,95 @@ export function buildAiCards(review: AiReviewFile | null | undefined, extraction
   return out;
 }
 
+/** 공급자마다 buildAiCards와 같은 규칙으로(그 공급자의 run만 보고) 고른 제안. */
+export function buildAiCardsByProvider(review: AiReviewFile | null | undefined, extraction: Pick<Extraction, 'jobId'>): Partial<Record<AiKey, Partial<Record<AiProvider, AiCardInfo>>>> {
+  const out: Partial<Record<AiKey, Partial<Record<AiProvider, AiCardInfo>>>> = {};
+  for (const provider of AI_PROVIDERS) {
+    const cards = pick((review?.runs ?? []).filter((r) => r.provider === provider), extraction);
+    for (const key of AI_KEYS) {
+      const info = cards[key];
+      if (info) (out[key] ??= {})[provider] = info;
+    }
+  }
+  return out;
+}
+
+/** primary 외 다른 공급자의 최신 제안(AI_PROVIDERS 순). 없으면 키 생략. */
+export function aiOthers(
+  primary: Partial<Record<AiKey, AiCardInfo>>,
+  byProvider: Partial<Record<AiKey, Partial<Record<AiProvider, AiCardInfo>>>>,
+): Partial<Record<AiKey, AiCardInfo[]>> {
+  const out: Partial<Record<AiKey, AiCardInfo[]>> = {};
+  for (const key of AI_KEYS) {
+    const list = AI_PROVIDERS.map((p) => byProvider[key]?.[p]).filter((i): i is AiCardInfo => !!i && i.run.id !== primary[key]?.run.id);
+    if (list.length > 0) out[key] = list;
+  }
+  return out;
+}
+
+export type AiAgreement = 'agree' | 'agree_none' | 'differ' | 'partial';
+const isNone = (s: AiSuggestion): boolean => s.verdict === 'none' || (s.value === null && s.verdict !== 'multi');
+const variantsKey = (s: AiSuggestion): string => (s.variants ?? []).map((v) => valueKey(v.value)).sort().join('|');
+/** 두 제안이 같은 답인가(none 제외). 값 비교는 sameValue. */
+const sameSuggestion = (a: AiSuggestion, b: AiSuggestion): boolean => {
+  if ((a.verdict === 'multi') !== (b.verdict === 'multi')) return false;
+  if (a.verdict === 'multi') return variantsKey(a) === variantsKey(b);
+  return sameValue(a.key, a.value, b.value);
+};
+/** 같은 항목에 대한 여러 공급자 제안의 일치 여부. 2개 미만이면 null. */
+export function aiAgreement(infos: AiCardInfo[]): { n: number; verdict: AiAgreement } | null {
+  if (infos.length < 2) return null;
+  const found = infos.map((i) => i.suggestion).filter((x) => !isNone(x));
+  const nones = infos.length - found.length;
+  const verdict: AiAgreement = nones === infos.length ? 'agree_none' : nones > 0 ? 'partial' : found.every((x) => sameSuggestion(found[0]!, x)) ? 'agree' : 'differ';
+  return { n: infos.length, verdict };
+}
+export const AGREEMENT_LABEL: Record<AiAgreement, (n: number) => string> = {
+  agree: (n) => `AI ${n}개 일치`, agree_none: () => 'AI 모두 못 찾음', differ: () => 'AI끼리 다름', partial: () => '일부만 찾음',
+};
+
+export interface CompareRow { provider: AiProvider; run?: AiRun; status: 'done' | 'running' | 'failed' | 'cancelled' | 'queued' | 'missing'; summary?: AiRunSummary }
+/** 최신 run이 비교 실행이면 공급자별 행. 아니면 null. */
+export function compareRows(review: AiReviewFile | null | undefined, state: AiRunState | null): { compareId: string; rows: CompareRow[]; scopeRun: AiRun } | null {
+  const latest = latestRun(review);
+  const compareId = latest?.compareId;
+  if (!latest || !compareId) return null;
+  const runs = (review?.runs ?? []).filter((r) => r.compareId === compareId).sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
+  // 세션 상태가 같은 비교면 계획 공급자를 그대로 쓴다(prepare 실패로 run이 없는 공급자도 행이 남는다). 대기는 시리즈가 아직 진행 중일 때만.
+  const same = state?.compare?.id === compareId ? state.compare : undefined;
+  const active = !!same && (state!.status === 'preparing' || state!.status === 'requesting' || state!.status === 'verifying');
+  const planned = same ? same.providers : runs.map((r) => r.provider);
+  const rows: CompareRow[] = planned.map((provider, i) => {
+    const r = runs.find((x) => x.provider === provider);
+    if (!r) return { provider, status: active && i > same!.index ? 'queued' : 'missing' };
+    if (r.status === 'done') return { provider, run: r, status: 'done', summary: runSummary(r) };
+    if (r.status === 'failed' || r.status === 'cancelled') return { provider, run: r, status: r.status };
+    return { provider, run: r, status: 'running' };
+  });
+  return { compareId, rows, scopeRun: runs[0] ?? latest };
+}
+
+/** 항목별 일치 요약. 제안이 2개 이상인 키만 집계. */
+export function compareAgreementSummary(
+  primary: Partial<Record<AiKey, AiCardInfo>>,
+  others: Partial<Record<AiKey, AiCardInfo[]>>,
+): { compared: number; agree: number; differ: number; partial: number; none: number } {
+  const out = { compared: 0, agree: 0, differ: 0, partial: 0, none: 0 };
+  for (const key of AI_KEYS) {
+    const infos = [primary[key], ...(others[key] ?? [])].filter((i): i is AiCardInfo => !!i);
+    const a = aiAgreement(infos);
+    if (!a) continue;
+    out.compared++;
+    if (a.verdict === 'agree') out.agree++;
+    else if (a.verdict === 'differ') out.differ++;
+    else if (a.verdict === 'partial') out.partial++;
+    else out.none++;
+  }
+  return out;
+}
+
 /** 이전 run에서 가져와 표시 중인 제안 수(최신 run과 다른 run의 제안). */
-export function olderCardCount(cards: Partial<Record<ExtractionKey, AiCardInfo>>, latest: AiRun | null): number {
+export function olderCardCount(cards: Partial<Record<AiKey, AiCardInfo>>, latest: AiRun | null): number {
   return Object.values(cards).filter((c) => c && c.run.id !== latest?.id).length;
 }
 
@@ -127,13 +223,15 @@ export function terminalSignal(state: { runId: string; status: string; at: strin
   return `${state.runId}:${state.status}:${state.at}`;
 }
 
-/** run의 범위 표시: "확인 필요 항목" / "7개 전체" / "항목: …" */
+/** run의 범위 표시: "확인 필요 항목" / "N개 전체" / "항목: …" */
 export function scopeLabel(run: Pick<AiRun, 'scope' | 'keys'>): string {
   if (run.scope === 'pending') return '확인 필요 항목';
-  if (run.scope === 'all') return '7개 전체';
-  if (run.scope === 'keys' || (run.keys.length > 0 && run.keys.length < EXTRACTION_KEYS.length)) return `항목: ${run.keys.map((k) => ITEM_LABEL[k] ?? k).join(', ')}`;
-  return '7개 전체';
+  if (run.scope === 'all') return `${run.keys.length}개 전체`;
+  if (run.scope === 'keys' || (run.keys.length > 0 && run.keys.length < AI_KEYS.length)) return `항목: ${run.keys.map((k) => REVIEW_LABEL[k] ?? k).join(', ')}`;
+  return `${run.keys.length}개 전체`;
 }
+
+const compareLabel = (state: AiRunState, label: string): string => (state.compare ? `AI 비교 ${state.compare.index + 1}/${state.compare.providers.length} · ${label}` : label);
 
 export interface QuickView {
   phase: 'idle' | 'running' | 'awaiting' | 'done' | 'failed';
@@ -146,10 +244,10 @@ export function quickView(review: AiReviewFile | null | undefined, extraction: P
   const run = latestRun(review);
   // run 파일이 아직 없거나(준비 단계) 최신 run이 이전 run인 동안은 세션 진행 상태를 우선한다
   if (state && ['preparing', 'requesting', 'verifying'].includes(state.status) && (!run || (state.runId !== run.id && run.status !== 'requesting'))) {
-    return { phase: 'running', label: state.label || '준비 중' };
+    return { phase: 'running', label: compareLabel(state, state.label || '준비 중') };
   }
   if (!run) return { phase: 'idle', label: '' };
-  if (run.status === 'requesting') return { phase: 'running', label: state?.runId === run.id ? state.label : 'AI에 요청하는 중' };
+  if (run.status === 'requesting') return { phase: 'running', label: state?.runId === run.id ? compareLabel(state, state.label) : 'AI에 요청하는 중' };
   if (run.status === 'awaiting') return { phase: 'awaiting', label: 'AI 답변 붙여넣기 대기 중' };
   if (run.status === 'failed') return { phase: 'failed', label: 'AI 재검토 실패', error: run.error ?? { code: 'AI_HTTP', message: '' } };
   if (run.status === 'done' && extraction && !isStale(run, extraction)) {
@@ -171,22 +269,22 @@ export function aiSetupBlock(
 }
 
 /** 요청 범위가 실제로 가리킬 키(UI가 "찾는 중" 표시를 미리 하는 데 쓴다). auto는 확인 필요가 있으면 그것만, 없으면 전체. */
-export function scopeKeys(scope: AiScope, keys: ExtractionKey[] | undefined, pending: ExtractionKey[]): ExtractionKey[] {
+export function scopeKeys(scope: AiScope, keys: AiKey[] | undefined, pending: AiKey[]): AiKey[] {
   if (scope === 'keys') return keys ?? [];
   if (scope === 'pending') return pending;
-  if (scope === 'auto') return pending.length > 0 ? pending : [...EXTRACTION_KEYS];
-  return [...EXTRACTION_KEYS];
+  if (scope === 'auto') return pending.length > 0 ? pending : [...AI_KEYS];
+  return [...AI_KEYS];
 }
 
 /** 실행 요청 오류의 사용자 문구. */
 export function aiErrorText(code: string | undefined, message: string): string {
-  if (code === 'NOTHING_TO_REVIEW') return '확인이 필요한 항목이 없습니다. 7개 항목 전체로 실행하세요.';
+  if (code === 'NOTHING_TO_REVIEW') return '확인이 필요한 항목이 없습니다. 전체 항목으로 실행하세요.';
   if (code === 'JOB_ALREADY_RUNNING') return '이 공고는 다른 작업이 진행 중입니다';
   if (code === 'AI_RUN_BUSY') return '이 공고는 이미 AI 실행 중입니다';
   return `${code ?? ''} ${message}`.trim();
 }
 
 /** 지금 요청 중인 run이 이 키를 찾고 있는가. */
-export function isFindingKey(run: Pick<AiRun, 'status' | 'keys'> | null, key: ExtractionKey): boolean {
+export function isFindingKey(run: Pick<AiRun, 'status' | 'keys'> | null, key: AiKey): boolean {
   return run?.status === 'requesting' && run.keys.includes(key);
 }

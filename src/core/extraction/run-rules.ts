@@ -1,6 +1,7 @@
 import type { DocModel } from '../doc/model';
 import { renderText } from '../doc/render-text';
 import type { EvidenceRef } from '../types/extraction';
+import type { AttachmentOrigin } from '../types/notice';
 import type { DocKind } from './classify';
 import { answersOnly } from './qna';
 import type { Candidate } from './decide';
@@ -10,10 +11,11 @@ import { bonusTable } from './strategies/bonus-table';
 import { prepare, type Prepared, type RawHit } from './strategies/common';
 import { inlineScore } from './strategies/inline-score';
 import { keywordEnum } from './strategies/keyword-enum';
+import { quantTable } from './strategies/quant-table';
 import { tableScore } from './strategies/table-score';
 import { windowRegex } from './strategies/window-regex';
 
-export interface RuleDocInput { doc: DocModel; attachmentId: string; sourceFile: string; docKind: DocKind; priority: number }
+export interface RuleDocInput { doc: DocModel; attachmentId: string; sourceFile: string; docKind: DocKind; priority: number; origin?: AttachmentOrigin }
 
 function runStrategy(doc: Prepared, rule: Rule, syn: RuleSet['synonyms']): RawHit[] {
   switch (rule.strategy) {
@@ -23,6 +25,7 @@ function runStrategy(doc: Prepared, rule: Rule, syn: RuleSet['synonyms']): RawHi
     case 'window-regex': return windowRegex(doc, rule, syn);
     case 'block-capture': return blockCapture(doc, rule, syn);
     case 'bonus-table': return bonusTable(doc, rule, syn);
+    case 'quant-table': return quantTable(doc, rule, syn);
   }
 }
 
@@ -53,6 +56,7 @@ export function runRules(inputs: RuleDocInput[], rules: RuleSet): RunResult {
         const evidence: EvidenceRef = {
           attachmentId: inp.attachmentId, sourceFile: inp.sourceFile, location: h.location,
           evidence: h.evidence.slice(0, 300), ruleId: rule.id, docKind: inp.docKind,
+          ...(inp.origin ? { origin: inp.origin } : {}),
         };
         if (h.page !== undefined) evidence.page = h.page;
         if (h.sheet !== undefined) evidence.sheet = h.sheet;

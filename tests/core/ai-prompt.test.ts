@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AI_KEYS, isDocAiKey } from '../../src/core/ai/keys';
 import { buildPrompt, ITEM_DEFS, PROMPT_VERSION, REQUEST_MARKER } from '../../src/core/ai/prompt';
 
 describe('buildPrompt', () => {
@@ -42,9 +43,17 @@ describe('buildPrompt', () => {
   });
 
   it('실적 인정금액은 string 형식으로 스키마에 전달된다', () => {
-    expect(PROMPT_VERSION).toBe('2.1.0');
+    expect(PROMPT_VERSION).toBe('2.2.0');
     const p = buildPrompt({ ...base, keys: ['performanceMinAmount', 'credibilityScore'] });
     expect(p.spec.kindOf.performanceMinAmount).toBe('string');
     expect(p.spec.kindOf.credibilityScore).toBe('number');
+  });
+
+  it('16개 키 요청 시 정의 16개, 공고 잎은 string', () => {
+    const p = buildPrompt({ ...base, keys: [...AI_KEYS] });
+    expect(p.spec.keys).toEqual([...AI_KEYS]);
+    expect(p.user.match(/^### /gm)).toHaveLength(16);
+    for (const k of AI_KEYS.filter((x) => !isDocAiKey(x))) expect(p.spec.kindOf[k as never]).toBe('string');
+    expect(p.system).toContain('공고 핵심 정보');
   });
 });

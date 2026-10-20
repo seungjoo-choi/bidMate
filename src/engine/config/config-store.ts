@@ -2,7 +2,7 @@ import type { ConfigList } from '../../core/types/config-file';
 import { writeJson } from '../file-store/json-store';
 import type { IFileStore } from '../file-store/types';
 
-export type ConfigFile = 'recipients' | 'groups' | 'templates';
+export type ConfigFile = 'recipients' | 'groups' | 'templates' | 'performances';
 
 /** 세 config 파일의 모든 변경이 공유하는 락 키. */
 export const CONFIG_LOCK = 'config';
@@ -10,6 +10,7 @@ export const CONFIG_PATHS: Record<ConfigFile, string> = {
   recipients: 'config/recipients.json',
   groups: 'config/groups.json',
   templates: 'config/templates.json',
+  performances: 'config/performances.json',
 };
 
 const err = (code: string, message: string, path?: string) => Object.assign(new Error(message), path ? { code, path } : { code });

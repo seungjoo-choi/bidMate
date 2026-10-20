@@ -3,12 +3,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { send } from '../../../messaging/bus';
 import { Button, InlineAlert } from '../../../ui/components';
 import { inputClass } from '../../../ui/components/Field';
+import { buildTextBlocks, displayLine, evidenceSpan, type TextBlock } from '../../../ui/review/text-view';
 
 const WINDOW = 600;
 const STEP = 600;
 
-/** query가 있으면 그 말로 검색한 상태로 연다. */
-export interface DrawerTarget { textPath: string; line?: number; title: string; query?: string }
+/** query가 있으면 그 말로 검색한 상태로 연다. quote가 있으면 기준 줄 근처에서 그 원문이 걸친 줄 전체를 강조한다. */
+export interface DrawerTarget { textPath: string; line?: number; title: string; query?: string; quote?: string }
 
 export function TextDrawer({ noticeId, target, onClose }: { noticeId: string; target: DrawerTarget; onClose: () => void }) {
   const [shown, setShown] = useState(false);
@@ -18,6 +19,8 @@ export function TextDrawer({ noticeId, target, onClose }: { noticeId: string; ta
   const [query, setQuery] = useState(target.query ?? '');
   const [cur, setCur] = useState(0);
   const [scrollTo, setScrollTo] = useState<number | null>(null);
+  const [raw, setRaw] = useState(false);
+  const [span, setSpan] = useState<[number, number] | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const close = () => { setShown(false); setTimeout(onClose, 200); };
@@ -39,20 +42,22 @@ export function TextDrawer({ noticeId, target, onClose }: { noticeId: string; ta
         if (!alive) return;
         const ls = text.split('\n');
         setLines(ls);
-        const t = target.line && target.line >= 1 ? Math.min(target.line, ls.length) - 1 : 0;
+        const sp = evidenceSpan(ls, target.line, target.quote);
+        setSpan(sp);
+        const t = sp ? sp[0] : 0;
         setRange([Math.max(0, t - WINDOW), Math.min(ls.length, t + WINDOW + 1)]);
-        if (target.line) setScrollTo(t);
+        if (sp) setScrollTo(t);
       },
       (e: unknown) => { if (alive) setError(e instanceof Error ? e.message : String(e)); },
     );
     return () => { alive = false; };
-  }, [noticeId, target.textPath, target.line]);
+  }, [noticeId, target.textPath, target.line, target.quote]);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q || !lines) return [] as number[];
     const out: number[] = [];
-    lines.forEach((l, i) => { if (l.toLowerCase().includes(q)) out.push(i); });
+    lines.forEach((l, i) => { if (displayLine(l).toLowerCase().includes(q)) out.push(i); });
     return out;
   }, [query, lines]);
   const matchSet = useMemo(() => new Set(matches), [matches]);
@@ -76,7 +81,38 @@ export function TextDrawer({ noticeId, target, onClose }: { noticeId: string; ta
     goto(matches[n]!);
   };
 
-  const targetIdx = target.line ? target.line - 1 : -1;
+  const blocks = useMemo(() => (lines ? buildTextBlocks(lines) : []), [lines]);
+  const inSpan = (i: number) => !!span && i >= span[0] && i <= span[1];
+  /** 근거 구간은 진한 노랑+왼쪽 막대, 검색 일치는 옅은 노랑, 현재 일치는 테두리. */
+  const hl = (i: number) => {
+    const isMatch = matchSet.has(i);
+    const isCur = isMatch && matches[cur] === i;
+    return `${inSpan(i) ? 'bg-mark-strong shadow-[inset_3px_0_0_var(--color-warn)]' : isMatch ? 'bg-mark' : ''} ${isCur ? 'outline-2 -outline-offset-2 outline-accent' : ''}`;
+  };
+  const lineDiv = (i: number, text: string, extra = '') => (
+    <div key={i} data-i={i} className={`min-h-6 whitespace-pre-wrap wrap-anywhere ${extra} ${hl(i)}`}>{text}</div>
+  );
+  const renderBlock = (b: TextBlock) => {
+    if (b.kind === 'page') return <div key={b.i} data-i={b.i} className="my-3 flex items-center gap-3 px-6 text-xs text-faint"><span className="h-px flex-1 bg-line" />{b.page}쪽<span className="h-px flex-1 bg-line" /></div>;
+    if (b.kind === 'line') return lineDiv(b.i, lines![b.i]!, 'px-6');
+    return (
+      <div key={b.start} data-i={b.start} className="my-2 overflow-x-auto px-6">
+        <table className="w-full border-collapse text-[0.8125rem] leading-5">
+          <tbody>
+            {b.rows.map((row) => (
+              <tr key={row[0]!.r}>
+                {row.map((c) => (
+                  <td key={c.c} rowSpan={c.rowSpan} colSpan={c.colSpan} className="border border-line px-2 py-1 align-top">
+                    {c.lines.map((i) => lineDiv(i, displayLine(lines![i]!), 'min-h-5'))}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
   return (
     <>
       <div className={`fixed inset-0 z-40 bg-black/30 transition-opacity duration-200 motion-reduce:transition-none ${shown ? 'opacity-100' : 'opacity-0'}`} onClick={close} />
@@ -105,25 +141,25 @@ export function TextDrawer({ noticeId, target, onClose }: { noticeId: string; ta
           <span className="w-16 text-center text-xs text-muted">{query.trim() ? (matches.length ? `${cur + 1}/${matches.length}` : '없음') : ''}</span>
           <Button variant="ghost" size="icon" aria-label="이전 일치" icon={<ChevronUp />} onClick={() => step(-1)} />
           <Button variant="ghost" size="icon" aria-label="다음 일치" icon={<ChevronDown />} onClick={() => step(1)} />
+          <Button variant="ghost" title={raw ? '표를 원문처럼 정리해 보기' : '추출된 텍스트를 줄 번호와 함께 그대로 보기'} onClick={() => { setRaw((v) => !v); if (span) setScrollTo(span[0]); }}>{raw ? '정리된 보기' : '원본 텍스트'}</Button>
         </div>
-        <div ref={listRef} className="min-h-0 flex-1 overflow-auto py-3 font-mono text-sm leading-6">
+        <div ref={listRef} className={`min-h-0 flex-1 overflow-auto py-3 text-sm leading-6 ${raw ? 'font-mono' : ''}`}>
           {error && <div className="p-4"><InlineAlert tone="error">{error}</InlineAlert></div>}
           {!lines && !error && <div className="flex justify-center p-8 text-muted"><Loader2 className="size-5 animate-spin" /></div>}
           {lines && (
             <>
               {range[0] > 0 && <button className="mb-1 w-full py-2 text-center text-accent hover:bg-sunken" onClick={() => setRange([Math.max(0, range[0] - STEP), range[1]])}>앞쪽 더 보기 ({range[0]}줄 남음)</button>}
-              {lines.slice(range[0], range[1]).map((l, k) => {
-                const i = range[0] + k;
-                const isTarget = i === targetIdx;
-                const isMatch = matchSet.has(i);
-                const isCur = isMatch && matches[cur] === i;
-                return (
-                  <div key={i} data-i={i} className={`flex ${isTarget ? 'bg-warn-wash' : ''} ${isMatch ? (isCur ? 'bg-mark-strong' : 'bg-mark') : ''}`}>
-                    <span className="w-16 shrink-0 select-none pr-4 text-right text-faint">{i + 1}</span>
-                    <span className="min-w-0 whitespace-pre-wrap wrap-anywhere">{l}</span>
-                  </div>
-                );
-              })}
+              {raw
+                ? lines.slice(range[0], range[1]).map((l, k) => {
+                    const i = range[0] + k;
+                    return (
+                      <div key={i} data-i={i} className={`flex ${hl(i)}`}>
+                        <span className="w-16 shrink-0 select-none pr-4 text-right text-faint">{i + 1}</span>
+                        <span className="min-w-0 whitespace-pre-wrap wrap-anywhere">{l}</span>
+                      </div>
+                    );
+                  })
+                : blocks.filter((b) => (b.kind === 'table' ? b.end >= range[0] && b.start < range[1] : b.i >= range[0] && b.i < range[1])).map(renderBlock)}
               {range[1] < lines.length && <button className="mt-1 w-full py-2 text-center text-accent hover:bg-sunken" onClick={() => setRange([range[0], Math.min(lines.length, range[1] + STEP)])}>뒤쪽 더 보기 ({lines.length - range[1]}줄 남음)</button>}
             </>
           )}

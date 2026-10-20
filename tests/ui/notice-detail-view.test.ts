@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { emptyNotice } from '../../src/core/model/notice-fields';
 import type { Attachment, Notice } from '../../src/core/types/notice';
+import type { Extraction } from '../../src/core/types/extraction';
 import type { IndexEntry } from '../../src/core/types/index-file';
 import type { Job } from '../../src/core/types/job';
 import type { MailDraft } from '../../src/core/types/mail';
 import {
-  overviewStats, scheduleTimeline,
+  deadlineNoticeView, overviewStats, scheduleTimeline,
   attachmentPath, attachmentRows, attachmentSummary, detailTabs, effectiveTab, folderRelPath, mailSummary,
-  overviewGroups, relatedNotices, sessionJobRows,
+  overviewGroups, relatedNotices, resultMilestones, sessionJobRows,
 } from '../../src/ui/notice-detail/view';
 
 const NOW = '2026-10-19T00:00:00.000Z';
@@ -63,6 +64,20 @@ describe('attachments', () => {
     expect(rows[3]!.size).toBe('저장 50 B / 예상 2.0 KB');
     expect(attachmentSummary(n)).toEqual({ total: 5, saved: 2, failed: 2, skipped: 1 });
   });
+  it('prespec origin은 종류 앞에 사전규격 표시하고 origin 전달, 중복 행은 건너뜀과 비고', () => {
+    const n = bid();
+    n.attachments = [
+      att({ id: '1', index: 0, docKind: 'rfp' }),
+      att({ id: '2', index: 1, origin: 'prespec', docKind: 'rfp' }),
+      att({ id: '3', index: 2, origin: 'prespec', status: 'skipped', savedName: null, duplicateOf: '1', note: '입찰공고 첨부와 중복(사전규격)' }),
+    ];
+    const rows = attachmentRows(n);
+    expect(rows[0]!.kind).not.toContain('사전규격');
+    expect(rows[0]!.origin).toBeUndefined();
+    expect(rows[1]!.kind).toBe(`사전규격 / ${rows[0]!.kind}`);
+    expect(rows[1]!.origin).toBe('prespec');
+    expect(rows[2]).toMatchObject({ status: 'skipped', remark: '입찰공고 첨부와 중복(사전규격)' });
+  });
   it('attachmentPath와 folderRelPath', () => {
     expect(attachmentPath('notices/N1', 'a.pdf')).toEqual(['notices', 'N1', 'attachments', 'a.pdf']);
     expect(attachmentPath('N1', 'a.pdf')).toEqual(['notices', 'N1', 'attachments', 'a.pdf']);
@@ -115,6 +130,7 @@ describe('mail, jobs, tabs', () => {
   });
   it('detailTabs/effectiveTab', () => {
     expect(detailTabs(bid(), null).map((t) => t.id)).toEqual(['overview', 'files', 'history', 'review']);
+    expect(detailTabs(bid(), null).find((t) => t.id === 'review')).toMatchObject({ label: '공고정보 검토', count: 9 });
     expect(detailTabs(prespec(), null).some((t) => t.id === 'review')).toBe(false);
     expect(effectiveTab('review', prespec())).toBe('overview');
     expect(effectiveTab('review', bid())).toBe('review');
@@ -173,6 +189,18 @@ describe('개요 행 추출 설명', () => {
     const r = ev.rows.find((x) => x.label === '대외신인도 배점')!;
     expect(r).toMatchObject({ value: '가감점 표만 있음, 합계 배점 없음', hint: '가점 6항목, 감점 2항목', mark: 'needs_review', href: '#/notices/N1-000/review' });
   });
+  it('경영상태가 충족이면 대외신인도 확인 필요를 떼고 충족 사유를 붙인다', () => {
+    const n = bid();
+    n.evaluation.credibilityScore = { value: null, raw: '가점 6항목, 감점 2항목', status: 'needs_review', note: '가감점 표만 있음, 합계 배점 없음' };
+    const x = { items: {
+      credibilityScore: { value: null, status: 'needs_review', reason: 'no_total' },
+      managementScore: { value: 4, status: 'verified' },
+    } } as unknown as Extraction;
+    const r = overviewGroups(n, [], x).find((g) => g.id === 'evaluation')!.rows.find((y) => y.label === '대외신인도 배점')!;
+    expect(r.mark).toBeUndefined();
+    expect(r.href).toBeUndefined();
+    expect(r.hint).toBe('가점 6항목, 감점 2항목 (경영상태 배점으로 충족)');
+  });
   it('설명이 없으면 그대로 —, 링크 없음', () => {
     const r = overviewGroups(bid(), []).find((g) => g.id === 'evaluation')!.rows.find((x) => x.label === '대외신인도 배점')!;
     expect(r.value).toBe('—');
@@ -180,3 +208,72 @@ describe('개요 행 추출 설명', () => {
   });
 });
 
+
+describe('deadlineNoticeView', () => {
+  const on = { notify: { rank: true, final: true, deadline: true } };
+  const delivered = (): Notice => {
+    const n = bid();
+    n.mail.status = 'delivered';
+    n.schedule.bidCloseAt = { value: '2026-10-22T14:00:00+09:00', status: 'verified' };
+    return n;
+  };
+  const now = new Date('2026-10-20T03:00:00Z'); // 10-20 12:00 KST
+
+  it('설정이 꺼져 있으면 off', () => {
+    expect(deadlineNoticeView(delivered(), [], { notify: { ...on.notify, deadline: false } }, now)).toEqual({ state: 'off' });
+  });
+  it('사전규격, 전달 전, 더 큰 round, 일정 없음은 not_target', () => {
+    expect(deadlineNoticeView(prespec(), [], on, now)).toMatchObject({ state: 'not_target', reason: '사전규격은 마감 알림 대상이 아닙니다' });
+    const none = delivered();
+    none.mail.status = 'none';
+    expect(deadlineNoticeView(none, [], on, now)).toMatchObject({ state: 'not_target', reason: '메일 전달을 마쳤거나 팔로우한 공고만 알림을 보냅니다' });
+    expect(deadlineNoticeView(none, [entry({ noticeId: none.id, following: 'final' })], on, now).state).toBe('target');
+    expect(deadlineNoticeView(delivered(), [entry({ noticeId: 'N1-001', round: '001' })], on, now)).toMatchObject({ state: 'not_target', reason: '더 새로운 차수의 공고가 대상입니다' });
+    const empty = delivered();
+    empty.schedule.bidCloseAt = { value: null, status: 'missing' };
+    expect(deadlineNoticeView(empty, [], on, now)).toMatchObject({ state: 'not_target', reason: '공고정보에 마감 일정이 없습니다' });
+  });
+  it('target은 지난 시각을 빼고 라인을 만든다', () => {
+    const n = delivered();
+    n.schedule.registrationDeadline = { value: '2026-10-21T10:00:00+09:00', status: 'verified' };
+    expect(deadlineNoticeView(n, [], on, now)).toEqual({
+      state: 'target',
+      lines: [
+        { label: '입찰 마감', times: ['D-1 10/21 09:00', '당일 10/22 09:00'] },
+        { label: '참가등록 마감', times: ['당일 10/21 09:00'] },
+      ],
+    });
+  });
+  it('모든 시각이 지나면 lines가 비어 있다', () => {
+    expect(deadlineNoticeView(delivered(), [], on, new Date('2026-10-22T03:00:00Z'))).toEqual({ state: 'target', lines: [] });
+  });
+});
+
+
+describe('resultMilestones', () => {
+  const now = new Date('2026-10-21T12:00:00+09:00');
+  const done = [{ key: 'a', label: 'a', when: '', dday: null, state: 'done' as const }];
+  const pending = [{ key: 'a', label: 'a', when: '', dday: null, state: 'next' as const }];
+  it('팔로우도 결과도 없으면 빈 배열', () => {
+    expect(resultMilestones({}, done, now)).toEqual([]);
+  });
+  it('낙찰까지 팔로우, 확인 시작 전', () => {
+    const m = resultMilestones({ following: 'final', result: { status: 'waiting', startAt: '2026-11-05T14:00:00+09:00' } as never }, done, now);
+    expect(m.map((x) => [x.key, x.state])).toEqual([['rank', 'upcoming'], ['final', 'upcoming']]);
+    expect(m[0]!.when).toMatch(/부터 확인$/);
+  });
+  it('확인 중이면 순위 발표가 다음 단계, 앞 일정에 다음 단계가 있으면 강조하지 않음', () => {
+    const r = { following: 'final' as const, result: { status: 'waiting', startAt: '2026-10-20T14:00:00+09:00' } as never };
+    expect(resultMilestones(r, done, now)[0]!.state).toBe('next');
+    expect(resultMilestones(r, pending, now)[0]!.state).toBe('upcoming');
+  });
+  it('순위 확인, 개찰 결과만은 최종 결과 단계 없음', () => {
+    const m = resultMilestones({ following: 'rank', result: { status: 'ranked', rank: 2, bidders: 5 } as never }, done, now);
+    expect(m).toHaveLength(1);
+    expect(m[0]).toMatchObject({ state: 'done', when: '우리 2위 / 5개사' });
+  });
+  it('결과 확정이면 팔로우가 없어도 표시', () => {
+    const m = resultMilestones({ result: { status: 'won', rank: 1 } as never }, done, now);
+    expect(m.map((x) => [x.key, x.state, x.when])).toEqual([['rank', 'done', '우리 1위'], ['final', 'done', '낙찰']]);
+  });
+});

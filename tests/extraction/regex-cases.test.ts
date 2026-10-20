@@ -197,6 +197,24 @@ describe('basic.projectPeriodCell (표 옆 칸)', () => {
   it.each(['제안요청서 참조', '15개월', '20oo년 o월 o일 ~ 20oo년 o월 o일', '금50,000,000원(부가세 포함)    * 추정가격 : 금45,454,545원', '용역내용', '사업기간 계약일로부터 6개월'])('기간 신호 없음/다른 라벨: %s', (s) => expect(value(s)).toBeUndefined());
 });
 
+describe('sched.proposalEvalDocCell (표 옆 칸)', () => {
+  const label = new RegExp(ruleOf('sched.proposalEvalDocCell').anchor as string);
+  const value = (s: string) => new RegExp(ruleOf('sched.proposalEvalDocCell').pattern as string).exec(compact(s))?.groups?.v;
+  it.each(['제안서 평가일시:', '제안서 평가일자', '제안서 발표일시 :', '평가일시'])('라벨 셀 %s', (s) => expect(label.test(compact(s))).toBe(true));
+  it.each([
+    '제안서 평가기관:',
+    '제안서 평가장소:',
+    '해당 사업의 구매규격 사전공개일부터 제안서 평가일까지 입찰자의 소속 임직원이',
+  ])('라벨이 아닌 문장: %s', (s) => expect(label.test(compact(s))).toBe(false));
+  it.each([
+    // 축산물품질평가원 전자출하 공고 실측
+    ['2026/08/18 09:30 (상황에 따라 변경될 수 있으며 개별 통지합니다.)', '2026/08/1809:30'],
+    ['2026. 8. 18.(화) 10:00', '2026.8.18.(화)10:00'],
+    ['2026년 8월 18일', '2026년8월18일'],
+  ])('값 셀 %s', (s, v) => expect(value(s)).toBe(v));
+  it.each(['추후 통보', '국가종합전자조달시스템(나라장터) > 입찰 > 조달평가'])('날짜 없음: %s', (s) => expect(value(s)).toBeUndefined());
+});
+
 describe('sched.proposalPeriodDoc', () => {
   const id = 'sched.proposalPeriodDoc';
   it.each([

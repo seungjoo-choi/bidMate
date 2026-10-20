@@ -93,6 +93,17 @@ describe('prepareMail', () => {
     expect(draft.skippedAttachments).toEqual([{ attachmentId: 'a2', name: '실패.pdf', status: 'failed' }]);
     expect(draft.warnings).toContain('첨부 1개가 저장되지 않았습니다');
   });
+  it('duplicateOf 행은 첨부에서 빠지고 skippedAttachments/저장 안 됨 경고에도 세지 않는다', async () => {
+    const { mem } = await setup();
+    const ns = new NoticeStore(mem);
+    const n = (await ns.loadNotice('R1-000'))!;
+    n.attachments = [n.attachments[0]!, { id: 'a3', index: 1, originalName: '규격서.hwp', savedName: '규격서.hwp', url: '', expectedSize: null, savedSize: null, status: 'skipped', attempts: 1, origin: 'prespec', duplicateOf: 'a1' }];
+    await ns.saveNotice(n);
+    const { draft } = await prepareMail(mem, { noticeId: 'R1-000' }, opts);
+    expect(draft.attachments.map((a) => a.attachmentId)).toEqual(['a1']);
+    expect(draft.skippedAttachments).toEqual([]);
+    expect(draft.warnings.some((w) => w.includes('저장되지 않았습니다'))).toBe(false);
+  });
   it('isBusy면 JOB_ALREADY_RUNNING이고 파일이 바뀌지 않는다', async () => {
     const { mem } = await setup();
     const before = new Map(mem.files);

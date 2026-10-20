@@ -61,7 +61,7 @@ export function planFiles(attachments: Attachment[], title?: string | null): Pla
   for (const a of attachments) {
     const e = extOf(a.originalName);
     // 저장된 hwp만 쌍둥이로 친다: hwp가 저장 실패면 pdf가 유일한 사본이다.
-    if ((e === 'hwp' || e === 'hwpx') && a.status === 'saved' && a.savedName) hwpTwins.add(twinKey(a.originalName));
+    if ((e === 'hwp' || e === 'hwpx') && a.status === 'saved' && a.savedName) hwpTwins.add(`${a.origin ?? 'bid'}|${twinKey(a.originalName)}`);
   }
   return attachments.map((attachment) => {
     const name = attachment.originalName;
@@ -69,8 +69,9 @@ export function planFiles(attachments: Attachment[], title?: string | null): Pla
     const skip = (skipReason: SkipReason): PlannedFile => ({ attachment, classified, action: 'skip', skipReason });
     if (!SUPPORTED_EXT.has(extOf(name))) return skip('unsupported_ext');
     if (classified.priority === 0) return skip('excluded');
+    if (attachment.duplicateOf) return skip('duplicate');
     if (attachment.status !== 'saved' || !attachment.savedName) return skip('not_saved');
-    if (extOf(name) === 'pdf' && hwpTwins.has(twinKey(name))) return skip('duplicate');
+    if (extOf(name) === 'pdf' && hwpTwins.has(`${attachment.origin ?? 'bid'}|${twinKey(name)}`)) return skip('duplicate');
     return { attachment, classified, action: 'parse' };
   });
 }

@@ -583,3 +583,137 @@ Fable 설계, 사용자 결정(메일 화면 "확인 필요" 팝업에서 [이 �
 - S3: AI 출력 스키마 v2(variants), AiSuggestion.variants/verdict 'multi'/ruleRelation, 적용 시 variantIndex(note `[조건] 메모`, 조건 60자·note 500자 제한), 규칙 reason 'multi'(금액 한 줄 조건 구분자, 확인 필요 집계는 conflict와 동일). 스키마에 maxItems 넣지 않음(Claude structured outputs 미지원) — 개수 제한은 파서. 프롬프트 2.1.0. 실측: Gemini가 variants 스키마 수용, 팔레스타인 유형별 4개 정확.
 - S5: API 기본 전문 전송(설정 ai.sendFullText, 기본 true), 상한 25만 자(실측 약 2자/토큰 → 약 12.5만 토큰), 초과 시 발췌. 수동은 발췌 v2(섹션 확장·주석 결속·참조어 추적). 항목 단독 요청 근거 누락 4/28→0.
 - 전문 실패 시 자동 발췌 재실행은 넣지 않음: 새 runId를 일괄 실행·취소가 모르는 동시성 문제. 대신 AI_TIMEOUT·AI_BAD_REQUEST 실패 화면에 '관련 구간만 전송' 안내. 기각: runner 재실행(취소 경합).
+
+## 2026-10-20, AI 비교 실행 (Fable 설계, 사용자 승인, 명세 .claude/specs/ai-compare.md)
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 표시 규칙을 "키별 최신 run 1개"에서 "키별, 공급자별 최신 요청 run"으로 확장. 기존 buildAiCards 결과가 primary, 다른 공급자 제안은 others | 따로 돌린 결과가 서로를 가리는 문제는 비교 실행 없이도 생김 | compareId 그룹만 비교 표시 / 별도 비교 테이블 화면 |
+| primary 선정 규칙 불변("요청한 키 기준 최신") | 사이드패널, 확인 일치 배지, 기존 테스트 무영향 | 설정 공급자 우선 |
+| AiRunner.execCompare가 같은 공고 잠금을 쥔 채 공급자를 순차 실행 | 공고당 1 run, 세션 키 1개, 고아 정리, 취소가 모두 단일 실행 전제 | 동시 실행 / 대시보드가 ai/run 순차 호출 / AiBatch 재사용 |
+| 2번째 이후 run은 scope keys, keys = 첫 run.keys로 고정 | 실행 중 적용으로 pending이 줄어도 같은 항목을 비교 | 매 run 같은 scope 재해석 |
+| 한 공급자 실패는 기록하고 계속, 취소만 남은 공급자 중단 | 공급자마다 키와 한도가 별개 | 첫 실패 시 중단 |
+| AiRun.compareId?(파일), AiRunState.compare?(세션)만 추가. AI_MAX_RUNS(10) 유지 | 패널 묶음과 진행 표시용 최소 정보 | 비교 전용 파일 |
+| 적용은 고른 공급자 제안만 appliedAt, 다른 제안은 남김. 무시도 그 공급자만 | 다른 AI 값으로 바꾸는 흐름 유지 | 적용 시 나머지 자동 무시 |
+| 비교는 API 방식 전용, 시작 UI는 AiRunDialog의 "여러 AI로 비교" 전환 | prepareRun이 기존 awaiting run을 취소하는 구조와 충돌 | 반자동 포함 / 메뉴에 공급자 조합 나열 |
+
+진입점 확장의 "공고당 1 run" 결정은 그대로 유지된다(비교 시리즈 전체가 잠금 1개).
+구현 보강: 다음 run을 prepare하는 동안(직전 runId가 잠금에 남아 있음) 고아 정리가 방금 만든 requesting run을 닫지 않도록 잠금 항목에 preparing 표시를 둔다.
+
+## 2026-10-20 공고정보 검토 탭(필수 12개 항목)
+- 무엇: 검토 탭이 사용자 필수 12개 + 경영상태 배점을 13줄(잎 16개)로 검토한다. 탭 이름 "공고정보 검토". 실적점수 평가는 묶음 행(수행실적 배점 + 인정기간/금액/조건). 화면은 접힌 목록 + 결정 필요 행 자동 펼침.
+- 데이터: ExtractionKey는 확장하지 않는다. 코어 `review-rows.ts`에 행 정의와 `leafReviewState`를 두고, 문서 잎 7개는 Extraction item, 공고 잎 8개는 notice FieldValue에서 만들어 공통 뷰 모델로 합친다. 스키마 변경, 마이그레이션 없음.
+- 상태: API/HTML 값은 status verified면 확인 완료, missing/needs_review면 확인 필요. 탭 배지와 상단 요약은 `pendingLeafKeys` 하나로 센다. `pendingKeys`, `reviewCountOf`, handoff 게이트, 사이드패널 개수는 문서 추출 의미로 유지. not_run은 세지 않는다.
+- 쓰기: 화면의 모든 수정/확정/되돌리기는 `notice/field-edit`(D1). "이 값이 맞음" = 같은 값으로 user_edited, "확인함"은 저장값 == 자동값 비교로 파생(필드 추가 없음).
+- AI 재검토 범위는 문서 항목 7개 유지. 공고 필드 행에는 AI 버튼 없음. → 같은 날 사용자 결정으로 변경, 아래 "AI 재검토 대상 13행 확장" 참조.
+- 입찰참가자격등록은 소스에 시작값이 없어 "마감" 한 값만 표시, 공고게시일시로 합성 금지.
+- 기각: ExtractionKey에 8개 추가(Record 전수 파급, AI 스키마 변경, 문서 추출 의미 훼손), notice FieldValue만으로 구성(EvidenceRef, 후보 근거, AI 연결 상실).
+- 기존 결정 변경: 2026-10-19 "검토 탭 count는 extraction 있을 때만, 라벨 평가정보 검토" → extraction 없어도 count, 라벨 공고정보 검토.
+
+## 2026-10-20 낙찰 결과 추적과 팔로우 알림 (Fable 설계, 사용자 승인, 명세 .claude/specs/award-tracking.md)
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| "낙찰"은 낙찰정보 API(2단계)에서 낙찰 업체가 우리일 때만. 1순위는 중간 상태 | 협상 결렬, 적격심사 탈락으로 1순위가 뒤집힘. 거짓 낙찰이 더 비쌈 | 비협상 공고는 1순위를 낙찰로 간주 |
+| 결과는 루트 results.json(파생 캐시), 팔로우는 follows.json(사용자 의사) 별도 파일. offscreen만 씀 | notice.json은 수집 잡 덮어쓰기 경합, index.json은 재생성 시 유실. 파생 캐시와 사용자 의사의 손상 처리 분리 | notice.json/index.json 필드, chrome.storage, 공고별 파일 |
+| IndexEntry.result, following은 listNotices에서 파생 병합 | 화면은 notice/list 하나만 보면 됨 | 대시보드가 별도 메시지로 읽기 |
+| 일반 공고는 목록 진입 시만 확인(10분 스로틀, 15건 상한). 주기 알람 없음 | 배지는 목록을 열어야 보임(사용자 결정) | 60분 주기 알람 |
+| 팔로우 공고만 단일 when 알람으로 확인 후 OS 알림. 개찰 전 0회, 시작 = max(개찰, 제안서 평가), 6시간 10분 간격, 이후 평일 9~17시 정시, 순위 후 평일 10/14/17시 | 결과는 담당자 근무 시간에 게시, 며칠 걸리는 경우 대응(사용자 결정) | 공고별 알람, 고정 간격 |
+| 알림은 SW가 발송, 중복 방지는 follows.notified + notification id 교체 | offscreen은 chrome.notifications 불가 | offscreen 발송 |
+| 결과 확정 또는 120일 경과 시 알림 후 팔로우 자동 해제 | 끝난 공고 계속 확인 불필요 | 수동 해제만 |
+| 수동 결과 덮어쓰기 없음 | 공개 API로 재계산 가능한 파생값, 충돌 규칙이 생김 | 사용자 수동 확정 |
+| 1단계 행은 차수로 거르지 않음(결과는 마지막 차수 기준) | 000만 수집한 정정 공고가 영원히 대기가 되는 것 방지 | 차수 일치 행만 |
+| 2단계 오퍼레이션, 필드는 추정. S0 실측 후 AWARD_FIELDS 확정 | 코드로 확인 불가 | 추정대로 바로 구현 |
+
+## 2026-10-20 AI 재검토 대상 13행 확장
+사용자 요구 "AI가 13개 모두 찾을 수 있어야" (행 버튼, 전체 재검토, 사이드패널 원클릭, 일괄 실행 모두). 명세 `.claude/specs/ai-review-13.md`.
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| AiKey = ReviewLeafKey(16). run.keys, suggestions, ai/apply, ai/dismiss key 전부 AiKey | AI 파이프라인 전체가 키 색인 맵, ReviewLeafKey가 라벨/kind/상태/수정 가능 여부가 정의된 유일한 집합 | ExtractionKey 확장 / extras 경로 / key: string |
+| 공고 잎 9개는 문서 원문 표기 string으로 받고 코드가 환산(docDateToIso, toIsoKst, parseKoreanAmount, parseJointVenture), 검증은 validateFieldValue | v2 원칙과 같음, AI 환산 오류 제거, raw 보존 | AI가 ISO/정수/boolean 직접 제공 |
+| 시각 없는 날짜는 값이 아님(note만) | FieldValue ISODate 의미 유지, 00:00 채우면 늘 differs | 날짜만 허용 |
+| verdict 기준값은 공고 잎 = 현재 FieldValue. text는 compact 후 포함 관계(짧은 쪽 4자 이상)면 match, datetime은 Date.parse 동일 | 형식만 다른 API 값이 전부 differs로 뜨는 소음 방지 | 정확 일치 / 프롬프트에 API 값 제공(앵커링) |
+| 적용은 applySuggestion 안에서 분기: 공고 잎은 editNoticeField(source.ref 'ai:<runId>'), stale 검사 공통 | UI 진입점 하나, appliedAt 기록 유지 | UI가 field-edit로 우회 |
+| "AI 적용" 표시는 source.ref가 'ai:'로 시작하는지로 파생 | 스키마 불변 | userEdit.origin 추가 |
+| 범위 계산은 pendingLeafKeys 하나(all = 16). pendingKeys, reviewCountOf, handoff 게이트는 유지 | 탭 배지, 메뉴 힌트, run.keys가 같은 수 | 진입점별 7/16 |
+| AI_MAX_TOKENS 8192 → 16384, 타임아웃 유지 | 16개 항목 출력 잘림 방지 | 두 run으로 분할(공고당 1 run 위반) |
+| 프롬프트 2.2.0, AI_SCHEMA_TAG /2 유지 | 응답 구조 동일 | 태그 /3 |
+| S3 이후(엔진, 프로토콜, ai-view, 화면)는 AI 비교 커밋 뒤 | 같은 파일 동시 수정 충돌 | 동시 진행 |
+| (같은 날 추가, 사용자 결정) 사이드패널 "검수" 버튼 배지도 noticeReviewCount(13행 기준). "평가 기준" 묶음 배지, 나라장터 패널 "평가정보: 확인 필요 n건", handoff 게이트는 문서 항목 기준 유지 | 검수 버튼은 검토 탭으로 가는 입구라 탭 배지와 같아야 함. 나머지는 평가정보만 가리키는 표시이거나 자동 메일 게이트 | 사이드패널 전부 13행 |
+
+## 2026-10-20 입찰 전 기능 5종 방향 (Fable 검토, 사용자 "추천대로")
+검토 요약 `.claude/specs/prebid-features.md`. 진행 순서 4(마감 알림) → 1(자격 판정) → 2(예상 점수) → 3(기관 이력) → 7(투찰가 시뮬레이터).
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 마감 알림은 이미 구현된 award-tracking 인프라(권한, result-scheduler, notify 설정)를 공유. 알림 발송과 클릭 처리를 `src/background/notify.ts`로 추출하고 스케줄러마다 자기 id 접두어(`result:`/`deadline:`) 클릭 리스너를 둔다. 명세 `.claude/specs/deadline-notify.md` | 알림 체계 이중화 방지, result-scheduler 테스트 무변경 | 기능별 알림 체계 / 공통 클릭 라우터 |
+| 알림 계획은 offscreen이 계산해 storage.local `deadlinePlan`에 캐시, SW는 캐시로 발송 | SW는 파일을 못 읽고 폴더 권한이 prompt일 수 있음 | 알람 시 offscreen 기동 후 읽기만 |
+| 회사 등급/속성은 `Settings.company` 확장, 실적 목록은 `config/performances.json` | 스칼라는 settings 전례(393행), 목록은 config 파일 전례(148행) | 둘 다 settings / 둘 다 파일 |
+| 자격 판정은 저장하지 않고 화면에서 계산, "미달 확정" 문구 금지(미달 가능), 인정조건 원문이 있으면 확인 필요 | 실적 목록 변경 시 stale 방지, 추출 오류로 입찰을 포기하는 비용이 큼 | 판정 결과 저장 / 미달 확정 표시 |
+| 예상 정량 점수는 공고별 직접 입력 + 근거 표시(`<folder>/estimate.json`). 기본 비율표 추정은 쓰지 않고 등급표 자동 추출은 보류 | 추출기는 배점만 보유, 497행 "문서에 없는 숫자 생성 금지" 유지 | 기본 비율표 추정 / 등급표 추출 선행 |
+| 기관 이력은 수요기관(dminsttCd) 기준 3년, 수동 갱신 + 로컬 캐시 `orgs/<기관코드>.json`, 착수 전 공개 API probe | 조달청 대행 공고는 공고기관이 조달청, 일일 호출 한도, 기간 검색/낙찰 목록 오퍼레이션 미확인 | 공고기관 기준 / 자동 주기 조회 |
+| 투찰가 시뮬레이터는 저장 없이 계산, 분모 기본 추정가격(변경 가능), 경쟁 최저 투찰률 기본 88%(기관 분포가 있으면 그 값), 낙찰하한율 아래는 계산 제외 경고 | 기초금액은 API에 없음, 공식은 평가 이력 검증 비율과 함께 "가정"으로 표기 | 공식 고정 적용 |
+
+S0 실측 1차(2026-10-20): 1단계(OpengCompt, inqryDiv=4)는 확인됨. 필드는 prcbdrBizno, opengRank, totalEvlAmtVal(높을수록 상위, SCORE_RANK_DESC=true 확인), rbidNo, opengRsltDivNm("개찰완료"). 낙찰 플래그 필드는 없음(openingWon 비활성 유지). 개찰 전 공고는 0건 응답(오류 아님). 2단계 getScsbidListSttus* 는 inqryDiv=2 + bidNtceNo로 "08 필수값 입력 에러" → inqryDiv=4(공고번호 조회)로 변경, 재실측 필요.
+S0 실측 2차(2026-10-20): 2단계는 inqryDiv=4 + bidNtceNo로 성공. 용역 공고는 getScsbidListSttusServc만 1건, 나머지 op는 0건(성공). 필드 bidwinnrBizno, bidwinnrNm, sucsfbidAmt, fnlSucsfDate(YYYY-MM-DD), rlOpengDt, prtcptCnum 확인. AWARD_FIELDS 추정값 그대로 확정. 유찰 공고는 실측 못 함(openingNoBid 비활성 유지).
+
+## 2026-10-21 입찰공고 수집 시 연계 사전규격 첨부 동반 수집 (Fable 설계, 실측으로 조정, 사용자 승인, 명세 .claude/specs/prespec-link.md)
+배경: R26BK01631407-000은 첨부가 공고서뿐이라 배점표(제안요청서)를 못 찾음. 제안요청서는 연계 사전규격 R26BD00246532에만 있음.
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 입찰공고 수집마다 `bfSpecRgstNo`로 사전규격을 조회해 첨부를 같이 받음(조건부 아님, 설정 토글 없음) | 공고서만 올리고 제안요청서는 사전규격에만 두는 경우가 흔함. 조건부는 추출 뒤 흐름을 한 번 더 돌려야 함 | 배점 not_found일 때만 받기 |
+| fetch_basic 안에서 처리, 새 StepId 없음. 사전규격 첨부는 같은 `attachments` 배열과 폴더에 `origin: 'prespec'`으로 이어 붙임 | 경로 가정과 단계 라벨이 여러 곳에 고정 | `fetch_prespec` 단계, `attachments/prespec/` 하위 폴더, 별도 배열 |
+| 미존재(`G2B_NOT_FOUND`)는 정상, 그 외 실패는 partial(`PRESPEC_FETCH_FAILED`, retryable). 재시도에서는 재조회 안 함 | 오래된 공고는 사전규격이 흔히 없음. 진행 중 첨부 배열이 다시 짜이면 다운로드 상태와 어긋남 | 모든 실패 무시 / 미존재도 partial |
+| 사전규격 API에는 파일명 필드가 없음(실측). 다운로드 시 확장자 없는 이름은 `content-disposition` 파일명으로 교체 | 이름 없이 저장하면 추출이 형식을 모름. 단독 사전규격 수집의 같은 문제도 해결 | 매직 바이트로 확장자만 추정 |
+| 중복 판정은 다운로드 후 한 번: 이름 키(NFC, 소문자, 공백과 괄호 제거, 확장자 포함)가 같거나, 크기가 같고 sha256이 같으면 사전규격 파일을 지우고 행은 skipped + `duplicateOf`로 남김. 이름 같고 내용 다르면 입찰공고판 채택 | 다운로드 전엔 이름을 모름. 입찰공고판이 최종본이고 사전규격 초안 배점 혼입 방지 | 다운로드 전 이름 비교(Fable 원안, 실측으로 불가), 둘 다 보관 |
+| 추출은 입찰공고 첨부 우선: bid 후보가 있으면 prespec 후보는 결정에서 빼고 candidates에만 남김. bid 후보가 없을 때만 prespec 값으로 verified, 화면에 "사전규격 첨부" 출처 | 공고서와 초안 차이로 매번 충돌이 생기는 것 방지, 차이는 검토 화면에서 볼 수 있음 | 동급 경쟁, prespec 값은 항상 needs_review |
+| 메일 첨부에 사전규격 첨부 포함(중복 행은 skipped라 제외) | 사용자 결정 | 공고서만 첨부 |
+| 이미 수집한 공고는 수동 "다시 수집"으로 반영 | API 일일 한도, 폴더 권한 | 일괄 보충 |
+
+- 2026-10-19 결정의 "사전규격 extract 항상 skipped"는 사전규격 공고 단독 수집에만 해당. 입찰공고에 연계된 사전규격 첨부는 bid 공고의 보충 문서로 추출하되 bid 후보가 우선.
+
+## 2026-10-21 정량평가 표 기반 "해당 없음" (Fable 설계, 사용자 승인, 명세 .claude/specs/not-applicable.md)
+배경: R26BK01631407-000은 정량평가가 경영상태 10점 하나뿐인데 실적과 신인도가 "확인 필요"로 남음.
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 새 전략 `quant-table`이 정량표를 `extras.quantTable`("<합계>:<범주>")로 요약, decide 후처리 `applyQuantTable`이 not_found 항목만 `verified + value null + reason not_applicable`로 바꿈 | no_total/bonus-table과 같은 구조, 숫자를 만들지 않음 | 경영상태가 있으면 나머지 자동 해당 없음(표 근거 없는 추정), 새 status 값 |
+| 표 완결성: 합계 배점과 행 배점 합 일치, 행/열 잘림 탈락, 범주를 하나도 못 읽으면 탈락, 제목에 정성/기술/가격평가가 함께 있으면 양식 A 제외 | 표를 일부만 읽은 거짓 해당 없음 방지 | 행 수 임계값, 제목만으로 판정 |
+| 범주는 배점 열(머리글이 배점 동의어인 모든 열)만 빼고 모든 칸에서 부분 일치 | 계층 표의 오른쪽 세부 항목 누락 방지, 오탐은 "있다고 봄" 방향 | 배점 열 왼쪽만, 라벨 길이 제한 |
+| 해당 없음은 그룹 충족(대외신인도/경영상태) 근거가 아님 | 경영상태 파싱 실패를 신인도 해당 없음이 덮는 것 방지 | 그대로 충족 |
+| 공고 필드는 `verified + null + note NA_NOTE`, mergeKey는 이를 해석 실패로 돌리지 않음 | FieldValue에 reason이 없음, 병합에서 needs_review로 바뀌면 메일 템플릿이 확인 필요로 표시 | FieldValue에 reason 추가 |
+| 적격 판정 verdict 불변, 사유 문구만 해당 없음 | 참가자격 쪽 실적 요건이 따로 있을 수 있음 | 해당 없음이면 충족 |
+| 규칙 1.4.0, 스키마 유지, 기존 공고는 다시 추출 | 가산적 변경 | 스키마 버전 올림 |
+| 같은 날 perf.period: "…제시"(제안서 작성 안내), 하수급인/하도급 계약금액 대비 실적 기간 제외. valueKey는 끝 "이내"만 다른 값을 같게 봄. 제안서 평가일시 라벨 옆 칸 규칙 `sched.proposalEvalDocCell` 추가 | 전자출하 제안요청서 실측 오탐/누락 | 없음 |
+
+## 2026-10-21 실적 집계 (Fable 설계, 화면 목업 .claude/specs/bid-stats-mockup.html)
+배경: 앱에 등록하고 결과를 추적한 공고의 투찰/낙찰 건수와 금액, 순위 분포, 기관별 집계. 대시보드 "실적" 페이지 + 공고목록 위 요약 띠.
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 우리 투찰금액은 개찰결과 1단계 우리 행의 `bidprcAmt`를 `ResultEntry.ourAmount`에 저장 | 이미 호출하는 응답에 있어 추가 호출 0회. 평가 분석에서 실측 확인됨(eval-analysis.md:31) | 2단계 sucsfbidAmt만 사용, 추정가격 대용 |
+| 낙찰금액은 `amount`(sucsfbidAmt) 우선, 없으면 `ourAmount` | 협상 계약은 sucsfbidAmt가 빈 값일 수 있음 | amount만 사용 |
+| schemaVersion 1 유지, 선택 필드 `ourAmount?`, `amountCheckedAt?` 추가 | 버전을 올리면 ResultStore.load가 기존 파일을 버리고 전부 재조회 | 버전 2 + 마이그레이션 |
+| 종료 항목 백필은 list 모드에서만, 1단계만 호출, 1회 10건 상한, judge 재실행 없이 `applyOurAmount`로 금액만 채움. 성공 응답이면 값 유무와 무관하게 `amountCheckedAt` 기록 | 종료 상태가 재판정으로 바뀌는 위험 차단, 우리 행 없는 건 반복 호출 방지 | 수동 "금액 가져오기" 버튼, judge 재실행, follow 모드 실행 |
+| 집계 입력은 `notice/list`의 IndexEntry만(`result`에 ourAmount, openingAt 병합). 순수 함수 `core/results/stats.ts` | 기존 병합 경로 재사용, 목록 띠와 실적 페이지 숫자 일치 | 새 메시지 + offscreen 집계 |
+| 월 귀속 = openingAt(로컬 시간) | 모든 항목에 있는 유일한 날짜 | awardedAt, collectedAt |
+| 투찰 = won, lost, rank 있는 ranked/expired. 낙찰률 분모 = won + lost | 미확정을 분모에 넣으면 개찰 직후 낙찰률이 일시적으로 떨어짐 | 투찰 전체 분모 |
+| 차트 라이브러리 미도입, div 막대(홈 MonthlyBars 방식 복제) | 막대 최대 12개, 번들과 톤 일치 | recharts, 직접 SVG |
+| 색은 낙찰 = ok, 전체 투찰 = 회색 두 가지만. 탈락에 danger 색 미사용 | 실적 화면이 경고판처럼 보이지 않게 | 상태별 다색 |
+| 일반 판정 루프에서 1단계 성공 + 종료 상태로 판정되면 `amountCheckedAt`도 찍는다(구현 중 보정) | 같은 응답에서 이미 ourAmount를 읽었으므로 다음 실행의 백필 재호출 방지 | 백필에서만 기록 |
+| 실적 페이지는 독립 메뉴 "실적". 홈은 숫자 카드 아래 한 줄 띠만, 공고목록 위에도 같은 띠(사용자 결정) | 홈은 살짝만, 상세는 따로 | 홈에 섹션 추가, 홈 맨 아래 카드, 공고목록 띠 제거 |
+
+
+## 2026-10-21 팔로우 범위 선택 (Fable 설계, 명세 `.claude/specs/follow-target.md`)
+사용자 요구: 별을 누르면 "개찰 결과만 / 낙찰까지" 중에 고르는 작은 메뉴.
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| FollowEntry.target('rank'/'final'), 기본 final. 옛 follows.json은 읽을 때 final로 정규화하고 다시 쓰지 않음, schemaVersion 1 유지 | 추가만으로 호환 | 마이그레이션 쓰기 / 버전 올림 |
+| 전역 notify.rank/final은 알림 스위치, 공고별 target은 추적 범위. 독립이며 메뉴는 경고 설명만 | 두 개념 분리, 전역 설정이 공고 선택을 막지 않게 | 전역 설정으로 메뉴 비활성 |
+| 개찰 결과만 해제는 저장 시점(finally)의 target으로 판정하고, finally는 follows 항목을 덮지 않고 notified만 합침(구현 중 리뷰 Major 보정) | 실행 중 사용자의 범위 변경이 덮이거나 무시되는 경합 방지 | 실행 시작 때 읽은 항목으로 통째 덮기 |
+| final에서 rank로 바꾸면 notified.rank를 비움(리뷰 Minor 보정) | 새 round에서 순위 알림 없이 조용히 해제되는 것 방지 | 그대로 유지 |
+| 메뉴는 포털 + fixed, 아래 공간 부족하면 위로 | 목록 overflow 컨테이너에 잘림 방지 | 행 안 absolute |
+| (2026-10-21 사용자 결정) 마감 알림 대상을 "메일 전달 완료 또는 팔로우 중"으로 넓힘(`isDeadlineTarget`). 팔로우 변경 시 deadline/refresh | 팔로우한 공고에 마감 알림이 안 오는 어긋남 해소, 알림 수는 계속 통제 | 수집 공고 전부 / 전달 완료만 유지 |

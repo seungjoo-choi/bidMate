@@ -1,5 +1,6 @@
 import { fetchNotice, redactKey } from '../../adapters/g2b/openapi';
 import { fetchPrespec, mapPrespecItem } from '../../adapters/g2b/prespec-api';
+import { buildPlan } from '../../core/deadline/plan';
 import { loadRules } from '../../core/extraction/rules/load';
 import { SELECTOR_SETS } from '../../adapters/naverworks/selectors';
 import { runCollectJob } from '../../engine/jobs/collect-job';
@@ -9,6 +10,7 @@ import { runExtractJob } from '../../engine/jobs/extract-job';
 import { createParserRegistry } from '../../engine/parsers/registry';
 import { editExtraction, editNoticeField, getNotice, listNotices, readExtractionText } from '../../engine/notices/notice-api';
 import { repairConfig } from '../../engine/config/config-store';
+import { deletePerformance, importPerformances, listPerformances, savePerformance } from '../../engine/config/performances-api';
 import { deleteGroup, deleteRecipient, importRecipients, listRecipients, saveGroup, saveRecipient, setDefaultGroup } from '../../engine/config/recipients-api';
 import { deleteTemplate, listTemplates, saveTemplate, setDefaultTemplate } from '../../engine/config/templates-api';
 import { getDraft, getEdits, prepareMail } from '../../engine/mail/prepare';
@@ -16,6 +18,10 @@ import { SentStore } from '../../engine/mail/sent-store';
 import { JobRegistry } from '../../engine/jobs/job-registry';
 import { listen, send } from '../../messaging/bus';
 import { fileStore } from '../../engine/file-store/file-store';
+import { setFollow } from '../../engine/results/follow-api';
+import { runResultRefresh } from '../../engine/results/result-tracker';
+import type { ResultRunSummary } from '../../core/types/result';
+import { probeResult } from '../../engine/results/result-probe';
 import { saveEval } from '../../engine/evaluation/eval-api';
 import { EvalStore } from '../../engine/evaluation/eval-store';
 import { lookupInIndex } from '../../engine/notices/lookup';
@@ -194,7 +200,28 @@ listen('eval/list', async () => (await new EvalStore(fileStore).loadIndex()).ent
 listen('eval/get', ({ noticeId }) => new EvalStore(fileStore).get(noticeId), 'offscreen');
 listen('eval/get-many', ({ noticeIds }) => new EvalStore(fileStore).getMany(noticeIds), 'offscreen');
 listen('eval/delete', async ({ noticeId }) => ({ removed: await new EvalStore(fileStore).remove(noticeId) }), 'offscreen');
+let resultRun: Promise<ResultRunSummary> | null = null;
+listen('result/run', ({ mode, serviceKey, bizNo }) => {
+  // 단일 실행. 실행 중이면 BUSY로 돌려보낸다(SW가 2분 뒤 재시도).
+  if (resultRun) return { ran: false, checked: 0, updated: 0, won: 0, skipped: 'BUSY' as const, nextFollowCheckAt: null, events: [] };
+  resultRun = runResultRefresh({
+    store: fileStore, fetch: (...a) => fetch(...a), serviceKey, bizNo,
+    checkPermission: async () => { const st = await fileStore.status(); return st.hasRoot && st.permission === 'granted'; },
+  }, { mode }).then((r) => {
+    // 응답이 타임아웃으로 SW에 못 가도 알림과 알람은 이 메시지로 전달된다.
+    void send('result/done', { events: r.events, nextFollowCheckAt: r.nextFollowCheckAt, ...(r.skipped ? { skipped: r.skipped } : {}) }, { target: 'sw' }).catch(() => undefined);
+    return r;
+  }).finally(() => { resultRun = null; });
+  return resultRun;
+}, 'offscreen');
+listen('follow/set', async (p) => {
+  const r = await setFollow(fileStore, p);
+  void send('result/done', { events: [], nextFollowCheckAt: r.nextFollowCheckAt }, { target: 'sw' }).catch(() => undefined);
+  return r;
+}, 'offscreen');
+listen('result/probe', ({ noticeNo, serviceKey }) => probeResult(noticeNo, serviceKey ?? ''), 'offscreen');
 listen('notice/list', () => listNotices(fileStore), 'offscreen');
+listen('deadline/plan', async () => buildPlan(await listNotices(fileStore), Date.now()), 'offscreen');
 listen('notice/get', ({ noticeId }) => getNotice(fileStore, noticeId), 'offscreen');
 const isNoticeBusy = (noticeId: string) => registry.findConflict({ type: 'extract', noticeId }) !== undefined;
 listen('extraction/edit', (p) => editExtraction(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
@@ -208,6 +235,7 @@ const aiRunner = new AiRunner({
   pushStatus: (s) => { void send('ai/status', s, { target: 'sw' }).catch(() => undefined); },
 });
 listen('ai/exec', async (p) => ({ runId: (await aiRunner.exec(p)).runId }), 'offscreen');
+listen('ai/compare-exec', async (p) => { const r = await aiRunner.execCompare(p); return { compareId: r.compareId, runId: r.runId }; }, 'offscreen');
 listen('ai/prepare', async (p) => {
   const prepared = await aiRunner.prepare({ noticeId: p.noticeId, scope: p.scope, keys: p.keys, provider: p.provider as NonNullable<typeof p.provider>, files: p.files });
   return { runId: prepared.run.id, text: prepared.built.manualText, webUrl: prepared.adapter.webUrl, stats: prepared.stats };
@@ -229,6 +257,10 @@ listen('ai/batch-exec', (p) => ({ batchId: aiBatch.start(p).batchId }), 'offscre
 listen('ai/batch-get', () => aiBatch.current(), 'offscreen');
 listen('ai/batch-cancel', ({ batchId }) => aiBatch.cancel(batchId), 'offscreen');
 listen('ai/models', ({ provider, apiKey }) => listModels(provider, apiKey, (...a) => fetch(...a)), 'offscreen');
+listen('performances/list', () => listPerformances(fileStore), 'offscreen');
+listen('performances/save', ({ performance }) => savePerformance(fileStore, performance), 'offscreen');
+listen('performances/delete', ({ id }) => deletePerformance(fileStore, id), 'offscreen');
+listen('performances/import', ({ plan }) => importPerformances(fileStore, plan), 'offscreen');
 listen('recipients/list', () => listRecipients(fileStore), 'offscreen');
 listen('recipients/save', ({ recipient }) => saveRecipient(fileStore, recipient), 'offscreen');
 listen('recipients/import', ({ plan }) => importRecipients(fileStore, plan), 'offscreen');

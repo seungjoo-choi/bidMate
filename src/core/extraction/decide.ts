@@ -2,7 +2,8 @@ import { EXTRACTION_KEYS } from '../types/extraction';
 import type { EvidenceRef, ExtractedItem, ExtractionFileStatus, ExtractionKey, ExtractionStatus } from '../types/extraction';
 import type { DocKind } from './classify';
 import { compact } from './normalize';
-import { coveredByGroup } from './review-count';
+import { parseQuantValue, QUANT_TABLE_EXTRA } from './quant-table';
+import { itemReviewState } from './review-count';
 import type { RuleSet } from './rules/schema';
 
 export interface Candidate {
@@ -17,7 +18,8 @@ export interface Decision {
 export function valueKey(v: unknown): string {
   if (typeof v === 'number') return `n:${v}`;
   if (typeof v === 'boolean') return `b:${v}`;
-  const s = compact(String(v));
+  // "계약일로부터 180일"과 "계약일로부터 180일 이내"처럼 끝의 "이내"만 다른 값은 같은 값으로 본다.
+  const s = compact(String(v)).replace(/이내$/, '');
   const y = /^(\d+)년$/.exec(s);
   return y ? `n:${y[1]}y` : `s:${s.slice(0, 40)}`;
 }
@@ -35,11 +37,21 @@ function isMultiCondition(target: string, cands: Candidate[]): boolean {
   return [...byLine.values()].some((l) => new Set(l.map((c) => valueKey(c.value))).size >= 2 && l.some((c) => CONDITION_MARK.test(c.evidence.evidence)));
 }
 
+/** 입찰공고 첨부 후보가 있으면 그것만으로 판정하고, 사전규격 후보는 값이 같든 다르든 candidates 뒤에만 붙인다(충돌을 만들지 않음). */
 function decideOne(target: string, cands: Candidate[], rules: RuleSet): ExtractedItem<unknown> {
+  const hasBid = cands.some((c) => c.evidence.origin !== 'prespec');
+  const main = hasBid ? cands.filter((c) => c.evidence.origin !== 'prespec') : cands;
+  const dropped = hasBid ? cands.filter((c) => c.evidence.origin === 'prespec') : [];
+  const item = decideMain(target, main, rules);
+  if (dropped.length) item.candidates = [...(item.candidates ?? []), ...dropped.map((c) => ({ value: c.value, raw: c.raw, evidence: c.evidence }))];
+  return item;
+}
+
+function decideMain(target: string, cands: Candidate[], rules: RuleSet): ExtractedItem<unknown> {
   if (cands.length === 0) return { value: null, status: 'needs_review', reason: 'not_found' };
   const sorted = cands
     .map((c, i) => ({ c, i }))
-    .sort((a, b) => a.c.priority - b.c.priority || b.c.weight - a.c.weight || a.i - b.i)
+    .sort((a, b) => a.c.priority - b.c.priority || (a.c.evidence.origin === 'prespec' ? 1 : 0) - (b.c.evidence.origin === 'prespec' ? 1 : 0) || b.c.weight - a.c.weight || a.i - b.i)
     .map((x) => x.c);
   const top = sorted[0]!;
   const toRef = (c: Candidate) => ({ value: c.value, raw: c.raw, evidence: c.evidence });
@@ -66,6 +78,25 @@ function applyBonusTable(items: Record<ExtractionKey, ExtractedItem<unknown>>, e
   items.credibilityScore = { value: null, status: 'needs_review', reason: 'no_total', raw: String(bt.raw ?? bt.value), evidence: bt.evidence };
 }
 
+/** 정량평가 표를 완결된 형태로 찾았는데 실적/신인도/경영상태 행이 없으면 해당 항목을 not_found 대신 "해당 없음"(verified, value null)으로 판정한다. */
+function applyQuantTable(items: Record<ExtractionKey, ExtractedItem<unknown>>, extras: Record<string, ExtractedItem<unknown>>): void {
+  const qt = extras[QUANT_TABLE_EXTRA];
+  if (!qt || qt.status !== 'verified' || !qt.evidence) return;
+  const parsed = parseQuantValue(qt.value);
+  if (!parsed) return;
+  const evidence = qt.evidence;
+  const qd = extras.quantEvalDoc;
+  const doc = qd && qd.status === 'verified' && typeof qd.value === 'string' ? qd.value : '';
+  const isNF = (k: ExtractionKey) => items[k].status === 'needs_review' && items[k].reason === 'not_found';
+  const na = (k: ExtractionKey) => { items[k] = { value: null, status: 'verified', reason: 'not_applicable', raw: qt.raw, evidence }; };
+  if (!parsed.cats.has('perf') && !/실적/.test(doc) && isNF('performanceScore')) {
+    na('performanceScore');
+    for (const k of ['performancePeriod', 'performanceMinAmount', 'performanceCondition'] as const) if (isNF(k)) na(k);
+  }
+  if (!parsed.cats.has('cred') && !/신인도/.test(doc) && isNF('credibilityScore') && (extras[BONUS_TABLE_EXTRA]?.value ?? null) === null) na('credibilityScore');
+  if (!parsed.cats.has('mgmt') && !/경영|신용/.test(doc) && isNF('managementScore')) na('managementScore');
+}
+
 export function decide(cands: Candidate[], rules: RuleSet): Decision {
   const by = new Map<string, Candidate[]>();
   for (const c of cands) {
@@ -81,6 +112,7 @@ export function decide(cands: Candidate[], rules: RuleSet): Decision {
     if (r.target.startsWith('extras.') && !(r.target.slice(7) in extras)) extras[r.target.slice(7)] = decideOne(r.target, [], rules);
   }
   applyBonusTable(items, extras);
+  applyQuantTable(items, extras);
   return { items, extras };
 }
 
@@ -92,6 +124,6 @@ export function computeStatus(items: Record<ExtractionKey, ExtractedItem<unknown
     const rel = fileStatuses.filter((s) => s !== 'skipped');
     return rel.every((s) => NOT_PARSED_OK.has(s)) ? 'unsupported' : 'failed';
   }
-  const ok = EXTRACTION_KEYS.every((k) => items[k].status === 'verified' || items[k].userEdited !== undefined || coveredByGroup(items, k));
+  const ok = EXTRACTION_KEYS.every((k) => { const st = itemReviewState(items, k); return st === 'verified' || st === 'user_edited' || st === 'covered' || st === 'not_applicable'; });
   return ok ? 'verified' : 'needs_review';
 }

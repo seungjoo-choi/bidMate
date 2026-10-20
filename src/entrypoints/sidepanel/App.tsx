@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Copy, Download, ExternalLink, LayoutDashboard, XCircle } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { noticeReviewCount } from '../../core/extraction/review-rows';
 import { basicFacts, evalFacts } from '../../core/model/notice-summary';
 import type { CollectResult, Job } from '../../core/types/job';
 import type { Extraction } from '../../core/types/extraction';
@@ -143,6 +144,7 @@ export function App() {
       ? summaryView({
         facts: basicFacts(current.notice), eval: evalFacts(current.notice, current.extraction), notice: current.notice,
         ai: current.extraction ? buildAiCards(aiReview, current.extraction) : undefined,
+        reviewCount: noticeReviewCount(current.notice, current.extraction),
       })
       : null),
     [current, active, aiReview],

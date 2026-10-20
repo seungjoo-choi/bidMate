@@ -87,6 +87,34 @@ describe('coerceValue', () => {
   });
 });
 
+describe('coerceValue 공고 잎', () => {
+  it('datetime: 문서 표기 -> ISO, 시각 없음 -> 실패', () => {
+    expect(coerceValue('postedAt', '2026. 10. 21.(수) 14:00')).toEqual({ ok: true, value: '2026-10-21T14:00:00+09:00' });
+    expect(coerceValue('proposalEvalAt', '2026-10-21 09:30')).toEqual({ ok: true, value: '2026-10-21T09:30:00+09:00' });
+    expect(coerceValue('registrationDeadline', '2026. 10. 21.(수)').ok).toBe(false);
+  });
+  it('amount: 괄호 꼬리를 떼고 원 단위로', () => {
+    expect(coerceValue('budgetAmount', '3억원(부가세 포함)')).toEqual({ ok: true, value: 300_000_000 });
+    expect(coerceValue('budgetAmount', '금액 미정').ok).toBe(false);
+  });
+  it('joint: 허용/단독 해석, 판단 불가는 실패', () => {
+    expect(coerceValue('jointVentureAllowed', '공동이행방식 허용')).toEqual({ ok: true, value: true });
+    expect(coerceValue('jointVentureAllowed', '단독')).toEqual({ ok: true, value: false });
+    expect(coerceValue('jointVentureAllowed', '모름').ok).toBe(false);
+  });
+  it('joint: 부정 문장은 false, 허용과 부정이 섞이면 true', () => {
+    for (const t of ['공동수급 불가', '공동계약 불가능', '공동수급 허용하지 않음', '공동수급체 구성 금지']) {
+      expect(coerceValue('jointVentureAllowed', t)).toEqual({ ok: true, value: false });
+    }
+    expect(coerceValue('jointVentureAllowed', '공동이행 허용, 분담이행 불가')).toEqual({ ok: true, value: true });
+    expect(coerceValue('jointVentureAllowed', '공동수급 가능')).toEqual({ ok: true, value: true });
+  });
+  it('text: trim, 빈 문자열 실패', () => {
+    expect(coerceValue('priceMethod', '  복수예비가격  ')).toEqual({ ok: true, value: '복수예비가격' });
+    expect(coerceValue('priceMethod', '   ').ok).toBe(false);
+  });
+});
+
 describe('variants / schema 태그', () => {
   const v2 = (items: unknown[], schema = 'bidmate-ai-review/2') => JSON.stringify({ schema, runId: 'r1', items });
   it('variants가 있으면 파싱하고(최대 8개), 없으면 필드를 두지 않는다', () => {
@@ -101,5 +129,14 @@ describe('variants / schema 태그', () => {
   it('구 태그(bidmate-ai-review/1)도 받아들이고 알 수 없는 태그는 거부한다', () => {
     expect(parseAiResponse(v2([{ key: 'credibilityScore', value: 1, quote: 'q' }], 'bidmate-ai-review/1'), ctx).ok).toBe(true);
     expect(parseAiResponse(v2([], 'bidmate-ai-review/9'), ctx)).toMatchObject({ ok: false, code: 'AI_BAD_RESPONSE' });
+  });
+});
+
+describe('coerceValue datetime ISO 정규화', () => {
+  it('오프셋 없는 ISO는 KST, Z나 오프셋이 있으면 그대로', () => {
+    expect(coerceValue('postedAt', '2026-10-21T14:00')).toEqual({ ok: true, value: '2026-10-21T14:00:00+09:00' });
+    expect(coerceValue('postedAt', '2026-10-21T14:00:30')).toEqual({ ok: true, value: '2026-10-21T14:00:30+09:00' });
+    expect(coerceValue('postedAt', '2026-10-21T05:00:00Z')).toEqual({ ok: true, value: '2026-10-21T05:00:00Z' });
+    expect(coerceValue('postedAt', '2026-10-21T14:00:00+09:00')).toEqual({ ok: true, value: '2026-10-21T14:00:00+09:00' });
   });
 });

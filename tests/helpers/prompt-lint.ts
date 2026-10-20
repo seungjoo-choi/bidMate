@@ -1,6 +1,6 @@
 import * as promptModule from '../../src/core/ai/prompt';
 import { buildPrompt } from '../../src/core/ai/prompt';
-import { EXTRACTION_KEYS } from '../../src/core/types/extraction';
+import { AI_KEYS } from '../../src/core/ai/keys';
 
 /** prompt.ts가 PROMPT_EXAMPLE_TOKENS를 export하기 전까지 쓰는 허용 목록 */
 const LOCAL_EXAMPLE_TOKENS: string[] = [];
@@ -8,7 +8,7 @@ export const BANNED_PHRASES = ['사업규모', 'KOICA', '코이카'];
 
 /** SYSTEM_PROMPT + 항목 정의(excerpt 빈 문자열) 텍스트 */
 export function renderLintTarget(): string {
-  const b = buildPrompt({ runId: 'lint', keys: EXTRACTION_KEYS, excerpt: '', skippedFiles: [] });
+  const b = buildPrompt({ runId: 'lint', keys: [...AI_KEYS], excerpt: '', skippedFiles: [] });
   return `${b.system}\n${b.user}`;
 }
 

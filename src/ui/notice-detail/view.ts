@@ -1,9 +1,16 @@
 /** 공고 상세 화면 표시 모델(순수 함수). React/chrome/entrypoints를 import하지 않는다. */
 import { kindOf } from '../../core/model/ids';
+import { fireTimeOf } from '../../core/deadline/plan';
+import { KST_OFFSET_MS, kstParts } from '../../core/results/schedule';
+import { DEADLINE_OFFSETS, type DeadlineOffset } from '../../core/types/deadline';
+import type { Settings } from '../../core/types/settings';
 import { normalizePath } from '../../core/model/path';
 import type { FieldValue } from '../../core/types/common';
-import type { Extraction } from '../../core/types/extraction';
+import type { Extraction, ExtractionKey } from '../../core/types/extraction';
+import { NA_VALUE_TEXT, coveringKey, fieldReviewState } from '../../core/extraction/review-count';
 import type { IndexEntry } from '../../core/types/index-file';
+import { RESULT_TERMINAL } from '../../core/types/result';
+import { formatCheckAt, resultCell } from '../notices/result-view';
 import type { Job, JobStatus, JobType, StepId } from '../../core/types/job';
 import type { MailDraft } from '../../core/types/mail';
 import type { AttachmentStatus, CollectStatus, MailStatus, Notice } from '../../core/types/notice';
@@ -11,15 +18,18 @@ import type { NoticeTab } from '../../entrypoints/dashboard/route';
 import type { BadgeStatus } from '../components/StatusBadge';
 import { formatAmountComma } from '../../core/model/format';
 import { dDayLevel, formatAmountFull, formatAmountShort, formatDDay, formatDateTime, formatDifferential, formatPeriod, formatScore } from '../review/format';
-import { DOC_KIND_LABEL, summarize } from '../review/view';
+import { noticeReviewCount } from '../../core/extraction/review-rows';
+import { DOC_KIND_LABEL, ITEM_LABEL } from '../review/view';
 
 export interface DetailRow { label: string; value: string; mark?: 'needs_review' | 'user_edited'; href?: string; pre?: boolean; hint?: string }
 export interface DetailGroup { id: string; title: string; description?: string; rows: DetailRow[] }
 
 const EMPTY = '—';
 
+/** 표시 표식. 그룹 충족이 필요한 평가 항목은 evalRow를 쓴다. */
 function markOf(f: FieldValue<unknown>): DetailRow['mark'] {
-  return f.status === 'needs_review' ? 'needs_review' : f.status === 'user_edited' ? 'user_edited' : undefined;
+  const st = fieldReviewState(f, null, '');
+  return st === 'needs_review' ? 'needs_review' : st === 'user_edited' ? 'user_edited' : undefined;
 }
 
 function row<T>(label: string, f: FieldValue<T>, fmt: (v: T) => string = (v) => String(v), extra: Partial<DetailRow> = {}): DetailRow {
@@ -43,7 +53,18 @@ function withReviewLink(id: string, rows: DetailRow[]): DetailRow[] {
   return rows.map((r) => (r.mark === 'needs_review' && !r.href && r.hint !== undefined ? { ...r, href: `${noticeHref(id)}/review` } : r));
 }
 
-export function overviewGroups(n: Notice, index: IndexEntry[]): DetailGroup[] {
+/** 추출 대상 평가 항목 행. 상태는 fieldReviewState(검토 탭과 같은 기준)로 판정하고, 그룹 충족이면 확인 필요를 떼고 충족 사유를 붙인다. */
+function evalRow<T>(label: string, f: FieldValue<T>, fmt: (v: T) => string, key: ExtractionKey, x: Extraction | null): DetailRow {
+  const r = row(label, f, fmt);
+  if (fieldReviewState(f, x, key) === 'not_applicable') return { label, value: NA_VALUE_TEXT, ...(f.note ? { hint: f.note } : {}) };
+  if (!x || fieldReviewState(f, x, key) !== 'covered') return r;
+  const by = coveringKey(x.items, key);
+  const { mark: _mark, ...rest } = r;
+  const note = by ? `${ITEM_LABEL[by]}으로 충족` : '충족';
+  return { ...rest, hint: rest.hint ? `${rest.hint} (${note})` : note };
+}
+
+export function overviewGroups(n: Notice, index: IndexEntry[], x: Extraction | null = null): DetailGroup[] {
   const b = n.basic;
   if (kindOf(n.ref) === 'prespec') {
     const p = n.prespec;
@@ -105,17 +126,17 @@ export function overviewGroups(n: Notice, index: IndexEntry[]): DetailGroup[] {
     },
     {
       id: 'evaluation', title: '평가 기준(공고정보 기준)',
-      description: '공고정보에서 읽은 값입니다. 문서에서 추출한 값의 확인과 수정은 평가정보 검토 탭에서 합니다.',
+      description: '공고정보에서 읽은 값입니다. 문서에서 추출한 값의 확인과 수정은 공고정보 검토 탭에서 합니다.',
       rows: withReviewLink(n.id, [
         row('평가방식', e.evalMethod, text),
         row('평가방식(문서 원문)', e.evalMethodDoc, text, { pre: true }),
-        row('차등점수제', e.differentialScoring, formatDifferential),
-        row('대외신인도 배점', e.credibilityScore, formatScore),
-        row('경영상태 배점', e.managementScore, formatScore),
-        row('수행실적 배점', e.performanceScore, formatScore),
-        row('실적 인정기간', e.performancePeriod, formatPeriod),
-        row('실적 인정금액', e.performanceMinAmount, formatAmountFull),
-        row('실적 인정조건', e.performanceCondition, text),
+        evalRow('차등점수제', e.differentialScoring, formatDifferential, 'differentialScoring', x),
+        evalRow('대외신인도 배점', e.credibilityScore, formatScore, 'credibilityScore', x),
+        evalRow('경영상태 배점', e.managementScore, formatScore, 'managementScore', x),
+        evalRow('수행실적 배점', e.performanceScore, formatScore, 'performanceScore', x),
+        evalRow('실적 인정기간', e.performancePeriod, formatPeriod, 'performancePeriod', x),
+        evalRow('실적 인정금액', e.performanceMinAmount, formatAmountFull, 'performanceMinAmount', x),
+        evalRow('실적 인정조건', e.performanceCondition, text, 'performanceCondition', x),
       ]),
     },
   ];
@@ -138,6 +159,7 @@ export const VIEWABLE_EXT: ReadonlySet<string> = new Set(['pdf', 'png', 'jpg', '
 export interface AttachmentRow {
   id: string; no: number; name: string; savedName: string | null; kind: string; size: string;
   status: AttachmentStatus; attempts: number; remark: string; openable: boolean;
+  origin?: 'prespec';
 }
 
 export function formatBytes(n: number | null | undefined): string {
@@ -163,7 +185,8 @@ export function attachmentRows(n: Notice): AttachmentRow[] {
     return {
       id: a.id, no: a.index + 1, name,
       savedName: a.savedName && a.savedName !== name ? a.savedName : null,
-      kind: a.docKind ? DOC_KIND_LABEL[a.docKind] ?? a.docKind : ext.toUpperCase() || EMPTY,
+      kind: `${a.origin === 'prespec' ? '사전규격 / ' : ''}${a.docKind ? DOC_KIND_LABEL[a.docKind] ?? a.docKind : ext.toUpperCase() || EMPTY}`,
+      ...(a.origin === 'prespec' ? { origin: 'prespec' as const } : {}),
       size, status: a.status, attempts: a.attempts, remark: a.lastError ?? a.note ?? '',
       openable: (a.status === 'saved' || a.status === 'size_mismatch') && !!a.savedName && VIEWABLE_EXT.has(extOf(a.savedName)),
     };
@@ -282,9 +305,7 @@ export function detailTabs(n: Notice, extraction: Extraction | null): Array<{ id
     { id: 'history', label: '수집과 메일 이력' },
   ];
   if (kindOf(n.ref) !== 'prespec') {
-    tabs.push(extraction
-      ? { id: 'review', label: '평가정보 검토', count: summarize(extraction).needsReview }
-      : { id: 'review', label: '평가정보 검토' });
+    tabs.push({ id: 'review', label: '공고정보 검토', count: noticeReviewCount(n, extraction) });
   }
   return tabs;
 }
@@ -356,4 +377,68 @@ export function scheduleTimeline(n: Notice, now: Date = new Date()): Milestone[]
     if (mark) m.mark = mark;
     return m;
   });
+}
+
+/** 일정 타임라인 뒤에 이어 붙이는 결과 단계(순위 발표, 최종 결과). 팔로우 중이거나 결과가 나온 공고만.
+ *  schedule: 앞쪽 일정 점들. 거기에 아직 'next'가 있으면 결과 단계는 'upcoming'으로 둔다(강조는 하나만). */
+export function resultMilestones(entry: Pick<IndexEntry, 'following' | 'result'> | undefined, schedule: Milestone[], now: Date = new Date()): Milestone[] {
+  const r = entry?.result;
+  const known = !!r && (r.status === 'ranked' || RESULT_TERMINAL.has(r.status));
+  if (!entry?.following && !known) return [];
+  const terminal = !!r && RESULT_TERMINAL.has(r.status);
+  const started = !!r?.startAt && Date.parse(r.startAt) <= now.getTime();
+  const rank: Milestone = r?.rank !== undefined
+    ? { key: 'rank', label: '순위 발표', when: `우리 ${r.rank}위${r.bidders ? ` / ${r.bidders}개사` : ''}`, dday: null, state: 'done' }
+    : terminal ? { key: 'rank', label: '순위 발표', when: '해당 없음', dday: null, state: 'done' }
+    : started ? { key: 'rank', label: '순위 발표', when: '확인 중', dday: null, state: 'next' }
+    : { key: 'rank', label: '순위 발표', when: r?.startAt ? `${formatCheckAt(r.startAt, now).replace(/\(.\)/, '')}부터 확인` : '', dday: null, state: 'upcoming' };
+  const out = [rank];
+  if (entry?.following !== 'rank' || terminal) {
+    out.push(terminal
+      ? { key: 'final', label: '최종 결과', when: resultCell(entry ?? {})?.text ?? '', dday: null, state: 'done' }
+      : { key: 'final', label: '최종 결과', when: r?.status === 'ranked' ? '확인 중' : '', dday: null, state: r?.status === 'ranked' ? 'next' : 'upcoming' });
+  }
+  const earlierNext = schedule.some((m) => m.state === 'next');
+  return earlierNext ? out.map((m) => (m.state === 'next' ? { ...m, state: 'upcoming' as const } : m)) : out;
+}
+
+export interface DeadlineNoticeLine { label: string; times: string[] }
+export type DeadlineNoticeView =
+  | { state: 'off' }
+  | { state: 'not_target'; reason: string }
+  | { state: 'target'; lines: DeadlineNoticeLine[] };
+
+const pad2 = (n: number): string => String(n).padStart(2, '0');
+
+/** 개요 탭 "마감 알림" 블록 표시 모델. 시각은 KST 기준이고 지난 알림 시각은 뺀다. */
+export function deadlineNoticeView(n: Notice, index: IndexEntry[], settings: Pick<Settings, 'notify'>, now: Date = new Date()): DeadlineNoticeView {
+  if (!settings.notify.deadline) return { state: 'off' };
+  if (kindOf(n.ref) === 'prespec') return { state: 'not_target', reason: '사전규격은 마감 알림 대상이 아닙니다' };
+  const self = index.find((e) => e.noticeId === n.id);
+  if (n.mail.status !== 'delivered' && self?.following === undefined) return { state: 'not_target', reason: '메일 전달을 마쳤거나 팔로우한 공고만 알림을 보냅니다' };
+  const round = Number(n.ref.round ?? n.basic.round.value ?? '');
+  if (index.some((e) => kindOf(e) === 'bid' && e.noticeNo === n.ref.noticeNo && Number(e.round) > round)) {
+    return { state: 'not_target', reason: '더 새로운 차수의 공고가 대상입니다' };
+  }
+  const bidClose = n.schedule.bidCloseAt.value;
+  const reg = n.schedule.registrationDeadline.value;
+  if (!bidClose && !reg) return { state: 'not_target', reason: '공고정보에 마감 일정이 없습니다' };
+  const nowMs = now.getTime();
+  const timesOf = (at: string | null | undefined): string[] => {
+    if (!at || !Number.isFinite(Date.parse(at))) return [];
+    const out: string[] = [];
+    for (const off of DEADLINE_OFFSETS as readonly DeadlineOffset[]) {
+      const fireAt = fireTimeOf(at, off);
+      if (fireAt <= nowMs) continue;
+      const d = new Date(kstParts(fireAt).dayStartMs + KST_OFFSET_MS);
+      out.push(`${off === 0 ? '당일' : `D-${off}`} ${pad2(d.getUTCMonth() + 1)}/${pad2(d.getUTCDate())} 09:00`);
+    }
+    return out;
+  };
+  const lines: DeadlineNoticeLine[] = [];
+  for (const [label, at] of [['입찰 마감', bidClose], ['참가등록 마감', reg]] as const) {
+    const times = timesOf(at);
+    if (times.length > 0) lines.push({ label, times });
+  }
+  return { state: 'target', lines };
 }

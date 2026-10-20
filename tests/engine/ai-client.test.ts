@@ -1,3 +1,4 @@
+import { NOTICE_KINDS } from '../helpers/ai-notice-kinds';
 import { describe, expect, it, vi } from 'vitest';
 import { callProvider } from '../../src/engine/ai/ai-client';
 import { claudeAdapter } from '../../src/engine/ai/providers/claude';
@@ -6,7 +7,7 @@ import type { OutputSpec } from '../../src/core/types/ai';
 const KEY = 'sk-ant-SECRET-9999';
 const spec: OutputSpec = {
   tag: 'bidmate-ai-review/2', runId: 'r1', keys: ['credibilityScore'],
-  kindOf: { credibilityScore: 'number', managementScore: 'number', performanceScore: 'number', performancePeriod: 'string', performanceMinAmount: 'number', performanceCondition: 'string', differentialScoring: 'boolean' },
+  kindOf: { credibilityScore: 'number', managementScore: 'number', performanceScore: 'number', performancePeriod: 'string', performanceMinAmount: 'number', performanceCondition: 'string', differentialScoring: 'boolean', ...NOTICE_KINDS },
 };
 const req = { apiKey: KEY, model: 'm', system: 's', user: 'u', spec, maxTokens: 8192 };
 const ok = () => new Response(JSON.stringify({ content: [{ type: 'text', text: '{}' }], stop_reason: 'end_turn' }), { status: 200 });

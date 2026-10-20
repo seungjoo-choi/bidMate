@@ -13,6 +13,8 @@ import { createParserRegistry } from '../../src/engine/parsers/registry';
 import { docOf, fakeParsers, readJsonFile, runCollect } from '../helpers/extract-harness';
 import { PRESPEC_MAP } from '../../src/adapters/g2b/prespec-api';
 import { loadRules } from '../../src/core/extraction/rules/load';
+import type { Notice } from '../../src/core/types/notice';
+import { itemWith } from '../helpers/extract-harness';
 
 const baseItem = servcFx.response.body.items[0] as Record<string, string>;
 const apiBody = (item: Record<string, string>) =>
@@ -319,5 +321,137 @@ describe('runCollectJob 기록용 이벤트', () => {
     const done = emitted.find((p) => p.step === 'fetch_basic' && p.status === 'done')!;
     expect(done.ms).toBeDefined();
     expect(done.ms!).toBeLessThan(delay);
+  });
+});
+
+describe('runCollectJob 연계 사전규격 첨부', () => {
+  const REG = 'R26BD00246532';
+  const bidItem = { ...itemWith(['공고서.hwp', '공고서.pdf']), bfSpecRgstNo: REG };
+  const preItem = { bfSpecRgstNo: REG, rcptDt: '2026-10-01 09:00:00', specDocFileUrl1: 'https://dl.test/p1', specDocFileUrl2: 'https://dl.test/p2' };
+  const cd = (name: string) => `attachment;filename=${encodeURIComponent(name)};`;
+  const dl = (url: string): Response => {
+    const [content, name] = url.endsWith('/1') ? ['SAME', null] : url.endsWith('/2') ? ['BID2', null] : url.endsWith('/p1') ? ['SAME', '2. 다른이름.hwp'] : ['RFP', '3. 제안요청서.hwp'];
+    return new Response(content, { headers: { 'content-length': String(content.length), ...(name ? { 'content-disposition': cd(name) } : {}) } });
+  };
+  const mkFetch = (bid: Record<string, string>, pre: (url: string) => Response | Promise<Response>) =>
+    vi.fn(async (url: string) => {
+      if (url.includes('HrcspSsstndrdInfoService')) return pre(url);
+      if (url.includes('apis.data.go.kr')) return new Response(apiBody(bid));
+      return dl(url);
+    });
+  const preOk = () => new Response(apiBody(preItem));
+  const savedNotice = (store: MemoryStore): Notice => JSON.parse(store.files.get([...store.files.keys()].find((k) => k.endsWith('/notice.json'))!) as string);
+  const preCalls = (f: ReturnType<typeof mkFetch>) => f.mock.calls.filter((c) => String(c[0]).includes('HrcspSsstndrdInfoService')).length;
+
+  it('bid 첨부 2개 + 사전규격 첨부 2개(하나는 중복) → 4행, 중복은 skipped, linked 기록, raw 저장', async () => {
+    const store = new MemoryStore();
+    const f = mkFetch(bidItem, preOk);
+    const { d, emitted } = deps(store, f);
+    const out = await runCollectJob(input(), d);
+    expect(out.status).toBe('completed');
+    const n = savedNotice(store);
+    expect(n.attachments).toHaveLength(4);
+    expect(n.attachments.map((a) => a.origin)).toEqual([undefined, undefined, 'prespec', 'prespec']);
+    const dup = n.attachments.find((a) => a.duplicateOf)!;
+    expect(dup).toMatchObject({ status: 'skipped', duplicateOf: n.attachments[0]!.id, origin: 'prespec' });
+    expect(n.attachments.filter((a) => a.status === 'saved')).toHaveLength(3);
+    expect(n.attachments[3]).toMatchObject({ originalName: '3. 제안요청서.hwp', status: 'saved' });
+    expect(n.linkedPrespec).toMatchObject({ regNo: REG, status: 'linked', attachmentCount: 2 });
+    expect([...store.files.keys()].some((k) => /\/source\/api-prespec-[^/]+\.json$/.test(k))).toBe(true);
+    expect(emitted.some((p) => p.step === 'fetch_basic' && p.label === '공고정보 조회 완료, 사전규격 첨부 2건')).toBe(true);
+  });
+
+  it('bfSpecRgstNo가 없으면 사전규격을 조회하지 않고 linkedPrespec도 없다', async () => {
+    const store = new MemoryStore();
+    const f = mkFetch({ ...bidItem, bfSpecRgstNo: '' }, preOk);
+    const { d } = deps(store, f);
+    const out = await runCollectJob(input(), d);
+    expect(out.status).toBe('completed');
+    expect(preCalls(f)).toBe(0);
+    expect(savedNotice(store)).not.toHaveProperty('linkedPrespec');
+  });
+
+  it('사전규격 미존재 → not_found, completed, errors 없음', async () => {
+    const store = new MemoryStore();
+    const empty = () => new Response(JSON.stringify({ response: { header: { resultCode: '00' }, body: { items: [] } } }));
+    const { d } = deps(store, mkFetch(bidItem, empty));
+    const out = await runCollectJob(input(), d);
+    expect(out.status).toBe('completed');
+    const n = savedNotice(store);
+    expect(n.linkedPrespec).toMatchObject({ regNo: REG, status: 'not_found' });
+    expect(n.collect.errors).toEqual([]);
+  });
+
+  it('HTTP 500 → failed, partial, PRESPEC_FETCH_FAILED(retryable false)', async () => {
+    const store = new MemoryStore();
+    const f = mkFetch(bidItem, () => new Response('err', { status: 500 }));
+    const { d } = deps(store, f);
+    const out = await runCollectJob(input(), d);
+    expect(out.status).toBe('partial');
+    expect(out.error).toMatchObject({ code: 'PRESPEC_FETCH_FAILED', retryable: false });
+    expect(out.error?.message).toMatch(/다시 수집하면 다시 조회합니다\.$/);
+    const n = savedNotice(store);
+    expect(n.linkedPrespec?.status).toBe('failed');
+    expect(n.collect.status).toBe('partial');
+    expect(n.collect.errors.map((e) => e.code)).toContain('PRESPEC_FETCH_FAILED');
+  });
+
+  it('조회 중 abort → cancelled', async () => {
+    const ac = new AbortController();
+    const f = mkFetch(bidItem, () => new Promise<Response>(() => { setTimeout(() => ac.abort(), 10); }));
+    const { d } = deps(new MemoryStore(), f, { signal: ac.signal });
+    const out = await runCollectJob(input(), d);
+    expect(out.status).toBe('cancelled');
+  });
+
+  it('재시도(fetch_basic done)에서는 사전규격을 다시 조회하지 않는다', async () => {
+    const store = new MemoryStore();
+    const first = mkFetch(bidItem, preOk);
+    await runCollectJob(input(), deps(store, first).d);
+    expect(preCalls(first)).toBe(1);
+    const job = mkJob();
+    job.noticeId = savedNotice(store).id;
+    job.attempt = 2;
+    job.steps = job.steps.map((s) => ({ ...s, status: 'done' as const }));
+    const second = mkFetch(bidItem, preOk);
+    const out = await runCollectJob({ job, secrets: { g2bServiceKey: 'K' }, settings: defaultSettings() }, deps(store, second).d);
+    expect(out.status).toBe('completed');
+    expect(preCalls(second)).toBe(0);
+    expect(savedNotice(store).linkedPrespec?.status).toBe('linked');
+  });
+
+  it('extract: 같은 priority면 bid 파일이 먼저, ExtractionFile.origin 기록', async () => {
+    const store = new MemoryStore();
+    const bid = { ...itemWith(['1. 제안요청서.hwp']), bfSpecRgstNo: REG };
+    const pre = { bfSpecRgstNo: REG, specDocFileUrl1: 'https://dl.test/p2' };
+    const f = mkFetch(bid, () => new Response(apiBody(pre)));
+    const order: string[] = [];
+    const parsers = fakeParsers(async (name) => { order.push(name); return docOf('a'); });
+    const job = { ...mkJob(), steps: ['fetch_basic', 'download_attachments', 'extract', 'fetch_html'].map((id) => ({ id: id as never, status: 'pending' as const })) };
+    const { d } = deps(store, f, { extract: { parsers, rules: loadRules() } });
+    const out = await runCollectJob({ job, secrets: { g2bServiceKey: 'K' }, settings: defaultSettings() }, d);
+    expect(out.status).toBe('completed');
+    const x = readJsonFile<Extraction>(store, '/extraction.json');
+    const parsed = x.files.filter((fl) => fl.status === 'parsed');
+    expect(parsed.map((fl) => fl.origin)).toEqual([undefined, 'prespec']);
+    expect(order).toHaveLength(2);
+  });
+
+  it('사전규격 조회 실패 뒤 재시도 잡도 조회 없이 partial과 PRESPEC_FETCH_FAILED를 유지한다', async () => {
+    const store = new MemoryStore();
+    const first = mkFetch(bidItem, () => new Response('err', { status: 500 }));
+    expect((await runCollectJob(input(), deps(store, first).d)).status).toBe('partial');
+    const job = mkJob();
+    job.noticeId = savedNotice(store).id;
+    job.attempt = 2;
+    job.steps = job.steps.map((s) => ({ ...s, status: 'done' as const }));
+    const second = mkFetch(bidItem, preOk);
+    const out = await runCollectJob({ job, secrets: { g2bServiceKey: 'K' }, settings: defaultSettings() }, deps(store, second).d);
+    expect(out.status).toBe('partial');
+    expect(out.error).toMatchObject({ code: 'PRESPEC_FETCH_FAILED', retryable: false });
+    expect(preCalls(second)).toBe(0);
+    const n = savedNotice(store);
+    expect(n.collect.status).toBe('partial');
+    expect(n.collect.errors.map((e) => e.code)).toContain('PRESPEC_FETCH_FAILED');
   });
 });

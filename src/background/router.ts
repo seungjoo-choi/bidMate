@@ -1,5 +1,5 @@
 import { listen, send } from '../messaging/bus';
-import { AI_BATCH_MAX, AI_BATCH_SESSION_KEY, AI_RUN_SESSION_PREFIX } from '../core/types/ai';
+import { AI_BATCH_MAX, AI_BATCH_SESSION_KEY, AI_PROVIDERS, AI_RUN_SESSION_PREFIX } from '../core/types/ai';
 import type { AiBatchState, AiProvider, AiRunState } from '../core/types/ai';
 import { withDefaults } from '../core/model/default-settings';
 import type { Settings } from '../core/types/settings';
@@ -75,6 +75,7 @@ function relayNoticeLookupBatch(): void {
 
 export const EXTENSION_ONLY_TYPES = [
   'notice/list', 'notice/get', 'extraction/edit', 'notice/field-edit', 'extraction/text',
+  'performances/list', 'performances/save', 'performances/delete', 'performances/import',
   'recipients/list', 'recipients/save', 'recipients/import', 'recipients/delete', 'groups/save', 'groups/delete', 'groups/set-default',
   'templates/list', 'templates/save', 'templates/delete', 'templates/set-default',
   'mail/prepare', 'mail/draft-get', 'mail/edits-get', 'mail/sent-list', 'mail/sent-get', 'mail/sent-add', 'mail/sent-void', 'mail/sent-view', 'config/repair',
@@ -256,6 +257,36 @@ function relayAi(): void {
         return await send('ai/exec', { noticeId: payload.noticeId, scope: payload.scope, ...(payload.keys ? { keys: payload.keys } : {}), provider, ...(payload.files ? { files: payload.files } : {}), api: { key, model, sendFullText: settings.ai.sendFullText } }, { target: 'offscreen', timeoutMs: 60_000 });
       } catch (e) {
         throw Object.assign(new Error(maskKey(e instanceof Error ? e.message : String(e), keys[provider])), { code: (e as { code?: string }).code });
+      }
+    },
+    'sw',
+  );
+  // 여러 AI 비교. 공급자마다 키·모델·권한을 모두 확인한 뒤에만 offscreen에 보낸다. 오류 메시지 앞에 공급자 라벨을 붙인다.
+  listen(
+    'ai/compare-run',
+    async (payload, sender) => {
+      assertExtensionSender(sender);
+      const providers = payload?.providers;
+      if (!Array.isArray(providers) || providers.length < 2 || providers.length > 3 || new Set(providers).size !== providers.length || providers.some((p) => !AI_PROVIDERS.includes(p))) {
+        throw err('INVALID_VALUE', '비교할 AI를 2~3개 고르세요.');
+      }
+      const targets: Array<{ provider: AiProvider; api: { key: string; model: string; sendFullText: boolean } }> = [];
+      const raws: Array<string | undefined> = [];
+      for (const provider of providers) {
+        try {
+          const r = await resolveAiRun(provider);
+          targets.push({ provider, api: { key: r.key, model: r.model, sendFullText: r.sendFullText } });
+          raws.push(r.raw);
+        } catch (e) {
+          throw Object.assign(new Error(`${PROVIDERS[provider].label}: ${e instanceof Error ? e.message : String(e)}`), { code: (e as { code?: string }).code });
+        }
+      }
+      await ensureOffscreen();
+      try {
+        return await send('ai/compare-exec', { noticeId: payload.noticeId, scope: payload.scope, ...(payload.keys ? { keys: payload.keys } : {}), ...(payload.files ? { files: payload.files } : {}), compareId: crypto.randomUUID(), targets }, { target: 'offscreen', timeoutMs: 60_000 });
+      } catch (e) {
+        const message = raws.reduce<string>((m, k) => maskKey(m, k), e instanceof Error ? e.message : String(e));
+        throw Object.assign(new Error(message), { code: (e as { code?: string }).code });
       }
     },
     'sw',

@@ -1,7 +1,7 @@
 import { redactKey } from '../../adapters/g2b/openapi';
 import type { AiBuildRequestInput, AiError, AiProviderAdapter } from './providers/types';
 
-export const AI_MAX_TOKENS = 8192;
+export const AI_MAX_TOKENS = 16_384;
 export const AI_TIMEOUT_MS = 120_000;
 const RETRY_DELAY_MS = 5_000;
 

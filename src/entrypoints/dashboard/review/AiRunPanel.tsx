@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import type { AiReviewFile, AiRun, AiRunState } from '../../../core/types/ai';
+import type { AiProvider, AiReviewFile, AiRun, AiRunState } from '../../../core/types/ai';
 import type { Extraction } from '../../../core/types/extraction';
 import { PROVIDERS } from '../../../engine/ai/providers';
 import { send } from '../../../messaging/bus';
 import { Button, FormActions, InlineAlert, ProviderIcon } from '../../../ui/components';
 import { inputClass } from '../../../ui/components/Field';
-import { REJECT_LABEL, afterCopy, copyOpenButton, isLimitError, isStale, latestRun, olderCardCount, runSummary, scopeLabel, type AiCardInfo } from '../../../ui/review/ai-view';
+import { REJECT_LABEL, afterCopy, compareAgreementSummary, compareRows, copyOpenButton, isLimitError, isStale, latestRun, olderCardCount, runSummary, scopeLabel, type AiCardInfo } from '../../../ui/review/ai-view';
 import type { PromptLoad } from '../../../ui/review/ai-view';
 import { formatDateTime } from '../../../ui/review/format';
 import { ITEM_LABEL } from '../../../ui/review/view';
@@ -28,7 +28,7 @@ const SUBMIT_ERROR: Record<string, string> = {
 };
 const errText = (e: unknown): { code?: string; message: string } => ({ code: (e as { code?: string }).code, message: e instanceof Error ? e.message : String(e) });
 
-function ManualWait({ noticeId, run, onReload }: { noticeId: string; run: AiRun; onReload: () => void }) {
+function ManualWait({ noticeId, run, onReload, onOpenDialog }: { noticeId: string; run: AiRun; onReload: () => void; onOpenDialog: (preset?: AiDialogPreset) => void }) {
   const adapter = PROVIDERS[run.provider];
   const [text, setText] = useState('');
   const [msg, setMsg] = useState<{ tone: 'info' | 'error'; text: string } | null>(null);
@@ -73,6 +73,11 @@ function ManualWait({ noticeId, run, onReload }: { noticeId: string; run: AiRun;
     finally { setBusy(false); }
   };
   const cancel = async () => { try { await send('ai/cancel', { noticeId, runId: run.id }); } catch { /* 이미 닫힘 */ } onReload(); };
+  /** 기다리던 요청은 닫고, 같은 범위로 공급자 선택을 펼친 실행 창을 연다. */
+  const switchProvider = async () => {
+    await cancel();
+    onOpenDialog({ scope: run.scope, ...(run.scope === 'keys' ? { keys: run.keys } : {}), expandSwitch: true });
+  };
 
   return (
     <div className="space-y-3">
@@ -85,6 +90,7 @@ function ManualWait({ noticeId, run, onReload }: { noticeId: string; run: AiRun;
         <Button variant="secondary" disabled={prompt === null} onClick={() => void copy(false)}>다시 복사</Button>
         <Button variant="secondary" onClick={() => window.open(adapter.webUrl, '_blank', 'noopener')}>탭 다시 열기</Button>
         <Button variant="secondary" onClick={() => void readClipboard()}>클립보드에서 읽기</Button>
+        <Button variant="secondary" disabled={busy} onClick={() => void switchProvider()}>다른 AI로 바꾸기</Button>
       </div>
       <textarea className={inputClass} rows={6} placeholder="AI의 답변(```json … ```)을 붙여넣으세요" value={text} onChange={(e) => setText(e.target.value)} />
       {msg && <InlineAlert tone={msg.tone === 'info' ? 'ai' : msg.tone}>{msg.text}</InlineAlert>}
@@ -137,19 +143,95 @@ function DoneSummary({ run, extraction, olderCount }: { run: AiRun; extraction: 
   );
 }
 
+/** 비교 실행(여러 AI) 요약: 공급자별 한 행과 일치 요약 한 줄. */
+function CompareSummary({ cmp, state, stale, cards, others, noticeId, onReload, onOpenDialog }: {
+  cmp: NonNullable<ReturnType<typeof compareRows>>;
+  state: AiRunState | null;
+  stale: boolean;
+  cards: Partial<Record<ExtractionKey, AiCardInfo>>;
+  others: Partial<Record<ExtractionKey, AiCardInfo[]>>;
+  noticeId: string;
+  onReload: () => void;
+  onOpenDialog: (preset?: AiDialogPreset) => void;
+}) {
+  const { scopeRun } = cmp;
+  const rerun = (provider: AiProvider) => onOpenDialog({ scope: scopeRun.scope, ...(scopeRun.scope === 'keys' ? { keys: scopeRun.keys } : {}), provider });
+  const cancel = async () => { try { if (state) await send('ai/cancel', { noticeId, runId: state.runId }); } catch { /* 이미 끝남 */ } onReload(); };
+  const sum = compareAgreementSummary(cards, others);
+  const sumLine = sum.agree + sum.differ + sum.partial + sum.none > 0
+    ? `비교 항목 ${sum.compared}개 · 일치 ${sum.agree} · 다름 ${sum.differ} · 일부만 찾음 ${sum.partial}` : null;
+  return (
+    <div className="space-y-2 text-sm">
+      <p className="font-semibold">AI 비교 · {scopeLabel(scopeRun)}</p>
+      {stale && <InlineAlert tone="warn">다시 추출되어 이전 AI 제안은 적용할 수 없습니다</InlineAlert>}
+      <ul className="space-y-1.5">
+        {cmp.rows.map((r) => (
+          <li key={r.provider} data-ai={r.provider} className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5">
+            <ProviderIcon provider={r.provider} size={16} />
+            <span><b>{PROVIDERS[r.provider].label}</b>{r.run?.model && <span className="tabular-nums text-muted"> {r.run.model}</span>}</span>
+            <span className="flex-1" />
+            {r.status === 'done' && r.summary && (
+              <span className="flex gap-3.5 text-[0.8125rem] text-muted tabular-nums">
+                <span>제안 <b className="text-ink">{r.summary.proposals}</b></span>
+                <span>일치 <b className="text-ink">{r.summary.match}</b></span>
+                <span>못 찾음 <b className="text-ink">{r.summary.none}</b></span>
+                <span>검증 실패 <b className="text-ink">{r.summary.rejected}</b></span>
+              </span>
+            )}
+            {r.status === 'running' && (
+              <>
+                <span className="flex items-center gap-2 text-muted"><span className="inline-flex animate-spin motion-reduce:animate-none"><ProviderIcon provider={r.provider} size={14} /></span>{state?.label ?? 'AI에 요청하는 중'}</span>
+                <Button variant="secondary" onClick={() => void cancel()}>취소</Button>
+              </>
+            )}
+            {r.status === 'failed' && (
+              <>
+                <span className="text-danger">{`${r.run?.error?.code ?? ''} ${r.run?.error?.message ?? ''}`.trim()}</span>
+                <Button variant="secondary" onClick={() => rerun(r.provider)}>다시 실행</Button>
+              </>
+            )}
+            {r.status === 'cancelled' && <span className="text-muted">취소됨</span>}
+            {r.status === 'queued' && <span className="text-muted">대기</span>}
+            {r.status === 'missing' && (
+              <>
+                <span className="text-muted">실행되지 않음</span>
+                <Button variant="secondary" onClick={() => rerun(r.provider)}>실행</Button>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+      {sumLine && <p className="text-[0.8125rem] text-muted tabular-nums">{sumLine}</p>}
+    </div>
+  );
+}
+
 /** 확인 화면 위쪽의 AI 재검토 상태: 진행 / 반자동 대기 / 완료 요약 / 오류. */
-export function AiRunPanel({ noticeId, extraction, review, state, cards, onReload, onOpenDialog }: {
+export function AiRunPanel({ noticeId, extraction, review, state, cards, others = {}, onReload, onOpenDialog }: {
   noticeId: string;
   extraction: Extraction;
   review: AiReviewFile | null | undefined;
   state: AiRunState | null;
   cards: Partial<Record<ExtractionKey, AiCardInfo>>;
+  /** 다른 공급자의 제안(비교 요약용) */
+  others?: Partial<Record<ExtractionKey, AiCardInfo[]>>;
   onReload: () => void;
   onOpenDialog: (preset?: AiDialogPreset) => void;
 }) {
   const run = latestRun(review);
   if (!run) return null;
   const cancelApi = async () => { try { await send('ai/cancel', { noticeId, runId: run.id }); } catch { /* 이미 끝남 */ } onReload(); };
+
+  const cmp = compareRows(review, state);
+  if (cmp) {
+    const running = cmp.rows.find((r) => r.status === 'running');
+    const firstStale = cmp.rows[0]?.run ? isStale(cmp.rows[0].run, extraction) : false;
+    return (
+      <div {...(running ? { 'data-ai': running.provider } : {})} className="ai-tint rounded-card border border-ai-line bg-ai-wash px-6 py-4">
+        <CompareSummary cmp={cmp} state={state} stale={firstStale} cards={cards} others={others} noticeId={noticeId} onReload={onReload} onOpenDialog={onOpenDialog} />
+      </div>
+    );
+  }
 
   let body: React.ReactNode;
   if (run.status === 'requesting') {
@@ -164,7 +246,7 @@ export function AiRunPanel({ noticeId, extraction, review, state, cards, onReloa
       </div>
     );
   } else if (run.status === 'awaiting') {
-    body = <ManualWait noticeId={noticeId} run={run} onReload={onReload} />;
+    body = <ManualWait noticeId={noticeId} run={run} onReload={onReload} onOpenDialog={onOpenDialog} />;
   } else if (run.status === 'failed') {
     const code = run.error?.code;
     body = (

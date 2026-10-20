@@ -18,6 +18,7 @@ export const mkCollectJob = (over: Partial<Job> = {}): Job => ({
 /** 파일명 목록으로 API 응답 항목을 만든다. 다운로드 URL은 `https://dl.test/<순번>`. */
 export function itemWith(names: string[]): Record<string, string> {
   const item = { ...baseItem };
+  delete item.bfSpecRgstNo;   // 연계 사전규격 조회가 끼지 않도록 뺀다(필요한 테스트가 직접 넣는다).
   for (let i = 1; i <= 10; i++) { item[`ntceSpecFileNm${i}`] = names[i - 1] ?? ''; item[`ntceSpecDocUrl${i}`] = names[i - 1] ? `https://dl.test/${i}` : ''; }
   return item;
 }
