@@ -29,8 +29,8 @@ const FIX_LABEL: Partial<Record<string, string>> = {
   'grant-site': '권한 설정', 'grant-fs': '폴더 설정', recipients: '수신자 설정',
 };
 
-const MANUAL_TEXT = '웹메일 탭을 열었습니다. 내용은 직접 붙여 넣어야 합니다';
-const URL_TEXT = { gmail: 'Gmail 작성 창을 열었습니다. 첨부와 서식 본문은 직접 넣어 주세요', naverworks: '네이버웍스 작성 창을 열었습니다. 내용을 확인하고 보내 주세요' } as const;
+const MANUAL_TEXT = '웹메일 탭에 내용을 직접 붙여 넣어 주세요';
+const URL_TEXT = { gmail: '첨부·서식 본문은 직접 넣어 주세요', naverworks: '작성 창에서 확인 후 보내 주세요' } as const;
 
 export function handoffView(collect: Job, compose: Job | null): HandoffView | null {
   const h = collect.handoff;
@@ -90,7 +90,7 @@ export function handoffView(collect: Job, compose: Job | null): HandoffView | nu
         action: v.cancelling ? 'none' : 'cancel-compose', ...(v.cancelling ? {} : { actionLabel: '취소' }), ...idPart, ...base,
       };
     case 'done':
-      return { kind: 'composed', text: '메일 작성 완료, 웹메일 탭에서 확인 후 보내세요', tone: 'ok', action: 'open-mail', actionLabel: '열기', ...idPart, ...base };
+      return { kind: 'composed', text: '웹메일 탭에서 확인 후 보내 주세요', tone: 'ok', action: 'open-mail', actionLabel: '열기', ...idPart, ...base };
     case 'manual':
       return { kind: 'manual', text: MANUAL_TEXT, tone: 'warn', action: 'open-mail', actionLabel: '열기', ...idPart, ...base };
     case 'partial':

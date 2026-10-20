@@ -23,6 +23,7 @@ export interface NoticeEvaluation {
   evalMethod: FieldValue<string>; differentialScoring: FieldValue<boolean>;
   credibilityScore: FieldValue<number>; managementScore: FieldValue<number>; performanceScore: FieldValue<number>;
   performancePeriod: FieldValue<string>; performanceMinAmount: FieldValue<number>; performanceCondition: FieldValue<string>;
+  evalMethodDoc: FieldValue<string>; quantEvalDoc: FieldValue<string>;
 }
 export interface NoticePrespec {
   specRegNo: FieldValue<string>; specName: FieldValue<string>; bizDivision: FieldValue<string>;

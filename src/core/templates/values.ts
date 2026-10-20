@@ -4,13 +4,14 @@ import type { FieldValue } from '../types/common';
 import type { ResolvedValue } from '../types/mail';
 import type { Notice, NoticeFieldKey } from '../types/notice';
 import type { TemplateFieldKey } from '../types/template';
+import { jointVentureText, resolveComposite } from './composites';
 import { VARIABLE_BY_KEY, type VariableKind } from './variables';
 
 export const NEEDS_REVIEW_TEXT = '확인 필요';
 
 const MISSING: ResolvedValue = { text: NEEDS_REVIEW_TEXT, status: 'missing', raw: null };
 
-function formatByKind(kind: VariableKind, value: unknown): string {
+export function formatByKind(kind: VariableKind, value: unknown): string {
   switch (kind) {
     case 'amount': return typeof value === 'number' ? formatAmountComma(value) : '';
     case 'amount_short': {
@@ -71,6 +72,10 @@ export function resolveValue(notice: Notice, fieldKey: TemplateFieldKey, now: Da
       const lines = [...notice.attachments].sort((a, b) => a.index - b.index).map(attachmentLine);
       return lines.length === 0 ? { text: '첨부 없음', status: 'ok', raw: [] } : { text: lines.join('\n'), status: 'ok', raw: lines };
     }
+    case 'credibilityEval':
+    case 'performanceEval':
+    case 'evalMethodText': return resolveComposite(notice, fieldKey, (k) => resolveValue(notice, k, now));
+    case 'jointVentureAllowed': return jointVentureText(notice.basic.jointVentureAllowed);
     default: {
       if (!(ALL_FIELD_KEYS as string[]).includes(fieldKey)) return { ...MISSING };
       const kind = VARIABLE_BY_KEY.get(fieldKey)?.kind ?? 'text';

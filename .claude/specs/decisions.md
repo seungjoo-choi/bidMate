@@ -108,7 +108,7 @@
 - 사실 정정: 카라바오(KOICA) 공고의 "4점"은 대외신인도가 아니라 제안요청서 정량평가표의 경영상태(신용평가등급) 행이었다. 분리 후 이 공고는 경영상태 4 verified, 대외신인도 not_found다.
 - 저장 데이터: 파일 마이그레이션 없음. 읽을 때만 보정한다(normalizeExtraction: 빠진 항목은 not_run, fillMissingFields: 빠진 notice 필드는 missing). Extraction schemaVersion 2, Notice는 1 유지. 옛 credibilityScore 값과 userEdited는 옮기지 않고, 재추출 때 경고("이전 버전에서 직접 수정한 대외신인도 값은 경영상태 배점이었을 수 있습니다")만 남긴다. 경영상태를 이미 직접 수정했으면 경고하지 않는다.
 - 사용자 규칙에서 동의어가 두 항목에 겹치면 경고만 남긴다.
-- 한쪽만 있는 공고는 다른 쪽이 not_found(확인 필요)가 되는 것이 정상이다. "해당 없음 확인" 기능은 범위 밖으로 미뤘다.
+- 한쪽만 있는 공고는 다른 쪽이 not_found(확인 필요)가 되는 것이 정상이다. "해당 없음 확인" 기능은 범위 밖으로 미뤘다. (2026-10-20 보완: not_found는 유지하되 그룹의 다른 항목이 충족이면 확인 필요로 세지 않는다)
 - 기각: 키 이름 변경, 옛 값을 근거 문맥으로 추정 이동, 일괄 마이그레이션, 빠진 항목을 not_found로 채움, 한쪽이 있으면 다른 쪽을 자동 해당 없음으로 확정.
 - 리뷰 반영: 인정조건 한 줄 캡처는 앵커 뒤 콜론 다음 본문이 8자 이상이고 "참조/따름/제안요청서에" 같은 다른 문서 안내가 아닐 때만 한다.
 - 남긴 리뷰 지적: 분류에서 "일반조건/지침/규정"이 제안요청서보다 먼저 판정돼 "제안요청서(계약일반조건 포함)" 같은 묶음 파일명은 참고자료가 된다. 분류 순서는 여러 번 바뀐 이력이 있어 실제 사례가 나오면 고친다.
@@ -440,3 +440,105 @@ Fable 설계, 사용자 승인(신인도는 표 위치 안내 + 직접 입력). 
 | window-regex `valueType: 'text'`는 d 플래그 indices로 원문 띄어쓰기를 복원 | compact 값은 메일에 못 쓴다 | 새 label-value 전략 |
 | 기존 공고는 "다시 추출"로 적용, 마이그레이션 없음 | 규칙 재실행이 그대로 갱신 | 일괄 변환 |
 | 보류: 조달청식 신인도 범위 표기("±2", "+1~-2"), 두 칸 표 "사업기간 / 값", "해당 없음" 확정 UI | 로컬 표본 없음, HTML이 보통 채움, 기존 결정상 범위 밖 | 없음 |
+
+## 2026-10-20 대외신인도 평가 합성 항목과 검토 그룹
+Fable 설계, 사용자 결정(경영상태 등 대외신인도와 비슷한 개념은 대외신인도 평가로 본다, 평가방법은 문서 원문, 공동수급은 "허용(공동이행방식)"). 명세 `.claude/specs/credibility-eval.md`.
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| D1 credibilityScore/managementScore 분리 유지, 합치는 곳은 메일 표시와 검토 판정뿐 | 데이터 정확성 유지(분리 결정 존중) | 한 항목으로 병합, 서로 값 복사 |
+| D2 메일 가상 키 credibilityEval(경영상태 먼저, `, ` 연결, 0개면 확인 필요) | 템플릿 문법 확장 없이 합성 | 템플릿 조건 문법 |
+| D3 REVIEW_GROUPS: 다른 멤버가 충족이고 값 없음(not_found/no_total/no_documents)이면 covered, conflict/low_confidence는 그대로 | 한쪽만 있는 공고의 오탐 확인 필요 제거 | not_found를 verified로 바꾸기 |
+| D4 bonus-period-extract(no_total, 사업기간 보충) 유지 | 이미 결정됨 | 없음 |
+| D5 evalMethodDoc 신규 필드 + 가상 키 evalMethodText(문서 원문 우선, 없으면 API 값). API 값은 {공고정보평가방법} | 사람 요약보다 문서 원문 | evalMethod에 문서값 덮어쓰기 |
+| D6 공동수급은 메일에서만 jointVentureText(`허용(<방식>방식)`) | 사이드패널 등 표기 보존 | formatJoint 변경 |
+| D7 확장 지점: default-rules.json, composites.ts, REVIEW_GROUPS, DOC_FILL_KEYS | 기관명 분기 없이 확장 | 기관명 분기 코드 |
+
+## 2026-10-20 공고 필드 직접 수정(notice/field-edit)
+Fable 설계, 사용자 결정(메일 화면 "확인 필요" 팝업에서 [이 메일에만]과 [공고에 저장] 둘 다). 명세 `.claude/specs/notice-field-edit.md`.
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| D1 UI 진입점은 `notice/field-edit` 하나, 서버가 ExtractionKey를 editExtraction에 위임(extraction 없으면 notice만) | UI가 키 종류를 몰라도 되고, 추출 전 공고의 평가 키 수정 구멍 제거 | UI 분기, extraction/edit payload 확장 |
+| D2 FieldValue에 `userEdit { editedAt, note?, before? }` 추가, status는 기존 user_edited. 재수정 시 before는 최초 자동값 승계 | 기존 user_edited 검사 코드 재사용, 기본정보는 되돌릴 자동값 출처가 없음. 스키마 버전 유지 | notice.userEdits 오버레이, candidates에 보관 |
+| D3 mergeFields가 user_edited 키의 값은 보존하고 `userEdit.before`만 이번 수집 자동값으로 갱신 | 되돌리면 "지금 수집했으면 나올 값"이 기대 동작 | before 고정, 되돌릴 때 재수집 |
+| D4 noticeNo·round와 파생 템플릿 키(sourceUrl 등)는 수정 불가 | id·index·잡 충돌 판정 근거 | sourceUrl 편집 허용 |
+| D5 합성 키는 하위 실제 키로 펼쳐 편집(credibilityEval→경영상태·신인도, evalMethodText→evalMethodDoc·evalMethod) | "합치는 곳은 표시뿐" 결정 유지 | 합성값 저장 |
+| D6 custom.* 편집 포함(없던 키 생성, 되돌리면 삭제) | 쓰는 경로가 전혀 없어 {custom.x}가 영구 값 없음 | 제외 |
+| D7 값 검증·입력 파싱은 core `field-edit.ts` 단일 출처, VALUE_CHECK 이동, parseAmount는 core로 이동 | UI와 서버가 같은 표 사용 | 중복 표 |
+| D8 되돌리기=value null, 비수정 필드에 null은 no-op | 멱등 | NOT_EDITED 오류 |
+| D9 공고에 저장 후 메일 화면은 초안도 다시 저장 | 디스크 초안 불일치 방지 | setNotice만 |
+| 한계: projectPeriod를 고쳤다 되돌리면 before(대개 missing)로 가고 다음 추출 때 문서값이 다시 채워진다(fillDocOnlyFields는 before 갱신 안 함) | 범위 축소 | fillDocOnlyFields 수정 |
+| UI: Fable 안의 field-fix-view 표시 모델은 쓰지 않고 이미 만든 ResolveDialog의 안내·근거 표시를 유지, 입력·대상만 core 함수 사용 | 중복 구현 회피 | 설계대로 신규 표시 모델 |
+| 리뷰 후속: extraction.json이 없을 때 notice에만 고친 평가 키는 첫 추출의 saveExtractionLatest가 items.userEdited로 옮겨 심는다 | 안 하면 메일엔 사용자 값, 검토 화면·reviewCount엔 확인 필요로 어긋남(D1의 빈틈) | 추출 전 평가 키 수정 금지 |
+| 리뷰 후속: 팝업의 합성 항목은 처음 값에서 바뀐 칸만 저장 | 손대지 않은 자동값이 user_edited로 굳어 재수집 갱신이 멈추는 것 방지 | 모든 칸 저장 |
+
+## 2026-10-20 채움률 보강(2,055건 측정)
+
+근거: 축평원·행안부·KOICA 최근 3년 SW·연구용역 2,055건 측정(measure2.md, misses.json) → 재측정 measure3.md. 명세: `.claude/specs/recall-boost.md`.
+
+| 사용자 결정 | 이유 |
+|---|---|
+| 배점이 없고 평가 주체 문장만 있으면 그 **문서 문장을 그대로** 메일에 넣는다(표준 배점 추정 금지) | 값은 문서 실제 텍스트 원칙. 틀린 배점을 만들지 않는다 |
+| 공고문의 "입찰서 제출기간"은 제안서 제출기간으로 본다 | 협상 공고에서 입찰서=제안서 전자제출, 3번 문서 보충 상한이 이 표기에 집중 |
+| 값은 문서 실제 텍스트, 요약·변환 금지(날짜 ISO 변환만 예외) | 위와 같음 |
+
+규칙 추가(`default-rules.json`, 모두 window-regex·text·prefer_priority):
+- `basic.projectPeriod` 보강: "총/전체 사업기간", 신호에 `~`·`까지` 추가
+- `basic.projectPeriodParen`: "(총 용역기간 : …)" 줄 중간 표기(총기간만, 단계별 예산 옆 기간은 제외)
+- `basic.projectPeriodCell`: 라벨만 있는 셀(용역/사업/계약/수행/과업기간) 다음 셀 값. blocksAfter 1, 기존 전략 재사용
+- `sched.proposalPeriodDoc`(→ extras.proposalPeriod), `sched.proposalEvalDoc`(→ extras.proposalEvalAt, ISO 변환 실패 시 값 아님), `eval.quantDoc`(→ extras.quantEvalDoc, notice.evaluation.quantEvalDoc)
+- 합성 `performanceEval`(기본 템플릿 10번을 합성 항목으로, 옛 txt_perf 문구는 normalize에서 승격), `credibilityEval`은 점수 0개일 때 quantEvalDoc 문장
+- `DOC_FILL_KEYS`에 proposalPeriod·proposalEvalAt·quantEvalDoc 추가(화면값 우선, user_edited 건너뜀). 검토 판정(review-count)·자동 작성 멈춤은 그대로
+
+기각한 대안:
+| 대안 | 기각 이유 |
+|---|---|
+| 조달청 표준 배점(경영상태 N점 등) 추정 | 문서에 없는 숫자를 만들면 틀릴 수 있고 원문 원칙 위반 |
+| 입찰서/제안서 제출기간을 구분 유지 | 사용자 결정(입찰서=제안서). 구분하면 3번 문서 보충이 대부분 비게 됨 |
+| 새 전략 파일 추가(표 옆 칸 전용) | 기존 window-regex의 blocksAfter로 충분(셀이 한 줄 단위로 평탄화됨) |
+| 셀 값에 "15개월"처럼 숫자+단위만 있어도 기간으로 인정 | KOICA 카라바오 문서의 "SW사업 적정 사업기간 산정" 표 15개월이 실제 용역기간과 충돌(기대값 깨짐). 날짜·까지·~·계약(체결)일 신호가 있을 때만 인정 |
+| 경영상태·수행실적 표 라벨 보강(mgmt.table/perf.table 변경) | 열어 본 사례는 conflict(같은 표 점수 중복)·제출서식(점수 없음)·등급표뿐. "기업경영상태, 용역수행실적(B) 5"는 두 항목 합산이라 한쪽에 배정하면 오답 위험 → 문장 보충(quantEvalDoc)으로만 처리 |
+
+## 2026-10-20, AI 재검토 "AI로 다시 찾기" (Fable 설계, 사용자 승인, 명세 .claude/specs/ai-review.md)
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| AI는 확인 화면 버튼으로만 실행, 범위 ①확인 필요 항목 ②7개 전체를 실행 때 선택 | 규칙 추출이 기본, AI는 사용자가 이상하다고 느낄 때 보완 | 추출 후 자동 실행 |
+| AI 결과는 근거 인용이 붙은 제안으로만 표시, [적용]해야 반영 | 자동 확정 금지 원칙 | 바로 반영 |
+| 공급자 Claude/OpenAI/Gemini × 방식 API/반자동, 설정 `ai.provider/mode/models[provider]`, 키 `secrets.ai[provider]`. 기본 Gemini API(무료 등급) | 사용자 요구. 비용 0 + 1클릭 | 공급자 1개, 기본 반자동 |
+| 결과는 `notices/<folder>/ai-review.json`(run 이력 최대 10) + `ai/<runId>-{prompt,response}.txt`. extraction.json·Notice 스키마 불변 | 규칙 산출물과 AI 제안 분리, run 단위 메타(공급자·모델·프롬프트 버전·토큰) | ExtractedItem에 aiSuggestion 필드 |
+| [적용] = userEdited(+`origin: ai`) 경로, notice source `{kind:'user', ref:'ai:<runId>'}`. SourceKind 'ai' 추가 안 함 | 보존·되돌리기·상태 계산 재사용, mergeDocumentLayer가 비문서 값을 영구 우선하는 함정 회피 | SourceKind 'ai', items.value에 기록 |
+| 재추출 후 이전 run은 stale(표시·적용 불가), 마이그레이션 없음 | 텍스트가 바뀌어 인용 대조·비교 무효 | 제안 이식·재검증 |
+| 실행은 offscreen(발췌·fetch·검증·저장), SW는 키·설정·권한 주입 릴레이, 진행은 storage.session `aiRun.<noticeId>`. JobType 아님 | 텍스트 파일·쓰기가 offscreen, 긴 응답을 pending으로 기다리지 않음, JobType 파급 회피 | SW fetch, 대시보드 fetch, extract 잡 step |
+| SDK 미사용, 공급자 어댑터(요청 조립·스키마 방언·응답/오류 해석·모델 목록) + 공통 ai-client(fetch·타임아웃·재시도) | 엔드포인트 2개뿐, 번들·MV3 호환 부담, Gemini responseSchema가 JSON Schema 방언이 아님 | SDK 3종, JSON Schema 하나 공유 |
+| API 호스트는 키 저장 시 optional host permission 요청, clipboardRead는 optional_permissions | manifest 고정 권한 추가 금지 결정 | host_permissions 추가 |
+| 프롬프트에 기존 값·후보·확인 필요 사유를 넣지 않음(①② 공통). 비교는 코드(decide.valueKey) | 앵커링 방지 | ①에서 후보 제공 |
+| 인용문은 파일 전체 텍스트에서 태그·`\|`·공백 제거 후 대조, 실패 시 카드 제외(요약에서만 펼침). 값은 VALUE_CHECK | 근거 없는 값 차단 + 투명성 | 경고 달고 표시, 완전 폐기 |
+| 발췌 = 규칙 동의어 + 고정 키워드 줄 창 [-6,+30], 표는 끝까지, 파일 16k/전체 48k자, 반자동은 공급자별 상한(초기 30k) | 비용 상한, 무료 웹 붙여넣기 제한 | 전문 전송 |
+| 반자동은 클립보드 + 새 탭만. 요청 마커·runId 에코로 오인 방지. 초과 시 파일 체크리스트로 run을 나눔, 제안 표시는 키별 최신 run | 약관(웹 자동 조작 금지), 답 하나 = JSON 하나 검증 구조 | 웹 DOM 조작·URL 프리필, 여러 메시지 분할 |
+| 429는 AI_RATE_LIMIT(재시도)과 AI_QUOTA(무료 한도·크레딧 소진, 다른 공급자 안내)로 분리 | Gemini 무료 등급, OpenAI insufficient_quota | 429 단일 코드 |
+| 스캔·암호 문서는 AI 전송 제외, PDF 직접 전송 안 함 | 인용 대조 불가, 비용 | document 블록 전송 |
+| 외부 API 형태·모델 ID·웹 URL·붙여넣기 상한은 S0 실측 전 확정하지 않음 | 코드로 확인 불가, 추정 금지 | 기억으로 하드코딩 |
+
+한계/결정(채움률 보강 후속):
+- quantEvalDoc 문장은 항목별 키워드 필터를 통과할 때만 쓴다: credibilityEval은 `경영상태|신용|신인도`, performanceEval은 `실적`(문장은 자르지 않음, 없으면 '확인 필요'). measure3 원문 대조에서 항목 무관 문장 6건이 나온 데 따른 결정
+- 한계: "기업경영상태, 용역수행실적(B) 5" 같은 합산 배점 행은 한쪽에 배정하지 않는다(현행 유지)
+- 한계: 시각 없는 제안서 평가일("2024. 3. 7.(목)")은 ISO 변환 실패로 값이 아니다(현행 유지)
+- 한계: 접두어 없는 "제출기한: …" 줄은 제안서 제출기간으로 잡지 않는다(현행 유지)
+- 한계: 사업기간에 서로 다른 값의 줄이 둘 이상이면 기존대로 conflict(대표값 유지)
+
+### 2026-10-20 AI 공급자 실측 (S0, Gemini만. Claude·OpenAI는 키 없음, 미실측)
+| 항목 | 결과 |
+|---|---|
+| 키 형식 | 신규 키는 `AQ.`로 시작(53자). `AIza` 접두 가정 금지 |
+| 인증·엔드포인트 | `x-goog-api-key` 헤더 + `POST /v1beta/models/{model}:generateContent` 동작 확인(Node fetch, 확장 출처 CORS는 미확인) |
+| 구조화 출력 | `responseMimeType:'application/json'` + `responseJsonSchema`(표준 JSON Schema, `const`·타입 배열 `['number','string','null']` 동작) 채택. `responseSchema`(OpenAPI)도 되지만 숫자가 문자열로 와서 기각. 응답은 순수 JSON |
+| 응답 | `candidates[0].content.parts[]`에 `text`와 `thoughtSignature`가 섞임 → text 파트만 이어 붙인다. `finishReason: STOP`, usage `promptTokenCount/candidatesTokenCount/thoughtsTokenCount` |
+| 생각 단계 | `generationConfig.thinkingConfig.thinkingLevel:'low'` 사용. `'minimal'`은 3.8-flash에서 400 |
+| 속도(짧은 예시, 무료 등급) | gemini-3.5-flash(low) 2.3초, 3.5-flash-lite 1.1초, 3.1-flash-lite 1.7초, **3.8-flash 47~247초**(생각 0이어도 느림, 대기열로 추정) |
+| 기본 모델 | **`gemini-3.5-flash` + thinkingLevel low**. 3.8-flash는 120초 타임아웃을 넘길 수 있어 기본에서 제외(선택은 가능, AI_TIMEOUT 시 "가벼운 모델 선택" 안내) |
+| 모델 목록 | `GET /v1beta/models`에 TTS·이미지·음악·로보틱스·에이전트 모델이 섞이고, 목록에 있어도 신규 사용자는 404인 모델이 있음(gemini-2.5-flash). 목록은 generateContent 지원 + 이름 필터(tts·image·banana·lyria·transcribe·robotics·computer-use·deep-research·antigravity·omni·customtools·gemma 제외) |
+| 오류 | 잘못된 키 401 `UNAUTHENTICATED`(→AI_AUTH), 없는/사용 불가 모델 404 `NOT_FOUND`(→AI_BAD_REQUEST "모델을 쓸 수 없습니다. 다른 모델을 고르세요"). 429 할당량 형태는 미확인 |
+| 공유 스키마 | `providers/schema.ts`의 `items.anyOf`(키별 object, value 타입 배열, enum) 형식을 gemini-3.5-flash·3.5-flash-lite가 그대로 수용, 4항목 정답(차등점수 미적용 false 포함) |
+| 503 | `{"code":503,"status":"UNAVAILABLE","message":"This model is currently experiencing high demand..."}` 실제 관측 → AI_OVERLOADED(재시도 1회) 매핑 맞음. 3.5-flash에서 간헐 발생 |

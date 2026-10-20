@@ -108,8 +108,8 @@ export function NoticesPage() {
             <input className={`${inputClass} pl-9`} placeholder="공고명, 번호, 기관 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
           </div>
-          <div className="overflow-hidden rounded-card border border-line bg-surface shadow-card">
-            <div className={`${GRID} bg-sunken py-3 text-sm text-muted`}>
+          <div className="max-h-[max(16rem,calc(100vh-20rem))] overflow-y-auto rounded-card border border-line bg-surface shadow-card">
+            <div className={`${GRID} sticky top-0 z-10 bg-sunken py-3 text-sm text-muted`}>
               <div className="text-right">순번</div>
               <SortHeader label="공고명" k="title" sort={sort} onSort={toggle} />
               <SortHeader label="마감" k="close" sort={sort} onSort={toggle} />

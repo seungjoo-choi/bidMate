@@ -158,7 +158,7 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
       {active === 'files' && <FilesTab notice={notice} toast={toast} />}
       {active === 'history' && <HistoryTab notice={notice} index={index} jobs={jobs} onNoticeChange={(n) => setData((d) => (d ? { ...d, notice: n } : d))} />}
       {active === 'review' && (
-        <ReviewTab noticeId={noticeId} extraction={extraction} busy={busy} onExtract={() => void extract()} onEdit={edit} toast={toast} />
+        <ReviewTab noticeId={noticeId} extraction={extraction} busy={busy} onExtract={() => void extract()} onEdit={edit} onApplied={(r) => setData((d) => (d ? { ...d, ...r } : d))} toast={toast} />
       )}
 
       {toast.node}

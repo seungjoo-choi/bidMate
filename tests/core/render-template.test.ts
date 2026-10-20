@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { builtinDefaultTemplate, builtinPrespecTemplate } from '../../src/core/templates/default-template';
 import { renderMail } from '../../src/core/templates/render';
+import { resolveValue } from '../../src/core/templates/values';
+import type { FieldValue } from '../../src/core/types/common';
 import { sampleNotice, samplePrespecNotice } from '../../src/core/templates/sample-notice';
 import { variablesFor } from '../../src/core/templates/variables';
 import type { Notice } from '../../src/core/types/notice';
@@ -279,5 +281,108 @@ describe('renderMail 사전규격', () => {
     expect(variablesFor('prespec').map((d) => d.name)).not.toContain('공고명');
     expect(variablesFor('bid').map((d) => d.name)).not.toContain('사전규격명');
     expect(variablesFor('bid').map((d) => d.name)).toContain('발주기관');
+  });
+});
+
+describe('합성 항목과 공동수급 표기', () => {
+  const fv = <T,>(value: T | null, status: 'verified' | 'needs_review' | 'missing' = 'verified', raw?: string): FieldValue<T> => ({ value, status, ...(raw !== undefined ? { raw } : {}) });
+  const withEval = (over: Partial<Notice['evaluation']>): Notice => {
+    const n = sampleNotice();
+    n.evaluation = { ...n.evaluation, credibilityScore: fv<number>(null, 'missing'), managementScore: fv<number>(null, 'missing'), ...over };
+    return n;
+  };
+
+  it('경영상태만 있으면 경영상태 조각만', () => {
+    expect(resolveValue(withEval({ managementScore: fv(4) }), 'credibilityEval')).toMatchObject({ text: '경영상태(신용평가등급) 평가(4점)', status: 'ok' });
+  });
+  it('대외신인도만 있으면 대외신인도 조각만', () => {
+    expect(resolveValue(withEval({ credibilityScore: fv(5) }), 'credibilityEval').text).toBe('대외신인도(5점)');
+  });
+  it('둘 다 있으면 경영상태 먼저 연결', () => {
+    expect(resolveValue(withEval({ managementScore: fv(4), credibilityScore: fv(5) }), 'credibilityEval').text).toBe('경영상태(신용평가등급) 평가(4점), 대외신인도(5점)');
+  });
+  it('조각이 needs_review면 확인 필요를 붙이고 전체도 needs_review', () => {
+    expect(resolveValue(withEval({ managementScore: fv(4, 'needs_review') }), 'credibilityEval')).toMatchObject({ text: '경영상태(신용평가등급) 평가(4점) (확인 필요)', status: 'needs_review' });
+  });
+  it('둘 다 없으면 확인 필요 missing', () => {
+    expect(resolveValue(withEval({}), 'credibilityEval')).toEqual({ text: '확인 필요', status: 'missing', raw: null });
+  });
+
+  it('credibilityEval: 점수가 없고 정량평가 문서 문장이 있으면 그 문장(ok)', () => {
+    const n = withEval({ quantEvalDoc: fv('정량평가 : 조달청(경영상태), 수요기관(수행실적)') });
+    expect(resolveValue(n, 'credibilityEval')).toMatchObject({ text: '정량평가 : 조달청(경영상태), 수요기관(수행실적)', status: 'ok' });
+  });
+  it('credibilityEval: 점수가 있으면 문서 문장보다 점수 우선', () => {
+    const n = withEval({ managementScore: fv(4), quantEvalDoc: fv('정량평가 : 조달청(경영상태)') });
+    expect(resolveValue(n, 'credibilityEval').text).toBe('경영상태(신용평가등급) 평가(4점)');
+  });
+  it('credibilityEval: 점수도 문장도 없으면 확인 필요', () => {
+    expect(resolveValue(withEval({ quantEvalDoc: fv<string>(null, 'missing') }), 'credibilityEval')).toEqual({ text: '확인 필요', status: 'missing', raw: null });
+  });
+
+  it('user_edited 문장은 키워드가 없어도 그대로 쓴다', () => {
+    const n = withEval({ quantEvalDoc: { value: '직접 입력한 평가 설명', status: 'user_edited' } as FieldValue<string> });
+    expect(resolveValue(n, 'credibilityEval')).toMatchObject({ text: '직접 입력한 평가 설명', status: 'ok' });
+  });
+  it('quantEvalDoc 항목 필터: measure3에서 틀린 6건 원문', () => {
+    const cred = (t: string) => resolveValue(withEval({ quantEvalDoc: fv(t) }), 'credibilityEval');
+    const perf = (t: string) => {
+      const n = sampleNotice();
+      n.evaluation = { ...n.evaluation, performanceScore: fv<number>(null, 'missing'), performancePeriod: fv<string>(null, 'missing'), performanceMinAmount: fv<number>(null, 'missing'), quantEvalDoc: fv(t) };
+      return resolveValue(n, 'performanceEval');
+    };
+    const MISS = { text: '확인 필요', status: 'missing', raw: null };
+    // R26BK01501286: 실적만 언급 -> 신인도 칸에는 쓰지 않고 실적 칸에는 쓴다
+    expect(cred('정량평가(사업수행실적) : 축산물품질관리원')).toEqual(MISS);
+    expect(perf('정량평가(사업수행실적) : 축산물품질관리원').text).toBe('정량평가(사업수행실적) : 축산물품질관리원');
+    // R26BK01396439, R26BK01587853, R25BK00876294, 20240603548: 경영상태만 언급 -> 실적 칸 불가, 신인도 칸 가능
+    for (const t of ['정량평가 : 조달청(경영상태)', '정량평가(경영상태) 기관 : 발주기관', '조달청 : 정성평가, 정량평가(경영상태)']) {
+      expect(perf(t)).toEqual(MISS);
+      expect(cred(t).text).toBe(t);
+    }
+    // 20231127127: 신인도만 언급
+    expect(perf('신인도 평가관련 : [별표 11] 적용')).toEqual(MISS);
+    expect(cred('신인도 평가관련 : [별표 11] 적용').text).toBe('신인도 평가관련 : [별표 11] 적용');
+  });
+  it('performanceEval: 점수가 있으면 기본 템플릿 10번(옛 문구)과 같은 결과', () => {
+    const n = sampleNotice();
+    expect(resolveValue(n, 'performanceEval')).toMatchObject({ text: '3년 이내 국내외 유사사업 수행실적(10점 (확인 필요)) - 2억 5,000만 원 이상인 사업에 한함', status: 'needs_review' });
+    const old = '{실적인정기간} 이내 국내외 유사사업 수행실적({실적평가}) - {실적인정금액} 이상인 사업에 한함';
+    expect(renderMail(tpl({ subject: old }), n).subject).toBe(resolveValue(n, 'performanceEval').text);
+  });
+  it('performanceEval: 점수·기간·금액이 모두 없고 문장만 있으면 그 문장', () => {
+    const n = sampleNotice();
+    n.evaluation = { ...n.evaluation, performanceScore: fv<number>(null, 'missing'), performancePeriod: fv<string>(null, 'missing'), performanceMinAmount: fv<number>(null, 'missing'), quantEvalDoc: fv('정량평가 : 조달청(경영상태), 수요기관(수행실적)') };
+    expect(resolveValue(n, 'performanceEval')).toMatchObject({ text: '정량평가 : 조달청(경영상태), 수요기관(수행실적)', status: 'ok' });
+  });
+  it('performanceEval: 모두 없으면 확인 필요, 일부만 없으면 기존 문구에 확인 필요', () => {
+    const n = sampleNotice();
+    n.evaluation = { ...n.evaluation, performanceScore: fv<number>(null, 'missing'), performancePeriod: fv<string>(null, 'missing'), performanceMinAmount: fv<number>(null, 'missing'), quantEvalDoc: fv<string>(null, 'missing') };
+    expect(resolveValue(n, 'performanceEval')).toEqual({ text: '확인 필요', status: 'missing', raw: null });
+    n.evaluation.performanceScore = fv(10);
+    expect(resolveValue(n, 'performanceEval')).toMatchObject({ text: '확인 필요 이내 국내외 유사사업 수행실적(10점) - 확인 필요 이상인 사업에 한함', status: 'needs_review' });
+  });
+
+  it('공동수급 방식 표기', () => {
+    const jv = (f: FieldValue<boolean>) => { const n = sampleNotice(); n.basic.jointVentureAllowed = f; return resolveValue(n, 'jointVentureAllowed').text; };
+    expect(jv(fv(true, 'verified', '(전자)공동이행'))).toBe('허용(공동이행방식)');
+    expect(jv(fv(true, 'verified', '(전자)주계약자관리'))).toBe('허용(주계약자관리방식)');
+    expect(jv(fv(false))).toBe('불허');
+    expect(jv(fv<boolean>(null, 'needs_review', '기타'))).toBe('기타 (확인 필요)');
+  });
+
+  it('평가방법은 문서 원문 우선, 없으면 API 값', () => {
+    const n = sampleNotice();
+    n.evaluation.evalMethodDoc = fv('기술평가위원회 온라인 소집평가');
+    expect(resolveValue(n, 'evalMethodText').text).toBe('기술평가위원회 온라인 소집평가');
+    n.evaluation.evalMethodDoc = fv<string>(null, 'missing');
+    expect(resolveValue(n, 'evalMethodText').text).toBe('기술 90 : 가격 10');
+  });
+
+  it('{공고정보평가방법}은 API 값', () => {
+    const n = sampleNotice();
+    n.evaluation.evalMethodDoc = fv('문서 원문 평가');
+    const r = renderMail(tpl({ subject: '{공고정보평가방법} / {평가방법}' }), n);
+    expect(r.subject).toBe('기술 90 : 가격 10 / 문서 원문 평가');
   });
 });

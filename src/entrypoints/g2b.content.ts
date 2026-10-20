@@ -1,12 +1,17 @@
 import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
 import { defineContentScript } from 'wxt/utils/define-content-script';
-import { defaultIsVisible, detectDetail, readHtmlFields } from '../adapters/g2b/detail-page';
+import { defaultIsVisible, detectDetail, MAIN_FRAME_SELECTOR, readHtmlFields } from '../adapters/g2b/detail-page';
 import { fetchEvalRaw } from '../adapters/g2b/eval-fetch';
 import { sameRound } from '../adapters/g2b/link';
 import { BusError, listen } from '../messaging/bus';
+import type { ResponseOf } from '../messaging/protocol';
 import { PanelController } from '../ui/g2b-panel/controller';
 import { mountPanel } from '../ui/g2b-panel/mount';
 import '../ui/g2b-panel/style.css';
+
+// 숨김 탭 진단용: 직전 요청 이후 rAF/타이머가 실제로 도달했는지
+let rafFlag = false;
+let timerSkew: number | null = null;
 
 export default defineContentScript({
   matches: ['https://www.g2b.go.kr/*'],
@@ -24,7 +29,28 @@ export default defineContentScript({
       const detected = detectDetail(document, { url: location.href });
       const match = !!detected && detected.noticeNo === noticeNo && (!round || !detected.round || sameRound(detected.round, round));
       const html = match ? readHtmlFields(document, { isVisible: defaultIsVisible }) : null;
-      return { detected, match, html, readyState: document.readyState };
+      // 진단 실패가 읽기 응답을 막지 않도록 따로 감싼다.
+      let diag: ResponseOf<'g2b/read-html'>['diag'] = null;
+      try {
+        const frame = document.querySelector(MAIN_FRAME_SELECTOR);
+        diag = {
+          visibility: document.visibilityState,
+          readyState: document.readyState,
+          mainFrame: frame !== null,
+          inputs: frame ? frame.querySelectorAll('input[title], textarea[title]').length : 0,
+          noticeInputAny: detectDetail(document, { url: location.href, isVisible: () => true }) !== null,
+          noticeInputVisible: detected !== null,
+          rafFiredSinceLast: rafFlag,
+          timerSkewMs: timerSkew,
+          url: location.href,
+        };
+        // 다음 요청까지의 rAF/타이머 도달 여부를 재기 위한 1회성 프로브(상시 루프 아님)
+        rafFlag = false;
+        requestAnimationFrame(() => { rafFlag = true; });
+        const t0 = performance.now();
+        setTimeout(() => { timerSkew = performance.now() - t0 - 100; }, 100);
+      } catch { /* 진단 생략 */ }
+      return { detected, match, html, readyState: document.readyState, diag };
     }, 'content');
     listen('g2b/eval-fetch', async ({ noticeNo, round, withoutIdHeaders }) => {
       const r = await fetchEvalRaw({ noticeNo, ...(round ? { round } : {}) }, { fetch: window.fetch.bind(window), ...(withoutIdHeaders ? { withoutIdHeaders } : {}) });

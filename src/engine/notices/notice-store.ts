@@ -125,8 +125,11 @@ export class NoticeStore {
     await this.saveNotice(n, undefined, { extractionStatus: x.status });
   }
 
-  private setUserEdited(n: Notice, k: string, value: unknown, fetchedAt: string): void {
-    (n.evaluation as unknown as Record<string, unknown>)[k] = { value, status: 'user_edited', source: { kind: 'user', ref: 'dashboard', fetchedAt } };
+  private setUserEdited(n: Notice, k: string, value: unknown, fetchedAt: string, note?: string): void {
+    (n.evaluation as unknown as Record<string, unknown>)[k] = {
+      value, status: 'user_edited', source: { kind: 'user', ref: 'dashboard', fetchedAt },
+      userEdit: { editedAt: fetchedAt, ...(note ? { note } : {}) },
+    };
   }
 
   /** 취소 등 extraction 없이 notice만 저장할 때: 공고 락 안에서 디스크의 사용자 수정을 다시 반영한다. */
@@ -135,7 +138,7 @@ export class NoticeStore {
       const diskX = await this.loadExtraction(n.id);
       for (const k of EXTRACTION_KEYS) {
         const theirs = diskX?.items?.[k]?.userEdited;
-        if (theirs) this.setUserEdited(n, k, theirs.value, theirs.editedAt);
+        if (theirs) this.setUserEdited(n, k, theirs.value, theirs.editedAt, theirs.note);
       }
       await this.saveNotice(n);
     });
@@ -156,7 +159,13 @@ export class NoticeStore {
         const differs = JSON.stringify(mine) !== JSON.stringify(theirs);
         if (theirs) {
           x.items[k].userEdited = theirs;
-          this.setUserEdited(n, k, theirs.value, theirs.editedAt);
+          this.setUserEdited(n, k, theirs.value, theirs.editedAt, theirs.note);
+        } else if (!diskX && dField?.status === 'user_edited') {
+          // 추출 전에 notice/field-edit로 notice에만 고친 값: 첫 추출 결과로 옮겨 심는다.
+          const editedAt = dField.userEdit?.editedAt ?? dField.source?.fetchedAt ?? new Date().toISOString();
+          const note = dField.userEdit?.note;
+          x.items[k].userEdited = { value: dField.value, editedAt, ...(note ? { note } : {}) };
+          (n.evaluation as unknown as Record<string, unknown>)[k] = dField;
         } else if (differs || n.evaluation[k].status === 'user_edited' || dField?.status === 'user_edited') {
           // 디스크에서 수정이 해제됐다: 디스크의 필드(자동 결과)를 따른다.
           delete x.items[k].userEdited;

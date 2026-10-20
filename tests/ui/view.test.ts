@@ -42,7 +42,18 @@ describe('카드 모델', () => {
   });
   it('요약 카운트', () => {
     const ex = make({ performanceScore: item({ status: 'needs_review' }), credibilityScore: item({ userEdited: { value: 3, editedAt: 'x' } }) });
-    expect(summarize(ex)).toEqual({ verified: 5, needsReview: 1, edited: 1 });
+    expect(summarize(ex)).toEqual({ verified: 5, needsReview: 1, edited: 1, covered: 0 });
+  });
+  it('그룹 충족(covered) 카드: 뱃지, 이유, 정렬, 요약', () => {
+    const ex = make({
+      managementScore: item({ value: 4 }), credibilityScore: item({ status: 'needs_review', reason: 'no_total' }),
+      performanceScore: item({ status: 'needs_review', reason: 'not_found' }),
+    });
+    const c = buildCard('credibilityScore', ex.items.credibilityScore, ex.items);
+    expect(c.badge).toBe('covered');
+    expect(c.reason).toBe('문서에 없음 (경영상태 배점 항목으로 충족)');
+    expect(buildCards(ex).map((x) => x.badge).slice(0, 2)).toEqual(['needs_review', 'covered']);
+    expect(summarize(ex)).toEqual({ verified: 5, needsReview: 1, edited: 0, covered: 1 });
   });
 });
 

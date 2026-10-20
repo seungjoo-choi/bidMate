@@ -135,9 +135,9 @@ export function TemplatesPage() {
             </div>
             <Select className="w-36 shrink-0" aria-label="정렬" value={sort} options={SORT_OPTIONS} onChange={(v) => setSort(v as SortKey)} />
           </div>
-          <div className="overflow-x-auto rounded-ctl border border-line">
+          <div className="max-h-[max(16rem,calc(100vh-20rem))] overflow-auto rounded-ctl border border-line">
             <table className="w-full min-w-[560px] text-left text-sm">
-              <thead className="bg-sunken text-muted">
+              <thead className="sticky top-0 z-10 bg-sunken text-muted">
                 <tr>
                   <th className="w-14 px-3 py-2 text-center font-medium">순번</th>
                   <th className="px-3 py-2 text-center font-medium">이름</th>

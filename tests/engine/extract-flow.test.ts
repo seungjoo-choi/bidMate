@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import type { Extraction } from '../../src/core/types/extraction';
 import type { IndexFile } from '../../src/core/types/index-file';
 import type { Notice } from '../../src/core/types/notice';
+import { conflictCountOf, reviewCountOf } from '../../src/core/extraction/review-count';
 import { createParserRegistry } from '../../src/engine/parsers/registry';
 import { docOf, fakeParsers, mkCollectJob, readJsonFile, runCollect } from '../helpers/extract-harness';
 
@@ -28,7 +29,7 @@ describe('실문서 수집 흐름', () => {
     expect(it.performanceMinAmount).toMatchObject({ value: 500000000, status: 'verified' });
     expect(it.differentialScoring).toMatchObject({ value: false, status: 'verified' });
     expect(it.performanceCondition).toMatchObject({ status: 'verified' });
-    expect(x.status).toBe('needs_review');
+    expect(x.status).toBe('verified');
     expect(x.schemaVersion).toBe(2);
     // 텍스트 산출물
     const texts = [...store.files.keys()].filter((k) => k.includes('/source/text/') && k.endsWith('.txt'));
@@ -47,10 +48,15 @@ describe('실문서 수집 흐름', () => {
     expect(notice.attachments.every((a) => a.docKind !== undefined)).toBe(true);
     // index
     const idx = JSON.parse(store.files.get('index.json') as string) as IndexFile;
-    expect(idx.notices[0]!.extractionStatus).toBe('needs_review');
+    expect(idx.notices[0]!.extractionStatus).toBe('verified');
     const res = out.result!;
-    expect(res.extraction).toMatchObject({ status: 'needs_review' });
-    expect(res.extraction!.reviewCount).toBe(1);
+    expect(res.extraction).toMatchObject({ status: 'verified' });
+    expect(res.extraction!.reviewCount).toBe(0);
+    expect(reviewCountOf(x)).toBe(0);
+    expect(conflictCountOf(x)).toBe(0);
+    expect(notice.evaluation.evalMethodDoc).toMatchObject({
+      value: '기술평가위원회 개최를 통한 온라인 소집평가 (조달청 나라장터 온라인 평가시스템 활용한 발표평가)', status: 'verified', source: { kind: 'document' },
+    });
   }, 60_000);
 });
 
@@ -81,6 +87,29 @@ describe('추출 실패/재시도', () => {
     expect(second.out.status).toBe('completed');
     expect(readJsonFile<Notice>(second.store, '/notice.json').collect.errors).toEqual([]);
     expect(readJsonFile<Extraction>(second.store, '/extraction.json').items.differentialScoring.value).toBe(false);
+  });
+});
+
+describe('평가방식 원문 재추출', () => {
+  it('재추출에서 evalMethodDoc 미검출 -> needs_review, 평가 항목 덮어쓰기 없음', async () => {
+    let text = '1) 평가방식 : 서면평가';
+    const parsers = fakeParsers(async () => docOf(text));
+    const files = { '1. 입찰공고문.hwp': 'x' };
+    const first = await runCollect({ files, parsers });
+    expect(readJsonFile<Notice>(first.store, '/notice.json').evaluation.evalMethodDoc).toMatchObject({ value: '서면평가', status: 'verified', source: { kind: 'document' } });
+
+    text = '차등점수제 : 미적용';
+    const n1 = readJsonFile<Notice>(first.store, '/notice.json');
+    const job = mkCollectJob({
+      attempt: 2, noticeId: n1.id,
+      steps: [
+        { id: 'fetch_basic', status: 'done' }, { id: 'download_attachments', status: 'done' },
+        { id: 'extract', status: 'pending' }, { id: 'fetch_html', status: 'pending' },
+      ],
+    });
+    const second = await runCollect({ files, parsers, store: first.store, job });
+    expect(readJsonFile<Notice>(second.store, '/notice.json').evaluation.evalMethodDoc)
+      .toMatchObject({ value: '서면평가', status: 'needs_review', note: '최근 추출에서 값이 확인되지 않음' });
   });
 });
 

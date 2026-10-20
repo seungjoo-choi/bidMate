@@ -46,3 +46,36 @@ describe('normalizeTemplate kind', () => {
     }
   });
 });
+
+describe('normalizeTemplate 합성 항목 승격', () => {
+  const OLD = '경영상태(신용평가등급) 평가({경영상태}), 대외신인도({대외신인도})';
+  const norm = (items: unknown[]) => normalizeTemplate({ id: 't', sections: [{ id: 's', title: 'T', items }] }, NOW).template.sections[0]!.items;
+
+  it('옛 txt_cred 문구가 일치하면 credibilityEval로 승격(스타일 유지)', () => {
+    const [it] = norm([{ kind: 'text', id: 'txt_cred', label: '대외신인도 평가', text: OLD, visible: true, style: { bold: true } }]);
+    expect(it).toEqual({ fieldKey: 'credibilityEval', label: '대외신인도 평가', visible: true, style: { bold: true } });
+  });
+  it('문구를 고친 txt_cred는 유지', () => {
+    const [it] = norm([{ kind: 'text', id: 'txt_cred', label: '대외신인도 평가', text: `${OLD} 수정`, visible: true }]);
+    expect(it).toMatchObject({ kind: 'text', id: 'txt_cred', text: `${OLD} 수정` });
+  });
+  it('evalMethod + 라벨 평가방법은 evalMethodText로', () => {
+    const items = norm([{ fieldKey: 'evalMethod', label: '평가방법', visible: true }, { fieldKey: 'evalMethod', label: '다른', visible: true }]);
+    expect(items.map((i) => (i as { fieldKey: string }).fieldKey)).toEqual(['evalMethodText', 'evalMethod']);
+  });
+});
+
+describe('옛 실적점수 문구 승격', () => {
+  const LEGACY = '{실적인정기간} 이내 국내외 유사사업 수행실적({실적평가}) - {실적인정금액} 이상인 사업에 한함';
+  const norm = (it: Record<string, unknown>) => normalizeTemplate({ id: 't', name: 'n', sections: [{ id: 's', title: 'T', items: [it] }] }, NOW).template.sections[0]!.items[0]!;
+  it('txt_perf 옛 문구 완전 일치면 performanceEval 합성 항목으로 승격', () => {
+    expect(norm({ kind: 'text', id: 'txt_perf', label: '실적점수 평가', text: LEGACY, visible: true, style: { bold: true } }))
+      .toMatchObject({ fieldKey: 'performanceEval', label: '실적점수 평가', visible: true, style: { bold: true } });
+  });
+  it('문구를 고쳤으면 text 항목 유지', () => {
+    expect(norm({ kind: 'text', id: 'txt_perf', label: '실적점수 평가', text: `${LEGACY} (수정)`, visible: true })).toMatchObject({ kind: 'text', id: 'txt_perf' });
+  });
+  it('다른 id면 text 항목 유지', () => {
+    expect(norm({ kind: 'text', id: 'txt_x', label: '실적', text: LEGACY, visible: true })).toMatchObject({ kind: 'text', id: 'txt_x' });
+  });
+});

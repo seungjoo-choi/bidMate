@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mergeDocumentLayer, mergeFields, type MergeLayer } from '../../src/core/model/merge';
 import { emptyNotice } from '../../src/core/model/notice-fields';
 import type { FieldValue } from '../../src/core/types/common';
+import type { Notice } from '../../src/core/types/notice';
 
 const fv = <T,>(value: T, kind: 'api' | 'html' = 'api'): FieldValue<T> => ({
   value, status: 'verified', source: { kind, ref: 'x', fetchedAt: 't' },
@@ -90,6 +91,34 @@ describe('mergeFields', () => {
     const out = mergeFields(null, [api({ budgetAmount: fv(1923000000) }), html({ budgetAmount: failed })]);
     expect(out.budgetAmount?.value).toBe(1923000000);
     expect(out.budgetAmount?.status).toBe('verified');
+  });
+});
+
+describe('mergeFields user_edited before 갱신', () => {
+  const edited = (before?: FieldValue<string>): Notice => {
+    const ex = notice();
+    ex.basic.title = {
+      value: '내가 수정', status: 'user_edited', source: { kind: 'user', ref: 'dashboard', fetchedAt: 't' },
+      userEdit: { editedAt: 't', ...(before ? { before } : {}) },
+    };
+    return ex;
+  };
+  it('새 api 값이 before로 들어가고 사용자 값은 유지된다', () => {
+    const out = mergeFields(edited(fv('A')), [api({ title: fv('B') })]);
+    expect(out.title?.value).toBe('내가 수정');
+    expect(out.title?.status).toBe('user_edited');
+    expect(out.title?.userEdit?.before?.value).toBe('B');
+    expect(out.title?.userEdit?.before?.status).toBe('verified');
+  });
+  it('레이어에 값이 없으면 before는 missing', () => {
+    const out = mergeFields(edited(), [api({})]);
+    expect(out.title?.userEdit?.before).toEqual({ value: null, status: 'missing' });
+  });
+  it('userEdit가 없는 옛 user_edited는 그대로 통과(회귀)', () => {
+    const ex = notice();
+    ex.basic.title = { value: '옛 수정', status: 'user_edited' };
+    const out = mergeFields(ex, [api({ title: fv('B') })]);
+    expect(out.title).toEqual({ value: '옛 수정', status: 'user_edited' });
   });
 });
 

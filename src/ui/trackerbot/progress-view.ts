@@ -113,7 +113,8 @@ export function progressItems(entries: RowEntry[], session: ProgressSession): Pr
     const rv = rowView(entry, { orphaned: false });
     if (rv.kind !== 'done' && rv.kind !== 'error') continue;
     const state: ProgressState = rv.kind === 'error' ? 'error' : (rv.tone === 'ok' ? 'ok' : 'warn');
-    const detail = rv.detail?.split('\n').slice(0, 3).join('\n');
+    // 카드가 두 줄로 접고 펼치기를 제공하므로 자르지 않는다
+    const detail = rv.detail;
     const phase = compose || job.handoff?.action === 'compose' ? 'compose' : 'collect';
     const at = compose && compose.updatedAt > job.updatedAt ? compose.updatedAt : job.updatedAt;
     const awaiting = rv.kind === 'done' && handoffAsk(job);

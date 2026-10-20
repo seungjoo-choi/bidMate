@@ -1,4 +1,5 @@
 import type { ISODate } from './common';
+import type { AiMode, AiProvider } from './ai';
 import type { ComposeSelectorSet } from '../../adapters/naverworks/types';
 
 export interface FieldMapping { key: string; label: string; variable: string; apiPath?: string; htmlSelector?: string; }
@@ -38,6 +39,8 @@ export interface Settings {
   customFields: FieldMapping[];
   /** 우리 회사. 평가 분석의 우리 회사 기준 보기에서 쓴다. bizNo는 숫자 10자리 */
   company: { bizNo: string; name?: string };
+  /** AI 재검토. models는 공급자별 모델 ID(비면 실행 시 AI_MODEL_MISSING) */
+  ai: { provider: AiProvider; mode: AiMode; models: Partial<Record<AiProvider, string>> };
   updatedAt: ISODate;
 }
-// chrome.storage.local: { secrets: { g2bServiceKey?: string }, settingsCache: Settings, registeredSites }
+// chrome.storage.local: { secrets: { g2bServiceKey?: string; ai?: Partial<Record<AiProvider, string>> }, settingsCache: Settings, registeredSites }

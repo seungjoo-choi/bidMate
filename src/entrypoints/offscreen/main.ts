@@ -7,7 +7,7 @@ import type { JobError, JobStatus } from '../../core/types/job';
 import { runComposeJob } from '../../engine/jobs/compose-job';
 import { runExtractJob } from '../../engine/jobs/extract-job';
 import { createParserRegistry } from '../../engine/parsers/registry';
-import { editExtraction, getNotice, listNotices, readExtractionText } from '../../engine/notices/notice-api';
+import { editExtraction, editNoticeField, getNotice, listNotices, readExtractionText } from '../../engine/notices/notice-api';
 import { repairConfig } from '../../engine/config/config-store';
 import { deleteGroup, deleteRecipient, importRecipients, listRecipients, saveGroup, saveRecipient, setDefaultGroup } from '../../engine/config/recipients-api';
 import { deleteTemplate, listTemplates, saveTemplate, setDefaultTemplate } from '../../engine/config/templates-api';
@@ -21,6 +21,8 @@ import { EvalStore } from '../../engine/evaluation/eval-store';
 import { lookupInIndex } from '../../engine/notices/lookup';
 import { NoticeStore } from '../../engine/notices/notice-store';
 import type { NoticeKind } from '../../core/types/notice';
+import { applySuggestion, dismissSuggestion, finishRun, getPrompt, getReview, listModels } from '../../engine/ai/ai-review-api';
+import { AiRunner } from '../../engine/ai/ai-runner';
 import type { G2bTestResult, NoticeLookup, JobRunPayload, SmokeTestResult } from '../../messaging/protocol';
 
 async function smokeTest(): Promise<SmokeTestResult> {
@@ -193,9 +195,32 @@ listen('eval/get-many', ({ noticeIds }) => new EvalStore(fileStore).getMany(noti
 listen('eval/delete', async ({ noticeId }) => ({ removed: await new EvalStore(fileStore).remove(noticeId) }), 'offscreen');
 listen('notice/list', () => listNotices(fileStore), 'offscreen');
 listen('notice/get', ({ noticeId }) => getNotice(fileStore, noticeId), 'offscreen');
-listen('extraction/edit', (p) => editExtraction(fileStore, p, { isBusy: (noticeId) => registry.findConflict({ type: 'extract', noticeId }) !== undefined }), 'offscreen');
-listen('extraction/text', (p) => readExtractionText(fileStore, p), 'offscreen');
 const isNoticeBusy = (noticeId: string) => registry.findConflict({ type: 'extract', noticeId }) !== undefined;
+listen('extraction/edit', (p) => editExtraction(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
+listen('notice/field-edit', (p) => editNoticeField(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
+listen('extraction/text', (p) => readExtractionText(fileStore, p), 'offscreen');
+
+// AI 재검토. 실행 조율은 AiRunner가 한다(공고당 1개, 상태 push, 취소, 고아 정리). 키는 SW가 ai/exec·ai/models로 주입하며 저장하지 않는다.
+const aiDeps = async () => ({ rules: await loadExtractionRules(), isBusy: isNoticeBusy });
+const aiRunner = new AiRunner({
+  store: fileStore, fetch: (...a) => fetch(...a), apiDeps: aiDeps,
+  pushStatus: (s) => { void send('ai/status', s, { target: 'sw' }).catch(() => undefined); },
+});
+listen('ai/exec', async (p) => ({ runId: (await aiRunner.exec(p)).runId }), 'offscreen');
+listen('ai/prepare', async (p) => {
+  const prepared = await aiRunner.prepare({ noticeId: p.noticeId, scope: p.scope, provider: p.provider as NonNullable<typeof p.provider>, files: p.files });
+  return { runId: prepared.run.id, text: prepared.built.manualText, webUrl: prepared.adapter.webUrl, stats: prepared.stats };
+}, 'offscreen');
+listen('ai/submit', async (p) => {
+  await finishRun(fileStore, { noticeId: p.noticeId, runId: p.runId, responseText: p.text }, await aiDeps());
+  return (await getReview(fileStore, p.noticeId)) as NonNullable<Awaited<ReturnType<typeof getReview>>>;
+}, 'offscreen');
+listen('ai/get', ({ noticeId }) => aiRunner.get(noticeId), 'offscreen');
+listen('ai/prompt-get', (p) => getPrompt(fileStore, p), 'offscreen');
+listen('ai/apply', async (p) => applySuggestion(fileStore, p, await aiDeps()), 'offscreen');
+listen('ai/dismiss', async (p) => dismissSuggestion(fileStore, p, await aiDeps()), 'offscreen');
+listen('ai/cancel', (p) => aiRunner.cancel(p), 'offscreen');
+listen('ai/models', ({ provider, apiKey }) => listModels(provider, apiKey, (...a) => fetch(...a)), 'offscreen');
 listen('recipients/list', () => listRecipients(fileStore), 'offscreen');
 listen('recipients/save', ({ recipient }) => saveRecipient(fileStore, recipient), 'offscreen');
 listen('recipients/import', ({ plan }) => importRecipients(fileStore, plan), 'offscreen');

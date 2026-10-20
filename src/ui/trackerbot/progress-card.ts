@@ -2,7 +2,14 @@ import { createMascotImg, ensureMascotStyle, setMascotMood } from '../mascot/dom
 import { STEP_ICON, STEP_ICON_CSS } from '../mascot/step-icons';
 import type { ProgressActionId, ProgressItem, ProgressPanelView } from './progress-view';
 
-export interface ProgressCardHandle { host: HTMLElement; render(view: ProgressPanelView): void; dispose(): void }
+export interface ProgressCardHandle { host: HTMLElement; render(view: ProgressPanelView): void; flash(key: string): void; dispose(): void }
+
+// 행의 "수집 중"을 눌렀을 때 어느 항목인지 잠깐 강조한다. className은 render마다 다시 쓰므로 data 속성으로 건다
+const FLASH_CSS = `
+.item[data-flash] { animation: bm-item-flash 1.6s ease-out; }
+@keyframes bm-item-flash { 0%, 35% { background-color: rgba(37, 99, 235, 0.14); } 100% { background-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { .item[data-flash] { animation: none; outline: 2px solid rgba(37, 99, 235, 0.55); } }
+`;
 
 const STYLE = `
 :host { all: initial; }
@@ -13,6 +20,7 @@ const STYLE = `
   --surface: #fff; --hover: #f1f5f9; --track: #e2e8f0; --edge: rgba(15, 23, 42, 0.08);
   --act-line: #e2e8f0; --act-line-hover: #cbd5e1; --go-line: #bfdbfe; --stop-line: #fecaca;
   --shade-1: rgba(15, 23, 42, 0.06); --shade-2: rgba(15, 23, 42, 0.14); --shade-3: rgba(15, 23, 42, 0.18);
+  --bubble: #f8fafc; --bubble-line: #dbe3ee; --go-fill: #2563eb; --go-fill-hover: #1d4ed8; --go-ink: #fff;
   color-scheme: light;
   position: fixed; right: 20px; bottom: 20px; z-index: 2147483000; width: 340px; max-width: calc(100vw - 40px);
   font-family: 'Pretendard', -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif; font-size: 12px; line-height: 17px; color: var(--ink-2);
@@ -37,7 +45,12 @@ svg { display: block; }
 .slot { position: relative; flex: none; width: 56px; height: 26px; }
 .sitter { position: absolute; left: 0; bottom: -6px; width: 56px; height: 56px; z-index: 2; pointer-events: none; }
 .sitter img { width: 56px; height: 56px; display: block; transform-origin: 50% 95%; }
-.bubble { position: absolute; left: 62px; top: -26px; z-index: 3; pointer-events: none; max-width: calc(100% - 72px); padding: 6px 10px; border-radius: 10px 10px 10px 3px; background: var(--surface); color: var(--ink); font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 6px 18px var(--shade-2), 0 0 0 1px var(--shade-1); }
+/* 카드에서 띄우고 꼬리를 마스코트 쪽으로 낸다. 배경은 카드와 다른 톤(--bubble)으로 구분한다 */
+.bubble { position: absolute; left: 62px; top: -44px; z-index: 3; pointer-events: none; max-width: calc(100% - 72px); padding: 6px 11px; border-radius: 11px; background: var(--bubble); border: 1px solid var(--bubble-line); color: var(--ink); font-size: 11.5px; font-weight: 600; white-space: nowrap; filter: drop-shadow(0 6px 12px var(--shade-2)); }
+/* 꼬리: 테두리색 삼각형 위에 1px 작은 바탕색 삼각형을 겹쳐 풍선 아래 테두리 선을 덮는다(이음매 없음). 그림자는 filter라 꼬리까지 하나로 진다 */
+.bubble::before, .bubble::after { content: ""; position: absolute; top: 100%; width: 0; height: 0; border-style: solid; border-color: transparent; }
+.bubble::before { left: 9px; border-width: 8px 7px 0 7px; border-top-color: var(--bubble-line); }
+.bubble::after { left: 10px; border-width: 7px 6px 0 6px; border-top-color: var(--bubble); }
 .bubble b { color: var(--blue); font-variant-numeric: tabular-nums; }
 .root[data-mood="sad"] .bubble, .root[data-mood="sad"] .bubble b { color: var(--err); }
 .root[data-mood="hop"] .bubble b, .root[data-mood="done"] .bubble b { color: var(--ok); }
@@ -57,7 +70,10 @@ svg { display: block; }
 .item + .item { margin-top: 2px; }
 .item.warn { background: var(--warn-soft); }
 .item.error { background: var(--err-soft); }
-.badge { flex: none; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+.badge { flex: none; width: 28px; height: 28px; margin-top: -1px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+/* 아이콘 원본 크기(11~14px)와 무관하게 배지 안에서 크기를 맞춘다. 끝난 상태 표시는 조금 작게 */
+.badge svg { width: 17px; height: 17px; }
+.item.ok .badge svg, .item.warn .badge svg, .item.error .badge svg, .item.arrive .badge svg, .item.fail .badge svg { width: 14px; height: 14px; }
 .item.active .badge, .item.arrive .badge { background: var(--blue-soft); color: var(--blue); }
 .item.active.compose .badge { background: var(--violet-soft); color: var(--violet); }
 .item.fail .badge { background: var(--err-soft); color: var(--err); }
@@ -81,7 +97,10 @@ svg { display: block; }
 .step.ok { color: var(--ok); }
 .step.warn { color: var(--warn); }
 .step.error { color: var(--err); }
-.detail { margin-top: 2px; color: var(--ink-2); white-space: pre-line; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; word-break: break-all; }
+.detail { margin-top: 2px; color: var(--ink-2); white-space: pre-line; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: keep-all; overflow-wrap: anywhere; }
+.detail.open { display: block; -webkit-line-clamp: unset; }
+.more-btn { margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--blue); }
+.more-btn:hover { text-decoration: underline; }
 /* 진행 막대 + 막대 끝을 따라가는 마스코트 */
 .rail { position: relative; margin-top: 16px; }
 .gauge { height: 4px; border-radius: 999px; background: var(--track); }
@@ -96,12 +115,13 @@ svg { display: block; }
 .runner { position: absolute; bottom: 1px; left: 0; width: 22px; height: 22px; margin-left: -11px; pointer-events: none; transition: left 700ms cubic-bezier(.25,.8,.35,1); }
 .runner img { position: relative; z-index: 1; width: 22px; height: 22px; display: block; transform-origin: 50% 100%; }
 .runner::after { content: ""; position: absolute; left: 50%; bottom: -2px; width: 12px; height: 3px; margin-left: -6px; border-radius: 50%; background: var(--shade-3); }
-.actions { display: flex; gap: 6px; margin-top: 8px; }
+.actions { display: flex; gap: 6px; margin-top: 10px; }
 .actions:not(:has(button:not([hidden]))) { display: none; }
-.act { padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; background: var(--surface); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--act-line); }
-.act:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--act-line-hover); }
-.act.go { color: var(--blue); box-shadow: inset 0 0 0 1px var(--go-line); }
-.act.go:hover { background: var(--blue-soft); }
+.act { flex: 1; height: 28px; padding: 0 12px; border-radius: 8px; font-size: 11.5px; font-weight: 600; background: var(--surface); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--act-line); transition: background-color 120ms, box-shadow 120ms, color 120ms; }
+.act:hover { color: var(--ink); background: var(--hover); box-shadow: inset 0 0 0 1px var(--act-line-hover); }
+.act.go { background: var(--go-fill); color: var(--go-ink); box-shadow: none; }
+.act.go:hover { background: var(--go-fill-hover); color: var(--go-ink); box-shadow: none; }
+.act.stop { flex: none; }
 .act.stop:hover { color: var(--err); box-shadow: inset 0 0 0 1px var(--stop-line); }
 .more { padding: 8px 14px 10px; color: var(--ink-3); font-size: 11px; text-align: center; border-top: 1px solid var(--line); }
 
@@ -124,6 +144,7 @@ svg { display: block; }
     --surface: #1c1c1b; --hover: #2a2a28; --track: #2e2e2b; --edge: rgba(255, 255, 255, 0.08);
     --act-line: #3a3a37; --act-line-hover: #4a4a46; --go-line: #2c4466; --stop-line: #5a2c27;
     --shade-1: rgba(0, 0, 0, 0.35); --shade-2: rgba(0, 0, 0, 0.5); --shade-3: rgba(0, 0, 0, 0.6);
+    --bubble: #2c2c2a; --bubble-line: #45453f; --go-fill: #7fa6ec; --go-fill-hover: #9bbaf1; --go-ink: #121417;
     color-scheme: dark;
   }
   .item.active .gauge > i::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .25), transparent); }
@@ -164,7 +185,7 @@ export function createProgressCard(
   host.setAttribute('data-bidmate', 'progress');
   const shadow = host.attachShadow({ mode: 'open' });
   const style = doc.createElement('style');
-  style.textContent = STYLE + STEP_ICON_CSS;
+  style.textContent = STYLE + STEP_ICON_CSS + FLASH_CSS;
   const root = doc.createElement('div');
   root.className = 'root';
   shadow.append(style, root);
@@ -199,6 +220,8 @@ export function createProgressCard(
 
   interface ItemNode {
     el: HTMLElement; badge: HTMLElement; title: HTMLElement; chip: HTMLElement; step: HTMLElement; detail: HTMLElement;
+    /** 설명이 두 줄을 넘을 때만 보이는 펼치기/접기 버튼과 펼침 상태 */
+    moreBtn: HTMLButtonElement; expanded: boolean;
     rail: HTMLElement; bar: HTMLElement; runner: HTMLElement; cancel: HTMLButtonElement; acts: HTMLButtonElement[]; dismiss: HTMLButtonElement;
     actIds: Array<ProgressActionId | undefined>;
     state?: ProgressItem['state'];
@@ -281,6 +304,13 @@ export function createProgressCard(
     row1.append(title, chip, dismiss);
     const step = el('div', 'step');
     const detail = el('div', 'detail');
+    const moreBtn = btn('펼치기', 'more-btn', () => {
+      const n = nodes.get(key);
+      if (!n) return;
+      n.expanded = !n.expanded;
+      syncMore(n);
+    });
+    moreBtn.hidden = true;
     const bar = el('i');
     const gauge = el('div', 'gauge');
     gauge.append(bar);
@@ -294,9 +324,18 @@ export function createProgressCard(
     const acts = [0, 1].map((i) => btn('', i === 0 ? 'act go' : 'act', () => { const id = actIds[i]; if (id) on.action(key, id); }));
     const actions = el('div', 'actions');
     actions.append(cancel, ...acts);
-    body.append(row1, step, detail, rail, actions);
+    body.append(row1, step, detail, moreBtn, rail, actions);
     item.append(badge, body);
-    return { el: item, badge, title, chip, step, detail, rail, bar, runner, cancel, acts, actIds, dismiss };
+    return { el: item, badge, title, chip, step, detail, moreBtn, expanded: false, rail, bar, runner, cancel, acts, actIds, dismiss };
+  };
+
+  /** 펼침 상태를 반영하고, 접힌 상태에서 두 줄을 넘칠 때만 버튼을 보인다(노드가 화면에 붙은 뒤 호출) */
+  const syncMore = (n: ItemNode): void => {
+    n.detail.classList.toggle('open', n.expanded);
+    const overflowing = !n.expanded && n.detail.scrollHeight > n.detail.clientHeight + 1;
+    n.moreBtn.hidden = n.detail.hidden || !(n.expanded || overflowing);
+    n.moreBtn.textContent = n.expanded ? '접기' : '펼치기';
+    n.moreBtn.setAttribute('aria-expanded', String(n.expanded));
   };
 
   const updateNode = (n: ItemNode, it: ProgressItem): void => {
@@ -341,6 +380,7 @@ export function createProgressCard(
     n.step.className = `step ${it.state}`;
     n.step.textContent = it.stepLabel;
     n.detail.hidden = !it.detail;
+    if (n.detail.textContent !== (it.detail ?? '')) n.expanded = false;
     n.detail.textContent = it.detail ?? '';
     n.detail.title = it.detail ?? '';
     n.rail.hidden = !(active || n.transit);
@@ -451,8 +491,24 @@ export function createProgressCard(
       if (ref === n.el) ref = ref.nextElementSibling;
       else list.insertBefore(n.el, ref);
     }
+    for (const n of nodes.values()) syncMore(n);
     updateMood(view);
     if (!ticker && view.items.some((it) => it.state === 'active')) ticker = setInterval(tick, CREEP_TICK_MS);
+  };
+
+  const flash = (key: string): void => {
+    const n = nodes.get(key);
+    if (!n) return;
+    n.el.scrollIntoView?.({ block: 'nearest' });
+    delete n.el.dataset.flash;
+    void n.el.offsetWidth; // 연속 클릭에도 애니메이션을 다시 시작한다
+    n.el.dataset.flash = '';
+    const end = (e: Event): void => {
+      if (e.target !== n.el) return;
+      delete n.el.dataset.flash;
+      n.el.removeEventListener('animationend', end);
+    };
+    n.el.addEventListener('animationend', end);
   };
 
   const dispose = (): void => {
@@ -462,5 +518,5 @@ export function createProgressCard(
     host.remove();
   };
 
-  return { host, render, dispose };
+  return { host, render, flash, dispose };
 }

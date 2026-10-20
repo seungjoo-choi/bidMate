@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addRecipient, convertItem, removeRecipient, resetRecipients, startEditing, toggleAttachment,
+  addRecipient, convertItem, overrideValue, removeRecipient, resetRecipients, startEditing, toggleAttachment,
 } from '../../src/entrypoints/dashboard/mail-edit-logic';
 import { createMailEdits, fieldItemToText } from '../../src/core/mail/edits';
 import { builtinDefaultTemplate } from '../../src/core/templates/default-template';
@@ -110,5 +110,30 @@ describe('convertItem', () => {
     const snap = structuredClone(e.template);
     convertItem(e, 'sec_info', 0, notice, now);
     expect(e.template).toEqual(snap);
+  });
+});
+
+describe('overrideValue', () => {
+  const n = sampleNotice();
+  it('해당 필드 항목을 입력값 문구 항목으로 바꾸고 되돌리기용 fromFieldKey를 남긴다', () => {
+    const e = overrideValue(mk(), 'projectPeriod', '사업기간', '계약일로부터 3개월', n, now);
+    const items = e.template.sections.flatMap((s) => s.items);
+    expect(items.some((it) => it.kind !== 'text' && it.fieldKey === 'projectPeriod')).toBe(false);
+    const t = items.find((it) => it.kind === 'text' && it.fromFieldKey === 'projectPeriod');
+    expect(t && t.kind === 'text' && t.text).toBe('계약일로부터 3개월');
+  });
+  it('이미 바꾼 문구 항목은 글만 새 값으로 바꾼다', () => {
+    const once = overrideValue(mk(), 'projectPeriod', '사업기간', 'A', n, now);
+    const twice = overrideValue(once, 'projectPeriod', '사업기간', 'B', n, now);
+    const ts = twice.template.sections.flatMap((s) => s.items).filter((it) => it.kind === 'text' && it.fromFieldKey === 'projectPeriod');
+    expect(ts.map((it) => it.kind === 'text' && it.text)).toEqual(ts.map(() => 'B'));
+    expect(ts.length).toBeGreaterThan(0);
+  });
+  it('제목·인사말의 {변수}를 입력값으로 바꾼다', () => {
+    const e0 = mk();
+    const e1 = { ...e0, template: { ...e0.template, subject: '[{사업기간}] 안내', greeting: '기간: {사업기간}' } };
+    const e = overrideValue(e1, 'projectPeriod', '사업기간', '6개월', n, now);
+    expect(e.template.subject).toBe('[6개월] 안내');
+    expect(e.template.greeting).toBe('기간: 6개월');
   });
 });

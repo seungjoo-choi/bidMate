@@ -108,6 +108,7 @@ export function overviewGroups(n: Notice, index: IndexEntry[]): DetailGroup[] {
       description: '공고정보에서 읽은 값입니다. 문서에서 추출한 값의 확인과 수정은 평가정보 검토 탭에서 합니다.',
       rows: withReviewLink(n.id, [
         row('평가방식', e.evalMethod, text),
+        row('평가방식(문서 원문)', e.evalMethodDoc, text, { pre: true }),
         row('차등점수제', e.differentialScoring, formatDifferential),
         row('대외신인도 배점', e.credibilityScore, formatScore),
         row('경영상태 배점', e.managementScore, formatScore),

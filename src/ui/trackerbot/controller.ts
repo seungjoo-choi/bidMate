@@ -51,6 +51,7 @@ export class TrackerbotController {
   private orphaned = false;
   private inflight = new Set<Promise<unknown>>();
   private listeners = new Set<() => void>();
+  private revealListeners = new Set<(key: string) => void>();
 
   constructor(private doc: Document, deps: TrackerbotDeps = {}) {
     this.send = deps.send ?? defaultSend;
@@ -84,6 +85,16 @@ export class TrackerbotController {
   subscribe(fn: () => void): () => void {
     this.listeners.add(fn);
     return () => { this.listeners.delete(fn); };
+  }
+
+  /** 행의 "수집 중"을 누르면 진행 팝업이 그 항목을 보이도록 알린다. 해제 함수를 반환한다. */
+  onReveal(fn: (key: string) => void): () => void {
+    this.revealListeners.add(fn);
+    return () => { this.revealListeners.delete(fn); };
+  }
+
+  private reveal(key: string): void {
+    for (const fn of [...this.revealListeners]) { try { fn(key); } catch { /* 구독자 오류는 무시 */ } }
   }
 
   /** 행 버튼 중 화면에 붙어 있는 첫 host로 스크롤한다. */
@@ -143,7 +154,7 @@ export class TrackerbotController {
       if (next && next.getAttribute('data-bidmate') === 'collect') continue;
       const handle = createRowButton(s.anchor, {
         collect: () => { void this.collect(key); },
-        cancel: () => { void this.cancel(key); },
+        reveal: () => this.reveal(key),
         action: (a) => { void this.onAction(key, a); },
       });
       let set = this.buttons.get(key);

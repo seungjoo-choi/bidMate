@@ -8,6 +8,10 @@ import { editsStaleness } from '../../core/mail/edits';
 import type { MailDraft, MailEdits } from '../../core/types/mail';
 import type { TemplateFieldKey } from '../../core/types/template';
 import type { MailStatus, Notice } from '../../core/types/notice';
+import type { Extraction } from '../../core/types/extraction';
+import type { UnresolvedVar } from '../../core/types/mail';
+import { isTemplateFieldKey, VARIABLE_BY_NAME } from '../../core/templates/variables';
+import { ResolveDialog, type NoticeEdit } from './mail/ResolveDialog';
 import { send } from '../../messaging/bus';
 import { Button, Card, ConfirmDialog, Field, InlineAlert, StatusBadge, Select, useToast, type BadgeStatus } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
@@ -21,7 +25,7 @@ import { useSettings } from '../../ui/hooks/useSettings';
 import { composeProvider, PROVIDER_LABEL } from '../../core/model/mail-provider';
 import { MailPreviewFrame } from './templates/MailPreviewFrame';
 import { SectionEditor } from './templates/SectionEditor';
-import { addRecipient, convertItem, patchTemplate, removeRecipient, resetRecipients, startEditing, toggleAttachment, type Recipients, type Role } from './mail-edit-logic';
+import { addRecipient, convertItem, overrideValue, patchTemplate, removeRecipient, resetRecipients, revertItem, startEditing, toggleAttachment, type Recipients, type Role } from './mail-edit-logic';
 
 const STATUS_LABEL: Record<MailStatus, string> = { none: '초안 없음', drafting: '초안 작성됨', ready_for_review: '검토 대기', delivered: '발송 완료' };
 const STATUS_TONE: Record<MailStatus, BadgeStatus> = { none: 'idle', drafting: 'warn', ready_for_review: 'warn', delivered: 'ok' };
@@ -69,6 +73,8 @@ const ADD_ERROR = { invalid: '올바른 이메일 주소를 입력하세요.', d
 
 export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: string }) {
   const [notice, setNotice] = useState<Notice | null | undefined>(undefined);
+  const [extraction, setExtraction] = useState<Extraction | null>(null);
+  const [resolving, setResolving] = useState<UnresolvedVar | null>(null);
   const [draft, setDraft] = useState<MailDraft | null>(null);
   const [edits, setEdits] = useState<MailEdits | null>(null);      // 저장된 공고 전용 양식
   const [working, setWorking] = useState<MailEdits | null>(null);  // 편집 중인 값(저장 전 포함)
@@ -79,7 +85,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
   const [saving, setSaving] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [showAllFiles, setShowAllFiles] = useState(false);
-  const [tab, setTab] = useState<Tab>(from === 'collect' ? 'edit' : 'preview');
+  const [tab, setTab] = useState<Tab>('preview'); // 수집 직후에도 결과부터 보고 편집으로 넘어간다
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [addEmail, setAddEmail] = useState('');
   const [addRole, setAddRole] = useState<Role>('to');
@@ -99,6 +105,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
         send('mail/edits-get', { noticeId }),
       ]);
       setNotice(r ? r.notice : null);
+      setExtraction(r?.extraction ?? null);
       setDraft(d);
       setEdits(e);
       setWorking(e);
@@ -191,6 +198,27 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
     }
   };
 
+  /** 팝업의 [공고에 저장]/[자동값으로 되돌리기]. 성공하면 화면의 공고를 바꾸고, 초안이 있으면 다시 저장해 본문을 맞춘다. */
+  const saveNoticeFields = async (list: NoticeEdit[]): Promise<string | null> => {
+    let done = 0;
+    try {
+      for (const e of list) {
+        const r = await send('notice/field-edit', { noticeId, ...e });
+        setNotice(r.notice);
+        setExtraction(r.extraction);
+        done++;
+      }
+      if (draft) await save();
+      else toast.show('공고 값을 저장했습니다');
+      return null;
+    } catch (e) {
+      const { code, message } = toInfo(e);
+      const why = code === 'JOB_ALREADY_RUNNING' ? '이 공고는 수집/추출 중입니다. 끝난 뒤 다시 시도하세요.' : `${code ?? ''} ${message}`.trim();
+      if (done > 0 && draft) await save();
+      return done > 0 ? `${list.length}개 중 ${done}개만 저장했습니다. ${why}` : why;
+    }
+  };
+
   const compose = useComposeController({
     noticeId, noticeRef: notice?.ref, jobs,
     params: { ...(groupId ? { groupId } : {}), ...(templateId ? { templateId } : {}) },
@@ -254,10 +282,12 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
 
   // 탭 줄 오른쪽에 붙는 복사 버튼 묶음. 미리보기 제목이 넓게 보이도록 액자 밖에 둔다.
   const copyTools = rendered && (
-    <div role="group" aria-label="메일 복사" className="inline-flex divide-x divide-line overflow-hidden rounded-ctl border border-line bg-surface shadow-card">
+    <div role="group" aria-label="메일 복사" className="inline-flex items-center gap-0.5 text-sm text-muted">
+      <ClipboardCopy aria-hidden className="mr-1 size-4" />
+      <span className="mr-1">복사</span>
       {([['제목', rendered.subject], ['HTML', rendered.html], ['텍스트', rendered.text]] as const).map(([label, value]) => (
-        <button key={label} type="button" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-ink transition-colors hover:bg-sunken" onClick={() => void copy(value, label)}>
-          <ClipboardCopy className="size-4 text-muted" />{label} 복사
+        <button key={label} type="button" aria-label={`${label} 복사`} className="rounded-ctl px-2 py-1 font-semibold text-muted transition-colors hover:bg-sunken hover:text-ink" onClick={() => void copy(value, label)}>
+          {label}
         </button>
       ))}
     </div>
@@ -268,31 +298,29 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
   return (
     <div className="space-y-5">
       {back}
+      {/* 제목이 한 줄을 넓게 쓰도록 상태·발송 정보는 제목 아래 메타 줄로 모은다. */}
       <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <div className="min-w-0 flex-1 basis-[28rem]">
+        <div className="min-w-0 flex-1 basis-[32rem]">
           <h1 className="title-mark text-2xl leading-snug font-bold tracking-tight text-balance">{title}</h1>
-          <div className="mt-2 pl-[calc(3px+0.75rem)] text-sm text-muted"><span className="font-mono text-sm">{noticeNo}</span>{isPrespec && <span className="ml-2 align-middle"><StatusBadge status="idle">사전규격</StatusBadge></span>}</div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-[calc(3px+0.75rem)] text-sm text-muted">
+            <span className="font-mono">{noticeNo}</span>
+            {isPrespec && <StatusBadge status="idle">사전규격</StatusBadge>}
+            <span aria-hidden className="text-faint">·</span>
+            <StatusBadge status={STATUS_TONE[mailStatus]}>{STATUS_LABEL[mailStatus]}</StatusBadge>
+            {notice.mail.deliveredAt && (
+              <span>
+                마지막 발송 <span className="font-mono tabular-nums">{formatDateTime(notice.mail.deliveredAt)}</span>
+                <a href={noticeHash(notice.id, 'history')} className="ml-2 text-accent hover:underline">이력 보기</a>
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <StatusBadge status={STATUS_TONE[mailStatus]}>{STATUS_LABEL[mailStatus]}</StatusBadge>
-          <Button variant="secondary" loading={statusBusy} disabled={saving} icon={<Check />} onClick={() => void recordSent()}>{mailStatus === 'delivered' ? '발송 1회 더 기록' : '발송 완료로 기록'}</Button>
-          {notice.mail.deliveredAt && (
-            <span className="text-sm text-muted">
-              마지막 발송 <span className="font-mono tabular-nums">{formatDateTime(notice.mail.deliveredAt)}</span>
-              <a href={noticeHash(notice.id, 'history')} className="ml-2 text-accent hover:underline">이력 보기</a>
-            </span>
-          )}
-        </div>
+        <Button variant="ghost" className="shrink-0" loading={statusBusy} disabled={saving} icon={<Check />} onClick={() => void recordSent()}>{mailStatus === 'delivered' ? '발송 1회 더 기록' : '발송 완료로 기록'}</Button>
       </header>
 
       {from === 'collect' && (
         <InlineAlert tone="info">수집이 끝났습니다. 보낼 내용을 확인하고 필요한 항목(예: 제안PM)을 채운 뒤 [{PROVIDER_LABEL[provider]}로 작성]을 누르세요.</InlineAlert>
       )}
-      <InlineAlert tone="info">
-        {provider === 'gmail'
-          ? 'Gmail은 작성 창을 열고 받는 사람, 참조, 제목, 본문(서식 없음)을 채웁니다. 첨부와 서식 본문은 직접 넣어 주세요.'
-          : '네이버웍스는 작성 창을 열고 받는 사람, 참조, 제목, 본문, 첨부를 채웁니다. 내용을 확인하고 보내기만 누르세요.'}
-      </InlineAlert>
       {stale && (
         <InlineAlert tone="warn">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -392,6 +420,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
                     onMoveDown={i < effective.sections.length - 1 ? () => edit((x) => patchTemplate(x, { sections: swap(x.template.sections, i, i + 1) })) : undefined}
                     onFocusInput={() => undefined}
                     onConvertToText={(j) => edit((x) => convertItem(x, s.id, j, notice, new Date()))}
+                    onRevertToField={(j) => edit((x) => revertItem(x, s.id, j))}
                   />
                 ))}
               </Card>
@@ -409,11 +438,18 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
         </div>
 
         <aside className="divide-y divide-line rounded-card border border-line bg-surface shadow-card xl:sticky xl:top-6">
-          {(compose.view || compose.note) && (
-            <PanelSection title={`${PROVIDER_LABEL[provider]} 작성`}>
+          {/* 작성 전에는 서비스가 무엇을 채우는지 안내하고, 시작하면 진행 상태로 바뀐다. */}
+          <PanelSection title={`${PROVIDER_LABEL[provider]} 작성`}>
+            {compose.view || compose.note ? (
               <ComposeStatus ctl={compose} detached />
-            </PanelSection>
-          )}
+            ) : (
+              <p className="text-xs leading-relaxed text-muted">
+                {provider === 'gmail'
+                  ? '작성 창을 열고 받는 사람, 참조, 제목, 본문(서식 없음)을 채웁니다. 첨부와 서식 본문은 직접 넣어 주세요.'
+                  : '작성 창을 열고 받는 사람, 참조, 제목, 본문, 첨부를 채웁니다. 내용을 확인하고 보내기만 누르세요.'}
+              </p>
+            )}
+          </PanelSection>
 
           <PanelSection title="수신자" meta={`TO ${shown.to.length}, CC ${shown.cc.length}`} metaTone={recipientCount === 0 ? 'text-danger' : 'text-muted'}>
             <div className="space-y-2.5 text-sm">
@@ -521,7 +557,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
               <ul className="space-y-1.5 text-sm">
                 {unresolved.map((u) => (
                   <li key={u.name} className="flex items-baseline justify-between gap-3">
-                    <a href={`#/review/${encodeURIComponent(noticeId)}`} className="min-w-0 truncate text-accent hover:underline">{u.label}</a>
+                    <button type="button" className="min-w-0 truncate text-left text-accent hover:underline" onClick={() => setResolving(u)}>{u.label}</button>
                     <span className="shrink-0 text-xs text-muted">{u.status === 'missing' ? '값 없음' : '확인 필요'}</span>
                   </li>
                 ))}
@@ -536,6 +572,20 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
           )}
         </aside>
       </div>
+
+      {resolving && (() => {
+        // {custom.키}는 레지스트리에 없고 이름이 곧 필드 키다.
+        const fieldKey = VARIABLE_BY_NAME.get(resolving.name)?.fieldKey ?? (isTemplateFieldKey(resolving.name) ? resolving.name : undefined);
+        if (!fieldKey) return null;
+        return (
+          <ResolveDialog
+            noticeId={noticeId} notice={notice} extraction={extraction} item={resolving} fieldKey={fieldKey}
+            onApplyMail={locked || (!working && !template) ? undefined : (text) => { edit((x) => overrideValue(x, fieldKey, resolving.name, text, notice, new Date())); toast.show(`이 메일의 ${resolving.label} 값을 바꿨습니다. 저장해야 초안에 반영됩니다`); }}
+            onSaveNotice={locked ? undefined : saveNoticeFields}
+            onClose={() => setResolving(null)}
+          />
+        );
+      })()}
 
       <ConfirmDialog
         open={confirm !== null}

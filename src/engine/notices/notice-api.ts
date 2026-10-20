@@ -1,12 +1,14 @@
 import { computeStatus } from '../../core/extraction/decide';
+import { applyUserEdit, isEditableKey, revertUserEdit, validateFieldValue, VALUE_CHECK } from '../../core/model/field-edit';
 import { mergeDocumentLayer } from '../../core/model/merge';
-import { setFields } from '../../core/model/notice-fields';
+import { getField, setFields } from '../../core/model/notice-fields';
 import { normalizePath } from '../../core/model/path';
-import { EXTRACTION_KEYS, type Extraction, type ExtractionKey } from '../../core/types/extraction';
+import { EXTRACTION_KEYS, type ExtractedItem, type Extraction, type ExtractionKey } from '../../core/types/extraction';
 import type { IndexEntry } from '../../core/types/index-file';
-import type { Notice } from '../../core/types/notice';
-import { missing } from '../../core/types/common';
+import type { Notice, NoticeFieldKey } from '../../core/types/notice';
+import { missing, type FieldValue } from '../../core/types/common';
 import { docFieldsOf } from '../extraction/extract-step';
+import { PROVIDERS } from '../ai/providers';
 import type { IFileStore } from '../file-store/types';
 import { editLockKey, NoticeStore } from './notice-store';
 
@@ -24,16 +26,6 @@ export async function getNotice(store: IFileStore, noticeId: string): Promise<{ 
   return { notice, extraction: await ns.loadExtraction(noticeId) };
 }
 
-const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
-const VALUE_CHECK: Record<ExtractionKey, (v: unknown) => boolean> = {
-  credibilityScore: (v) => finite(v) && v >= 0 && v <= 1000,
-  managementScore: (v) => finite(v) && v >= 0 && v <= 1000,
-  performanceScore: (v) => finite(v) && v >= 0 && v <= 1000,
-  performancePeriod: (v) => typeof v === 'string' && /^\d{1,2}년$/.test(v),
-  performanceMinAmount: (v) => finite(v) && Number.isInteger(v) && v >= 0,
-  performanceCondition: (v) => typeof v === 'string' && v.length <= 2000,
-  differentialScoring: (v) => typeof v === 'boolean',
-};
 
 /**
  * value가 있으면 사용자 수정을 넣고, null이면 해제해 자동 결과로 되돌린다. 끝나면 전체 status를 다시 계산한다.
@@ -41,7 +33,15 @@ const VALUE_CHECK: Record<ExtractionKey, (v: unknown) => boolean> = {
  */
 export async function editExtraction(
   store: IFileStore, p: { noticeId: string; key: ExtractionKey; value: unknown | null; note?: string },
-  opts: { now?: () => Date; isBusy?: (noticeId: string) => boolean } = {},
+  opts: {
+    now?: () => Date; isBusy?: (noticeId: string) => boolean;
+    /** AI 제안 적용 출처. 있으면 userEdited.origin에 남기고 note가 비면 기본 메모를 넣는다. */
+    origin?: NonNullable<ExtractedItem<unknown>['userEdited']>['origin'];
+    /** notice 필드 source(kind는 항상 'user'). 기본 ref는 'dashboard' */
+    source?: { ref: string; evidence?: string; page?: number };
+    /** 지정하면 락 안에서 읽은 extraction.jobId가 같을 때만 저장한다(다르면 AI_STALE). */
+    expectJobId?: string;
+  } = {},
 ): Promise<{ notice: Notice; extraction: Extraction }> {
   const key = p.key as string;
   if (typeof key !== 'string' || !(EXTRACTION_KEYS as string[]).includes(key)) throw err('INVALID_KEY', `알 수 없는 항목: ${String(key)}`);
@@ -55,12 +55,22 @@ export async function editExtraction(
     const notice = await ns.loadNotice(p.noticeId);
     const extraction = await ns.loadExtraction(p.noticeId);
     if (!notice || !extraction) throw err('NOT_FOUND', '추출 결과를 찾을 수 없습니다.');
+    if (opts.expectJobId !== undefined && extraction.jobId !== opts.expectJobId) throw err('AI_STALE', '추출 결과가 다시 만들어져 적용할 수 없습니다.');
     if (!Object.hasOwn(extraction.items, p.key)) throw err('INVALID_KEY', `알 수 없는 항목: ${key}`);
     const item = extraction.items[p.key];
     const nowIso = now().toISOString();
     if (value !== null) {
-      item.userEdited = { value, editedAt: nowIso, ...(p.note ? { note: p.note } : {}) };
-      notice.evaluation[p.key] = { value, status: 'user_edited', source: { kind: 'user', ref: 'dashboard', fetchedAt: nowIso } } as never;
+      const note = p.note || (opts.origin ? `AI 제안 적용(${PROVIDERS[opts.origin.provider]?.label ?? opts.origin.provider}${opts.origin.model ? ` ${opts.origin.model}` : ''})` : undefined);
+      item.userEdited = { value, editedAt: nowIso, ...(note ? { note } : {}), ...(opts.origin ? { origin: opts.origin } : {}) };
+      notice.evaluation[p.key] = {
+        value, status: 'user_edited',
+        source: {
+          kind: 'user', ref: opts.source?.ref ?? 'dashboard',
+          ...(opts.source?.evidence ? { evidence: opts.source.evidence } : {}), ...(opts.source?.page !== undefined ? { page: opts.source.page } : {}),
+          fetchedAt: nowIso,
+        },
+        userEdit: { editedAt: nowIso, ...(note ? { note } : {}) },
+      } as never;
     } else {
       delete item.userEdited;
       notice.evaluation[p.key] = missing() as never;
@@ -70,6 +80,60 @@ export async function editExtraction(
     extraction.status = computeStatus(extraction.items, extraction.files.map((f) => f.status));
     notice.updatedAt = nowIso;
     await ns.saveExtraction(notice, extraction);
+    return { notice, extraction };
+  });
+}
+
+/**
+ * 임의의 공고 필드(custom.* 포함)를 사용자 수정으로 바꾸거나(value) 자동값으로 되돌린다(null).
+ * ExtractionKey는 extraction이 있으면 editExtraction에 맡기고, 없을 때만 notice에 직접 쓴다.
+ */
+export async function editNoticeField(
+  store: IFileStore,
+  p: { noticeId: string; key: string; value: unknown | null; raw?: string; note?: string },
+  opts: { now?: () => Date; isBusy?: (noticeId: string) => boolean } = {},
+): Promise<{ notice: Notice; extraction: Extraction | null }> {
+  const key = p.key;
+  if (!isEditableKey(key)) throw err('INVALID_KEY', `수정할 수 없는 항목: ${String(key)}`);
+  if (p.note !== undefined && (typeof p.note !== 'string' || p.note.length > 500)) throw err('INVALID_VALUE', 'note는 500자 이하 문자열이어야 합니다.');
+  const ns = new NoticeStore(store);
+  if ((EXTRACTION_KEYS as string[]).includes(key)) {
+    if (await ns.loadExtraction(p.noticeId)) return editExtraction(store, { ...p, key: key as ExtractionKey }, opts);
+  }
+  const value = p.value === undefined ? null : p.value;
+  if (value !== null) {
+    const v = validateFieldValue(key, value, p.raw);
+    if (!v.ok) throw err('INVALID_VALUE', v.message);
+  }
+  const now = opts.now ?? (() => new Date());
+  return store.withLock(editLockKey(p.noticeId), async () => {
+    if (opts.isBusy?.(p.noticeId)) throw err('JOB_ALREADY_RUNNING', '같은 공고의 수집/추출 잡이 실행 중입니다.');
+    const notice = await ns.loadNotice(p.noticeId);
+    if (!notice) throw err('NOT_FOUND', '공고를 찾을 수 없습니다.');
+    const extraction = await ns.loadExtraction(p.noticeId);
+    if (extraction && (EXTRACTION_KEYS as string[]).includes(key)) throw err('JOB_ALREADY_RUNNING', '추출 결과가 방금 생성되었습니다. 다시 시도하세요.');
+    const isCustom = key.startsWith('custom.');
+    const ckey = isCustom ? key.slice('custom.'.length) : key;
+    notice.customFields ??= {};
+    const prev = isCustom
+      ? (Object.hasOwn(notice.customFields, ckey) ? notice.customFields[ckey] : undefined)
+      : getField(notice, key as NoticeFieldKey);
+    const nowIso = now().toISOString();
+    let next: FieldValue<unknown> | undefined;
+    if (value !== null) {
+      next = applyUserEdit(prev, value, nowIso, { raw: p.raw, note: p.note });
+    } else {
+      if (prev?.status !== 'user_edited') return { notice, extraction };
+      next = revertUserEdit(prev);
+    }
+    if (isCustom) {
+      if (next) notice.customFields[ckey] = next as FieldValue<string>;
+      else delete notice.customFields[ckey];
+    } else {
+      setFields(notice, { [key as NoticeFieldKey]: next ?? missing() });
+    }
+    notice.updatedAt = nowIso;
+    await ns.saveNotice(notice);
     return { notice, extraction };
   });
 }

@@ -42,6 +42,7 @@ describe('실제 문서 f1+f3', () => {
     expect(items.credibilityScore.evidence!.evidence).toMatch(/^(가점|감점)/);
     expect(items.performanceScore).toMatchObject({ value: 6, status: 'verified' });
     expect(extras.projectPeriod).toMatchObject({ value: '계약체결일로부터 2028.02.28.까지', status: 'verified' });
+    expect(extras.evalMethodDoc).toMatchObject({ value: '기술평가위원회 개최를 통한 온라인 소집평가 (조달청 나라장터 온라인 평가시스템 활용한 발표평가)', status: 'verified' });
     expect(items.performancePeriod).toMatchObject({ value: '5년', status: 'verified' });
     expect(items.performancePeriod.raw).toContain('5년 이내');
     expect(items.performanceMinAmount).toMatchObject({ value: 500000000, status: 'verified' });
@@ -421,7 +422,13 @@ describe('규칙 격리', () => {
     const d = decide([], loadRules());
     expect(JSON.parse(JSON.stringify(d.extras))).toEqual({
       bonusTable: { value: null, status: 'needs_review', reason: 'not_found' },
+      evalMethodDoc: { value: null, status: 'needs_review', reason: 'not_found' },
       projectPeriod: { value: null, status: 'needs_review', reason: 'not_found' },
+      projectPeriodCell: { value: null, status: 'needs_review', reason: 'not_found' },
+      projectPeriodParen: { value: null, status: 'needs_review', reason: 'not_found' },
+      proposalPeriod: { value: null, status: 'needs_review', reason: 'not_found' },
+      proposalEvalAt: { value: null, status: 'needs_review', reason: 'not_found' },
+      quantEvalDoc: { value: null, status: 'needs_review', reason: 'not_found' },
     });
   });
 });
@@ -566,5 +573,21 @@ describe('스키마 검증', () => {
   });
   it('window-regex valueType text 통과', () => {
     expect(validateRule({ id: 'x', target: 'extras.x', strategy: 'window-regex', anchor: 'a', pattern: '(?<v>b)', blocksAfter: 0, valueType: 'text' }, syn)).toEqual([]);
+  });
+});
+
+describe('평가방식 원문 규칙(eval.methodDoc)', () => {
+  const evalDoc = (text: string) => {
+    const rules = loadRules();
+    return decide(runRules([input(doc([P(text)]))], rules), rules).extras.evalMethodDoc!;
+  };
+  it('"1) 평가방식 : 서면평가" -> 서면평가', () => {
+    expect(evalDoc('1) 평가방식 : 서면평가')).toMatchObject({ value: '서면평가', status: 'verified' });
+  });
+  it('"정량평가방법 : 배점표에 따름"은 후보 아님', () => {
+    expect(evalDoc('정량평가방법 : 배점표에 따름')).toMatchObject({ reason: 'not_found' });
+  });
+  it('"평가방법 : 제안요청서 참조"는 후보 아님', () => {
+    expect(evalDoc('평가방법 : 제안요청서 참조')).toMatchObject({ reason: 'not_found' });
   });
 });

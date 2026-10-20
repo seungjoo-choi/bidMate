@@ -1,8 +1,8 @@
-import { createMailEdits, fieldItemToText } from '../../core/mail/edits';
+import { createMailEdits, fieldItemToText, textItemToField } from '../../core/mail/edits';
 import { isValidEmail, normalizeEmail } from '../../core/recipients/email';
 import type { MailEdits } from '../../core/types/mail';
 import type { Notice } from '../../core/types/notice';
-import type { Template } from '../../core/types/template';
+import type { Template, TemplateFieldKey } from '../../core/types/template';
 
 export type Role = 'to' | 'cc';
 export type Recipients = { to: string[]; cc: string[] };
@@ -53,4 +53,30 @@ export function convertItem(e: MailEdits, sectionId: string, itemIndex: number, 
     return { ...s, items: s.items.map((it, i) => (i === itemIndex && it.kind !== 'text' ? fieldItemToText(it, notice, now) : it)) };
   });
   return patchTemplate(e, { sections });
+}
+
+/** [값 고치기]로 바뀐 문구 항목을 원래 공고 값 항목으로 되돌린다. 해당 없으면 그대로 둔다. */
+export function revertItem(e: MailEdits, sectionId: string, itemIndex: number): MailEdits {
+  const sections = e.template.sections.map((s) => {
+    if (s.id !== sectionId) return s;
+    return { ...s, items: s.items.map((it, i) => (i === itemIndex && it.kind === 'text' && it.fromFieldKey ? textItemToField({ ...it, fromFieldKey: it.fromFieldKey }) : it)) };
+  });
+  return patchTemplate(e, { sections });
+}
+
+/** 이 메일에서만 fieldKey 값을 text로 고정한다. 필드 항목은 문구 항목([값 고치기]와 같은 모양)으로, 제목·인사말·맺음말·구역 제목·문구 속 {varName}은 text로 바꾼다. */
+export function overrideValue(e: MailEdits, fieldKey: TemplateFieldKey, varName: string, text: string, notice: Notice, now: Date): MailEdits {
+  const token = `{${varName}}`;
+  const rep = (s: string) => s.split(token).join(text);
+  const t = e.template;
+  const sections = t.sections.map((s) => ({
+    ...s,
+    title: rep(s.title),
+    ...(s.inlineValue !== undefined ? { inlineValue: rep(s.inlineValue) } : {}),
+    items: s.items.map((it) => {
+      if (it.kind === 'text') return it.fromFieldKey === fieldKey ? { ...it, text } : { ...it, text: rep(it.text) };
+      return it.fieldKey === fieldKey ? { ...fieldItemToText(it, notice, now), text } : it;
+    }),
+  }));
+  return patchTemplate(e, { subject: rep(t.subject), greeting: rep(t.greeting), closing: rep(t.closing), sections });
 }

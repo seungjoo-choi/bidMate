@@ -4,7 +4,7 @@ import { normalizeTemplate } from '../templates/normalize';
 import { resolveValue } from '../templates/values';
 import type { MailEdits } from '../types/mail';
 import type { Notice } from '../types/notice';
-import type { Template, TemplateFieldItem, TemplateTextItem } from '../types/template';
+import type { Template, TemplateFieldItem, TemplateFieldKey, TemplateTextItem } from '../types/template';
 
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 const isStrArr = (x: unknown): x is string[] => Array.isArray(x) && x.every((v) => typeof v === 'string');
@@ -58,13 +58,24 @@ export function editsStaleness(e: MailEdits, current?: Template): 'missing' | 'c
   return current.updatedAt !== e.base.updatedAt ? 'changed' : null;
 }
 
-/** 필드 항목을 현재 해석 값의 text 항목으로 전환한다(label/visible/style 유지). */
+/** 필드 항목을 현재 해석 값의 text 항목으로 전환한다(label/visible/style 유지, 원래 변수는 fromFieldKey에 기억). */
 export function fieldItemToText(item: TemplateFieldItem, notice: Notice, now: Date): TemplateTextItem {
   return {
     kind: 'text',
     id: newId('txt'),
     label: item.label,
     text: resolveValue(notice, item.fieldKey, now).text,
+    visible: item.visible,
+    ...(item.style ? { style: { ...item.style } } : {}),
+    fromFieldKey: item.fieldKey,
+  };
+}
+
+/** [값 고치기]로 바뀐 text 항목을 원래 필드 항목으로 되돌린다(label/visible/style 유지). */
+export function textItemToField(item: TemplateTextItem & { fromFieldKey: TemplateFieldKey }): TemplateFieldItem {
+  return {
+    fieldKey: item.fromFieldKey,
+    label: item.label,
     visible: item.visible,
     ...(item.style ? { style: { ...item.style } } : {}),
   };

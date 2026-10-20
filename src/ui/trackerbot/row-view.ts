@@ -16,8 +16,9 @@ export interface RowEntry {
 export type RowSubAction = 'open-mail' | 'open-review' | 'settings' | 'sidepanel';
 
 export type RowView =
-  | { kind: 'idle'; label: string; chip?: string; tone: 'primary' | 'secondary'; detail?: string }
-  | { kind: 'busy'; label: string; canCancel: boolean; cancelling: boolean; cancelTarget: 'collect' | 'compose' }
+  | { kind: 'idle'; label: string; chip?: string; chipTone?: 'ok' | 'warn'; tone: 'primary' | 'secondary'; detail?: string }
+  /** 진행 숫자·취소는 우측 하단 진행 팝업이 맡고, 행은 짧은 라벨만. detail은 툴팁 */
+  | { kind: 'busy'; label: string; detail?: string; canCancel: boolean; cancelling: boolean; cancelTarget: 'collect' | 'compose' }
   | { kind: 'done'; label: string; tone: 'ok' | 'warn'; detail?: string; canRetry: boolean; action?: RowSubAction; actionLabel?: string; fix?: FixTarget }
   | {
       kind: 'error'; label: string; detail?: string; action: 'retry' | 'grant' | 'settings' | 'none'; actionLabel?: string; subAction?: RowSubAction; subActionLabel?: string;
@@ -55,7 +56,8 @@ export function rowView(entry: RowEntry, opts: { orphaned: boolean }): RowView {
   };
   if (h && (v.kind === 'completed' || v.kind === 'partial')) {
     // 셀이 좁아 라벨은 짧게, 상세는 툴팁
-    const tip = withError([v.kind === 'completed' ? [v.headline, ddayLine(v.chip, entry.ref)].filter(Boolean).join('\n') : [v.headline, ...v.failures.map((f) => `${f.name}: ${f.reason}`)].join('\n'), h.text].join('\n'));
+    // 라벨이 메일 단계를 말하므로 "수집 완료"는 빼고 첨부·마감을 한 줄로 묶는다
+    const tip = withError([v.kind === 'completed' ? [v.headline.replace(/^수집 완료,\s*/, ''), ddayLine(v.chip, entry.ref)].filter(Boolean).join(' · ') :[v.headline, ...v.failures.map((f) => `${f.name}: ${f.reason}`)].join('\n'), h.text].join('\n'));
     const act = hAction ? { action: hAction, actionLabel: h.actionLabel, ...hFix } : {};
     switch (h.kind) {
       case 'composing':
@@ -94,11 +96,14 @@ export function rowView(entry: RowEntry, opts: { orphaned: boolean }): RowView {
       const found = v.buttonLabel === '다시 수집';
       const detail = entry.otherTab ? '다른 탭에서 수집 중' : entry.error ?? undefined;
       const label = v.buttonLabel === '공고 수집' && kindOf(entry.ref) === 'prespec' ? '사전규격 수집' : v.buttonLabel;
-      return { kind: 'idle', label, chip: v.collected?.text, tone: found ? 'secondary' : 'primary', ...(detail ? { detail } : {}) };
+      return {
+        kind: 'idle', label, chip: v.collected?.text, ...(v.collected ? { chipTone: v.collected.tone } : {}),
+        tone: found ? 'secondary' : 'primary', ...(detail ? { detail } : {}),
+      };
     }
     case 'progress':
       return {
-        kind: 'busy', label: v.attach ? `첨부 ${v.attach.done}/${v.attach.total}` : v.label.slice(0, 20),
+        kind: 'busy', label: v.cancelling ? '취소 중' : '수집 중', detail: v.attach ? `첨부 ${v.attach.done}/${v.attach.total}` : v.label,
         canCancel: !v.cancelling, cancelling: v.cancelling, cancelTarget: 'collect',
       };
     case 'completed':

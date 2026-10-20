@@ -3,6 +3,7 @@ import type { SettingsSection } from '../../messaging/protocol';
 import { StorageFolderCard } from './StorageFolderCard';
 import { MailServiceCard } from './MailServiceCard';
 import { G2bCard } from './G2bCard';
+import { AiCard } from './AiCard';
 import { CompanyCard } from './CompanyCard';
 import { AutoComposeCard } from './AutoComposeCard';
 import { PageTitle } from './menu';
@@ -36,6 +37,7 @@ export function SettingsPage({ section, nonce }: { section?: SettingsSection; no
       {slot('mail-service', <MailServiceCard />)}
       {slot('auto-compose', <AutoComposeCard />)}
       {slot('g2b', <G2bCard />)}
+      {slot('ai', <AiCard />)}
       {slot('company', <CompanyCard />)}
     </>
   );

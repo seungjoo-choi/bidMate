@@ -42,56 +42,60 @@ export function mergeFields(existing: Notice | null, layers: MergeLayer[]): Fiel
   for (const key of ALL_FIELD_KEYS) {
     const prev = existing ? getField(existing, key) : undefined;
     if (prev?.status === 'user_edited') {
-      out[key] = prev;
+      // 사용자 값은 그대로 두고, 되돌릴 때 돌아갈 자동값(before)만 이번 수집 결과로 갱신한다.
+      const auto = mergeKey(prev.userEdit?.before, layers.map((l) => l.fields[key]), queried);
+      out[key] = prev.userEdit ? { ...prev, userEdit: { ...prev.userEdit, before: auto } } : prev;
       continue;
     }
-    const candidates = layers.map((l) => l.fields[key]);
-    const present = candidates.filter(hasValue);
-    const unparsed = candidates.filter(
-      (v): v is FieldValue<unknown> => !!v && (v.value === null || v.value === undefined) && typeof v.raw === 'string' && v.raw.trim() !== '',
-    );
-    if (present.length === 0) {
-      if (unparsed[0]) out[key] = { ...unparsed[0], status: 'needs_review', note: unparsed[0].note ?? '값을 해석하지 못함' };
-      else if (hasValue(prev)) {
-        out[key] = prev.source && queried.has(prev.source.kind)
-          ? { ...prev, status: 'needs_review', note: '최근 수집에서 값이 확인되지 않음' }
-          : prev;
-      } else out[key] = { value: null, status: 'missing' };
-      continue;
-    }
-    const first = present[0]!;
-    const differing = present.slice(1).filter((v) => sameKey(v.value) !== sameKey(first.value));
-    if (differing.length === 0) {
-      // 값 없는 레이어가 후보(candidates)를 들고 오면 그 레이어 안에서 값이 갈린 것이다(예: 문서 간 충돌).
-      // 후보 중 first와 다른 값이 있으면 충돌로 드러내고, 전부 같으면 first를 그대로 쓴다.
-      const conflictCands = unparsed.flatMap((u) => u.candidates ?? []);
-      const otherCands = conflictCands.filter((c) => sameKey(c.value) !== sameKey(first.value));
-      if (otherCands.length) {
-        out[key] = {
-          ...first,
-          status: 'needs_review',
-          note: '출처별 값이 서로 다름',
-          basis: basisOf(first),
-          candidates: [{ value: first.value, source: first.source ?? UNKNOWN_SOURCE }, ...otherCands],
-        };
-        continue;
-      }
-      // 다른 출처가 해석 실패 원문만 냈으면 값은 그대로 쓰되, 대조할 수 있게 원문을 note로 남긴다.
-      const parseFailures = unparsed.filter((u) => !u.candidates?.length);
-      out[key] = parseFailures.length
-        ? { ...first, note: parseFailures.map((u) => `${u.source?.kind ?? '?'} 원문 해석 실패: ${u.raw}`).join(' / ') }
-        : first;
-      continue;
-    }
-    out[key] = {
-      ...first,
-      status: 'needs_review',
-      note: '출처별 값이 서로 다름',
-      basis: basisOf(first),
-      candidates: [first, ...differing].map((v) => ({ value: v.value, source: v.source ?? UNKNOWN_SOURCE })),
-    };
+    out[key] = mergeKey(prev, layers.map((l) => l.fields[key]), queried);
   }
   return out;
+}
+
+/** 키 하나의 병합. candidates는 layer별 이 키의 값(우선순위 순서). */
+function mergeKey(prev: FieldValue<unknown> | undefined, candidates: Array<FieldValue<unknown> | undefined>, queried: Set<SourceKind>): FieldValue<unknown> {
+  const present = candidates.filter(hasValue);
+  const unparsed = candidates.filter(
+    (v): v is FieldValue<unknown> => !!v && (v.value === null || v.value === undefined) && typeof v.raw === 'string' && v.raw.trim() !== '',
+  );
+  if (present.length === 0) {
+    if (unparsed[0]) return { ...unparsed[0], status: 'needs_review', note: unparsed[0].note ?? '값을 해석하지 못함' };
+    if (hasValue(prev)) {
+      return prev.source && queried.has(prev.source.kind)
+        ? { ...prev, status: 'needs_review', note: '최근 수집에서 값이 확인되지 않음' }
+        : prev;
+    }
+    return { value: null, status: 'missing' };
+  }
+  const first = present[0]!;
+  const differing = present.slice(1).filter((v) => sameKey(v.value) !== sameKey(first.value));
+  if (differing.length === 0) {
+    // 값 없는 레이어가 후보(candidates)를 들고 오면 그 레이어 안에서 값이 갈린 것이다(예: 문서 간 충돌).
+    // 후보 중 first와 다른 값이 있으면 충돌로 드러내고, 전부 같으면 first를 그대로 쓴다.
+    const conflictCands = unparsed.flatMap((u) => u.candidates ?? []);
+    const otherCands = conflictCands.filter((c) => sameKey(c.value) !== sameKey(first.value));
+    if (otherCands.length) {
+      return {
+        ...first,
+        status: 'needs_review',
+        note: '출처별 값이 서로 다름',
+        basis: basisOf(first),
+        candidates: [{ value: first.value, source: first.source ?? UNKNOWN_SOURCE }, ...otherCands],
+      };
+    }
+    // 다른 출처가 해석 실패 원문만 냈으면 값은 그대로 쓰되, 대조할 수 있게 원문을 note로 남긴다.
+    const parseFailures = unparsed.filter((u) => !u.candidates?.length);
+    return parseFailures.length
+      ? { ...first, note: parseFailures.map((u) => `${u.source?.kind ?? '?'} 원문 해석 실패: ${u.raw}`).join(' / ') }
+      : first;
+  }
+  return {
+    ...first,
+    status: 'needs_review',
+    note: '출처별 값이 서로 다름',
+    basis: basisOf(first),
+    candidates: [first, ...differing].map((v) => ({ value: v.value, source: v.source ?? UNKNOWN_SOURCE })),
+  };
 }
 
 /**

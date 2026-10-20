@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "synonyms": {
     "credibility": [
       "대외신인도",
@@ -11,15 +11,52 @@
       "신용평가",
       "신용도"
     ],
-    "mgmtExclude": ["수행실적", "실적평가", "사업실적", "이행실적", "용역실적", "입찰참가제한", "업무정지", "부정당", "제재"],
-    "performance": ["수행실적", "실적평가", "사업실적", "이행실적", "용역실적"],
-    "bonusLabel": ["가점", "감점", "가감점", "가․감점", "가·감점", "가ㆍ감점", "가산점", "감산점"],
+    "mgmtExclude": [
+      "수행실적",
+      "실적평가",
+      "사업실적",
+      "이행실적",
+      "용역실적",
+      "입찰참가제한",
+      "업무정지",
+      "부정당",
+      "제재"
+    ],
+    "performance": [
+      "수행실적",
+      "실적평가",
+      "사업실적",
+      "이행실적",
+      "용역실적"
+    ],
+    "bonusLabel": [
+      "가점",
+      "감점",
+      "가감점",
+      "가․감점",
+      "가·감점",
+      "가ㆍ감점",
+      "가산점",
+      "감산점"
+    ],
     "scoreHeader": [
       "배점",
       "배점한도",
       "점수"
     ],
-    "perfAnchor": ["유사사업", "유사실적", "실적인정", "수행실적", "유사용역", "사업실적", "이행실적", "용역실적", "동등실적", "유지보수실적", "납품실적"]
+    "perfAnchor": [
+      "유사사업",
+      "유사실적",
+      "실적인정",
+      "수행실적",
+      "유사용역",
+      "사업실적",
+      "이행실적",
+      "용역실적",
+      "동등실적",
+      "유지보수실적",
+      "납품실적"
+    ]
   },
   "rules": [
     {
@@ -35,7 +72,8 @@
       "target": "managementScore",
       "strategy": "table-score",
       "label": "management",
-      "scoreHeader": "scoreHeader", "excludeLabel": "mgmtExclude",
+      "scoreHeader": "scoreHeader",
+      "excludeLabel": "mgmtExclude",
       "weight": 1
     },
     {
@@ -43,7 +81,8 @@
       "target": "performanceScore",
       "strategy": "table-score",
       "label": "performance",
-      "scoreHeader": "scoreHeader", "excludeLabel": "management",
+      "scoreHeader": "scoreHeader",
+      "excludeLabel": "management",
       "weight": 1
     },
     {
@@ -59,7 +98,8 @@
       "target": "managementScore",
       "strategy": "inline-score",
       "label": "management",
-      "maxGap": 20, "excludeLabel": "mgmtExclude",
+      "maxGap": 20,
+      "excludeLabel": "mgmtExclude",
       "weight": 0.3
     },
     {
@@ -67,7 +107,8 @@
       "target": "performanceScore",
       "strategy": "inline-score",
       "label": "performance",
-      "maxGap": 20, "excludeLabel": "management",
+      "maxGap": 20,
+      "excludeLabel": "management",
       "weight": 0.3
     },
     {
@@ -83,7 +124,14 @@
         "적용제외": false,
         "해당없": false,
         "비적용": false,
-        "적용하지아니": false, "적용대상이아": false, "심사대상이아": false, "대상이아": false, "부여하지않": false, "부여하지아니": false, "적용": true, "부여": true
+        "적용하지아니": false,
+        "적용대상이아": false,
+        "심사대상이아": false,
+        "대상이아": false,
+        "부여하지않": false,
+        "부여하지아니": false,
+        "적용": true,
+        "부여": true
       }
     },
     {
@@ -134,8 +182,74 @@
       "blocksAfter": 0,
       "valueType": "text",
       "conflictPolicy": "prefer_priority",
-      "anchor": "^(?:[가-힣]\\.)?[^가-힣]{0,8}(?:사업|용역|계약|수행|과업)기간[:)]",
-      "pattern": "^(?:[가-힣]\\.)?[^가-힣]{0,8}(?:사업|용역|계약|수행|과업)기간[:)]+(?=[^:]{0,40}(?:\\d{4}[.\\-/년]|\\d{1,3}(?:개월|일|년|주)|계약(?:체결)?일|착수일|협약일))(?<v>[^:]{2,80})"
+      "anchor": "^(?:[가-힣]\\.)?[^가-힣]{0,8}(?:총|전체)?(?:사업|용역|계약|수행|과업)기간[:)]",
+      "pattern": "^(?:[가-힣]\\.)?[^가-힣]{0,8}(?:총|전체)?(?:사업|용역|계약|수행|과업)기간[:)]+(?=[^:]{0,40}(?:\\d{4}[.\\-/년]|\\d{1,3}(?:개월|일|년|주)|계약(?:체결)?일|착수일|협약일|\\d\\.?~|까지))(?<v>[^:]{2,80})"
+    },
+    {
+      "id": "eval.methodDoc",
+      "target": "extras.evalMethodDoc",
+      "strategy": "window-regex",
+      "weight": 1,
+      "blocksAfter": 0,
+      "valueType": "text",
+      "conflictPolicy": "prefer_priority",
+      "anchor": "^(?:[가-힣]\\.)?[^가-힣]{0,8}(?:기술)?평가(?:방식|방법)[:)]",
+      "pattern": "^(?:[가-힣]\\.)?[^가-힣]{0,8}(?:기술)?평가(?:방식|방법)[:)]+(?!(?:제안요청서|공고문|붙임|별첨|별지|「))(?<v>(?=[^:]{0,60}(?:평가|심사|발표|서면|온라인|소집|PT|협상|제안서))[^:]{4,160})"
+    },
+    {
+      "id": "basic.projectPeriodParen",
+      "target": "extras.projectPeriodParen",
+      "strategy": "window-regex",
+      "weight": 1,
+      "blocksAfter": 0,
+      "valueType": "text",
+      "conflictPolicy": "prefer_priority",
+      "anchor": "\\(총(?:사업|용역|계약|과업)기간:",
+      "pattern": "\\(총(?:사업|용역|계약|과업)기간:(?=[^:)]{0,40}(?:\\d{4}[.\\-/년]|\\d{1,3}(?:개월|일|년|주)))(?<v>\\d[^:)]{1,78})"
+    },
+    {
+      "id": "basic.projectPeriodCell",
+      "target": "extras.projectPeriodCell",
+      "strategy": "window-regex",
+      "weight": 1,
+      "blocksAfter": 1,
+      "valueType": "text",
+      "conflictPolicy": "prefer_priority",
+      "anchor": "^(?:[가-힣]\\.)?[^가-힣]{0,8}(?:총|전체)?(?:사업|용역|계약|수행|과업)기간:?$",
+      "pattern": "^(?!.*(?:사업|용역|계약|수행|과업)기간)(?=[^:]{0,40}(?:\\d{4}[.\\-/년]|까지|\\d\\.?~|계약(?:체결)?일|착수일|협약일))(?<v>[^:]{2,80})$"
+    },
+    {
+      "id": "sched.proposalPeriodDoc",
+      "target": "extras.proposalPeriod",
+      "strategy": "window-regex",
+      "weight": 1,
+      "blocksAfter": 0,
+      "valueType": "text",
+      "conflictPolicy": "prefer_priority",
+      "anchor": "(?:입찰서|제안서|입찰서\\(제안서\\)|기술제안서)제출(?:기간|기한|일시|마감일시|마감일?|마감시간)",
+      "pattern": "(?:입찰서|제안서|입찰서\\(제안서\\)|기술제안서)제출(?:기간|기한|일시|마감일시|마감일?|마감시간)(?:\\([^)]{0,15}\\))?[:)]*(?<v>\\d{4}(?:[./\\-]\\d{1,2}[./\\-]|년\\d{1,2}월)\\d{1,2}일?\\.?(?:\\([월화수목금토일]\\))?(?:\\d{1,2}:\\d{2})?(?:[~∼～](?:\\d{4}(?:[./\\-]\\d{1,2}[./\\-]|년\\d{1,2}월)\\d{1,2}일?\\.?(?:\\([월화수목금토일]\\))?(?:\\d{1,2}:\\d{2})?|\\d{1,2}:\\d{2}))?(?:까지)?)"
+    },
+    {
+      "id": "sched.proposalEvalDoc",
+      "target": "extras.proposalEvalAt",
+      "strategy": "window-regex",
+      "weight": 1,
+      "blocksAfter": 0,
+      "valueType": "text",
+      "conflictPolicy": "prefer_priority",
+      "anchor": "(?:제안서평가(?:\\([^)]{0,6}\\))?(?:일시|일자)?|제안서발표(?:일시|일자)?|평가일시(?:및장소)?|(?<!결과|결과의|적격자|선정|합격|합격자|낙찰|낙찰자|대상자)발표일시)",
+      "pattern": "(?:제안서평가(?:\\([^)]{0,6}\\))?(?:일시|일자)?|제안서발표(?:일시|일자)?|평가일시(?:및장소)?|(?<!결과|결과의|적격자|선정|합격|합격자|낙찰|낙찰자|대상자)발표일시)[:)]*(?<v>\\d{4}(?:[./\\-]\\d{1,2}[./\\-]|년\\d{1,2}월)\\d{1,2}일?\\.?(?:\\([월화수목금토일]\\))?(?:\\d{1,2}:\\d{2})?)"
+    },
+    {
+      "id": "eval.quantDoc",
+      "target": "extras.quantEvalDoc",
+      "strategy": "window-regex",
+      "weight": 1,
+      "blocksAfter": 0,
+      "valueType": "text",
+      "conflictPolicy": "prefer_priority",
+      "anchor": "정량적?평가(?=[:(])|신인도(?:평가관련)?:",
+      "pattern": "(?<v>(?![^※]{0,100}(?:확인서|증명서|서식|재무관|수상실적|위탁운영실적|책임자|1부))(?:정량적?평가(?=[:(])(?=.{0,60}?(?:경영상태|신용평가|신인도|수행실적|사업실적|유사.{0,6}실적))[^※]{1,100}|신인도(?:평가관련)?:.{0,12}별표.{0,60}))"
     }
   ]
 }

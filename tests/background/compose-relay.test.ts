@@ -57,6 +57,17 @@ describe('compose-relay', () => {
     await expect(handlerOf('compose/open')({ jobId: 'j', url: 'https://mail.worksmobile.com/', selector: { selectorSetId: 's' } }, sender))
       .resolves.toEqual({ tabId: 9 });
   });
+  it('open: selector가 있으면 탭을 뒤에서(active false) 연다', async () => {
+    const create = vi.fn().mockResolvedValue({ id: 9 });
+    vi.stubGlobal('chrome', {
+      permissions: { contains: vi.fn().mockResolvedValue(true) },
+      windows: { getLastFocused: vi.fn().mockResolvedValue({ id: 1 }) },
+      tabs: { create, onUpdated: { addListener: vi.fn((fn: (id: number, info: { status?: string }) => void) => { fn(9, { status: 'complete' }); }), removeListener: vi.fn() } },
+      scripting: { executeScript: vi.fn().mockRejectedValue(new Error('denied')) },
+    });
+    await handlerOf('compose/open')({ jobId: 'j', url: 'https://mail.worksmobile.com/', selector: { selectorSetId: 's' } }, sender);
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ active: false }));
+  });
   it('open: http 주소는 COMPOSE_BAD_URL', async () => {
     await expect(handlerOf('compose/open')({ jobId: 'j', url: 'http://mail.google.com/', selector: { selectorSetId: 's' } }, sender))
       .rejects.toMatchObject({ code: 'COMPOSE_BAD_URL' });
@@ -79,7 +90,7 @@ describe('compose-relay', () => {
     });
     const url = 'https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=a%40x.com';
     await expect(handlerOf('compose/open')({ jobId: 'j', url }, sender)).resolves.toEqual({ tabId: 9 });
-    expect(create).toHaveBeenCalledWith(expect.objectContaining({ url }));
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ url, active: true }));
     // CS(naverworks-compose.js)는 주입하지 않는다. 발송 관찰(send-watch.js)만 주입된다.
     expect(executeScript.mock.calls.some((c) => c[0].files?.includes('naverworks-compose.js'))).toBe(false);
   });

@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, GripVertical, PenLine, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, GripVertical, PenLine, Plus, Trash2, Undo2 } from 'lucide-react';
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { newId } from '../../../core/model/ids';
 import type { TemplateFieldKey, TemplateItem, TemplateSection, TemplateStyle } from '../../../core/types/template';
@@ -22,6 +22,8 @@ export interface SectionEditorProps {
   onFocusInput: (el: FocusEl) => void;
   /** 있으면 공고 값 항목 옆에 [값 고치기]를 보여 준다(공고별 메일 편집용). */
   onConvertToText?: (itemIndex: number) => void;
+  /** 있으면 [값 고치기]로 바뀐 문구 항목 옆에 [공고 값으로 되돌리기]를 보여 준다. */
+  onRevertToField?: (itemIndex: number) => void;
   /** 템플릿 종류. 항목 추가 목록을 이 종류의 변수로 제한한다. 생략하면 입찰공고. */
   kind?: NoticeKind;
 }
@@ -59,7 +61,7 @@ function withStyle(it: TemplateItem, style: TemplateStyle | undefined): Template
   return (style ? { ...rest, style } : rest) as TemplateItem;
 }
 
-export function SectionEditor({ section, index, usedKeys, onChange, onRemove, onMoveUp, onMoveDown, onFocusInput, onConvertToText, kind = 'bid' }: SectionEditorProps) {
+export function SectionEditor({ section, index, usedKeys, onChange, onRemove, onMoveUp, onMoveDown, onFocusInput, onConvertToText, onRevertToField, kind = 'bid' }: SectionEditorProps) {
   const [addKey, setAddKey] = useState('');
   const available = variablesFor(kind).filter((d) => !usedKeys.has(d.fieldKey));
   const focus = (e: { currentTarget: FocusEl }) => onFocusInput(e.currentTarget);
@@ -185,6 +187,9 @@ export function SectionEditor({ section, index, usedKeys, onChange, onRemove, on
               <span className="hidden w-28 shrink-0 truncate text-xs text-muted sm:block">{varName}</span>
               {onConvertToText && !isText && (
                 <Button variant="ghost" size="icon" aria-label={`${varName} 값 고치기`} title="이 메일에서만 값을 직접 고칩니다" icon={<PenLine />} onClick={() => onConvertToText(i)} />
+              )}
+              {onRevertToField && isText && it.fromFieldKey && !usedKeys.has(it.fromFieldKey) && (
+                <Button variant="ghost" size="icon" aria-label={`${it.label || '문구'} 공고 값으로 되돌리기`} title="직접 고친 값을 버리고 공고 값으로 되돌립니다" icon={<Undo2 />} onClick={() => onRevertToField(i)} />
               )}
               <StyleToggles style={it.style} onChange={(st) => setItem(i, withStyle(it, st))} />
               <Button variant="ghost" size="icon" aria-label="항목 삭제" icon={<Trash2 />} onClick={() => onChange({ ...section, items: section.items.filter((_, j) => j !== i) })} />

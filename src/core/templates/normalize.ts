@@ -5,6 +5,8 @@ import { VARIABLE_BY_KEY, isTemplateFieldKey } from './variables';
 
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 const isKind = (x: unknown): x is NoticeKind => x === 'bid' || x === 'prespec' || x === 'orderplan';
+const LEGACY_CRED_TEXT = '경영상태(신용평가등급) 평가({경영상태}), 대외신인도({대외신인도})';
+const LEGACY_PERF_TEXT = '{실적인정기간} 이내 국내외 유사사업 수행실적({실적평가}) - {실적인정금액} 이상인 사업에 한함';
 const str = (x: unknown): string => (typeof x === 'string' ? x : '');
 
 /** bold/underline이 true인 키만 남긴다. 둘 다 아니면 undefined(style 속성 생략). */
@@ -30,10 +32,26 @@ export function normalizeTemplate(raw: unknown, now: Date): { template: Template
       if (!isObj(it)) continue;
       const style = normalizeStyle(it.style);
       if (it.kind === 'text') {
+        // 옛 기본 템플릿의 대외신인도 문구는 합성 항목으로 승격한다(문구를 고친 항목은 유지).
+        if (it.id === 'txt_cred' && it.text === LEGACY_CRED_TEXT) {
+          items.push({
+            fieldKey: 'credibilityEval', label: str(it.label), visible: typeof it.visible === 'boolean' ? it.visible : true,
+            ...(style ? { style } : {}),
+          });
+          continue;
+        }
+        if (it.id === 'txt_perf' && it.text === LEGACY_PERF_TEXT) {
+          items.push({
+            fieldKey: 'performanceEval', label: str(it.label), visible: typeof it.visible === 'boolean' ? it.visible : true,
+            ...(style ? { style } : {}),
+          });
+          continue;
+        }
         items.push({
           kind: 'text', id: typeof it.id === 'string' && it.id ? it.id : newId('txt'),
           label: str(it.label), text: str(it.text), visible: typeof it.visible === 'boolean' ? it.visible : true,
           ...(style ? { style } : {}),
+          ...(isTemplateFieldKey(it.fromFieldKey) ? { fromFieldKey: it.fromFieldKey } : {}),
         });
         continue;
       }
@@ -46,7 +64,7 @@ export function normalizeTemplate(raw: unknown, now: Date): { template: Template
         continue;
       }
       items.push({
-        fieldKey: it.fieldKey,
+        fieldKey: it.fieldKey === 'evalMethod' && it.label === '평가방법' ? 'evalMethodText' : it.fieldKey,
         label: typeof it.label === 'string' ? it.label : (VARIABLE_BY_KEY.get(it.fieldKey)?.label ?? it.fieldKey),
         visible: typeof it.visible === 'boolean' ? it.visible : true,
         ...(style ? { style } : {}),

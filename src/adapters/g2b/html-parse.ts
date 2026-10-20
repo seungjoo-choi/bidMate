@@ -1,3 +1,4 @@
+import { parseAmount } from '../../core/model/amount';
 import { toIsoKst } from '../../core/model/dates';
 import { parseJointVenture } from '../../core/model/joint-venture';
 import type { FieldValue } from '../../core/types/common';
@@ -7,13 +8,7 @@ const DATE_KEYS = new Set<NoticeFieldKey>(['postedAt', 'registrationDeadline', '
 const NUMBER_KEYS = new Set<NoticeFieldKey>(['budgetAmount', 'estimatedPrice', 'credibilityScore', 'managementScore', 'performanceScore', 'performanceMinAmount']);
 const BOOL_KEYS = new Set<NoticeFieldKey>(['jointVentureAllowed', 'differentialScoring']);
 
-/** "1,923,000,000", "1,923,000,000원" 만 숫자로 해석한다. 억/만 등 단위가 섞이면 null. */
-export function parseAmount(raw: string): number | null {
-  const m = /^\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?\s*(원|점|%)?\s*$/.exec(raw);
-  if (!m) return null;
-  const n = Number(`${m[1]!.replace(/,/g, '')}${m[2] ?? ''}`);
-  return Number.isFinite(n) ? n : null;
-}
+export { parseAmount };
 
 /** 화면에서 읽은 원문 하나를 키별 규칙으로 FieldValue로 만든다. 실패하면 value null + needs_review(raw 보존). */
 export function parseHtmlField(key: NoticeFieldKey, raw: string, ref: string, capturedAt: string): FieldValue<unknown> {

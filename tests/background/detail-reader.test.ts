@@ -17,6 +17,7 @@ function setup(o: {
   tabUrl?: (tick: number) => string;
   timeoutMs?: number;
   jump?: number; // sleep마다 추가로 흐르는 시간
+  logFn?: (...a: unknown[]) => void;
 } & Hook = {}) {
   let clock = 0;
   let tick = 0;
@@ -42,6 +43,7 @@ function setup(o: {
     now: () => clock,
     sleep: async (ms) => { clock += ms + (o.jump ?? 0); tick++; o.onTick?.(tick); },
     pollMs: 700, settleMs: 1500, timeoutMs: o.timeoutMs ?? 45_000,
+    log: o.logFn ?? (() => {}),
   });
   return { tabs, windows, sendToTab, removed, log };
 }
@@ -151,5 +153,39 @@ describe('readDetail', () => {
     await readDetail('j1');
     expect(s2.tabs.create.mock.calls[0]![0]).toMatchObject({ windowId: 42 });
     expect(s2.tabs.create.mock.calls[0]![0]).not.toHaveProperty('openerTabId');
+  });
+
+  it('(14) 틱마다 log 1회, 종료 시 trace log 1회이고 trace 길이 = 틱 수', async () => {
+    const logFn = vi.fn();
+    const s = setup({ logFn });
+    await readDetail('j1');
+    const ticks = s.sendToTab.mock.calls.length;
+    const tickLogs = logFn.mock.calls.filter((c) => c[0] === '[detail-reader]');
+    const traceLogs = logFn.mock.calls.filter((c) => c[0] === '[detail-reader] trace');
+    expect(tickLogs).toHaveLength(ticks);
+    expect(traceLogs).toHaveLength(1);
+    expect(JSON.parse(traceLogs[0]![2] as string)).toHaveLength(ticks);
+  });
+
+  it('(15) trace는 120개 상한, 초과 시 앞부분 버림', async () => {
+    const logFn = vi.fn();
+    const s = setup({ logFn, timeoutMs: 200_000, reply: () => ({ detected: null, match: false, html: null, readyState: 'loading' }) });
+    expect(await code(readDetail('j1'))).toBe('DETAIL_TIMEOUT');
+    expect(s.sendToTab.mock.calls.length).toBeGreaterThan(120);
+    const traceLog = logFn.mock.calls.find((c) => c[0] === '[detail-reader] trace')!;
+    const trace = JSON.parse(traceLog[2] as string) as Array<{ t: number }>;
+    expect(trace).toHaveLength(120);
+    expect(trace[0]!.t).toBeGreaterThan(0);
+  });
+
+  it('(16) NO_RECEIVER/TIMEOUT 틱도 기록', async () => {
+    const logFn = vi.fn();
+    setup({ logFn, reply: (_t, c) => (c === 0 ? new BusError('NO_RECEIVER', 'x') : c === 1 ? new BusError('TIMEOUT', 'x') : undefined) });
+    await readDetail('j1');
+    const traceLog = logFn.mock.calls.find((c) => c[0] === '[detail-reader] trace')!;
+    const trace = JSON.parse(traceLog[2] as string) as Array<{ result: unknown }>;
+    expect(trace[0]!.result).toBe('NO_RECEIVER');
+    expect(trace[1]!.result).toBe('TIMEOUT');
+    expect(trace[2]!.result).toMatchObject({ match: true, fieldKeys: ['projectPeriod'] });
   });
 });

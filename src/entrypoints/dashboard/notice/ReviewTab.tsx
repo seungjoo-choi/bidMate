@@ -1,9 +1,16 @@
-import { ChevronDown, ChevronRight, FileSearch } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileSearch, Sparkles } from 'lucide-react';
 import { useState } from 'react';
+import { pendingKeys } from '../../../core/extraction/review-count';
 import type { EvidenceRef, Extraction, ExtractionKey } from '../../../core/types/extraction';
+import type { Notice } from '../../../core/types/notice';
+import { send } from '../../../messaging/bus';
 import { Button, StatusBadge } from '../../../ui/components';
+import { useAiRun } from '../../../ui/hooks/useAiRun';
+import { buildAiCards, latestRun } from '../../../ui/review/ai-view';
 import { DOC_KIND_LABEL, FILE_STATUS_LABEL, buildCards, fileDisplayName, filePagesTables, fileRemark, findTextPath, summarize } from '../../../ui/review/view';
 import { EditedMark, ItemCard, type EditError } from '../review/ItemCard';
+import { AiRunDialog, type AiDialogPreset } from '../review/AiRunDialog';
+import { AiRunPanel } from '../review/AiRunPanel';
 import { TextDrawer, type DrawerTarget } from '../review/TextDrawer';
 
 function Collapsible({ title, children }: { title: string; children: React.ReactNode }) {
@@ -19,15 +26,19 @@ function Collapsible({ title, children }: { title: string; children: React.React
   );
 }
 
-export function ReviewTab({ noticeId, extraction, busy, onExtract, onEdit, toast }: {
+export function ReviewTab({ noticeId, extraction, busy, onExtract, onEdit, onApplied, toast }: {
   noticeId: string;
   extraction: Extraction | null;
   busy: boolean;
   onExtract: () => void;
   onEdit: (key: ExtractionKey, value: unknown | null, note?: string) => Promise<EditError | null>;
+  /** AI 제안 적용 결과(notice·extraction)를 상위 상태에 반영한다 */
+  onApplied: (r: { notice: Notice; extraction: Extraction }) => void;
   toast: { show: (t: string) => void };
 }) {
   const [drawer, setDrawer] = useState<DrawerTarget | null>(null);
+  const [dialog, setDialog] = useState<AiDialogPreset | null>(null);
+  const ai = useAiRun(noticeId);
 
   const openText = (ex: Extraction, e: EvidenceRef) => {
     const textPath = findTextPath(ex.files, e);
@@ -45,19 +56,43 @@ export function ReviewTab({ noticeId, extraction, busy, onExtract, onEdit, toast
     );
   }
 
-  const cards = buildCards(extraction);
+  const aiCards = buildAiCards(ai.review, extraction);
+  const cards = buildCards(extraction, aiCards);
   const counts = summarize(extraction);
+  const parsedCount = extraction.files.filter((f) => f.status === 'parsed' && f.textPath).length;
+  const lastRun = latestRun(ai.review);
+  const aiActive = lastRun?.status === 'requesting' || lastRun?.status === 'awaiting';
+  const errOf = (e: unknown) => ({ code: (e as { code?: string }).code, message: e instanceof Error ? e.message : String(e) });
+  const aiApply = (key: ExtractionKey, runId: string) => async (note?: string) => {
+    try {
+      const r = await send('ai/apply', { noticeId, runId, key, note });
+      ai.setReview(r.aiReview);
+      onApplied({ notice: r.notice, extraction: r.extraction });
+      toast.show('저장됨');
+      return null;
+    } catch (e) { if ((e as { code?: string }).code === 'AI_STALE') void ai.reload(); return errOf(e); }
+  };
+  const aiDismiss = (key: ExtractionKey, runId: string) => async () => {
+    try { ai.setReview(await send('ai/dismiss', { noticeId, runId, key })); return null; } catch (e) { return errOf(e); }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-6 border-y border-line py-3.5 tabular-nums">
+      <div className="flex items-center gap-6 border-y border-line py-3.5 tabular-nums">
         <StatusBadge status="ok">확인 완료 {counts.verified}</StatusBadge>
         <StatusBadge status="warn">확인 필요 {counts.needsReview}</StatusBadge>
         <EditedMark>직접 수정 {counts.edited}</EditedMark>
+        <div className="ml-auto">
+          <Button variant="secondary" icon={<Sparkles />} disabled={busy || parsedCount === 0 || aiActive} onClick={() => setDialog({})}>AI로 다시 찾기</Button>
+        </div>
       </div>
+      <AiRunPanel noticeId={noticeId} extraction={extraction} review={ai.review} state={ai.state} cards={aiCards} onReload={() => void ai.reload()} onOpenDialog={(p) => setDialog(p ?? {})} />
       <div className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface shadow-card">
         {cards.map((c) => (
-          <ItemCard key={c.key} card={c} busy={busy} onEdit={(v, note) => onEdit(c.key, v, note)} onOpenText={(e) => openText(extraction, e)} />
+          <ItemCard
+            key={c.key} card={c} busy={busy} onEdit={(v, note) => onEdit(c.key, v, note)} onOpenText={(e) => openText(extraction, e)}
+            {...(c.ai ? { onAiApply: aiApply(c.key, c.ai.run.id), onAiDismiss: aiDismiss(c.key, c.ai.run.id) } : {})}
+          />
         ))}
       </div>
 
@@ -91,6 +126,9 @@ export function ReviewTab({ noticeId, extraction, busy, onExtract, onEdit, toast
         </Collapsible>
       )}
 
+      {dialog && (
+        <AiRunDialog noticeId={noticeId} extraction={extraction} pendingCount={pendingKeys(extraction.items).length} preset={dialog} onClose={() => setDialog(null)} onStarted={() => void ai.reload()} />
+      )}
       {drawer && <TextDrawer noticeId={noticeId} target={drawer} onClose={() => setDrawer(null)} />}
     </div>
   );

@@ -5,7 +5,8 @@ import type { EvidenceRef } from '../../../core/types/extraction';
 import { Button, InlineAlert, StatusBadge } from '../../../ui/components';
 import { inputClass } from '../../../ui/components/Field';
 import { formatAmountShort } from '../../../ui/review/format';
-import { evidenceMeta, type CardModel } from '../../../ui/review/view';
+import { evidenceMeta, userEditedBadgeText, type CardModel } from '../../../ui/review/view';
+import { AiSuggestionBlock, type AiBlockError } from './AiSuggestionBlock';
 
 export interface EditError { code?: string; message: string }
 export interface ItemCardProps {
@@ -13,12 +14,16 @@ export interface ItemCardProps {
   busy: boolean;
   onEdit: (value: unknown | null, note?: string) => Promise<EditError | null>;
   onOpenText: (e: EvidenceRef) => void;
+  /** AI 제안 [적용]/[이 값으로 확정], [무시] (card.ai가 있을 때만 쓰인다) */
+  onAiApply?: (note?: string) => Promise<AiBlockError | null>;
+  onAiDismiss?: () => Promise<AiBlockError | null>;
 }
 
 const compactText = (t: string) => t.replace(/\s+/g, '');
 
 const BADGE = {
   verified: { tone: 'ok', text: '확인 완료' }, needs_review: { tone: 'warn', text: '확인 필요' }, userEdited: { tone: 'info', text: '직접 수정' },
+  covered: { tone: 'idle', text: '충족' },
 } as const;
 
 /** 직접 수정 표시. StatusBadge와 같은 모양에 링크색. */
@@ -128,7 +133,7 @@ function Editor({ card, onEdit, onCancel }: { card: CardModel; onEdit: ItemCardP
   );
 }
 
-export function ItemCard({ card, busy, onEdit, onOpenText }: ItemCardProps) {
+export function ItemCard({ card, busy, onEdit, onOpenText, onAiApply, onAiDismiss }: ItemCardProps) {
   const [editing, setEditing] = useState(false);
   const [picked, setPicked] = useState(0);
   const [alert, setAlert] = useState<string | null>(null);
@@ -148,8 +153,8 @@ export function ItemCard({ card, busy, onEdit, onOpenText }: ItemCardProps) {
         <h3 className="text-base leading-snug font-semibold">{card.label}</h3>
         <div>
           {card.badge === 'userEdited'
-            ? <EditedMark>{badge.text}</EditedMark>
-            : <StatusBadge status={badge.tone as 'ok' | 'warn'}>{badge.text}</StatusBadge>}
+            ? <EditedMark>{userEditedBadgeText(card)}</EditedMark>
+            : <StatusBadge status={badge.tone as 'ok' | 'warn' | 'idle'}>{badge.text}</StatusBadge>}
         </div>
         {card.reason && <p className="text-sm text-muted">{card.reason}</p>}
       </div>
@@ -173,6 +178,10 @@ export function ItemCard({ card, busy, onEdit, onOpenText }: ItemCardProps) {
             {card.evidence.context && compactText(card.evidence.context) !== compactText(card.evidence.evidence) && <p className="text-muted">{card.evidence.context}</p>}
             <button className="text-accent hover:underline" onClick={() => onOpenText(card.evidence!)}>전체 텍스트에서 보기</button>
           </div>
+        )}
+
+        {card.ai && onAiApply && onAiDismiss && (
+          <AiSuggestionBlock card={card} busy={busy} onApply={onAiApply} onDismiss={onAiDismiss} onOpenText={onOpenText} />
         )}
 
         {card.candidates.length >= 2 && (

@@ -87,9 +87,9 @@ export function SentHistoryPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-card border border-line bg-surface shadow-card">
+          <div className="max-h-[max(16rem,calc(100vh-20rem))] overflow-auto rounded-card border border-line bg-surface shadow-card">
             <table className="w-full text-left text-sm">
-              <thead className="bg-sunken text-muted">
+              <thead className="sticky top-0 z-10 bg-sunken text-muted">
                 <tr>
                   <th scope="col" className={TH}>발송 시각</th><th scope="col" className={TH}>공고번호</th><th scope="col" className={TH}>공고명</th><th scope="col" className={TH}>기관</th><th scope="col" className={TH}>제목</th>
                   <th scope="col" className={`${TH} text-right`}>받는 사람</th><th scope="col" className={`${TH} text-right`}>첨부</th><th scope="col" className={TH}>출처</th><th scope="col" className={TH}>확인</th><th scope="col" className={TH}>서비스</th>

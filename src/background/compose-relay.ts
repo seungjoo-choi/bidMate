@@ -61,7 +61,9 @@ async function open(p: PayloadOf<'compose/open'>): Promise<{ tabId: number }> {
   const origin = `${u.origin}/*`;
   if (!(await chrome.permissions.contains({ origins: [origin] }))) throw err('NEEDS_SITE_PERMISSION', `${u.host} 접근 권한이 필요합니다.`);
   const win = await chrome.windows.getLastFocused();
-  const tab = await chrome.tabs.create({ windowId: win.id, url: p.url, active: true });
+  // 자동 입력(셀렉터 있음)은 뒤에서 열고 입력과 첨부가 끝난 뒤 compose/focus로 앞으로 가져온다.
+  // 주소/수동 방식은 사용자가 바로 이어서 작업하므로 앞에 띄운다.
+  const tab = await chrome.tabs.create({ windowId: win.id, url: p.url, active: !p.selector });
   const tabId = tab.id as number;
   await setComposeTab(p.jobId, { composeTabId: tabId });
   if (p.sendWatch) rememberSendWatch(p.jobId, p.sendWatch);

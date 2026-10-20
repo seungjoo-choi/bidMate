@@ -22,6 +22,7 @@ export class ProgressPopup {
   private scheduled = false;
   private stopped = false;
   private unsubscribe: (() => void) | undefined;
+  private unReveal: (() => void) | undefined;
   private pendingStart = new Map<string, string | null>(); // key -> 시작 요청 당시 기존 잡 id
 
   constructor(doc: Document, private controller: TrackerbotController, deps: ProgressPopupDeps = {}) {
@@ -44,6 +45,7 @@ export class ProgressPopup {
   start(): void {
     this.stopped = false;
     this.unsubscribe = this.controller.subscribe(() => this.schedule());
+    this.unReveal = this.controller.onReveal((key) => this.reveal(key));
     this.refresh();
   }
 
@@ -51,6 +53,8 @@ export class ProgressPopup {
     this.stopped = true;
     this.unsubscribe?.();
     this.unsubscribe = undefined;
+    this.unReveal?.();
+    this.unReveal = undefined;
     for (const t of this.timers.values()) clearTimeout(t);
     this.timers.clear();
     this.okSince.clear();
@@ -66,6 +70,14 @@ export class ProgressPopup {
     if (this.scheduled || this.stopped) return;
     this.scheduled = true;
     queueMicrotask(() => { this.scheduled = false; this.refresh(); });
+  }
+
+  /** 행의 "수집 중"을 누르면 접힌 팝업을 펼치고 그 항목을 강조한다 */
+  private reveal(key: string): void {
+    if (this.stopped) return;
+    this.collapsed = false;
+    this.refresh();
+    this.card.flash(key);
   }
 
   private dismiss(key: string): void {

@@ -7,7 +7,7 @@ beforeEach(() => {
   document.body.innerHTML = '<table><tr><td><a href="https://www.g2b.go.kr/x" class="c">바로가기</a></td></tr></table>';
   anchor = document.querySelector('a')!;
 });
-const cbs = () => ({ collect: vi.fn(), cancel: vi.fn(), action: vi.fn() });
+const cbs = () => ({ collect: vi.fn(), reveal: vi.fn(), action: vi.fn() });
 const btns = (h: { host: HTMLElement }) => Array.from(h.host.shadowRoot!.querySelectorAll('button'));
 
 describe('createRowButton', () => {
@@ -23,10 +23,30 @@ describe('createRowButton', () => {
     const h = createRowButton(anchor, cbs());
     h.render({ kind: 'idle', label: '공고 수집', tone: 'primary' });
     expect(btns(h).map((b) => b.textContent)).toEqual(['공고 수집']);
-    h.render({ kind: 'busy', label: '첨부 1/2', canCancel: true, cancelling: false, cancelTarget: 'collect' });
-    expect(btns(h).map((b) => b.textContent)).toEqual(['첨부 1/2', '취소']);
+    expect(btns(h)[0]!.querySelector('.bm-mascot')).not.toBeNull();
+    h.render({ kind: 'busy', label: '수집 중', detail: '첨부 1/2', canCancel: true, cancelling: false, cancelTarget: 'collect' });
+    expect(btns(h).map((b) => b.textContent)).toEqual(['수집 중']);
+    expect(btns(h)[0]!.title).toContain('첨부 1/2');
+    expect(btns(h)[0]!.querySelector('.bm-mascot')).toBeNull();
+    expect(btns(h)[0]!.querySelector('.spin')).not.toBeNull();
     h.render({ kind: 'done', label: '수집 완료', tone: 'ok', canRetry: false });
     expect(btns(h).map((b) => b.textContent)).toEqual(['수집 완료']);
+    expect(btns(h)[0]!.querySelector('.bm-mascot')).toBeNull();
+    expect(btns(h)[0]!.querySelector('.ic')).not.toBeNull();
+  });
+  it('이미 수집한 공고: 완료 알약(요약) + 다시 수집 아이콘', () => {
+    const on = cbs();
+    const h = createRowButton(anchor, on);
+    h.render({ kind: 'idle', label: '다시 수집', chip: '수집 완료', chipTone: 'ok', tone: 'secondary' });
+    expect(btns(h).map((b) => b.textContent)).toEqual(['수집 완료', '']);
+    expect(btns(h)[1]!.getAttribute('aria-label')).toBe('다시 수집');
+    expect(btns(h)[0]!.parentElement).toBe(btns(h)[1]!.parentElement);
+    btns(h)[0]!.click();
+    expect(on.action).toHaveBeenCalledWith('sidepanel');
+    btns(h)[1]!.click();
+    expect(on.collect).toHaveBeenCalledTimes(1);
+    h.render({ kind: 'idle', label: '다시 수집', tone: 'secondary' });
+    expect(btns(h).map((b) => b.textContent)).toEqual(['다시 수집']);
   });
   it('클릭 콜백 호출과 전파 차단', () => {
     const on = cbs();
@@ -38,8 +58,8 @@ describe('createRowButton', () => {
     expect(on.collect).toHaveBeenCalledTimes(1);
     expect(outer).not.toHaveBeenCalled();
     h.render({ kind: 'busy', label: 'x', canCancel: true, cancelling: false, cancelTarget: 'collect' });
-    btns(h)[1]!.click();
-    expect(on.cancel).toHaveBeenCalledTimes(1);
+    btns(h)[0]!.click();
+    expect(on.reveal).toHaveBeenCalledTimes(1);
     h.render({ kind: 'error', label: '오류', action: 'grant', actionLabel: '폴더 접근 허용' });
     btns(h)[0]!.click();
     expect(on.action).toHaveBeenCalledWith('grant');

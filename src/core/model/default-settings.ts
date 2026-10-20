@@ -1,4 +1,5 @@
 import type { Settings } from '../types/settings';
+import { AI_DEFAULT_MODELS } from '../ai/constants';
 
 export const DEFAULT_WEBMAIL_HOST = 'mail.worksmobile.com';
 export const NAVERWORKS_COMPOSE_PATH = '/write/popup?srvid=mail&to=&orderType=new&memo=false';
@@ -21,6 +22,7 @@ export function defaultSettings(): Settings {
     mail: { provider: 'naverworks' },
     customFields: [],
     company: { bizNo: '' },
+    ai: { provider: 'gemini', mode: 'api', models: { ...AI_DEFAULT_MODELS } },
     updatedAt: new Date().toISOString(),
   };
 }
@@ -43,6 +45,7 @@ export function withDefaults(stored: Settings | undefined): Settings {
     extraction: { ...d.extraction, ...stored.extraction },
     autoCompose: { ...d.autoCompose, ...stored.autoCompose },
     company: { ...d.company, ...stored.company },
+    ai: { ...d.ai, ...stored.ai, models: { ...d.ai.models, ...stored.ai?.models } },
     mail: { ...d.mail, ...stored.mail, ...(legacyGmail ? { provider: 'gmail' as const } : {}) },
   };
 }

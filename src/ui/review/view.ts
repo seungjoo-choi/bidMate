@@ -1,10 +1,12 @@
 import type { DocKind } from '../../core/extraction/classify';
+import { REVIEW_GROUPS, coveredByGroup } from '../../core/extraction/review-count';
 import type { EvidenceRef, Extraction, ExtractionFile, ExtractionKey, ExtractedItem } from '../../core/types/extraction';
 import { EXTRACTION_KEYS } from '../../core/types/extraction';
+import type { AiCardInfo } from './ai-view';
 import { formatAmountFull, formatDifferential, formatPeriod, formatScore } from './format';
 
 export type ValueKind = 'score' | 'period' | 'amount' | 'text' | 'bool';
-export type CardBadge = 'verified' | 'needs_review' | 'userEdited';
+export type CardBadge = 'verified' | 'needs_review' | 'userEdited' | 'covered';
 
 export const ITEM_LABEL: Record<ExtractionKey, string> = {
   credibilityScore: '대외신인도 배점', managementScore: '경영상태 배점', performanceScore: '수행실적 배점', performancePeriod: '실적 인정기간',
@@ -44,12 +46,21 @@ export interface CardModel {
   key: ExtractionKey; label: string; kind: ValueKind; badge: CardBadge;
   reason?: string; value: unknown; valueText: string;
   evidence?: EvidenceRef; candidates: CandidateModel[]; userEdited: boolean; note?: string;
+  /** 사용자 수정이 AI 제안 적용에서 온 경우 */
+  editedOrigin?: 'ai';
+  /** 이 항목의 AI 제안(non-stale done run). 항목 값에는 영향이 없다 */
+  ai?: AiCardInfo;
 }
 
-export function buildCard(key: ExtractionKey, item: ExtractedItem<unknown>): CardModel {
+/** 직접 수정 배지 글자. AI 제안을 적용한 수정이면 "AI 제안 적용" */
+export const userEditedBadgeText = (c: Pick<CardModel, 'editedOrigin'>): string => (c.editedOrigin === 'ai' ? 'AI 제안 적용' : '직접 수정');
+
+export function buildCard(key: ExtractionKey, item: ExtractedItem<unknown>, items?: Record<ExtractionKey, ExtractedItem<unknown>>): CardModel {
   const edited = item.userEdited !== undefined;
+  const covered = !edited && items !== undefined && coveredByGroup(items, key);
+  const coverKey = covered ? REVIEW_GROUPS.find((g) => g.includes(key))?.find((m) => m !== key && (items![m].status === 'verified' || items![m].userEdited !== undefined)) : undefined;
   const value = edited ? item.userEdited!.value : item.value;
-  const badge: CardBadge = edited ? 'userEdited' : item.status === 'verified' ? 'verified' : 'needs_review';
+  const badge: CardBadge = edited ? 'userEdited' : covered ? 'covered' : item.status === 'verified' ? 'verified' : 'needs_review';
   const candidates = (item.candidates ?? []).map((c) => {
     const valueText = formatItemValue(key, c.value);
     return {
@@ -59,28 +70,32 @@ export function buildCard(key: ExtractionKey, item: ExtractedItem<unknown>): Car
   });
   return {
     key, label: ITEM_LABEL[key], kind: ITEM_KIND[key], badge,
-    reason: badge === 'needs_review' ? (item.status === 'not_run' ? NOT_RUN_TEXT : reasonText(item.reason)) : undefined,
+    reason: badge === 'covered' && coverKey ? `문서에 없음 (${ITEM_LABEL[coverKey]} 항목으로 충족)` : badge === 'needs_review' ? (item.status === 'not_run' ? NOT_RUN_TEXT : reasonText(item.reason)) : undefined,
     value, valueText: formatItemValue(key, value),
     evidence: item.evidence, candidates: candidates.length >= 2 ? candidates : [],
     userEdited: edited, note: item.userEdited?.note,
+    ...(item.userEdited?.origin?.kind === 'ai' ? { editedOrigin: 'ai' as const } : {}),
   };
 }
 
-/** 확인 필요 항목이 먼저, 같은 등급은 EXTRACTION_KEYS 순서를 유지한다. */
-export function buildCards(ex: Extraction): CardModel[] {
-  const cards = EXTRACTION_KEYS.filter((k) => ex.items[k]).map((k) => buildCard(k, ex.items[k]));
+/** 확인 필요 항목이 먼저, 다음 충족(그룹), 나머지. 같은 등급은 EXTRACTION_KEYS 순서를 유지한다. */
+const rankOf = (b: CardBadge): number => (b === 'needs_review' ? 0 : b === 'covered' ? 1 : 2);
+
+export function buildCards(ex: Extraction, ai?: Partial<Record<ExtractionKey, AiCardInfo>>): CardModel[] {
+  const cards = EXTRACTION_KEYS.filter((k) => ex.items[k]).map((k) => ({ ...buildCard(k, ex.items[k], ex.items), ...(ai?.[k] ? { ai: ai[k] } : {}) }));
   return cards
     .map((c, i) => ({ c, i }))
-    .sort((a, b) => (a.c.badge === 'needs_review' ? 0 : 1) - (b.c.badge === 'needs_review' ? 0 : 1) || a.i - b.i)
+    .sort((a, b) => rankOf(a.c.badge) - rankOf(b.c.badge) || a.i - b.i)
     .map((x) => x.c);
 }
 
-export interface SummaryCounts { verified: number; needsReview: number; edited: number }
+export interface SummaryCounts { verified: number; needsReview: number; edited: number; covered: number }
 export function summarize(ex: Extraction): SummaryCounts {
-  const s: SummaryCounts = { verified: 0, needsReview: 0, edited: 0 };
+  const s: SummaryCounts = { verified: 0, needsReview: 0, edited: 0, covered: 0 };
   for (const c of buildCards(ex)) {
     if (c.badge === 'userEdited') s.edited++;
     else if (c.badge === 'verified') s.verified++;
+    else if (c.badge === 'covered') s.covered++;
     else s.needsReview++;
   }
   return s;

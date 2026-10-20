@@ -339,6 +339,8 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
     }
     const error: JobError = { code: errCode(e) ?? 'COMPOSE_ERROR', message: errMsg(e), step: cur, retryable: errCode(e) !== 'NEEDS_FS_PERMISSION' };
     emit(cur, 'failed', error.message);
+    // 탭은 뒤에서 열리므로, 도중에 실패하면 남은 부분을 직접 마무리하도록 앞으로 가져온다
+    if (opened && errCode(e) !== 'COMPOSE_TAB_CLOSED') { try { await deps.call('compose/focus', { jobId: job.id }, T.short); } catch { /* 무시 */ } }
     return { status: 'failed', error };
   }
 }

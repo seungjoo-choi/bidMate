@@ -7,12 +7,13 @@ import type { GroupInput, RecipientImportPlan, RecipientImportResult, RecipientI
 import type { NwRawUser } from '../adapters/naverworks/contacts-types';
 import type { MailDraft, MailEdits } from '../core/types/mail';
 import type { AfterCollect, MailProvider, Settings } from '../core/types/settings';
-import type { Notice, NoticeRef } from '../core/types/notice';
+import type { Notice, NoticeFieldKey, NoticeRef } from '../core/types/notice';
 import type { CollectStatus } from '../core/types/notice';
 import type { DetectedDetail } from '../adapters/g2b/detail-page';
 import type { ComposeSelectorSet, ComposeState, SendWatchConfig } from '../adapters/naverworks/types';
 import type { EvalRaw } from '../adapters/g2b/eval-api';
 import type { EvalIndexEntry, EvalRecord } from '../core/types/evaluation';
+import type { AiProvider, AiReviewFile, AiRunState, AiScope } from '../core/types/ai';
 
 /** 'content'는 SW/팝업이 content script로 보내는 메시지의 대상. */
 export type Target = 'sw' | 'offscreen' | 'content';
@@ -39,7 +40,7 @@ export type AttachStatus =
   | { done: true; result: AttachResult };
 export interface FileMeta { fileId: string; name: string; size: number; mime?: string; }
 /** 설정 화면에서 바로 보여 줄 카드 */
-export type SettingsSection = 'storage' | 'mail-service' | 'auto-compose' | 'g2b' | 'company';
+export type SettingsSection = 'storage' | 'mail-service' | 'auto-compose' | 'g2b' | 'company' | 'ai';
 /** 오류를 고칠 수 있는 화면. ui/open 페이로드로 그대로 보낸다 */
 export type FixTarget = { page: 'recipients' } | { page: 'settings'; section: SettingsSection };
 export interface NoticeLookup { found: boolean; collectedAt?: string; collectStatus?: CollectStatus; noticeId?: string; bidCloseAt?: string; title?: string }
@@ -103,6 +104,7 @@ export type Msg =
   | { type: 'notice/list'; payload: void; response: IndexEntry[] }  // 확장 페이지→SW→offscreen
   | { type: 'notice/get'; payload: { noticeId: string }; response: { notice: Notice; extraction: Extraction | null } | null }
   | { type: 'extraction/edit'; payload: { noticeId: string; key: ExtractionKey; value: unknown | null; note?: string }; response: { notice: Notice; extraction: Extraction } }
+  | { type: 'notice/field-edit'; payload: { noticeId: string; key: NoticeFieldKey | `custom.${string}`; value: unknown | null; raw?: string; note?: string }; response: { notice: Notice; extraction: Extraction | null } }
   | { type: 'extraction/text'; payload: { noticeId: string; textPath: string }; response: { text: string } }
   | { type: 'recipients/list'; payload: void; response: RecipientsSnapshot }
   | { type: 'recipients/save'; payload: { recipient: RecipientInput }; response: RecipientsSnapshot }
@@ -128,7 +130,9 @@ export type Msg =
   | { type: 'config/repair'; payload: { file: 'recipients' | 'groups' | 'templates' }; response: { backupPath: string } }
   | { type: 'g2b/detect'; payload: void; response: G2bDetected | null }  // popup→CS
   | { type: 'g2b/read-html'; payload: { noticeNo: string; round?: string };
-      response: { detected: DetectedDetail | null; match: boolean; html: HtmlFields | null; readyState: DocumentReadyState } }  // SW→g2b 탭 CS(target content)
+      response: { detected: DetectedDetail | null; match: boolean; html: HtmlFields | null; readyState: DocumentReadyState;
+                  diag: null | { visibility: DocumentVisibilityState; readyState: DocumentReadyState; mainFrame: boolean; inputs: number;
+                          noticeInputAny: boolean; noticeInputVisible: boolean; rafFiredSinceLast: boolean; timerSkewMs: number | null; url: string } } }  // SW→g2b 탭 CS(target content)
   | { type: 'g2b/read-detail'; payload: { jobId: string };
       response: { html: HtmlFields; elapsedMs: { detect: number; stable: number } } }  // offscreen→SW. 실패는 DETAIL_* code
   | { type: 'g2b/eval-fetch'; payload: EvalRef & { withoutIdHeaders?: boolean }; response: { raw: EvalRaw; warnings: string[] } }  // SW→g2b 탭 CS(target content). 실패는 EVAL_* code
@@ -139,6 +143,18 @@ export type Msg =
   | { type: 'eval/get-many'; payload: { noticeIds?: string[] }; response: EvalRecord[] }
   | { type: 'eval/delete'; payload: { noticeId: string }; response: { removed: boolean } }
   | { type: 'eval/probe'; payload: { ref: EvalRef; withoutIdHeaders?: boolean }; response: EvalProbeResult }  // 확장 페이지→SW. 저장 없이 개수만 반환
+  | { type: 'ai/get'; payload: { noticeId: string }; response: AiReviewFile | null }
+  | { type: 'ai/run'; payload: { noticeId: string; scope: AiScope; provider?: AiProvider; files?: string[] }; response: { runId: string } }  // 대시보드→SW. 키는 SW가 주입한다
+  | { type: 'ai/exec'; payload: { noticeId: string; scope: AiScope; provider: AiProvider; files?: string[]; api: { key: string; model: string } }; response: { runId: string } }  // SW→offscreen 전용
+  | { type: 'ai/status'; payload: AiRunState; response: void }  // offscreen→SW 전용
+  | { type: 'ai/cancel'; payload: { noticeId: string; runId: string }; response: { cancelled: boolean } }
+  | { type: 'ai/prepare'; payload: { noticeId: string; scope: AiScope; provider?: AiProvider; files?: string[] }; response: { runId: string; text: string; webUrl: string; stats: { chars: number; files: number; truncated: boolean; excludedFiles: string[] } } }
+  | { type: 'ai/prompt-get'; payload: { noticeId: string; runId: string }; response: { text: string } }
+  | { type: 'ai/submit'; payload: { noticeId: string; runId: string; text: string }; response: AiReviewFile }  // text 상한 200KB(SW 검사)
+  | { type: 'ai/apply'; payload: { noticeId: string; runId: string; key: ExtractionKey; note?: string }; response: { notice: Notice; extraction: Extraction; aiReview: AiReviewFile } }
+  | { type: 'ai/dismiss'; payload: { noticeId: string; runId: string; key: ExtractionKey }; response: AiReviewFile }
+  | { type: 'ai/test'; payload: { provider: AiProvider }; response: { ok: boolean; models?: Array<{ id: string; displayName?: string }>; error?: { code: string; message: string } } }  // 대시보드→SW
+  | { type: 'ai/models'; payload: { provider: AiProvider; apiKey: string }; response: { models: Array<{ id: string; displayName?: string }> } }  // SW→offscreen 전용
   | { type: 'g2b/collect'; payload: void; response: { started: boolean; jobId?: string; code?: string } }  // popup→CS
   | { type: 'g2b/retry'; payload: { jobId: string }; response: { started: boolean; jobId?: string; code?: string } };  // sidepanel→CS: 이 탭 공고의 잡 재시도(SW가 공고/탭 일치 검사)
 

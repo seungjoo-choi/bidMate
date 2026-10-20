@@ -16,7 +16,10 @@ export interface DetailReaderDeps {
   pollMs?: number;     // 700
   settleMs?: number;   // 1500
   timeoutMs?: number;  // 45_000
+  log?: (...a: unknown[]) => void;  // console.info
 }
+
+const TRACE_MAX = 120;
 
 let injected: Partial<DetailReaderDeps> = {};
 
@@ -33,6 +36,7 @@ function deps(): DetailReaderDeps {
     getJob: injected.getJob ?? getJob,
     now: injected.now, sleep: injected.sleep,
     pollMs: injected.pollMs, settleMs: injected.settleMs, timeoutMs: injected.timeoutMs,
+    log: injected.log,
   };
 }
 
@@ -49,6 +53,7 @@ async function readOne(jobId: string, requestedAt: number): Promise<ResponseOf<'
   const pollMs = d.pollMs ?? 700;
   const settleMs = d.settleMs ?? 1500;
   const timeoutMs = d.timeoutMs ?? 45_000;
+  const log = d.log ?? ((...a: unknown[]) => console.info(...a));
   const start = now();
   // 큐에서 오래 기다려 요청자가 이미 타임아웃됐을 항목은 탭을 열지 않는다.
   if (start - requestedAt + timeoutMs > REQUEST_WAIT_MS) throw err('DETAIL_TIMEOUT', '상세화면 읽기 대기가 길어 건너뛰었습니다.');
@@ -76,6 +81,7 @@ async function readOne(jobId: string, requestedAt: number): Promise<ResponseOf<'
     if (windowId === undefined) windowId = (await d.windows.getLastFocused()).id;
   } catch { /* 창을 알 수 없으면 브라우저 기본 창 */ }
 
+  const trace: unknown[] = [];
   let tabId: number | undefined;
   let closed = false;
   const onRemoved = (id: number) => { if (id === tabId) closed = true; };
@@ -117,8 +123,15 @@ async function readOne(jobId: string, requestedAt: number): Promise<ResponseOf<'
       }
       if (!(await isActive())) throw err('DETAIL_CANCELLED', '잡이 취소되었습니다.');
 
+      const pushTick = (result: unknown) => {
+        const tick = { t: now() - start, tabStatus: cur.status, discarded: cur.discarded, url: curUrl, result };
+        trace.push(tick);
+        if (trace.length > TRACE_MAX) trace.shift();
+        log('[detail-reader]', jobId, tick);
+      };
       try {
         const r = await d.sendToTab(id, 'g2b/read-html', { noticeNo, ...(round ? { round } : {}) }, { timeoutMs: 2000 });
+        pushTick({ match: r.match, fieldKeys: Object.keys(r.html?.fields ?? {}), diag: r.diag });
         if (r.match && r.html) {
           const snap = JSON.stringify(r.html.fields);
           firstMatchAt ??= now();
@@ -128,11 +141,15 @@ async function readOne(jobId: string, requestedAt: number): Promise<ResponseOf<'
         } else {
           prev = undefined;
         }
-      } catch { /* 수신자 없음/타임아웃은 로딩 중의 일시 상태 */ }
+      } catch (e) {
+        /* 수신자 없음/타임아웃은 로딩 중의 일시 상태 */
+        pushTick(e instanceof BusError && e.code === 'TIMEOUT' ? 'TIMEOUT' : 'NO_RECEIVER');
+      }
 
       await sleep(pollMs);
     }
   } finally {
+    log('[detail-reader] trace', jobId, JSON.stringify(trace));
     d.tabs.onRemoved.removeListener(onRemoved);
     if (tabId !== undefined) {
       try { await d.tabs.remove(tabId); } catch { /* 이미 닫힘 */ }

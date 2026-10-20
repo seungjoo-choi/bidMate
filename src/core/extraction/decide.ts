@@ -2,6 +2,7 @@ import { EXTRACTION_KEYS } from '../types/extraction';
 import type { EvidenceRef, ExtractedItem, ExtractionFileStatus, ExtractionKey, ExtractionStatus } from '../types/extraction';
 import type { DocKind } from './classify';
 import { compact } from './normalize';
+import { coveredByGroup } from './review-count';
 import type { RuleSet } from './rules/schema';
 
 export interface Candidate {
@@ -13,7 +14,7 @@ export interface Decision {
 }
 
 /** 값 비교 키: number/boolean은 그대로, "N년"은 연수, string은 compact 앞 40자. */
-function valueKey(v: unknown): string {
+export function valueKey(v: unknown): string {
   if (typeof v === 'number') return `n:${v}`;
   if (typeof v === 'boolean') return `b:${v}`;
   const s = compact(String(v));
@@ -77,6 +78,6 @@ export function computeStatus(items: Record<ExtractionKey, ExtractedItem<unknown
     const rel = fileStatuses.filter((s) => s !== 'skipped');
     return rel.every((s) => NOT_PARSED_OK.has(s)) ? 'unsupported' : 'failed';
   }
-  const ok = EXTRACTION_KEYS.every((k) => items[k].status === 'verified' || items[k].userEdited !== undefined);
+  const ok = EXTRACTION_KEYS.every((k) => items[k].status === 'verified' || items[k].userEdited !== undefined || coveredByGroup(items, k));
   return ok ? 'verified' : 'needs_review';
 }

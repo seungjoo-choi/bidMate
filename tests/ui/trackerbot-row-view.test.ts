@@ -26,15 +26,15 @@ describe('rowView', () => {
   });
   it('lookup found -> 다시 수집 + 칩', () => {
     const at = new Date(2026, 9, 17, 13, 40).toISOString();
-    expect(v(entry({ lookup: { found: true, collectedAt: at, collectStatus: 'collected' } }))).toMatchObject({ kind: 'idle', label: '다시 수집', chip: '수집 완료', tone: 'secondary' });
+    expect(v(entry({ lookup: { found: true, collectedAt: at, collectStatus: 'collected' } }))).toMatchObject({ kind: 'idle', label: '다시 수집', chip: '수집 완료', chipTone: 'ok', tone: 'secondary' });
   });
   it('starting', () => {
     expect(v(entry({ starting: true }))).toEqual({ kind: 'busy', label: '시작 중', canCancel: false, cancelling: false, cancelTarget: 'collect' });
   });
-  it('진행(첨부 n/m)', () => {
+  it('진행: 라벨은 짧게, 첨부 n/m은 툴팁', () => {
     const j = job({ steps: steps({ status: 'done' }, { status: 'running', progress: { done: 3, total: 6 } }) });
-    expect(v(entry({ job: j }))).toEqual({ kind: 'busy', label: '첨부 3/6', canCancel: true, cancelling: false, cancelTarget: 'collect' });
-    expect(v(entry({ job: job({ status: 'cancelling', label: '가'.repeat(30) }) }))).toMatchObject({ kind: 'busy', label: '가'.repeat(20), canCancel: false, cancelling: true });
+    expect(v(entry({ job: j }))).toEqual({ kind: 'busy', label: '수집 중', detail: '첨부 3/6', canCancel: true, cancelling: false, cancelTarget: 'collect' });
+    expect(v(entry({ job: job({ status: 'cancelling', label: '가'.repeat(30) }) }))).toMatchObject({ kind: 'busy', label: '취소 중', detail: '가'.repeat(30), canCancel: false, cancelling: true });
   });
   it('completed', () => {
     const j = job({ status: 'completed', result: { noticeId: 'n', folder: 'f', attachments: [att('saved'), att('saved')] } });

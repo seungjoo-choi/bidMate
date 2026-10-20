@@ -7,14 +7,15 @@ import { inputClass } from '../../../ui/components/Field';
 const WINDOW = 600;
 const STEP = 600;
 
-export interface DrawerTarget { textPath: string; line?: number; title: string }
+/** query가 있으면 그 말로 검색한 상태로 연다. */
+export interface DrawerTarget { textPath: string; line?: number; title: string; query?: string }
 
 export function TextDrawer({ noticeId, target, onClose }: { noticeId: string; target: DrawerTarget; onClose: () => void }) {
   const [shown, setShown] = useState(false);
   const [lines, setLines] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState<[number, number]>([0, 0]);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(target.query ?? '');
   const [cur, setCur] = useState(0);
   const [scrollTo, setScrollTo] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);

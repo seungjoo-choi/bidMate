@@ -38,10 +38,10 @@ describe('handoffView', () => {
   });
   it('compose completed -> 열기', () => {
     expect(handoffView(collect(started), compose({ status: 'completed' })))
-      .toMatchObject({ kind: 'composed', text: '메일 작성 완료, 웹메일 탭에서 확인 후 보내세요', tone: 'ok', action: 'open-mail', actionLabel: '열기' });
+      .toMatchObject({ kind: 'composed', text: '웹메일 탭에서 확인 후 보내 주세요', tone: 'ok', action: 'open-mail', actionLabel: '열기' });
   });
   it('compose 수동 모드/partial -> 직접 붙여 넣기 안내', () => {
-    const text = '웹메일 탭을 열었습니다. 내용은 직접 붙여 넣어야 합니다';
+    const text = '웹메일 탭에 내용을 직접 붙여 넣어 주세요';
     expect(handoffView(collect(started), compose({ status: 'partial', result: cres({ mode: 'manual' }) })))
       .toMatchObject({ kind: 'manual', text, action: 'open-mail' });
     expect(handoffView(collect(started), compose({ status: 'partial', result: cres({ fields: [{ field: 'to', requested: 'x', rendered: 'x', status: 'failed', method: 'm' }] }) })))
@@ -89,7 +89,7 @@ describe('handoffView url 결과', () => {
   it('url -> compose_partial Gmail 안내', () => {
     const c = compose({ status: 'partial', result: cres({ mode: 'url', provider: 'gmail' }) });
     expect(handoffView(collect(started), c)).toMatchObject({
-      kind: 'compose_partial', text: 'Gmail 작성 창을 열었습니다. 첨부와 서식 본문은 직접 넣어 주세요', tone: 'warn', action: 'open-mail', actionLabel: '열기',
+      kind: 'compose_partial', text: '첨부·서식 본문은 직접 넣어 주세요', tone: 'warn', action: 'open-mail', actionLabel: '열기',
     });
   });
 });

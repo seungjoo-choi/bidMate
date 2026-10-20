@@ -1,6 +1,7 @@
 import type { ISODate } from './common';
 import type { DocFormat } from '../doc/model';
 import type { DocKind } from '../extraction/classify';
+import type { AiProvider } from './ai';
 
 export type ExtractionStatus = 'verified' | 'needs_review' | 'unsupported' | 'failed' | 'not_run';
 export type ExtractionKey =
@@ -22,7 +23,10 @@ export interface ExtractedItem<T> {
   reason?: 'not_found' | 'conflict' | 'low_confidence' | 'no_documents' | 'no_total';
   evidence?: EvidenceRef;
   candidates?: Array<{ value: T; raw?: string; evidence: EvidenceRef }>;
-  userEdited?: { value: T | null; editedAt: ISODate; note?: string };
+  userEdited?: {
+    value: T | null; editedAt: ISODate; note?: string;
+    origin?: { kind: 'ai'; runId: string; provider: AiProvider; model: string | null; promptVersion: string };
+  };
 }
 export type ExtractionFileStatus =
   | 'parsed' | 'unsupported' | 'encrypted' | 'drm' | 'scanned' | 'corrupt' | 'failed' | 'timeout' | 'skipped' | 'cancelled';

@@ -239,6 +239,62 @@ describe('runComposeJob', () => {
   });
 });
 
+describe('runComposeJob 실패 시 compose/focus', () => {
+  it('탭을 연 뒤 감지 실패(COMPOSE_NOT_DETECTED)면 compose/focus를 호출한다', async () => {
+    const mem = await setup();
+    const hs = autoHandlers(mem);
+    hs['compose/detect'] = () => ({ frames: [] });
+    const h = harness(mem, hs, { detectTimeoutMs: 3000 });
+    const r = await h.run();
+    expect(r.status).toBe('failed');
+    expect(h.calls.at(-1)).toBe('compose/focus');
+  });
+  it('탭을 연 뒤 fill rpc가 throw해도 compose/focus를 호출한다', async () => {
+    const mem = await setup();
+    const hs = autoHandlers(mem);
+    hs['compose/fill'] = () => { throw Object.assign(new Error('x'), { code: 'INTERNAL' }); };
+    const h = harness(mem, hs, {}, autoSettings());
+    const r = await h.run();
+    expect(r.status).toBe('failed');
+    expect(h.calls).toContain('compose/open');
+    expect(h.calls.at(-1)).toBe('compose/focus');
+  });
+  it('compose/focus 자체가 실패해도 무시한다', async () => {
+    const mem = await setup();
+    const hs = autoHandlers(mem);
+    hs['compose/detect'] = () => ({ frames: [] });
+    hs['compose/focus'] = () => { throw new Error('boom'); };
+    const r = await harness(mem, hs, { detectTimeoutMs: 3000 }).run();
+    expect(r.error?.code).toBe('COMPOSE_NOT_DETECTED');
+  });
+  it('탭 열기 전 실패(render_mail)면 호출하지 않는다', async () => {
+    const mem = await setup({ group: false });
+    const h = harness(mem, autoHandlers(mem));
+    const r = await h.run();
+    expect(r.status).toBe('failed');
+    expect(h.calls).not.toContain('compose/focus');
+  });
+  it('COMPOSE_TAB_CLOSED면 호출하지 않는다', async () => {
+    const mem = await setup();
+    const hs = autoHandlers(mem);
+    hs['compose/detect'] = () => { throw Object.assign(new Error('x'), { code: 'COMPOSE_TAB_CLOSED' }); };
+    const h = harness(mem, hs);
+    const r = await h.run();
+    expect(r.error?.code).toBe('COMPOSE_TAB_CLOSED');
+    expect(h.calls).not.toContain('compose/focus');
+  });
+  it('취소(abort)면 compose/abort만 호출하고 focus는 호출하지 않는다', async () => {
+    const mem = await setup();
+    const hs = autoHandlers(mem);
+    const h = harness(mem, hs);
+    hs['file/chunk'] = () => { h.ac.abort(); return { received: 1 }; };
+    const r = await h.run();
+    expect(r.status).toBe('cancelled');
+    expect(h.calls).toContain('compose/abort');
+    expect(h.calls).not.toContain('compose/focus');
+  });
+});
+
 describe('runComposeJob gmail 주소 방식', () => {
   const gmailSettings = () => { const s = defaultSettings(); s.mail.provider = 'gmail'; return s; };
   const gmailSets = { 'gmail-v1': gmailV1 };

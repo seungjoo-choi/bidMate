@@ -20,7 +20,7 @@ export function sampleNotice(): Notice {
     registrationDeadline: ok(local(2026, 10, 20, 17)), bidStartAt: ok(local(2026, 10, 15, 9)),
     bidCloseAt: ok(local(2026, 10, 22, 14)), proposalPeriod: ok('2026/10/23 10:00 ~ 2026/10/27 14:00'),
     proposalEvalAt: ok(local(2026, 10, 30, 10)), openingAt: ok(local(2026, 10, 22, 15)),
-    evalMethod: ok('기술 90 : 가격 10'), differentialScoring: ok(true),
+    evalMethod: ok('기술 90 : 가격 10'), evalMethodDoc: ok('기술평가위원회 개최를 통한 온라인 소집평가'), differentialScoring: ok(true),
     credibilityScore: ok(2), managementScore: ok(5),
     performanceScore: { value: 10, status: 'needs_review', source: src },
     performancePeriod: ok('3년'), performanceMinAmount: ok(250_000_000), performanceCondition: ok('유사 사업 수행실적'),

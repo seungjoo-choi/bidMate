@@ -5,8 +5,9 @@ import { computeStatus, decide } from '../../core/extraction/decide';
 import { conflictCountOf, reviewCountOf } from '../../core/extraction/review-count';
 import { runRules, type RuleDocInput } from '../../core/extraction/run-rules';
 import type { RuleSet } from '../../core/extraction/rules/schema';
+import { toIsoKst } from '../../core/model/dates';
 import { mergeDocumentLayer } from '../../core/model/merge';
-import { EVALUATION_KEYS, setFields, type FieldMap } from '../../core/model/notice-fields';
+import { EVALUATION_KEYS, getField, setFields, type FieldMap } from '../../core/model/notice-fields';
 import { sanitizeSegment } from '../../core/model/sanitize';
 import type { FieldValue } from '../../core/types/common';
 import { EXTRACTION_KEYS, EXTRACTION_SCHEMA_VERSION, type Extraction, type ExtractionFile, type ExtractionFileStatus, type ExtractedItem, type ExtractionKey, type EvidenceRef } from '../../core/types/extraction';
@@ -106,23 +107,64 @@ export function docFieldsOf(items: Record<ExtractionKey, ExtractedItem<unknown>>
   return out;
 }
 
-/** 문서에서 찾은 사업기간을 basic 필드로 바꾼다. not_found면 키가 없다. */
-export function basicFieldsOf(extras: Record<string, ExtractedItem<unknown>>, fetchedAt: string): Partial<Pick<FieldMap, 'projectPeriod'>> {
-  const it = extras.projectPeriod;
-  const f = it && it.reason !== 'no_total' ? fieldOfItem(it, fetchedAt, true) : undefined;
-  return f ? { projectPeriod: f } : {};
+/** 문서 전용 보충 필드(공고정보/API에 없을 때만 문서 값으로 채운다). */
+export const DOC_FILL_KEYS = ['projectPeriod', 'evalMethodDoc', 'proposalPeriod', 'proposalEvalAt', 'quantEvalDoc'] as const;
+
+/** 문서 날짜 원문("2024/10/08 09:30", "2024. 3. 7.(목) 13:30")을 ISO(+09:00)로 바꾼다. 날짜·시각 중 하나라도 없거나 범위를 벗어나면 null. */
+export function docDateToIso(text: string): string | null {
+  const t = text;
+  const d = /(\d{4})\s*(?:[./-]\s*(\d{1,2})\s*[./-]|년\s*(\d{1,2})\s*월)\s*(\d{1,2})/.exec(t);
+  if (!d) return null;
+  const tm = /(\d{1,2}):(\d{2})/.exec(t.slice(d.index + d[0].length));
+  if (!tm) return null;
+  const [y, mo, da, hh, mi] = [Number(d[1]), Number(d[2] ?? d[3]), Number(d[4]), Number(tm[1]), Number(tm[2])];
+  if (hh > 23 || mi > 59) return null;
+  const cal = new Date(Date.UTC(y, mo - 1, da)); // 실제 달력 날짜만(2024.02.30 거부)
+  if (cal.getUTCFullYear() !== y || cal.getUTCMonth() !== mo - 1 || cal.getUTCDate() !== da) return null;
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  return toIsoKst(`${d[1]}-${p2(mo)}-${p2(da)} ${p2(hh)}:${p2(mi)}`);
 }
 
-/** 상세화면/API에 값이 없을 때만 문서 사업기간을 채운다. mergeFields는 쓰지 않는다(HTML 덮어쓰기와 상시 충돌 방지). */
-export function fillBasicFromDocs(notice: Notice, fields: Partial<Pick<FieldMap, 'projectPeriod'>>): void {
-  for (const key of ['projectPeriod'] as const) {
-    const prev = notice.basic[key] as FieldValue<unknown> | undefined;
+/** 같은 줄 규칙(extras[key])에 값이 없을 때만 쓰는 보조 규칙의 extras 키. 같은 target으로 두면 표기가 다른 같은 값끼리 충돌해 verified가 needs_review가 된다. */
+const DOC_FALLBACK: Partial<Record<(typeof DOC_FILL_KEYS)[number], string[]>> = { projectPeriod: ['projectPeriodParen', 'projectPeriodCell'] };
+
+/** 문서에서 찾은 사업기간·평가방식 원문을 필드로 바꾼다. not_found/no_total이면 키가 없다. */
+export function docOnlyFieldsOf(extras: Record<string, ExtractedItem<unknown>>, fetchedAt: string): FieldMap {
+  const out: FieldMap = {};
+  for (const key of DOC_FILL_KEYS) {
+    // 같은 줄 규칙 -> 보조 규칙 순으로 값이 되는 첫 항목을 쓴다(no_total·값 없음은 건너뜀).
+    for (const k of [key, ...(DOC_FALLBACK[key] ?? [])]) {
+      const it = extras[k];
+      let f = it && it.reason !== 'no_total' ? fieldOfItem(it, fetchedAt, true) : undefined;
+      if (f && key === 'proposalEvalAt') {
+        // schedule.proposalEvalAt은 ISODate다. 변환에 실패하면 값으로 보지 않고, 후보도 변환되는 것만 남긴다.
+        const iso = typeof f.value === 'string' ? docDateToIso(f.value) : null;
+        if (!iso) f = undefined;
+        else {
+          const { candidates, ...rest } = f;
+          const cs = (candidates ?? []).flatMap((c) => {
+            const ci = typeof c.value === 'string' ? docDateToIso(c.value) : null;
+            return ci ? [{ ...c, value: ci }] : [];
+          });
+          f = { ...rest, value: iso, ...(cs.length ? { candidates: cs } : {}) } as FieldValue<unknown>;
+        }
+      }
+      if (f) { out[key] = f; break; }
+    }
+  }
+  return out;
+}
+
+/** 상세화면/API에 값이 없을 때만 문서 값을 채운다. mergeFields는 쓰지 않는다(HTML 덮어쓰기와 상시 충돌 방지). */
+export function fillDocOnlyFields(notice: Notice, fields: FieldMap): void {
+  for (const key of DOC_FILL_KEYS) {
+    const prev = getField(notice, key);
     if (prev?.status === 'user_edited') continue;
     if (prev && prev.value != null && prev.source?.kind !== 'document') continue;
     const next = fields[key];
-    if (next) (notice.basic as unknown as Record<string, FieldValue<unknown>>)[key] = next;
+    if (next) setFields(notice, { [key]: next });
     else if (prev && prev.source?.kind === 'document' && prev.value != null) {
-      (notice.basic as unknown as Record<string, FieldValue<unknown>>)[key] = { ...prev, status: 'needs_review', note: '최근 추출에서 값이 확인되지 않음' };
+      setFields(notice, { [key]: { ...prev, status: 'needs_review', note: '최근 추출에서 값이 확인되지 않음' } as FieldValue<unknown> });
     }
   }
 }
@@ -322,9 +364,9 @@ export async function runExtractStep(job: Job, notice: Notice, prior: Extraction
   }
   const merged = mergeDocumentLayer(notice, docFieldsOf(items, nowIso));
   const evalOnly: FieldMap = {};
-  for (const k of EVALUATION_KEYS) if (merged[k]) evalOnly[k] = merged[k];
+  for (const k of EVALUATION_KEYS) if (!(DOC_FILL_KEYS as readonly string[]).includes(k) && merged[k]) evalOnly[k] = merged[k];
   setFields(notice, evalOnly);
-  fillBasicFromDocs(notice, basicFieldsOf(extras, nowIso));
+  fillDocOnlyFields(notice, docOnlyFieldsOf(extras, nowIso));
 
   step('done', `평가정보 추출 완료, 확인 필요 ${reviewCountOf(extraction)}건`, { done: total, total });
   return { status: 'done', extraction };
