@@ -88,15 +88,15 @@ export function EvaluationsPage() {
       {list && list.length > 0 && (
         <div className="space-y-3">
         {cum && <StatsStrip cum={cum} list={list} hasCompany={hasCompany} />}
-        <div className="flex items-center justify-between gap-4 pt-2">
+        {/* 검색 조건은 왼쪽에 붙여 두고, 건수는 오른쪽 끝 */}
+        <div className="flex flex-wrap items-center gap-2.5 pt-2">
+          <Select className="w-56" aria-label="기관" placeholder="전체 기관" value={org} options={orgs} onChange={setOrg} clearable />
+          <div className="relative w-80">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" />
+            <input className={`${inputClass} pl-9`} placeholder="공고명, 번호, 기관, 업체 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+          </div>
+          <span className="flex-1" />
           <span className="text-sm text-muted">{query.trim() || org ? `${rows.length} / ${list.length}건` : `${list.length}건`}</span>
-        <div className="flex items-center gap-2.5">
-        <Select className="w-56" aria-label="기관" placeholder="전체 기관" value={org} options={orgs} onChange={setOrg} clearable />
-        <div className="relative w-80">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" />
-          <input className={`${inputClass} pl-9`} placeholder="공고명, 번호, 기관, 업체 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
-        </div>
-        </div>
         </div>
         <div className="max-h-[max(16rem,calc(100vh-20rem))] overflow-y-auto rounded-card border border-line bg-surface shadow-card">
           <div className={`${GRID} sticky top-0 z-10 bg-sunken py-3 text-sm text-muted`}>

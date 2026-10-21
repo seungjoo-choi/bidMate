@@ -13,3 +13,6 @@ export * from './MenuButton';
 export * from './MoreMenu';
 export * from './FormActions';
 export * from './ErrorBoundary';
+export * from './Switch';
+export * from './BackLink';
+export * from './TruncatedText';

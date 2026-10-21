@@ -1,3 +1,4 @@
+import { FolderOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { send } from '../../messaging/bus';
 import type { FsStatus } from '../../messaging/protocol';
@@ -23,9 +24,9 @@ import { MENU } from './menu';
 import { parseRoute, settingsSectionOf, type Page } from './route';
 
 const FOLDER_BADGE = {
-  granted: { tone: 'ok', text: '저장 폴더 연결됨' },
-  prompt: { tone: 'warn', text: '폴더 재승인 필요' },
-  denied: { tone: 'error', text: '폴더 접근 거부됨' },
+  granted: { tone: 'ok', text: '연결됨' },
+  prompt: { tone: 'warn', text: '재승인 필요' },
+  denied: { tone: 'error', text: '접근 거부됨' },
 } as const;
 
 /** 사이드바 아래 저장 폴더 상태. 화면 이동과 창 포커스 때 다시 읽는다. 조회 실패 시 숨긴다. */
@@ -39,11 +40,17 @@ function FolderStatus({ refreshKey }: { refreshKey: string }) {
     return () => { alive = false; window.removeEventListener('focus', load); };
   }, [refreshKey]);
   if (!status) return null;
-  const b = status.hasRoot ? FOLDER_BADGE[status.permission] : { tone: 'idle', text: '저장 폴더 미설정' } as const;
+  const b = status.hasRoot ? FOLDER_BADGE[status.permission] : { tone: 'idle', text: '미설정' } as const;
   return (
-    <a href="#/settings?section=storage" className="mt-auto block space-y-0.5 border-t border-line px-3 pt-4">
+    <a href="#/settings?section=storage" title="저장 폴더 설정으로 이동" className="mt-auto block space-y-1.5 border-t border-line px-3 pt-4">
+      <span className="block text-xs font-medium text-muted">저장 폴더</span>
+      {status.hasRoot && (
+        <span className="flex items-center gap-1.5 text-sm text-ink">
+          <FolderOpen className="size-4 shrink-0 text-muted" aria-hidden />
+          <span className="truncate">{status.rootName}</span>
+        </span>
+      )}
       <StatusBadge status={b.tone}>{b.text}</StatusBadge>
-      {status.hasRoot && <span className="block truncate text-sm text-muted">{status.rootName}</span>}
     </a>
   );
 }

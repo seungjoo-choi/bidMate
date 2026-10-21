@@ -1,4 +1,4 @@
-import { ArrowLeft, BarChart3, ClipboardCopy, Download, ExternalLink, GitCompareArrows, Loader2, Mail, RefreshCw, Trash2 } from 'lucide-react';
+import { BarChart3, Bookmark, ClipboardCopy, Download, ExternalLink, GitCompareArrows, Loader2, Mail, RefreshCw, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Extraction } from '../../../core/types/extraction';
 import { handoffReasonLabel } from '../../../core/model/handoff';
@@ -9,7 +9,7 @@ import { send } from '../../../messaging/bus';
 import { evalErrorText } from '../../../core/evaluation/error-text';
 import { EVAL_COLLECT_UI_TIMEOUT_MS } from '../../../core/evaluation/limits';
 import { kindOf, noticeLabel } from '../../../core/model/ids';
-import { Button, ConfirmDialog, InlineAlert, MoreMenu, StatusBadge, useToast } from '../../../ui/components';
+import { BackLink, Button, ConfirmDialog, InlineAlert, MoreMenu, StatusBadge, useToast } from '../../../ui/components';
 import { useJobs } from '../../../ui/hooks/useJobs';
 import { COLLECT_BADGE, detailTabs, effectiveTab, folderRelPath } from '../../../ui/notice-detail/view';
 import { dDayLevel, formatDDay, formatDateTime } from '../../../ui/review/format';
@@ -23,6 +23,7 @@ import { OverviewTab } from './OverviewTab';
 import { ReviewTab } from './ReviewTab';
 import { TabBar } from './TabBar';
 import { FollowMenu, useFollowToggle } from '../FollowToggle';
+import { useFavorites } from '../../../ui/hooks/useFavorites';
 import { WonCard } from './ResultStrip';
 import { followButton, isWon, type FollowAction } from '../../../ui/notices/result-view';
 import { evalFetchable } from '../../../ui/notices/eval-fetch-view';
@@ -48,6 +49,8 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
   const running = jobs.find((j) => j.type !== 'compose' && j.noticeId === noticeId && ACTIVE.has(j.status));
   const wasRunning = useRef(false);
   const follow = useFollowToggle();
+  const fav = useFavorites();
+  const faved = fav.has(noticeId);
   const { settings } = useSettings();
   const notify = settings?.notify ?? { rank: true, final: true };
 
@@ -152,7 +155,7 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
   };
 
   const back = (
-    <a href="#/notices" className="inline-flex items-center gap-1 text-sm text-accent hover:underline"><ArrowLeft className="size-4" />공고 목록</a>
+    <BackLink href="#/notices">공고 목록</BackLink>
   );
 
   if (data === undefined) {
@@ -193,6 +196,10 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
+          <Button variant="secondary" aria-pressed={faved} title={faved ? '즐겨찾기 해제' : '즐겨찾기에 추가'}
+            icon={<Bookmark className={faved ? 'text-primary' : undefined} fill={faved ? 'currentColor' : 'none'} />}
+            onClick={() => void fav.toggle(noticeId).then((ok) => { if (!ok) toast.show('즐겨찾기를 저장하지 못했습니다.'); })}
+          >{faved ? '즐겨찾기됨' : '즐겨찾기'}</Button>
           {entry && fb.visible && !fb.disabled && <FollowMenu variant="button" following={entry.following ?? null} rankDone={entry.result?.status === 'ranked'} notify={notify} busy={follow.isBusy(noticeId)} title={title} onSelect={(a) => void applyFollow(a)} />}
           {/* 자주 쓰는 동작만 밖에 두고 나머지는 더보기로 접는다. 진행 중인 동작은 상태가 보이도록 밖으로 꺼낸다. */}
           {evalBusy && <Button variant="secondary" icon={<Download />} loading>평가점수 가져오기</Button>}

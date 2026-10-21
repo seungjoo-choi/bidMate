@@ -1,6 +1,6 @@
 import { BusError, listen, send, sendToTab } from '../messaging/bus';
 import type { EvalCollectResult, EvalProbeResult, EvalRef, MsgType, PayloadOf, ResponseOf } from '../messaging/protocol';
-import { EVAL_FETCH_WAIT_MS, EVAL_SAVE_WAIT_MS, EVAL_RETRY_MAX_MS, EVAL_RETRY_MS, EVAL_TAB_LOAD_WAIT_MS } from '../core/evaluation/limits';
+import { EVAL_FETCH_WAIT_MS, EVAL_REUSE_PROBE_MS, EVAL_SAVE_WAIT_MS, EVAL_RETRY_MAX_MS, EVAL_RETRY_MS, EVAL_TAB_LOAD_WAIT_MS } from '../core/evaluation/limits';
 import { waitComplete } from './compose-relay';
 import { assertExtensionSender, senderKind } from './job-coordinator';
 import { ensureOffscreen } from './offscreen-manager';
@@ -18,7 +18,7 @@ const ROUND_RE = /^\d{3}$/;
 type Sender = chrome.runtime.MessageSender;
 
 export interface EvalCollectorDeps {
-  tabs: Pick<typeof chrome.tabs, 'query' | 'create' | 'update' | 'remove'>;
+  tabs: Pick<typeof chrome.tabs, 'query' | 'create' | 'update' | 'remove' | 'reload'>;
   sendToTab: typeof sendToTab;
   waitComplete: (tabId: number, timeoutMs: number) => Promise<boolean>;
   sleep?: (ms: number) => Promise<void>;
@@ -75,14 +75,20 @@ export function normalizeEvalRef(ref: EvalRef | undefined): { noticeNo: string; 
   return { noticeNo, round };
 }
 
-interface AcquiredTab { tabId: number; created: boolean }
+/** own: 요청을 보낸 나라장터 탭 자신, reused: 열려 있던 다른 나라장터 탭, created: 이번에 만든 탭 */
+interface AcquiredTab { tabId: number; kind: 'own' | 'reused' | 'created' }
 
 async function acquireG2bTab(sender: Sender): Promise<AcquiredTab> {
   const d = deps();
-  if (senderKind(sender) === 'g2b' && sender.tab?.id !== undefined) return { tabId: sender.tab.id, created: false };
+  if (senderKind(sender) === 'g2b' && sender.tab?.id !== undefined) return { tabId: sender.tab.id, kind: 'own' };
   const existing = await d.tabs.query({ url: G2B_MATCH });
   const found = existing.find((t) => t.id !== undefined);
-  if (found) return { tabId: found.id as number, created: false };
+  if (found) return { tabId: found.id as number, kind: 'reused' };
+  return createG2bTab();
+}
+
+async function createG2bTab(): Promise<AcquiredTab> {
+  const d = deps();
   const tab = await d.tabs.create({ url: G2B_HOME, active: false });
   if (tab.id === undefined) throw err('EVAL_TAB_FAILED', '나라장터 탭을 열지 못했습니다.');
   const tabId = tab.id;
@@ -90,34 +96,67 @@ async function acquireG2bTab(sender: Sender): Promise<AcquiredTab> {
     try { await d.tabs.remove(tabId); } catch { /* 이미 닫힘 */ }
     throw err('EVAL_TAB_TIMEOUT', '나라장터 탭 로딩이 지연되었습니다.');
   }
-  return { tabId, created: true };
+  return { tabId, kind: 'created' };
 }
 
 const isNoReceiver = (e: unknown): boolean =>
   (e as { code?: unknown })?.code === 'NO_RECEIVER' || /Receiving end does not exist|Could not establish connection/i.test(e instanceof Error ? e.message : '');
 
-/** CS가 아직 뜨지 않았으면 700ms 간격으로 최대 15초 재시도한다. */
-async function sendEvalFetch(tabId: number, payload: { noticeNo: string; round: string; withoutIdHeaders?: boolean }): Promise<ResponseOf<'g2b/eval-fetch'>> {
+const unreachable = () => err('EVAL_CS_UNREACHABLE', '나라장터 탭에 연결하지 못했습니다.');
+
+type EvalFetchPayload = { noticeNo: string; round: string; withoutIdHeaders?: boolean };
+
+/** CS가 아직 뜨지 않았으면 700ms 간격으로 maxMs까지 재시도한다. */
+async function sendEvalFetch(tabId: number, payload: EvalFetchPayload, maxMs = RETRY_MAX_MS): Promise<ResponseOf<'g2b/eval-fetch'>> {
   const d = deps();
   const start = d.now();
   for (;;) {
     try {
       return await d.sendToTab(tabId, 'g2b/eval-fetch', payload, { timeoutMs: FETCH_WAIT_MS });
     } catch (e) {
-      if (!isNoReceiver(e) || d.now() - start >= RETRY_MAX_MS) throw e;
+      if (!isNoReceiver(e) || d.now() - start >= maxMs) throw e;
       await d.sleep(RETRY_MS);
     }
   }
 }
 
+/** 탭을 새로고침하고 로드 완료를 기다린다. 탭이 닫혔거나 로딩이 늦으면 false */
+async function reloadAndWait(tabId: number): Promise<boolean> {
+  const d = deps();
+  const loaded = d.waitComplete(tabId, LOAD_WAIT_MS); // complete 이벤트를 놓치지 않게 새로고침 전에 건다
+  try { await d.tabs.reload(tabId); } catch { return false; }
+  return loaded;
+}
+
+/**
+ * 열려 있던 탭은 확장을 다시 불러오기 전에 열렸거나 잠들어(discarded) CS가 없을 수 있다.
+ * 잠깐 응답이 없으면 새로고침해 CS를 다시 띄우고, 새로고침도 안 되면 새 탭을 연다.
+ * 새 탭으로 바꾸면 onSwitch로 알린다.
+ */
+async function sendWithRecovery(tab: AcquiredTab, payload: EvalFetchPayload, onSwitch: (t: AcquiredTab) => void): Promise<ResponseOf<'g2b/eval-fetch'>> {
+  const last = async (tabId: number) => {
+    try { return await sendEvalFetch(tabId, payload); } catch (e) { throw isNoReceiver(e) ? unreachable() : e; }
+  };
+  if (tab.kind !== 'reused') return last(tab.tabId);
+  try {
+    return await sendEvalFetch(tab.tabId, payload, EVAL_REUSE_PROBE_MS);
+  } catch (e) {
+    if (!isNoReceiver(e)) throw e;
+  }
+  if (await reloadAndWait(tab.tabId)) return last(tab.tabId);
+  const fresh = await createG2bTab();
+  onSwitch(fresh);
+  return last(fresh.tabId);
+}
+
 async function fetchRawOnce(sender: Sender, ref: { noticeNo: string; round: string }, withoutIdHeaders: boolean): Promise<ResponseOf<'g2b/eval-fetch'>> {
   const d = deps();
-  const tab = await acquireG2bTab(sender);
-  let keep = !tab.created;
+  let tab = await acquireG2bTab(sender);
+  let keep = tab.kind !== 'created';
   try {
-    return await sendEvalFetch(tab.tabId, { ...ref, ...(withoutIdHeaders ? { withoutIdHeaders } : {}) });
+    return await sendWithRecovery(tab, { ...ref, ...(withoutIdHeaders ? { withoutIdHeaders } : {}) }, (t) => { tab = t; keep = false; });
   } catch (e) {
-    if (tab.created && (e as { code?: unknown })?.code === 'EVAL_NOT_LOGGED_IN') {
+    if (tab.kind === 'created' && (e as { code?: unknown })?.code === 'EVAL_NOT_LOGGED_IN') {
       // 사용자가 로그인할 수 있게 만든 탭을 남기고 앞으로 가져온다.
       keep = true;
       try { await d.tabs.update(tab.tabId, { active: true }); } catch { /* 무시 */ }

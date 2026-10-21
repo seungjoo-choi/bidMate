@@ -305,11 +305,14 @@ export function RfpPage({ query }: { query: { next?: string; prev?: string } }) 
         {renderSlot('next')}
       </div>
 
-      <div className="flex flex-col items-center gap-2">
-        <Button className="h-12 px-8 text-base" icon={<ArrowRight />} loading={saving} disabled={!canCompare} onClick={() => void compare()}>변경점 비교하기</Button>
+      {/* 동작 줄: 안내는 왼쪽, 비교 버튼은 두 칸 아래 오른쪽 끝(폼 제출 버튼 자리) */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+          {hint && <span className="mr-auto text-[13px] text-muted">{hint}</span>}
+          <Button icon={<ArrowRight />} loading={saving} disabled={!canCompare} onClick={() => void compare()}>변경점 비교하기</Button>
+        </div>
         {same && <InlineAlert tone="warn">비교 대상과 기준에 같은 문서가 들어 있어요. 서로 다른 문서를 골라 주세요.</InlineAlert>}
         {saveError && <InlineAlert tone="error">{saveError}</InlineAlert>}
-        {hint && <span className="text-[13px] text-muted">{hint}</span>}
       </div>
 
       {listError && <InlineAlert tone="error">목록을 불러오지 못했어요. {listError}</InlineAlert>}

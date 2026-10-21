@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { kindOf } from '../../core/model/ids';
 import { composeHost,originOf } from '../../core/model/mail-provider';
 import type { AutoComposeSettings, ReviewGate } from '../../core/types/settings';
-import { Button, Card, Field, FormActions, InlineAlert, Select, StatusBadge, useToast } from '../../ui/components';
+import { Button, Card, Field, FormActions, InlineAlert, Select, StatusBadge, Switch, useToast } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useRecipients, useTemplates } from '../../ui/hooks/useConfig';
 import { useSettings } from '../../ui/hooks/useSettings';
@@ -78,10 +78,7 @@ export function AutoComposeCard() {
 
   return (
     <Card title="자동 메일 작성" description="수집이 끝나면 대시보드 메일 준비 화면(검수가 필요하면 검수 화면)을 엽니다. 끄면 화면 이동이 꺼집니다.">
-      <label className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <input type="checkbox" className="accent-current" checked={draft.enabled} onChange={(e) => void toggle(e.target.checked)} />
-        수집 완료 후 메일 작성으로 이어가기
-      </label>
+      <Switch checked={draft.enabled} onChange={(v) => void toggle(v)} label="수집 완료 후 메일 작성으로 이어가기" />
 
       <Field label="검수 기준" help="기준에 걸리면 자동 작성 대신 검수 화면을 엽니다.">
         <div className="space-y-1.5">

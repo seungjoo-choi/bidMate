@@ -139,10 +139,6 @@ export function NoticePicker({ side, other, onClose, onSelect, onFile }: {
           </div>
           {!chosen && (
             <div className="flex gap-2">
-              <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-ctl border border-line-strong bg-surface px-3 text-sm focus-within:border-primary">
-                <Search className="size-4 text-faint" />
-                <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="공고명, 공고번호, 기관명으로 검색" className="min-w-0 flex-1 bg-transparent outline-none" />
-              </label>
               <div className="w-32 shrink-0">
                 <Select aria-label="연도" value={year} onChange={setYear}
                   options={[{ value: '', label: '전체 연도' }, ...years.map((y) => ({ value: String(y.year), label: `${y.year}년`, hint: `${y.count}` }))]} />
@@ -151,6 +147,10 @@ export function NoticePicker({ side, other, onClose, onSelect, onFile }: {
                 <Select aria-label="기관" value={org} onChange={setOrg}
                   options={[{ value: '', label: '전체 기관' }, ...orgs.map((o) => ({ value: o.org, label: o.org, hint: `${o.count}` }))]} />
               </div>
+              <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-ctl border border-line-strong bg-surface px-3 text-sm focus-within:border-primary">
+                <Search className="size-4 text-faint" />
+                <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="공고명, 공고번호, 기관명으로 검색" className="min-w-0 flex-1 bg-transparent outline-none" />
+              </label>
             </div>
           )}
         </div>

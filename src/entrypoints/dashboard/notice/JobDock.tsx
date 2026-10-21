@@ -72,10 +72,13 @@ export function JobDock({ job, needsReview, onClose }: { job: Job | null; needsR
           </div>
           {sub && <div className={`mt-0.5 text-[0.8125rem] leading-snug ${running ? 'truncate' : 'break-words'} ${!running && !ok ? 'text-danger' : 'text-muted'}`} title={sub}>{sub}</div>}
         </div>
-        {running
-          ? job && job.status !== 'cancelling' && <Button variant="ghost" className="!h-8 shrink-0 !px-2.5" onClick={() => void send('job/cancel', { jobId: job.id }).catch(() => undefined)}>중단</Button>
-          : <Button variant="ghost" className="!h-8 shrink-0 !px-2.5" onClick={onClose}>닫기</Button>}
+        {running && job && job.status !== 'cancelling' && <Button variant="ghost" className="!h-8 shrink-0 !px-2.5" onClick={() => void send('job/cancel', { jobId: job.id }).catch(() => undefined)}>중단</Button>}
       </div>
+      {!running && (
+        <div className="mt-3 flex justify-end">
+          <Button variant="ghost" className="!h-9 !px-3" onClick={onClose}>닫기</Button>
+        </div>
+      )}
       {running && (
         <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-sunken">
           {ratio === null

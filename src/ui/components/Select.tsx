@@ -138,9 +138,11 @@ export function Select({ value, options, onChange, placeholder = '선택', disab
   const showClear = clearable && !!selected && !disabled;
   // className에 너비가 있으면 inputClass의 w-full이 이겨서 늘어나므로 뺀다
   const baseClass = /(^|\s)w-/.test(className) ? inputClass.replace('w-full ', '') : inputClass;
+  const widthClass = className.split(/\s+/).filter((c) => /^(min-|max-)?w-/.test(c)).join(' ');
 
   return (
-    <div className={clearable ? 'relative w-full min-w-0' : 'contents'}>
+    // 지우기 버튼을 겹쳐 놓을 틀. 너비를 지정했으면 틀도 그 너비를 따라야 가로 나열(flex)에서 한 줄을 다 차지하지 않는다
+    <div className={clearable ? `relative min-w-0 ${widthClass || 'w-full'}` : 'contents'}>
       <button
         ref={triggerRef}
         id={id}

@@ -1,4 +1,4 @@
-import { ArrowLeft, Plus, Save } from 'lucide-react';
+import { Plus, Save } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { renderMail } from '../../core/templates/render';
 import { kindOf } from '../../core/model/ids';
@@ -7,7 +7,7 @@ import type { RenderedMail } from '../../core/types/mail';
 import type { Notice, NoticeKind } from '../../core/types/notice';
 import type { Template, TemplateFieldKey } from '../../core/types/template';
 import { send } from '../../messaging/bus';
-import { Button, Card, Field, InlineAlert, inputClass, StatusBadge, useToast } from '../../ui/components';
+import { BackLink, Button, Card, Field, InlineAlert, inputClass, StatusBadge, useToast } from '../../ui/components';
 import { useTemplates } from '../../ui/hooks/useConfig';
 import { FsErrorAlert } from './FsErrorAlert';
 import { templateErrorText } from './TemplatesPage';
@@ -132,7 +132,7 @@ export function TemplateEditor({ id }: { id: string }) {
   };
 
   const back = (
-    <Button variant="ghost" icon={<ArrowLeft />} onClick={() => { window.location.hash = '#/templates'; }}>템플릿 목록</Button>
+    <BackLink href="#/templates">템플릿 목록</BackLink>
   );
 
   if (error) {

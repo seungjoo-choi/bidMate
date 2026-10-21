@@ -174,7 +174,7 @@ export function AiSuggestionBlock({ leaf: card, busy, onApply, onDismiss, onOpen
       )}
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
       <div className="flex flex-wrap items-center gap-2">
-        {s.evidence && <Button variant="primary" icon={<FileSearch />} onClick={() => onOpenText(s.evidence!)}>원문에서 확인</Button>}
+        {s.evidence && <Button variant="secondary" icon={<FileSearch />} onClick={() => onOpenText(s.evidence!)}>원문에서 확인</Button>}
         {applies && !noteOpen && <button type="button" className="text-[0.8125rem] text-accent hover:underline" onClick={() => setNoteOpen(true)}>메모 추가</button>}
         <span className="flex-1" />
         {[...actions].filter((a) => !(a === 'apply' && s.value === null)).sort((a, b) => Number(b === 'dismiss') - Number(a === 'dismiss')).map((a) => (

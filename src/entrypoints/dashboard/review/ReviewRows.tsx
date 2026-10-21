@@ -257,7 +257,7 @@ function LeafPanel({ leaf, titled, a }: { leaf: ReviewLeaf; titled: boolean; a: 
           <div className="text-xs text-muted">{evidenceMeta(ev)}</div>
           <blockquote className="border-l-2 border-line-strong pl-3"><Marked text={ev.evidence} value={leaf.valueText} /></blockquote>
           {ev.context && compact(ev.context) !== compact(ev.evidence) && <p className="text-muted">{ev.context}</p>}
-          <div><Button variant="primary" className="mt-1" icon={<FileSearch />} onClick={() => a.onOpenText(ev)}>원문에서 확인</Button></div>
+          <div><Button variant="secondary" className="mt-1" icon={<FileSearch />} onClick={() => a.onOpenText(ev)}>원문에서 확인</Button></div>
         </div>
       )}
       {!ev && leaf.evidenceText && (

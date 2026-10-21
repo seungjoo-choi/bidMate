@@ -818,3 +818,28 @@ S0 실측 2차(2026-10-20): 2단계는 inqryDiv=4 + bidNtceNo로 성공. 용역 
 - 구현: 라이브러리 없이 fflate로 OOXML 직접 생성(기존 실적 양식과 같은 방식). 대시보드에서 계산·다운로드, 저장 안 함.
 - 기각: 원문 두 칸만(어디가 바뀌었는지 직접 비교해야 함), SheetJS 등 새 의존성.
 - 관련: 추출기 v2 — 셀 안 중첩 표를 한 행=한 줄, 칸=탭으로(화면은 구분선, 엑셀은 " | "). 원문 탭은 공백으로 바꿔 구분자와 섞이지 않게 함.
+
+## 2026-10-21, 나라장터 연동 실패 기록 (Fable)
+상세: `.claude/specs/g2b-failure-log.md`
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 저장소 = `chrome.storage.local` 단일 키 `g2bFailures`, SW 단일 작성자, 300건/30일 | 쓰기 주체 하나로 유실 방지, onChanged 구독, 재시작 후 유지 | storage.session(재시작 소실), IndexedDB(구독·테스트 부담), 저장 폴더(권한 문제 진단 불가), 건별 키 |
+| 구조화 오류 전달 = 버스 `Reply.error.detail`(2KB 상한, SW 화이트리스트) + `JobError.detail`(fetchJsonOp) | 단계·엔드포인트·HTTP·ErrorMsg는 CS/offscreen 안에서만 앎 | message 문자열 정규식 파싱 |
+| 기록 제외: EVAL_NO_RESULT·취소·입력검증·FS 권한 | g2b 통신 실패가 아니며 자동 배치에서 실제 오류를 밀어냄 | 전부 기록 |
+| collect/attachment는 잡 종료 리스너에서 파생, detail은 detail-reader 직접, result/official/probe는 offscreen 콜백 → `diag/g2b-failure` | job-coordinator·collect-job 무수정 | 잡 ledger에 detail 보존(redactError 수정) |
+| 응답 본문 미저장, ErrorMsg 200자, 서비스키 가림 | 평가위원 실명 등 민감정보 차단 | 응답 앞부분 저장 |
+
+## 2026-10-21 · 공고 통합검색 (Fable)
+상세: `.claude/specs/notice-search.md` (구현 전)
+
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 상세 전문을 render-text 형식 txt로 `source/text/[상세] 나라장터 상세화면.txt`에 저장, `Notice.detailText?` 추가, 마이그레이션 없음(재수집) | 첨부 txt 도구(TextDrawer, locateQuote, excerpt)를 고치지 않고 재사용하고 경로 검증도 통과. DOM은 렌더된 탭에서만 얻을 수 있어 백필 비용이 큼 | HTML 원본 저장 / Extraction.files에 끼워 넣기(재추출 시 사라짐) / 전 공고 일괄 백필 |
+| 검색은 대시보드 메모리에서 수행, `notice/texts`로 한 번에 로드, 인덱스 파일 없음 | 공고 1건 코퍼스는 선형 검색으로 수 ms. 인덱스는 stale 관리 부담만 늘림 | offscreen 검색 메시지(키 입력마다 왕복) / IndexedDB 역색인 |
+| 결과 단위 = 줄 또는 표 행, 그룹 안은 문서 순서, 점수 없음. 띄어쓰기 무시 정규화와 원문 역매핑 | 사용자는 문서를 훑어 찾음. 성격이 다른 문서끼리 점수로 섞으면 혼란 | BM25 랭킹 / 문단 병합 단위 |
+| `buildTextBlocks`를 core/doc으로 이동(ui는 re-export) | core에서 ui를 import할 수 없음 | 코어에 표 행 파서 복제 |
+| UI는 전역 Provider와 오른쪽 패널, 결과는 TextDrawer 재사용(겹침). 단축키 `Ctrl+Shift+F`·`/` | 공고 id만으로 어디서든 열리고 보던 화면을 유지 | 상세 탭 추가 / 라우트 `#/search/<id>` / 패널 안 자체 뷰어 |
+| 2단계는 로컬 후보 40k자 + 인용 위치 검증 + "전문 재질문" 탈출구, API 전용, 별도 `AskRunner`·`search/asks.json` | 대화형 비용 통제. 발췌 누락 교훈은 탈출구로 흡수. 재검토 파이프라인은 키 색인에 묶여 있음 | 매번 전문 전송 / AiRunner·ai-review.json 재사용 / 반자동 붙여넣기 / 임베딩 검색(의존성·인덱스) |
+| 답의 값은 검증하지 않고 인용 위치만 검증, 검증 실패 인용도 회색으로 표시 | 자유 질문에는 값 의미가 없음. 숨기면 답의 근거가 사라짐 | 미검증 인용 삭제 / 값까지 검증 |
+| 상세 전문은 AI 재검토 입력에 아직 넣지 않음 | run.files 의미와 비교 기준이 바뀌므로 별도 결정 | 바로 포함 |

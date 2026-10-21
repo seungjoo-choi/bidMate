@@ -2,7 +2,7 @@ import { Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { DEFAULT_NAME_PREFIX } from '../../core/model/default-settings';
 import { withNamePrefix } from '../../core/model/names';
-import { Button, Card, Field, FormActions, InlineAlert, useToast } from '../../ui/components';
+import { Button, Card, Field, FormActions, InlineAlert, Switch, useToast } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useSettings } from '../../ui/hooks/useSettings';
 
@@ -44,10 +44,7 @@ export function FileNameCard() {
 
   return (
     <Card title="파일 이름 태그" description="첨부파일을 저장 폴더에 받을 때 파일 이름 앞에 보안 등급 문구를 붙입니다. 추출한 텍스트 파일과 메일로 보내는 첨부에도 같은 이름이 붙고, 대시보드 화면에서는 문구를 빼고 보여 줍니다.">
-      <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-ink">
-        <input type="checkbox" className="size-4 accent-[var(--color-accent)]" checked={enabled} disabled={!settings || busy} onChange={(e) => setEnabled(e.target.checked)} />
-        파일 이름 앞에 문구 붙이기
-      </label>
+      <Switch checked={enabled} disabled={!settings || busy} onChange={setEnabled} label="파일 이름 앞에 문구 붙이기" />
       <Field label="붙일 문구" htmlFor="name-prefix" help={`문구와 파일 이름 사이는 자동으로 한 칸 띄웁니다. 예: ${example}`}>
         <input id="name-prefix" className={inputClass} value={text} disabled={!enabled} onChange={(e) => setText(e.target.value)} placeholder={DEFAULT_NAME_PREFIX} />
       </Field>

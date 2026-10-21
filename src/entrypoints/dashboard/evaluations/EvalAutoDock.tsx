@@ -148,9 +148,7 @@ function RunBody({ s, titleOf, onEvaluations }: { s: EvalBatchState; titleOf: (i
           {s.running && s.current && <div className="mt-0.5 truncate text-[0.8125rem] text-muted">{titleOf(s.current)}</div>}
           {!s.running && s.failed.length > 0 && <div className="mt-0.5 text-[0.8125rem] text-muted">{s.failed.length}건은 아직 가져올 수 없어요</div>}
         </div>
-        {s.running
-          ? <Button variant="ghost" className="!h-8 shrink-0 !px-2.5" onClick={() => { cancel = true; }}>중단</Button>
-          : <Button variant="ghost" className="!h-8 shrink-0 !px-2.5" onClick={() => set({ kind: 'idle' })}>닫기</Button>}
+        {s.running && <Button variant="ghost" className="!h-8 shrink-0 !px-2.5" onClick={() => { cancel = true; }}>중단</Button>}
       </div>
       {s.running && (
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-sunken">
@@ -163,9 +161,11 @@ function RunBody({ s, titleOf, onEvaluations }: { s: EvalBatchState; titleOf: (i
           {s.failed.map((f) => <li key={f.noticeId} className="break-words"><span className="text-ink">{titleOf(f.noticeId)}</span>: {f.message}</li>)}
         </ul>
       )}
-      {!s.running && s.ok > 0 && !onEvaluations && (
-        <div className="mt-3 flex justify-end">
-          <Button variant="secondary" className="!h-8 !px-2.5" onClick={() => { location.hash = '#/evaluations'; }}>평가분석 보기</Button>
+      {/* 끝난 뒤 동작은 오른쪽 아래에 모은다 */}
+      {!s.running && (
+        <div className="mt-3 flex justify-end gap-2">
+          {s.ok > 0 && !onEvaluations && <Button variant="secondary" className="!h-9 !px-3" onClick={() => { location.hash = '#/evaluations'; }}>평가분석 보기</Button>}
+          <Button variant="ghost" className="!h-9 !px-3" onClick={() => set({ kind: 'idle' })}>닫기</Button>
         </div>
       )}
     </>

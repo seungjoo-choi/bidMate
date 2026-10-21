@@ -29,6 +29,7 @@ function setup(o: { existing?: Array<{ id: number }>; send?: (n: number) => unkn
     create: vi.fn().mockResolvedValue({ id: 9 }),
     update: vi.fn().mockResolvedValue({}),
     remove: vi.fn().mockResolvedValue(undefined),
+    reload: vi.fn().mockResolvedValue(undefined),
   };
   let n = 0;
   const sendToTab = vi.fn(async (..._a: unknown[]) => {
@@ -85,9 +86,46 @@ describe('eval-collector', () => {
     expect(m.sleep).toHaveBeenCalledWith(700);
 
     const m2 = setup({ send: () => new BusError('NO_RECEIVER', 'x') });
-    expect(await codeOf(fetchEvalViaTab(EXT, REF))).toBe('NO_RECEIVER');
+    expect(await codeOf(fetchEvalViaTab(EXT, REF))).toBe('EVAL_CS_UNREACHABLE');
     expect(m2.sendToTab.mock.calls.length).toBeLessThanOrEqual(23);
     expect(m2.tabs.remove).toHaveBeenCalledWith(9);
+  });
+
+  it('열린 탭이 3초간 수신자가 없으면 새로고침해 다시 보내고 탭은 닫지 않는다', async () => {
+    let reloaded = false;
+    const m = setup({ existing: [{ id: 3 }], send: () => (reloaded ? { raw: RAW, warnings: [] } : new BusError('NO_RECEIVER', 'x')) });
+    m.tabs.reload.mockImplementation(async () => { reloaded = true; });
+    await expect(fetchEvalViaTab(EXT, REF)).resolves.toMatchObject({ raw: RAW });
+    expect(m.tabs.reload).toHaveBeenCalledWith(3);
+    expect(m.waitComplete).toHaveBeenCalledWith(3, expect.any(Number));
+    expect(m.sendToTab.mock.calls.length).toBeLessThanOrEqual(7); // 3초 재시도분 + 새로고침 뒤 1회
+    expect(m.tabs.create).not.toHaveBeenCalled();
+    expect(m.tabs.remove).not.toHaveBeenCalled();
+  });
+
+  it('새로고침 뒤에도 수신자가 없으면 EVAL_CS_UNREACHABLE', async () => {
+    const m = setup({ existing: [{ id: 3 }], send: () => new BusError('NO_RECEIVER', 'x') });
+    expect(await codeOf(fetchEvalViaTab(EXT, REF))).toBe('EVAL_CS_UNREACHABLE');
+    expect(m.tabs.reload).toHaveBeenCalledWith(3);
+    expect(m.tabs.create).not.toHaveBeenCalled();
+    expect(m.tabs.remove).not.toHaveBeenCalled();
+  });
+
+  it('새로고침이 안 되면 새 탭을 열어 보내고 끝나면 닫는다', async () => {
+    const m = setup({ existing: [{ id: 3 }], send: () => new BusError('NO_RECEIVER', 'x') });
+    m.tabs.reload.mockRejectedValue(new Error('No tab with id: 3'));
+    m.sendToTab.mockImplementation(async (tabId: unknown) => { if (tabId === 9) return { raw: RAW, warnings: [] }; throw new BusError('NO_RECEIVER', 'x'); });
+    await expect(fetchEvalViaTab(EXT, REF)).resolves.toMatchObject({ raw: RAW });
+    expect(m.tabs.create).toHaveBeenCalledWith({ url: 'https://www.g2b.go.kr/', active: false });
+    expect(m.tabs.remove).toHaveBeenCalledWith(9);
+    expect(m.tabs.remove).not.toHaveBeenCalledWith(3);
+  });
+
+  it('요청한 나라장터 탭 자신은 새로고침하지 않는다', async () => {
+    const m = setup({ send: () => new BusError('NO_RECEIVER', 'x') });
+    expect(await codeOf(fetchEvalViaTab(G2B, REF))).toBe('EVAL_CS_UNREACHABLE');
+    expect(m.tabs.reload).not.toHaveBeenCalled();
+    expect(m.tabs.remove).not.toHaveBeenCalled();
   });
 
   it('로그인 오류면 만든 탭을 닫지 않고 활성화한다', async () => {

@@ -50,10 +50,10 @@ export async function fetchEvalRaw(ref: { noticeNo: string; round?: string }, ct
       const parsed = parseG2bJson(text);
       if (parsed.ok && Number(parsed.json.ErrorCode) === -801) throw loginErr();
       if (!parsed.ok) throw new StepError(parsed.code, parsed.code === 'EVAL_NOT_LOGGED_IN' ? '나라장터에 로그인되어 있지 않습니다.' : `응답을 해석하지 못했습니다(HTTP ${res.status}).`, step);
-      if (!res.ok) throw new StepError('EVAL_API_ERROR', `HTTP ${res.status}`, step);
+      const msg = typeof parsed.json.ErrorMsg === 'string' ? parsed.json.ErrorMsg.trim() : '';
+      if (!res.ok) throw new StepError('EVAL_API_ERROR', `HTTP ${res.status}${msg ? `: ${msg}` : ''}`, step);
       const code = Number(parsed.json.ErrorCode);
       if (code !== 0) {
-        const msg = typeof parsed.json.ErrorMsg === 'string' ? parsed.json.ErrorMsg : '';
         throw new StepError('EVAL_API_ERROR', `ErrorCode ${Number.isFinite(code) ? code : '?'}${msg ? `: ${msg}` : ''}`, step);
       }
       return parsed.json;

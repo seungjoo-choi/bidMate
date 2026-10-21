@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, ClipboardCopy, Loader2, Plus, RotateCcw, Save, Send, TriangleAlert, X } from 'lucide-react';
+import { Check, ClipboardCopy, Loader2, Plus, RotateCcw, Save, Send, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { kindOf, noticeLabel } from '../../core/model/ids';
 import { withoutNamePrefix } from '../../core/model/names';
@@ -14,7 +14,7 @@ import type { UnresolvedVar } from '../../core/types/mail';
 import { isTemplateFieldKey, VARIABLE_BY_NAME } from '../../core/templates/variables';
 import { ResolveDialog, type NoticeEdit } from './mail/ResolveDialog';
 import { send } from '../../messaging/bus';
-import { Button, Card, ConfirmDialog, Field, InlineAlert, StatusBadge, Select, useToast, type BadgeStatus } from '../../ui/components';
+import { BackLink, Button, Card, ConfirmDialog, Field, InlineAlert, StatusBadge, Select, useToast, type BadgeStatus } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useRecipients, useTemplates } from '../../ui/hooks/useConfig';
 import { FsErrorAlert, type FsErrorInfo } from './FsErrorAlert';
@@ -311,9 +311,9 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
   };
 
   const back = from === 'mails' ? (
-    <a href={mailsHash()} className="inline-flex items-center gap-1 text-sm text-accent hover:underline"><ArrowLeft className="size-4" />메일 관리로 돌아가기</a>
+    <BackLink href={mailsHash()}>메일 관리</BackLink>
   ) : (
-    <a href={`#/review/${encodeURIComponent(noticeId)}`} className="inline-flex items-center gap-1 text-sm text-accent hover:underline"><ArrowLeft className="size-4" />공고로 돌아가기</a>
+    <BackLink href={`#/review/${encodeURIComponent(noticeId)}`}>공고 상세</BackLink>
   );
 
   if (notice === undefined) {

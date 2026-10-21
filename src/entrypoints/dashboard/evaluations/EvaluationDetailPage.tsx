@@ -6,7 +6,7 @@ import { EVAL_COLLECT_UI_TIMEOUT_MS } from '../../../core/evaluation/limits';
 import { evalErrorText } from '../../../core/evaluation/error-text';
 import type { EvalRecord } from '../../../core/types/evaluation';
 import { send } from '../../../messaging/bus';
-import { Button, EmptyState, InlineAlert } from '../../../ui/components';
+import { BackLink, Button, EmptyState, InlineAlert } from '../../../ui/components';
 import { useSettings } from '../../../ui/hooks/useSettings';
 import { FsErrorAlert } from '../FsErrorAlert';
 import type { EvalCtx } from './ctx';
@@ -90,7 +90,7 @@ export function EvaluationDetailPage({ noticeId }: { noticeId: string }) {
   if (rec === null || !ctx) {
     return (
       <div className="space-y-6">
-        <a href="#/evaluations" className="text-sm text-primary hover:underline">평가분석</a>
+        <BackLink href="#/evaluations">평가분석</BackLink>
         <EmptyState title="저장된 평가 데이터 없음" hint="나라장터 공고 화면에서 [평가점수 가져오기]" />
       </div>
     );
