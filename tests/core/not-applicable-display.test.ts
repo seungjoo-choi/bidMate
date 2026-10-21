@@ -84,11 +84,11 @@ describe('해당 없음 추출/메일 연결 (6)', () => {
     expect(f).toMatchObject({ value: null, status: 'verified', note: NA_NOTE });
     expect(f.source).toBeDefined();
   });
-  it('handoff: reviewCount 0이면 compose', () => {
+  it('handoff: reviewCount 0이면 edit', () => {
     const S = { enabled: true, afterCollect: 'compose', recipients: { mode: 'default' }, reviewGate: 'any_review' } as never;
     const j = { id: 'j', type: 'collect', status: 'completed', steps: [], attempt: 1, createdAt: 't', updatedAt: 't', errors: [],
       result: { noticeId: 'n', extraction: { status: 'verified', reviewCount: 0, conflictCount: 0 } } } as Job;
-    expect(decideHandoff(j, S)).toEqual({ kind: 'compose' });
+    expect(decideHandoff(j, S)).toEqual({ kind: 'edit' });
   });
 });
 

@@ -31,7 +31,8 @@ export interface Settings {
     naverworks: { host: string /* 기본 'mail.worksmobile.com' */; composePath?: string; selectorSetId: string; selectorOverrides?: Partial<ComposeSelectorSet>; /** 사내 연락처 domainId(불러오기에서 자동 감지) */ contactDomainId?: string };
     gmail: { accountIndex: number; selectorSetId: string; selectorOverrides?: Partial<ComposeSelectorSet> };
   };
-  download: { concurrency: number; maxRetries: number; backoffMs: number; maxFileMB: number };
+  /** namePrefix = 저장 파일명 앞 태그(예: [대외비 2군]). 첨부·추출 텍스트에 붙고, 메일 첨부도 저장 파일명으로 나간다 */
+  download: { concurrency: number; maxRetries: number; backoffMs: number; maxFileMB: number; namePrefix: { enabled: boolean; text: string } };
   extraction: { budgetMs: number; fileTimeoutMs: number; maxParseMB: number };
   autoCompose: AutoComposeSettings;
   /** provider = 메일 작성 서비스 */

@@ -12,7 +12,8 @@ export interface MailPreviewFrameProps {
   /** renderMail이 만든 본문 HTML. 스크립트가 돌지 않도록 sandbox iframe 안에만 넣는다. */
   html: string;
   subject?: string;
-  height?: number;
+  /** 숫자는 px, 문자열은 CSS 길이(calc 등)로 쓴다. */
+  height?: number | string;
   /** 제목 줄 오른쪽에 붙일 도구(복사 버튼 등). */
   tools?: ReactNode;
   /** true면 고정 폭 대신 부모 폭을 채운다. */

@@ -53,7 +53,7 @@ export function FsErrorAlert({ error, onRetry }: { error: FsErrorInfo | null; on
         <div className="flex items-center justify-between gap-4">
           <span>{noFolder ? '저장 폴더가 설정되지 않았습니다. 설정에서 폴더를 선택해 주세요.' : '저장 폴더 접근 권한이 필요합니다.'}</span>
           {noFolder
-            ? <Button variant="secondary" icon={<FolderOpen />} onClick={() => { location.hash = '#/settings'; }}>폴더 선택하러 가기</Button>
+            ? <Button variant="secondary" icon={<FolderOpen />} onClick={() => { location.hash = '#/settings?section=storage'; }}>폴더 선택하러 가기</Button>
             : <Button variant="secondary" icon={<FolderCheck />} disabled={handle === undefined} onClick={() => void grant()}>폴더 접근 허용</Button>}
         </div>
         {grantError && <p className="mt-2 text-sm">{grantError}</p>}

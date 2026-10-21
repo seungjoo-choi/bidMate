@@ -1,6 +1,6 @@
 import { AlertTriangle, Check, Copy, ExternalLink, Mail, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { Job } from '../../core/types/job';
+import type { ComposeParams, Job } from '../../core/types/job';
 import type { NoticeRef } from '../../core/types/notice';
 import type { MailDraft } from '../../core/types/mail';
 import { composeHost, originOf, PROVIDER_LABEL } from '../../core/model/mail-provider';
@@ -11,12 +11,13 @@ import { Button, InlineAlert, StatusBadge } from '../components';
 import { copyRich, copyText } from '../clipboard';
 import { Mascot } from '../mascot';
 import { composeView, type CopyKind } from '../compose-view';
+import { formatDateTimeSlash } from '../../core/model/format';
 
 const COPY_LABEL: Record<CopyKind, string> = {
   to: '받는사람', cc: '참조', subject: '제목', body: '본문(서식)', attach: '첨부 폴더',
 };
 const FIELD_LABEL: Record<string, string> = { to: '받는사람', cc: '참조', subject: '제목', body: '본문' };
-const FIELD_STATUS: Record<string, string> = { mismatch: '내용 불일치', failed: '실패', unsupported: '자동 입력 불가' };
+const FIELD_STATUS: Record<string, string> = { mismatch: '내용 불일치', failed: '실패', unsupported: '자동 입력 불가', prefilled: '주소로 전달(화면 확인 안 됨)' };
 const ATTACH_STATUS: Record<string, string> = {
   uploading_timeout: '업로드 시간 초과', failed: '실패', not_in_dom: '목록에 없음', size_mismatch: '크기 불일치', skipped: '건너뜀',
 };
@@ -71,7 +72,7 @@ export function useComposeController({ noticeId, noticeRef, params, jobs, before
   const [rootName, setRootName] = useState<string | undefined>();
   const [copied, setCopied] = useState<CopyKind | null>(null);
 
-  const needsCopy = view?.kind === 'manual' || view?.kind === 'partial' || view?.kind === 'url';
+  const needsCopy = view?.kind === 'manual' || view?.kind === 'partial' || view?.kind === 'url' || view?.kind === 'send-issue';
   useEffect(() => {
     setCopied(null);
     if (!needsCopy) return;
@@ -82,7 +83,7 @@ export function useComposeController({ noticeId, noticeRef, params, jobs, before
   }, [needsCopy, noticeId, job?.id]);
 
   // 사용자 제스처 안에서 첫 await로 permissions.request를 호출한다.
-  const start = async (retryOf?: string) => {
+  const start = async (retryOf?: string, autoSend?: NonNullable<ComposeParams['autoSend']>) => {
     setNote(null);
     if (!granted) {
       if (!origin) return;
@@ -92,7 +93,7 @@ export function useComposeController({ noticeId, noticeRef, params, jobs, before
     setBusy(true);
     try {
       if (beforeStart && !(await beforeStart())) return;
-      await send('job/start', { type: 'compose', noticeId, ...(noticeRef ? { ref: noticeRef } : {}), params: params ?? {}, ...(retryOf ? { retryOf } : {}) });
+      await send('job/start', { type: 'compose', noticeId, ...(noticeRef ? { ref: noticeRef } : {}), params: { ...(params ?? {}), ...(autoSend ? { autoSend } : {}) }, ...(retryOf ? { retryOf } : {}) });
     } catch (e) {
       setNote(e instanceof Error ? e.message : String(e));
     } finally {
@@ -139,20 +140,22 @@ export function useComposeController({ noticeId, noticeRef, params, jobs, before
     } catch { setNote('클립보드에 복사하지 못했습니다'); }
   };
 
-  return { job, view, busy, note, draft, copied, granted, start, focusTab, copy, preview };
+  /** 미리보기에서 사용자가 [보내기]를 누른 뒤에만 부른다. 토큰은 미리보기에 보여 준 초안 기준. */
+  const startSend = (token: NonNullable<ComposeParams['autoSend']>) => start(undefined, token);
+
+  return { job, view, busy, note, draft, copied, granted, start, startSend, focusTab, copy, preview };
 }
 
 /**
- * 메일 작성 시작 버튼. 진행 중에는 막고, 한 번 작성한 뒤에는 다시 작성으로 바뀐다.
+ * 메일 작성 시작 버튼(작성 탭을 열어 내용을 채운다). 진행 중에는 막는다. 주 동작이 따로 있는 화면은 variant로 보조 모양을 쓴다.
  * 오류 상태에서는 ComposeStatus의 조치 버튼(다시 시도 등)만 쓰도록 막는다.
  */
-export function ComposeStartButton({ ctl, label = '메일 작성', className = '' }: { ctl: ComposeController; label?: string; className?: string }) {
+export function ComposeStartButton({ ctl, label = '메일 작성', className = '', variant = 'primary', onStart }: { ctl: ComposeController; label?: string; className?: string; variant?: 'primary' | 'secondary'; /** 시작 직전에 부른다(진행 팝업 열기 등) */ onStart?: () => void }) {
   const { view, busy, granted, start } = ctl;
-  const again = view !== null && view.kind !== 'error';
   return (
-    <Button className={className} variant={again ? 'secondary' : 'primary'} icon={<Mail />} loading={busy}
-      disabled={granted === null || view?.kind === 'progress' || view?.kind === 'error'} onClick={() => void start()}>
-      {granted === false ? `웹메일 접근 허용 후 ${label}` : again ? '다시 작성' : label}
+    <Button className={className} variant={variant} icon={<Mail />} loading={busy}
+      disabled={granted === null || view?.kind === 'progress' || view?.kind === 'error'} onClick={() => { onStart?.(); void start(); }}>
+      {granted === false ? `웹메일 접근 허용 후 ${label}` : label}
     </Button>
   );
 }
@@ -227,6 +230,51 @@ export function ComposeStatus({ ctl, detached = false }: { ctl: ComposeControlle
         </div>
         {focusBtn(view.canFocus)}
         {retryBtn}
+      </div>
+    );
+  } else if (view.kind === 'sent') {
+    body = (
+      <div className="space-y-3">
+        <div className="flex items-start gap-2">
+          <Mascot mood="happy" size={40} />
+          <div>
+            <div className="font-semibold">메일을 보냈습니다</div>
+            {view.clickedAt && <div className="mt-0.5 text-sm text-muted font-mono tabular-nums">{formatDateTimeSlash(view.clickedAt)}</div>}
+          </div>
+        </div>
+        {!view.tabClosed && focusBtn(view.canFocus)}
+      </div>
+    );
+  } else if (view.kind === 'send-issue') {
+    body = (
+      <div className="space-y-3">
+        <div className="flex items-start gap-2">
+          {view.state === 'unknown'
+            ? <XCircle className="mt-0.5 size-5 shrink-0 text-danger" />
+            : <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warn" />}
+          <div className="font-semibold">{view.message}</div>
+        </div>
+        {view.maybeSent && (
+          <p className="text-sm text-muted">발송 이력에 '확인 없음'으로 기록했습니다. 실제로 보내지지 않았다면 발송 이력에서 이 기록을 취소하세요</p>
+        )}
+        {(view.fields.length > 0 || view.attachments.length > 0) && (
+          <ul className="space-y-1.5">
+            {view.fields.map((f) => (
+              <li key={f.field} className="flex items-center justify-between gap-2 text-sm">
+                <span>{FIELD_LABEL[f.field]}</span>
+                <StatusBadge status="warn">{FIELD_STATUS[f.status] ?? f.status}</StatusBadge>
+              </li>
+            ))}
+            {view.attachments.map((a) => (
+              <li key={a.fileId} className="flex items-start justify-between gap-2 text-sm">
+                <span className="min-w-0 truncate" title={a.error ?? a.name}>{a.name}</span>
+                <StatusBadge status={a.status === 'skipped' ? 'idle' : 'error'}>{ATTACH_STATUS[a.status] ?? a.status}</StatusBadge>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!view.maybeSent && copyBtns(view.copies)}
+        {focusBtn(view.canFocus)}
       </div>
     );
   } else if (view.kind === 'manual') {

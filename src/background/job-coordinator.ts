@@ -4,7 +4,7 @@ import { inboxHost } from '../core/model/mail-provider';
 import { refsConflict } from '../core/model/job-conflict';
 import { kindOf, noticeIdOf } from '../core/model/ids';
 import { COLLECTIBLE_NOTICE_KINDS, type NoticeKind } from '../core/types/notice';
-import type { CollectResult, Handoff, Job, JobError, JobEvent, JobLog, JobProgress, JobStatus, StepId, StepState } from '../core/types/job';
+import type { CollectResult, Handoff, Job, JobError, JobEvent, JobLog, JobProgress, JobSendState, JobStatus, StepId, StepState } from '../core/types/job';
 import type { AfterCollect, Settings } from '../core/types/settings';
 import { listen, send as busSend } from '../messaging/bus';
 import type { ActiveJob, Envelope, JobRequest, JobRunPayload } from '../messaging/protocol';
@@ -19,7 +19,7 @@ const LABEL_MAX = 200;
 const MESSAGE_MAX = 300;
 const COLLECT_STEPS: StepId[] = ['fetch_basic', 'download_attachments', 'extract', 'fetch_html'];
 const EXTRACT_STEPS: StepId[] = ['extract'];
-const COMPOSE_STEPS: StepId[] = ['render_mail', 'open_compose', 'fill_fields', 'attach_files', 'verify'];
+const COMPOSE_STEPS: StepId[] = ['render_mail', 'open_compose', 'fill_fields', 'attach_files', 'verify', 'send_mail'];
 
 /** 진행 중으로 보는 상태. cancelling도 종결이 아니다. */
 export const ACTIVE = new Set<JobStatus>(['queued', 'running', 'cancelling']);
@@ -302,7 +302,7 @@ function newJob(req: JobRequest, noticeId: string): Job {
     id: crypto.randomUUID(), type: req.type, noticeId, ref: req.ref, status: 'queued',
     steps: (req.type === 'extract' ? EXTRACT_STEPS : req.type === 'compose' ? COMPOSE_STEPS : COLLECT_STEPS).map((id): StepState => ({ id, status: 'pending' })),
     attempt: 1, originTabId: req.originTabId, createdAt: now, updatedAt: now, errors: [],
-    ...(req.type === 'compose' && req.params ? { params: { groupId: req.params.groupId, templateId: req.params.templateId, recipients: req.params.recipients } } : {}),
+    ...(req.type === 'compose' && req.params ? { params: { groupId: req.params.groupId, templateId: req.params.templateId, recipients: req.params.recipients, ...(req.params.autoSend ? { autoSend: req.params.autoSend } : {}) } } : {}),
     ...(req.type === 'compose' && req.auto ? { auto: { collectJobId: req.auto.collectJobId } } : {}),
   };
 }
@@ -326,6 +326,16 @@ export function setComposeTab(jobId: string, patch: { composeTabId?: number; com
     const cur = await getJob(jobId);
     if (!cur || !ACTIVE.has(cur.status)) return;
     await putJob({ ...cur, ...patch });
+  });
+}
+
+/** compose 잡의 발송 상태를 병합 기록한다. 잡이 ACTIVE일 때만. send가 없으면 patch로 생성한다. */
+export function setSendState(jobId: string, patch: Partial<JobSendState>): Promise<void> {
+  return serial(async () => {
+    const cur = await getJob(jobId);
+    if (!cur || !ACTIVE.has(cur.status)) return;
+    const send = { ...(cur.send ?? { clickedAt: new Date().toISOString(), confirmed: false }), ...patch } as JobSendState;
+    await putJob({ ...cur, send });
   });
 }
 
@@ -372,7 +382,8 @@ export function startJob(req: JobRequest): Promise<StartResult> {
       };
       delete job.handoff; // 재시도 결과로 자동 작성을 다시 판정한다
       // compose 재시도는 이전 탭을 재사용하지 않는다.
-      if (job.type === 'compose') { delete job.composeTabId; delete job.composeFrameId; }
+      // 이전 시도의 발송 상태(clickedAt 등)도 물려받지 않는다. 남으면 새 탭의 닫힘·사용자 발송이 이전 기록에 잘못 붙는다.
+      if (job.type === 'compose') { delete job.composeTabId; delete job.composeFrameId; delete job.send; }
     } else {
       // extract/compose 잡은 ref 없이 noticeId만으로 시작한다.
       if (!req.ref && !((req.type === 'extract' || req.type === 'compose') && req.noticeId)) throw Object.assign(new Error('공고 참조(ref)가 필요합니다.'), { code: 'INVALID_REQUEST' });
@@ -561,7 +572,13 @@ export function registerCoordinator(): void {
     await assertRetryAllowed(req, sender);
     // auto는 SW 내부 전용이므로 외부 메시지의 값은 버린다.
     const { auto: _ignored, ...safe } = req;
-    return startJob({ ...safe, originTabId: originTabIdFor(await resolveKind(sender), sender) });
+    const kind = await resolveKind(sender);
+    // autoSend도 확장 페이지 발신만 인정한다(auto와 같은 취급).
+    if (kind !== 'extension' && safe.params?.autoSend) {
+      const { autoSend: _drop, ...params } = safe.params;
+      safe.params = params;
+    }
+    return startJob({ ...safe, originTabId: originTabIdFor(kind, sender) });
   }, 'sw');
   listen('job/get', ({ jobId }, sender) => getJobForSender(jobId, sender), 'sw');
   listen('job/latest-for-tab', (ref, sender) => latestJobForSender(ref, sender), 'sw');

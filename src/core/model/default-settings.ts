@@ -5,6 +5,8 @@ export const DEFAULT_WEBMAIL_HOST = 'mail.worksmobile.com';
 export const NAVERWORKS_COMPOSE_PATH = '/write/popup?srvid=mail&to=&orderType=new&memo=false';
 /** mail-provider에서 다시 내보낸다(순환 import를 피하려고 여기에 둔다). */
 export const GMAIL_HOST = 'mail.google.com';
+/** 사내 규정: 로컬 보관 문서는 파일명 앞에 보안 등급 태그를 붙인다. */
+export const DEFAULT_NAME_PREFIX = '[대외비 2군]';
 
 export function defaultSettings(): Settings {
   return {
@@ -16,7 +18,7 @@ export function defaultSettings(): Settings {
       naverworks: { host: DEFAULT_WEBMAIL_HOST, composePath: NAVERWORKS_COMPOSE_PATH, selectorSetId: 'naverworks-v1' },
       gmail: { accountIndex: 0, selectorSetId: 'gmail-v1' },
     },
-    download: { concurrency: 3, maxRetries: 3, backoffMs: 1000, maxFileMB: 100 },
+    download: { concurrency: 3, maxRetries: 3, backoffMs: 1000, maxFileMB: 100, namePrefix: { enabled: true, text: DEFAULT_NAME_PREFIX } },
     extraction: { budgetMs: 90000, fileTimeoutMs: 20000, maxParseMB: 50 },
     autoCompose: { enabled: false, afterCollect: 'ask', recipients: { mode: 'default' }, reviewGate: 'conflicts' },
     mail: { provider: 'naverworks' },
@@ -43,6 +45,7 @@ export function withDefaults(stored: Settings | undefined): Settings {
   return {
     ...stored,
     sites,
+    download: { ...d.download, ...stored.download, namePrefix: { ...d.download.namePrefix, ...stored.download?.namePrefix } },
     extraction: { ...d.extraction, ...stored.extraction },
     autoCompose: { ...d.autoCompose, ...stored.autoCompose },
     company: { ...d.company, ...stored.company },

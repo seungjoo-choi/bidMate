@@ -16,6 +16,8 @@ export interface ComposeSelectorSet {
   forbidden: { send: string[]; textPatterns: string[] /* 기본 ["보내기","전송","Send"] */ };
   /** 사용자가 직접 보냈는지 관찰하는 값(forbidden과 별개). send-watch.ts가 읽기만 한다. */
   sendWatch?: SendWatchConfig;
+  /** 대시보드 [바로 발송]에서 확장이 눌러도 되는 유일한 요소(forbidden·sendWatch와 별개). send-trigger.ts만 쓴다 */
+  autoSend?: { button: string; /** 화면 주소 목록(순서대로 받는사람, 참조, 숨은참조)과 그 안의 주소 칩. 있으면 클릭 직전에 칸별 대조 */ recipientLists?: { list: string; chip: string } };
 }
 export interface SendWatchConfig { buttons: string[]; textPatterns?: string[]; hotkey?: boolean; gone?: string; toast?: { selector: string; textPattern: string } }
 export interface ComposeState {

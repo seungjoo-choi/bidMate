@@ -5,10 +5,11 @@ import { naverworksV1 } from '../../src/adapters/naverworks/selectors/naverworks
 import type { ComposeSelectorSet, ComposeState } from '../../src/adapters/naverworks/types';
 import { defaultSettings } from '../../src/core/model/default-settings';
 import { sampleNotice } from '../../src/core/templates/sample-notice';
-import type { Job, JobProgress } from '../../src/core/types/job';
+import type { ComposeParams, Job, JobProgress } from '../../src/core/types/job';
 import { saveGroup, saveRecipient, setDefaultGroup } from '../../src/engine/config/recipients-api';
 import { runComposeJob, type ComposeJobDeps } from '../../src/engine/jobs/compose-job';
 import { NoticeStore } from '../../src/engine/notices/notice-store';
+import { draftFingerprint } from '../../src/core/mail/send-fingerprint';
 import { createMailEdits } from '../../src/core/mail/edits';
 import { listTemplates } from '../../src/engine/config/templates-api';
 import { getDraft, prepareMail } from '../../src/engine/mail/prepare';
@@ -39,7 +40,7 @@ const autoSettings = () => { const s = defaultSettings(); s.sites.naverworks.com
 const job: Job = { id: 'j1', type: 'compose', noticeId: 'R1-000', status: 'running', steps: [], attempt: 1, createdAt: '', updatedAt: '', errors: [] };
 
 type Handler = (payload: any) => unknown;
-function harness(mem: MemoryStore, handlers: Record<string, Handler>, extra: Partial<ComposeJobDeps> = {}, settings = defaultSettings()) {
+function harness(mem: MemoryStore, handlers: Record<string, Handler>, extra: Partial<ComposeJobDeps> = {}, settings = defaultSettings(), jobOver: Partial<Job> = {}) {
   const calls: string[] = [];
   const progress: JobProgress[] = [];
   const ac = new AbortController();
@@ -52,10 +53,10 @@ function harness(mem: MemoryStore, handlers: Record<string, Handler>, extra: Par
       if (!h) return undefined;
       return h(payload);
     }) as ComposeJobDeps['call'],
-    selectorSets: { 'naverworks-v1': verifiedSet }, sleep: async (ms) => { clock += ms; }, now: () => new Date(clock),
+    selectorSets: { 'naverworks-v1': verifiedSet }, sentCount: async () => 0, sleep: async (ms) => { clock += ms; }, now: () => new Date(clock),
     ...extra,
   };
-  return { calls, progress, ac, run: () => runComposeJob({ job, settings }, deps) };
+  return { calls, progress, ac, run: () => runComposeJob({ job: { ...job, ...jobOver }, settings }, deps) };
 }
 
 const okFields = (p: any) => (['to', 'cc', 'subject', 'body'] as const).map((field) => ({ field, requested: p[field] ?? '', rendered: null, status: 'ok' as const, method: 'm' }));
@@ -93,7 +94,7 @@ describe('runComposeJob', () => {
     expect(r.result?.fields.map((f) => f.field).sort()).toEqual(['body', 'cc', 'subject', 'to']);
     expect(r.result?.attachments.every((a) => a.status === 'skipped' && a.error === 'ATTACH_MANUAL')).toBe(true);
     expect(h.calls).toEqual(['compose/open', 'compose/focus']);
-    expect(h.progress.filter((p) => p.status === 'skipped').map((p) => p.step)).toEqual(['fill_fields', 'attach_files', 'verify']);
+    expect(h.progress.filter((p) => p.status === 'skipped').map((p) => p.step)).toEqual(['fill_fields', 'attach_files', 'verify', 'send_mail']);
     expect(h.progress.find((p) => p.step === 'fill_fields' && p.status === 'skipped')?.label).toBe('주소로 전달(받는 사람, 참조, 제목), 본문은 붙여 넣기');
     expect(JSON.parse(await mem.readText(`${FOLDER}/mail.json`))).toHaveLength(1);
     expect((await new NoticeStore(mem).loadNotice('R1-000'))?.mail.status).toBe('ready_for_review');
@@ -315,7 +316,7 @@ describe('runComposeJob gmail 주소 방식', () => {
       ['to', 'prefilled', 'url'], ['cc', 'prefilled', 'url'], ['subject', 'prefilled', 'url'], ['body', 'prefilled', 'url'],
     ]);
     expect(r.result?.attachments.every((a) => a.status === 'skipped' && a.error === 'ATTACH_MANUAL')).toBe(true);
-    expect(h.progress.filter((p) => p.status === 'skipped').map((p) => p.step)).toEqual(['fill_fields', 'attach_files', 'verify']);
+    expect(h.progress.filter((p) => p.status === 'skipped').map((p) => p.step)).toEqual(['fill_fields', 'attach_files', 'verify', 'send_mail']);
     expect(JSON.stringify(r.result)).not.toContain('mail.google.com');
   });
 
@@ -491,5 +492,153 @@ describe('runComposeJob naverworks 자동 첨부 꺼진 셋과 서명 유지', (
     const body = r.result?.fields.find((f) => f.field === 'body');
     expect(body).toMatchObject({ status: 'mismatch', error: 'KEEP_LOST' });
     expect(r.status).toBe('partial');
+  });
+});
+
+describe('runComposeJob autoSend', () => {
+  const sendCalls = ['compose/send-click', 'compose/send-status', 'compose/close-tab'];
+  async function autoSendParams(mem: MemoryStore, over: Partial<NonNullable<ComposeParams['autoSend']>> = {}): Promise<ComposeParams> {
+    const fingerprint = draftFingerprint((await prepareMail(mem, { noticeId: 'R1-000' })).draft);
+    return { autoSend: { expectSentCount: 0, fingerprint, confirmedAt: '2026-10-18T09:00:00.000Z', ...over } };
+  }
+  const baseHandlers = (mem: MemoryStore, extra: Record<string, Handler> = {}): Record<string, Handler> => ({
+    ...autoHandlers(mem), 'compose/verify': async () => ({ ...(await okState(mem)), attachments: [{ name: '공고문.hwp', uploading: false }] }), 'compose/send-click': () => ({ clicked: true }), 'compose/send-status': () => ({ tabAlive: true, clicked: true, confirmed: true, confirmation: 'ui_gone' }),
+    'compose/close-tab': () => ({ closed: true }), ...extra,
+  });
+  const notCalled = (calls: string[]) => { for (const c of sendCalls) expect(calls).not.toContain(c); };
+
+  it('가드 사유별로 skipped이고 send-click을 호출하지 않으며 focus한다', async () => {
+    const cases: Array<{ reason: string; over: (mem: MemoryStore) => Promise<{ params?: ComposeParams; jobOver?: Partial<Job>; extra?: Partial<ComposeJobDeps>; handlers?: Record<string, Handler> }> }> = [
+      { reason: 'NOT_SUPPORTED', over: async () => ({ extra: { selectorSets: { 'naverworks-v1': { ...verifiedSet, autoSend: undefined } } } }) },
+      { reason: 'RETRY_ATTEMPT', over: async () => ({ jobOver: { attempt: 2 } }) },
+      { reason: 'AUTO_JOB', over: async () => ({ jobOver: { auto: { collectJobId: 'c1' } } }) },
+      { reason: 'FIELDS_NOT_OK', over: async (mem) => ({ handlers: { 'compose/verify': async () => ({ ...(await okState(mem)), to: ['other@x.com'], attachments: [{ name: '공고문.hwp', uploading: false }] }) } }) },
+      { reason: 'ATTACH_NOT_OK', over: async () => ({ handlers: { 'compose/attach-status': (p: any) => ({ done: true, result: { ...attachDone(p).result, status: 'failed' } }) } }) },
+      { reason: 'FINGERPRINT_MISMATCH', over: async (mem) => ({ params: await autoSendParams(mem, { fingerprint: 'deadbeef' }) }) },
+      { reason: 'SENT_COUNT_CHANGED', over: async () => ({ extra: { sentCount: async () => 1 } }) },
+    ];
+    for (const c of cases) {
+      const mem = await setup();
+      const o = await c.over(mem);
+      const params = o.params ?? await autoSendParams(mem);
+      const h = harness(mem, baseHandlers(mem, o.handlers), o.extra, autoSettings(), { params, ...o.jobOver });
+      const r = await h.run();
+      expect(r.result?.send, c.reason).toMatchObject({ state: 'skipped', reason: c.reason });
+      expect(r.status, c.reason).toBe('partial');
+      notCalled(h.calls);
+      expect(h.calls.at(-1), c.reason).toBe('compose/focus');
+    }
+  });
+
+  it('클릭 성공 후 confirmed면 close-tab을 호출하고 focus하지 않는다, 기록이 send-click보다 먼저', async () => {
+    const mem = await setup();
+    let recordedBeforeClick = false;
+    const h = harness(mem, baseHandlers(mem, {
+      'compose/send-click': async (p) => { recordedBeforeClick = (await mem.readText(`${FOLDER}/mail.json`)).includes('j1-1') && p.composeRecordId === 'j1-1'; return { clicked: true }; },
+    }), {}, autoSettings(), { params: await autoSendParams(mem) });
+    const r = await h.run();
+    expect(recordedBeforeClick).toBe(true);
+    expect(r.status).toBe('completed');
+    expect(r.result?.send).toMatchObject({ state: 'sent', confirmation: 'ui_gone', tabClosed: true });
+    expect(h.calls.slice(-3)).toEqual(['compose/send-click', 'compose/send-status', 'compose/close-tab']);
+    expect(h.calls).not.toContain('compose/focus');
+  });
+
+  it('탭이 사라지고 confirmed(onRemoved 경로)면 sent이고 close-tab을 호출하지 않는다', async () => {
+    const mem = await setup();
+    const h = harness(mem, baseHandlers(mem, { 'compose/send-status': () => ({ tabAlive: false, clicked: true, confirmed: true, confirmation: 'unload' }) }), {}, autoSettings(), { params: await autoSendParams(mem) });
+    const r = await h.run();
+    expect(r.result?.send).toMatchObject({ state: 'sent', confirmation: 'unload' });
+    expect(h.calls).not.toContain('compose/close-tab');
+    expect(h.calls).not.toContain('compose/focus');
+  });
+
+  it('확인 시간 초과면 unconfirmed, partial, focus', async () => {
+    const mem = await setup();
+    const h = harness(mem, baseHandlers(mem, { 'compose/send-status': () => ({ tabAlive: true, clicked: true, confirmed: false }) }), {}, autoSettings(), { params: await autoSendParams(mem) });
+    const r = await h.run();
+    expect(r.status).toBe('partial');
+    expect(r.result?.send?.state).toBe('unconfirmed');
+    expect(h.calls.filter((c) => c === 'compose/focus')).toHaveLength(1);
+    expect(h.calls.at(-1)).toBe('compose/focus');
+    expect(h.calls.indexOf('compose/focus')).toBeGreaterThan(h.calls.lastIndexOf('compose/send-status'));
+  });
+
+  it('send-click rpc 오류면 unknown이고 재호출하지 않는다', async () => {
+    const mem = await setup();
+    const h = harness(mem, baseHandlers(mem, { 'compose/send-click': () => { throw new Error('timeout'); } }), {}, autoSettings(), { params: await autoSendParams(mem) });
+    const r = await h.run();
+    expect(r.result?.send?.state).toBe('unknown');
+    expect(r.status).toBe('partial');
+    expect(h.calls.filter((c) => c === 'compose/send-click')).toHaveLength(1);
+    expect(h.calls).not.toContain('compose/send-status');
+    expect(h.calls.at(-1)).toBe('compose/focus');
+  });
+
+  it('send-click이 clicked false면 reason으로 skipped, focus', async () => {
+    const mem = await setup();
+    const h = harness(mem, baseHandlers(mem, { 'compose/send-click': () => ({ clicked: false, reason: 'BUTTON_DISABLED' }) }), {}, autoSettings(), { params: await autoSendParams(mem) });
+    const r = await h.run();
+    expect(r.result?.send).toMatchObject({ state: 'skipped', reason: 'BUTTON_DISABLED' });
+    expect(h.calls.at(-1)).toBe('compose/focus');
+  });
+
+  it('send-click 응답 전에 abort돼도 결과는 sent이고 cancelled가 아니다', async () => {
+    const mem = await setup();
+    const h = harness(mem, baseHandlers(mem, { 'compose/send-click': () => { h.ac.abort(); return { clicked: true }; } }), {}, autoSettings(), { params: await autoSendParams(mem) });
+    const r = await h.run();
+    expect(r.status).not.toBe('cancelled');
+    expect(r.result?.send).toMatchObject({ state: 'sent', confirmation: 'ui_gone' });
+  });
+
+  it('클릭 전(가드 단계)에 abort되면 send-click을 호출하지 않는다', async () => {
+    const mem = await setup();
+    const h = harness(mem, baseHandlers(mem), { sentCount: async () => { h.ac.abort(); return 0; } }, autoSettings(), { params: await autoSendParams(mem) });
+    const r = await h.run();
+    expect(r.status).toBe('cancelled');
+    expect(h.calls).not.toContain('compose/send-click');
+  });
+
+  describe('수신자 칩 대조(gmail verified 셋, to/cc는 prefilled)', () => {
+    const gmailSet = (chip: boolean): ComposeSelectorSet => ({
+      ...gmailV1, status: 'verified', version: 'test', compose: { readySelector: '', scope: '.win' }, subject: { input: '.subj' },
+      body: { kind: 'contenteditable', editable: '.bd', insert: ['innerHTML'] }, attach: { item: '.att', itemName: '.nm', methods: ['input'] },
+      autoSend: { button: 'button.send', ...(chip ? { recipientLists: { list: '.l', chip: '.c' } } : {}) },
+    });
+    const gSettings = () => { const s = defaultSettings(); s.mail.provider = 'gmail'; return s; };
+    const gHandlers = (mem: MemoryStore, extra: Record<string, Handler> = {}): Record<string, Handler> => baseHandlers(mem, {
+      'compose/verify': async () => ({ ...(await okState(mem)), attachments: [{ name: '공고문.hwp', uploading: false }], supported: { to: false, cc: false, subject: true, body: true, attachments: true } }),
+      ...extra,
+    });
+
+    it('recipientLists가 있으면 prefilled to/cc여도 send-click을 호출하고 payload에 to/cc가 들어간다, 확인되면 completed', async () => {
+      const mem = await setup();
+      let payload: any;
+      const h = harness(mem, gHandlers(mem, { 'compose/send-click': (p) => { payload = p; return { clicked: true }; } }), { selectorSets: { 'gmail-v1': gmailSet(true) } }, gSettings(), { params: await autoSendParams(mem) });
+      const r = await h.run();
+      const d = (await getDraft(mem, 'R1-000'))!;
+      expect(payload).toMatchObject({ to: d.to, cc: d.cc });
+      expect(r.result?.outcome).toBe('partial');
+      expect(r.result?.send).toMatchObject({ state: 'sent' });
+      expect(r.status).toBe('completed');
+    });
+    it('recipientLists가 없으면 FIELDS_NOT_OK로 skipped', async () => {
+      const mem = await setup();
+      const h = harness(mem, gHandlers(mem), { selectorSets: { 'gmail-v1': gmailSet(false) } }, gSettings(), { params: await autoSendParams(mem) });
+      const r = await h.run();
+      expect(r.result?.send).toMatchObject({ state: 'skipped', reason: 'FIELDS_NOT_OK' });
+      expect(h.calls).not.toContain('compose/send-click');
+    });
+  });
+
+  it('autoSend 없는 잡은 send 필드 없이 기존 결과와 같다', async () => {
+    const mem = await setup();
+    const h = harness(mem, autoHandlers(mem), {}, autoSettings());
+    const r = await h.run();
+    expect(r.status).toBe('completed');
+    expect(r.result?.send).toBeUndefined();
+    expect(h.calls.at(-1)).toBe('compose/focus');
+    notCalled(h.calls);
+    expect(h.progress.find((p) => p.step === 'send_mail')?.status).toBe('skipped');
   });
 });

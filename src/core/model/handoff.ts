@@ -38,11 +38,8 @@ export function decideHandoff(job: Job, s: AutoComposeSettings): Verdict | null 
   }
   const needsReview = gated(result?.extraction, s.reviewGate);
   // 이미 작성/전달한 공고도 다시 작성한다(사용자 결정 2026-10-19). already_composed 생략은 쓰지 않는다.
-  const mode = job.afterCollect ?? s.afterCollect;
-  if (mode === 'dashboard') return needsReview ? { kind: 'review', reasons: ['needs_review'] } : { kind: 'edit' };
-  if (mode === 'ask') return needsReview ? { kind: 'review', reasons: ['needs_review'] } : { kind: 'ask' };
-  if (needsReview) return { kind: 'review', reasons: ['needs_review'] };
-  return { kind: 'compose' };
+  // 수집 뒤 바로 작성은 없앴다(사용자 결정 2026-10-21). afterCollect가 compose/ask로 저장돼 있어도 대시보드로 보낸다.
+  return needsReview ? { kind: 'review', reasons: ['needs_review'] } : { kind: 'edit' };
 }
 
 export function handoffReasonLabel(r: HandoffReason): string {

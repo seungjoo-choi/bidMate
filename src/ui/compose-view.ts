@@ -1,5 +1,5 @@
 import type { AttachResult, FieldResult } from '../core/types/compose';
-import type { ComposeResult, Job } from '../core/types/job';
+import type { ComposeResult, Job, SendSkipReason } from '../core/types/job';
 import type { MailProvider } from '../core/types/settings';
 import type { FixTarget } from '../messaging/protocol';
 import { progressRatio } from './g2b-panel/panel-view';
@@ -11,6 +11,11 @@ export type ComposeAction = 'grant-site' | 'grant-fs' | 'recipients' | 'settings
 export type ComposeView =
   | { kind: 'progress'; label: string; ratio: number; attach?: { done: number; total: number }; cancelling: boolean; canFocus: boolean }
   | { kind: 'done'; canFocus: boolean }
+  | { kind: 'sent'; clickedAt?: string; tabClosed: boolean; canFocus: boolean }
+  | {
+      kind: 'send-issue'; state: 'unconfirmed' | 'skipped' | 'unknown'; message: string; maybeSent: boolean;
+      fields: FieldResult[]; attachments: Array<AttachResult & { error?: string }>; copies: CopyKind[]; attachDir?: string; canFocus: boolean;
+    }
   | { kind: 'manual'; copies: CopyKind[]; attachDir?: string; canFocus: boolean }
   | {
       kind: 'partial'; fields: FieldResult[]; attachments: Array<AttachResult & { error?: string }>;
@@ -28,7 +33,31 @@ export const COMPOSE_STEP_LABEL: Record<string, string> = {
   fill_fields: '수신자/제목/본문 입력 중',
   attach_files: '첨부 중',
   verify: '입력 결과 확인 중',
+  send_mail: '발송',
 };
+
+export const SEND_SKIP_LABEL: Record<SendSkipReason, string> = {
+  NOT_SUPPORTED: '자동 발송을 지원하지 않는 작성 화면입니다',
+  RETRY_ATTEMPT: '다시 시도한 작성은 자동 발송하지 않습니다',
+  AUTO_JOB: '자동 작성은 자동 발송하지 않습니다',
+  FIELDS_NOT_OK: '입력되지 않은 항목이 있습니다',
+  ATTACH_NOT_OK: '첨부가 모두 올라가지 않았습니다',
+  FINGERPRINT_MISMATCH: '미리보기와 입력된 내용이 다릅니다',
+  SENT_COUNT_CHANGED: '미리보기 뒤에 다른 발송 기록이 생겼습니다',
+  BUTTON_NOT_FOUND: '보내기 버튼을 찾지 못했습니다',
+  BUTTON_DISABLED: '보내기 버튼이 눌리지 않는 상태입니다',
+  SUBJECT_MISMATCH: '작성 창의 제목이 다릅니다',
+  RECIPIENT_MISMATCH: '작성 창의 받는사람·참조가 초안과 다릅니다',
+  ALREADY_FIRED: '이미 보내기를 눌렀습니다',
+  CLICK_FAILED: '보내기를 누르지 못했습니다',
+};
+
+function sendIssueMessage(send: NonNullable<ComposeResult['send']>): string {
+  if (send.state === 'unconfirmed') return '보내기를 눌렀지만 발송 완료를 확인하지 못했습니다. 웹메일 탭을 확인하세요';
+  if (send.state === 'unknown') return '발송 여부를 알 수 없습니다. 웹메일 탭을 확인하세요';
+  const why = send.reason ? SEND_SKIP_LABEL[send.reason] : '자동 발송 조건을 만족하지 않았습니다';
+  return `자동 발송하지 않았습니다. ${why}. 내용을 확인한 뒤 직접 보내 주세요`;
+}
 
 const ALL_COPIES: CopyKind[] = ['to', 'cc', 'subject', 'body', 'attach'];
 
@@ -83,9 +112,19 @@ export function composeView(job: Job | null): ComposeView | null {
       };
     }
     case 'completed':
-      return { kind: 'done', canFocus };
     case 'partial':
+      if (result?.send?.state === 'sent') return { kind: 'sent', clickedAt: result.send.clickedAt, tabClosed: result.send.tabClosed === true, canFocus };
+      if (job.status === 'completed') return { kind: 'done', canFocus };
       if (!result) return errorOf(job.errors[0]?.code, job.errors[0]?.message);
+      if (result.send) {
+        return {
+          kind: 'send-issue', state: result.send.state, message: sendIssueMessage(result.send), maybeSent: result.send.state !== 'skipped',
+          // 주소로 전달한 수신자(prefilled)는 클릭 직전 화면 대조로 확인하므로 문제 항목에서 뺀다
+          fields: result.fields.filter((f) => f.status !== 'ok' && f.status !== 'prefilled'),
+          attachments: result.attachments.filter((a) => a.status !== 'uploaded'),
+          copies: copiesFor(result), attachDir: result.attachDir, canFocus,
+        };
+      }
       if (result.mode === 'url') {
         return {
           kind: 'url', provider: result.provider ?? 'gmail',

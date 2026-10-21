@@ -6,7 +6,6 @@ import { ErrorBoundary, Logo, StatusBadge } from '../../ui/components';
 import { EvaluationDetailPage } from './evaluations/EvaluationDetailPage';
 import { EvaluationsPage } from './evaluations/EvaluationsPage';
 import { GrantPage } from './GrantPage';
-import { DiagnosticsPage } from './DiagnosticsPage';
 import { HomePage } from './HomePage';
 import { MailPreparePage } from './MailPreparePage';
 import { NoticeDetailPage } from './notice/NoticeDetailPage';
@@ -39,7 +38,7 @@ function FolderStatus({ refreshKey }: { refreshKey: string }) {
   if (!status) return null;
   const b = status.hasRoot ? FOLDER_BADGE[status.permission] : { tone: 'idle', text: '저장 폴더 미설정' } as const;
   return (
-    <a href="#/settings" className="mt-auto block space-y-0.5 border-t border-line px-3 pt-4">
+    <a href="#/settings?section=storage" className="mt-auto block space-y-0.5 border-t border-line px-3 pt-4">
       <StatusBadge status={b.tone}>{b.text}</StatusBadge>
       {status.hasRoot && <span className="block truncate text-sm text-muted">{status.rootName}</span>}
     </a>
@@ -56,7 +55,6 @@ export function App() {
   const route = parseRoute(hash);
   if (route.page === 'grant') return <GrantPage />;
   const active: Page = route.page === 'mail' && route.query.from === 'mails' ? 'mails' : route.page === 'notice' || route.page === 'mail' ? 'notices' : route.page === 'template' ? 'templates' : route.page === 'evaluation' ? 'evaluations' : route.page;
-  const wide = route.page !== 'diagnostics';
 
   return (
     <div className="flex min-h-screen bg-canvas">
@@ -86,7 +84,7 @@ export function App() {
         <FolderStatus refreshKey={hash} />
       </aside>
       <main className="min-w-0 flex-1 px-12 pt-10 pb-16">
-        <div className={`mx-auto space-y-6 ${route.page === 'template' || route.page === 'recipients' || route.page === 'notices' ? 'max-w-[90rem]' : route.page === 'evaluation' ? 'max-w-[105rem]' : wide ? 'max-w-[70rem]' : 'max-w-[50rem]'}`}>
+        <div className={`mx-auto space-y-6 ${route.page === 'template' || route.page === 'recipients' || route.page === 'notices' ? 'max-w-[90rem]' : route.page === 'evaluation' ? 'max-w-[105rem]' : 'max-w-[70rem]'}`}>
           <ErrorBoundary resetKey={hash}>
           {route.page === 'home' && <HomePage />}
           {route.page === 'notices' && <NoticesPage />}
@@ -100,7 +98,6 @@ export function App() {
           {route.page === 'mail' && <MailPreparePage key={route.noticeId} noticeId={route.noticeId} from={route.query.from} />}
           {route.page === 'notice' && <NoticeDetailPage key={route.noticeId} noticeId={route.noticeId} tab={route.tab} handoff={parseHandoffReasons(route.query.handoff)} />}
           {route.page === 'settings' && <SettingsPage section={settingsSectionOf(hash)} nonce={hash} />}
-          {route.page === 'diagnostics' && <DiagnosticsPage />}
           </ErrorBoundary>
         </div>
       </main>

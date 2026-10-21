@@ -36,9 +36,9 @@ describe('decideHandoff', () => {
     expect(decideHandoff(job('partial', att('failed'), ex), S)).toEqual({ kind: 'review', reasons: ['attachments_failed', 'extract_failed'] });
     expect(decideHandoff(job('partial', att('saved')), S)).toEqual({ kind: 'review', reasons: ['collect_failed'] });
   });
-  it('mailStatus와 무관하게 compose, 검수 기준에 걸리면 review', () => {
+  it('mailStatus와 무관하게 edit, 검수 기준에 걸리면 review', () => {
     for (const m of ['ready_for_review', 'delivered', 'drafting']) {
-      expect(decideHandoff(job('completed', { noticeId: 'n', mailStatus: m }), S)).toEqual({ kind: 'compose' });
+      expect(decideHandoff(job('completed', { noticeId: 'n', mailStatus: m }), S)).toEqual({ kind: 'edit' });
       expect(decideHandoff(job('completed', { noticeId: 'n', mailStatus: m, extraction: ext('needs_review', 2, 1) }), S)).toEqual({ kind: 'review', reasons: ['needs_review'] });
     }
   });
@@ -46,59 +46,46 @@ describe('decideHandoff', () => {
     const r = (e: unknown) => job('completed', { noticeId: 'n', extraction: e });
     const review = { kind: 'review', reasons: ['needs_review'] };
     const e = ext('needs_review', 2, 0);
-    expect(decideHandoff(r(e), { ...S, reviewGate: 'errors_only' })).toEqual({ kind: 'compose' });
-    expect(decideHandoff(r(e), { ...S, reviewGate: 'conflicts' })).toEqual({ kind: 'compose' });
+    expect(decideHandoff(r(e), { ...S, reviewGate: 'errors_only' })).toEqual({ kind: 'edit' });
+    expect(decideHandoff(r(e), { ...S, reviewGate: 'conflicts' })).toEqual({ kind: 'edit' });
     expect(decideHandoff(r(e), { ...S, reviewGate: 'any_review' })).toEqual(review);
     const c = ext('needs_review', 2, 1);
-    expect(decideHandoff(r(c), { ...S, reviewGate: 'errors_only' })).toEqual({ kind: 'compose' });
+    expect(decideHandoff(r(c), { ...S, reviewGate: 'errors_only' })).toEqual({ kind: 'edit' });
     expect(decideHandoff(r(c), { ...S, reviewGate: 'conflicts' })).toEqual(review);
     expect(decideHandoff(r(c), { ...S, reviewGate: 'any_review' })).toEqual(review);
   });
   it('extraction 없음/not_run/unsupported는 통과', () => {
     const any = { ...S, reviewGate: 'any_review' as const };
-    expect(decideHandoff(job('completed', { noticeId: 'n' }), any)).toEqual({ kind: 'compose' });
-    expect(decideHandoff(job('completed', { noticeId: 'n', extraction: ext('not_run', 3, 3) }), any)).toEqual({ kind: 'compose' });
-    expect(decideHandoff(job('completed', { noticeId: 'n', extraction: ext('unsupported', 3, 3) }), any)).toEqual({ kind: 'compose' });
+    expect(decideHandoff(job('completed', { noticeId: 'n' }), any)).toEqual({ kind: 'edit' });
+    expect(decideHandoff(job('completed', { noticeId: 'n', extraction: ext('not_run', 3, 3) }), any)).toEqual({ kind: 'edit' });
+    expect(decideHandoff(job('completed', { noticeId: 'n', extraction: ext('unsupported', 3, 3) }), any)).toEqual({ kind: 'edit' });
   });
 });
 
 describe('decideHandoff afterCollect', () => {
   const ok = { noticeId: 'n' };
-  const withAfter = (a: 'dashboard' | 'compose' | undefined): Job => ({ ...job('completed', ok), ...(a ? { afterCollect: a } : {}) });
-  it('job 스냅샷이 설정보다 우선', () => {
-    expect(decideHandoff(withAfter('dashboard'), S)).toEqual({ kind: 'edit' });
-    expect(decideHandoff(withAfter('compose'), { ...S, afterCollect: 'dashboard' })).toEqual({ kind: 'compose' });
+  const withAfter = (a: 'dashboard' | 'compose' | 'ask' | undefined): Job => ({ ...job('completed', ok), ...(a ? { afterCollect: a } : {}) });
+  it('afterCollect 값과 무관하게 edit (잡 스냅샷)', () => {
+    for (const a of ['dashboard', 'compose', 'ask'] as const) {
+      expect(decideHandoff(withAfter(a), S)).toEqual({ kind: 'edit' });
+    }
   });
-  it('job 값이 없으면 설정 폴백', () => {
-    expect(decideHandoff(withAfter(undefined), { ...S, afterCollect: 'dashboard' })).toEqual({ kind: 'edit' });
-    expect(decideHandoff(withAfter(undefined), S)).toEqual({ kind: 'compose' });
+  it('afterCollect 값과 무관하게 edit (설정)', () => {
+    for (const a of ['dashboard', 'compose', 'ask'] as const) {
+      expect(decideHandoff(withAfter(undefined), { ...S, afterCollect: a })).toEqual({ kind: 'edit' });
+    }
   });
   it('edit는 mailStatus를 무시한다', () => {
     const j: Job = { ...job('completed', { noticeId: 'n', mailStatus: 'delivered' }), afterCollect: 'dashboard' };
     expect(decideHandoff(j, S)).toEqual({ kind: 'edit' });
   });
-  it('compose는 mailStatus와 무관하게 compose', () => {
-    const j: Job = { ...job('completed', { noticeId: 'n', mailStatus: 'ready_for_review' }), afterCollect: 'compose' };
-    expect(decideHandoff(j, S)).toEqual({ kind: 'compose' });
+  it('compose/ask여도 needsReview면 review가 우선', () => {
+    const j = (a: 'compose' | 'ask'): Job => ({ ...job('completed', { noticeId: 'n', extraction: ext('done', 1, 1) }), afterCollect: a });
+    expect(decideHandoff(j('compose'), S)).toEqual({ kind: 'review', reasons: ['needs_review'] });
+    expect(decideHandoff(j('ask'), { ...S, afterCollect: 'ask' })).toEqual({ kind: 'review', reasons: ['needs_review'] });
   });
-  describe('ask', () => {
-    const SA: AutoComposeSettings = { ...S, afterCollect: 'ask' };
-    it('completed면 ask', () => {
-      expect(decideHandoff(job('completed', { noticeId: 'n' }), SA)).toEqual({ kind: 'ask' });
-    });
-    it('needsReview면 review가 우선', () => {
-      expect(decideHandoff(job('completed', { noticeId: 'n', extraction: ext('done', 1, 1) }), SA)).toEqual({ kind: 'review', reasons: ['needs_review'] });
-    });
-    it('mailStatus가 delivered여도 ask', () => {
-      expect(decideHandoff(job('completed', { noticeId: 'n', mailStatus: 'delivered' }), SA)).toEqual({ kind: 'ask' });
-    });
-    it("job.afterCollect 'compose'가 설정 ask보다 우선", () => {
-      const j: Job = { ...job('completed', { noticeId: 'n' }), afterCollect: 'compose' };
-      expect(decideHandoff(j, SA)).toEqual({ kind: 'compose' });
-    });
-    it('disabled면 skip', () => {
-      expect(decideHandoff(job('completed', { noticeId: 'n' }), { ...SA, enabled: false })).toEqual({ kind: 'skip', reason: 'disabled' });
-    });
+  it('disabled면 skip', () => {
+    expect(decideHandoff(job('completed', { noticeId: 'n' }), { ...S, afterCollect: 'ask', enabled: false })).toEqual({ kind: 'skip', reason: 'disabled' });
   });
 });
 

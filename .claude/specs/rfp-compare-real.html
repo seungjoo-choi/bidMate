@@ -1,0 +1,1029 @@
+<!doctype html>
+<html lang="ko" class="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RFP 비교 실데이터</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --canvas:#111110; --surface:#1c1c1b; --sunken:#171716; --select:#2a2a28; --line:#2e2e2b; --line-strong:#3a3a37;
+    --ink:#e9e9e5; --muted:#9b9b95; --faint:#6a6a65; --primary:#3b6fd6; --primary-hover:#4c7ee3;
+    --pri-wash:#1a2947; --pri-line:#375892; --pri-ink:#b8cff8;
+    --ok:#6cc08e; --warn:#e0a44a; --danger:#ec7a6d; --ok-wash:#18241c; --ok-line:#2b4a36; --warn-wash:#2a2216; --danger-wash:#2c1a18; --info-wash:#1b222d;
+    --ai-wash:#211d2b; --ai-line:#3a3150; --ai-ink:#c3b5ea; --ai-surface:#19161f;
+    --ins-bg:#1f3a28; --ins-strong:#2f6b45; --del-bg:#3a1f1c; --del-strong:#7a3029;
+    --shadow-card:0 1px 2px rgb(0 0 0/.45),0 2px 8px -2px rgb(0 0 0/.35);
+    --shadow-raised:0 2px 6px rgb(0 0 0/.45),0 10px 24px -6px rgb(0 0 0/.6);
+    --shadow-overlay:0 8px 24px rgb(0 0 0/.35),0 32px 72px -12px rgb(0 0 0/.6);
+  }
+  :root.light {
+    --canvas:#ebebe7; --surface:#fff; --sunken:#efefeb; --select:#e9e9e4; --line:#e2e2dd; --line-strong:#cfcfc9;
+    --ink:#1b1b19; --muted:#65655f; --faint:#a1a19b; --primary:#2b5cb0; --primary-hover:#224d97;
+    --pri-wash:#e2ebfa; --pri-line:#a8c1ea; --pri-ink:#1c4592;
+    --ok:#2f7a4f; --warn:#a1620a; --danger:#b8382c; --ok-wash:#ecf5ef; --ok-line:#c4e0cd; --warn-wash:#fbf3e4; --danger-wash:#fbeceb; --info-wash:#eef2f8;
+    --ai-wash:#f3f0fa; --ai-line:#ddd5ee; --ai-ink:#5b4a8a; --ai-surface:#fff;
+    --ins-bg:#dcf1e3; --ins-strong:#a6dcb8; --del-bg:#fbe1de; --del-strong:#f2b2aa;
+    --shadow-card:0 1px 2px rgb(27 27 25/.06),0 2px 8px -2px rgb(27 27 25/.09);
+    --shadow-raised:0 2px 6px rgb(27 27 25/.06),0 10px 24px -6px rgb(27 27 25/.18);
+    --shadow-overlay:0 8px 24px rgb(27 27 25/.09),0 32px 72px -12px rgb(27 27 25/.18);
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; }
+  body { background:var(--canvas); color:var(--ink); font:15px/1.6 'Pretendard Variable',Pretendard,'Malgun Gothic',sans-serif;
+    letter-spacing:-0.01em; word-break:keep-all; -webkit-font-smoothing:antialiased; }
+  button { font:inherit; color:inherit; }
+  svg.i { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+  .mono { font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; letter-spacing:0; }
+  .muted { color:var(--muted); } .faint { color:var(--faint); }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow-card); }
+
+  /* ── 목업 내비 ── */
+  .mk-bar { position:sticky; top:0; z-index:80; display:flex; align-items:center; gap:6px; padding:8px 16px; background:#1b1b19; color:#e9e9e5; font-size:13px; }
+  .mk-bar b { margin-right:10px; font-weight:600; }
+  .mk-bar button { background:transparent; border:1px solid #3a3a37; color:#cfcfca; border-radius:999px; padding:3px 12px; cursor:pointer; font-size:13px; }
+  .mk-bar button.on { background:#e9e9e5; color:#1b1b19; border-color:#e9e9e5; font-weight:600; }
+  .mk-bar .sp { flex:1; }
+  .mk-note { max-width:1180px; margin:0 auto; padding:14px 24px 0; font-size:13px; color:var(--muted); }
+  .mk-note b { color:var(--ink); }
+
+  /* ── 앱 셸 ── */
+  .app { display:flex; min-height:calc(100vh - 42px); }
+  aside.side { position:sticky; top:42px; height:calc(100vh - 42px); width:240px; flex-shrink:0; display:flex; flex-direction:column; gap:24px;
+    border-right:1px solid var(--line); background:var(--surface); padding:24px 12px; }
+  .logo { display:flex; align-items:center; gap:10px; padding:0 12px; }
+  .logo .mark { width:30px; height:30px; border-radius:9px; background:linear-gradient(135deg,#2b5cb0,#5b8be0); display:grid; place-items:center; color:#fff; font-weight:800; font-size:15px; }
+  .logo .t1 { font-size:18px; font-weight:700; line-height:1.2; letter-spacing:-0.02em; } .logo .t2 { font-size:12px; color:var(--muted); line-height:1.2; }
+  nav.menu { display:grid; gap:4px; }
+  nav.menu a { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:6px; color:var(--muted); font-weight:500; text-decoration:none; font-size:15px; }
+  nav.menu a svg.i { width:20px; height:20px; }
+  nav.menu a.on { background:var(--select); color:var(--ink); font-weight:600; }
+  nav.menu a .new { margin-left:auto; font-size:11px; font-weight:700; color:var(--primary); background:var(--pri-wash); border-radius:999px; padding:0 7px; line-height:18px; }
+  main.main { flex:1; min-width:0; padding:40px 48px 64px; }
+  .wrap { margin:0 auto; max-width:70rem; }
+  .wrap.wide { max-width:92rem; }
+  .screen { display:none; } .screen.on { display:block; }
+
+  h1.pt { display:flex; align-items:center; gap:10px; margin:0; font-size:24px; font-weight:700; letter-spacing:-0.02em; }
+  h1.pt svg.i { width:24px; height:24px; }
+  .lead { margin:6px 0 0; color:var(--muted); font-size:15px; }
+
+  /* ── 버튼 ── */
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; height:34px; padding:0 13px; border-radius:8px; font-size:14px; font-weight:500;
+    border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgb(0 0 0/.06); cursor:pointer; white-space:nowrap; text-decoration:none; }
+  .btn:hover { background:var(--sunken); }
+  .btn.ghost { border-color:transparent; background:transparent; box-shadow:none; color:var(--muted); }
+  .btn.ghost:hover { background:var(--sunken); color:var(--ink); }
+  .btn.pri { background:var(--primary); border-color:var(--primary); color:#fff; }
+  .btn.pri:hover { background:var(--primary-hover); }
+  .btn.pri[disabled] { background:var(--line-strong); border-color:var(--line-strong); color:var(--surface); cursor:not-allowed; }
+  .btn.soft { background:var(--pri-wash); border-color:var(--pri-line); color:var(--pri-ink); box-shadow:none; }
+  .btn.ai { background:var(--ai-wash); border-color:var(--ai-line); color:var(--ai-ink); box-shadow:none; }
+  .btn.sm { height:28px; padding:0 10px; font-size:13px; border-radius:6px; }
+  .btn.lg { height:48px; padding:0 26px; font-size:16px; font-weight:600; border-radius:10px; }
+  .btn.icon { width:34px; padding:0; }
+  kbd { font-family:ui-monospace,Menlo,monospace; font-size:11px; border:1px solid var(--line-strong); border-bottom-width:2px; border-radius:4px; padding:0 5px; background:var(--surface); color:var(--muted); }
+
+  /* ── 진입: 슬롯 ── */
+  .slots { margin-top:28px; display:grid; grid-template-columns:minmax(0,1fr) 52px minmax(0,1fr); align-items:stretch; }
+  .swap { align-self:center; justify-self:center; width:40px; height:40px; border-radius:999px; border:1px solid var(--line-strong); background:var(--surface);
+    box-shadow:var(--shadow-card); display:grid; place-items:center; cursor:pointer; color:var(--muted); z-index:1; }
+  .swap:hover { color:var(--ink); transform:rotate(180deg); transition:transform .3s; }
+  .slot { position:relative; min-height:300px; border-radius:14px; padding:22px 24px; display:flex; flex-direction:column; }
+  .slot-tag { display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:700; letter-spacing:0; }
+  .slot-tag::before { content:''; width:9px; height:9px; border-radius:3px; background:currentColor; }
+  .slot-tag.prev { color:var(--muted); } .slot-tag.next { color:var(--primary); }
+  .slot-top { display:flex; align-items:center; justify-content:space-between; min-height:28px; }
+  .slot.empty { border:2px dashed var(--line-strong); background:transparent; align-items:center; text-align:center; justify-content:center; gap:4px; }
+  .slot.empty .slot-top { position:absolute; top:20px; left:24px; right:24px; }
+  .slot.empty .big-ic { width:56px; height:56px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow-card); display:grid; place-items:center; color:var(--muted); margin-bottom:12px; }
+  .slot.empty .big-ic svg.i { width:26px; height:26px; stroke-width:1.7; }
+  .slot.empty h3 { margin:0; font-size:17px; font-weight:650; }
+  .slot.empty p { margin:2px 0 16px; font-size:14px; color:var(--muted); }
+  .slot.empty .acts { display:flex; gap:8px; }
+  .slot.empty .lib { margin-top:14px; font-size:13px; color:var(--muted); background:none; border:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line-strong); }
+  .slot.empty.drag { border-color:var(--primary); background:var(--pri-wash); }
+  .slot.empty.drag .big-ic { color:var(--primary); }
+  .slot.empty.picking { border-color:var(--primary); border-style:solid; background:var(--surface); box-shadow:0 0 0 4px var(--pri-wash); }
+  .slot.filled { background:var(--surface); border:1px solid var(--line); box-shadow:var(--shadow-card); }
+  .slot.filled.is-next { box-shadow:var(--shadow-card), inset 0 3px 0 var(--primary); }
+  .slot.filled.is-prev { box-shadow:var(--shadow-card), inset 0 3px 0 var(--line-strong); }
+  .doc-row { display:flex; gap:14px; margin-top:16px; }
+  .ext { flex-shrink:0; width:44px; height:52px; border-radius:7px; background:var(--sunken); border:1px solid var(--line); display:grid; place-items:end center; padding-bottom:7px;
+    font-size:11px; font-weight:800; color:var(--primary); letter-spacing:0; position:relative; }
+  .ext::after { content:''; position:absolute; top:-1px; right:-1px; width:14px; height:14px; background:var(--canvas); border-left:1px solid var(--line); border-bottom:1px solid var(--line); border-bottom-left-radius:5px; }
+  .ext.pdf { color:var(--danger); }
+  .doc-title { font-size:17px; font-weight:650; line-height:1.4; letter-spacing:-0.02em; }
+  .doc-meta { font-size:13px; color:var(--muted); margin-top:3px; display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; }
+  .doc-meta .dot::before { content:'·'; margin-right:10px; color:var(--faint); }
+  .src-chip { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; padding:0 7px; line-height:20px; border-radius:5px; background:var(--sunken); color:var(--muted); }
+  .file-sel { margin-top:14px; display:flex; align-items:center; gap:8px; height:36px; padding:0 12px; border:1px solid var(--line-strong); border-radius:6px; font-size:14px; background:var(--surface); }
+  .file-sel .grow { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .file-sel .k { font-size:12px; color:var(--faint); }
+  .req-sum { margin-top:auto; padding-top:18px; }
+  .req-n { display:flex; align-items:baseline; gap:8px; }
+  .req-n b { font-size:30px; font-weight:750; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; }
+  .req-n span { color:var(--muted); font-size:14px; }
+  .q { display:inline-flex; align-items:center; gap:5px; font-size:13px; font-weight:600; margin-left:auto; }
+  .q.good { color:var(--ok); } .q.part { color:var(--warn); } .q.none { color:var(--faint); }
+  .comp { display:flex; height:8px; border-radius:99px; overflow:hidden; gap:2px; margin-top:10px; }
+  .comp i { display:block; height:100%; }
+  .legend { display:flex; flex-wrap:wrap; gap:4px 12px; margin-top:9px; font-size:12px; color:var(--muted); }
+  .legend span { display:inline-flex; align-items:center; gap:5px; } .legend i { width:8px; height:8px; border-radius:2px; display:inline-block; }
+  .legend b { color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums; }
+  .slot-foot { display:flex; gap:6px; margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
+
+  .cta { margin-top:24px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .cta .hint { font-size:13px; color:var(--muted); }
+
+  .sec-h { display:flex; align-items:baseline; justify-content:space-between; margin:48px 0 10px; }
+  .sec-h h2 { margin:0; font-size:17px; font-weight:700; }
+  .sec-h .muted { font-size:13px; }
+  .list .li { display:grid; align-items:center; gap:20px; padding:14px 20px; border-top:1px solid var(--line); }
+  .list .li:first-child { border-top:0; }
+  .list .li:hover { background:var(--sunken); }
+  .recent .li { grid-template-columns:minmax(0,1fr) 220px 120px 110px; }
+  .pair-t { display:flex; align-items:center; gap:8px; min-width:0; font-weight:600; }
+  .pair-t .a { color:var(--muted); font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:0 1 auto; }
+  .pair-t .b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:0 1 auto; }
+  .pair-t svg.i { color:var(--faint); width:14px; height:14px; }
+  .mini { display:flex; height:6px; border-radius:99px; overflow:hidden; gap:2px; }
+  .mini-l { font-size:12px; color:var(--muted); margin-top:5px; display:flex; gap:10px; }
+  .prog { font-size:13px; color:var(--muted); }
+  .prog .bar { height:4px; border-radius:99px; background:var(--sunken); margin-top:5px; overflow:hidden; } .prog .bar i { display:block; height:100%; background:var(--ink); border-radius:99px; }
+  .lib-l .li { grid-template-columns:44px minmax(0,1fr) 120px 110px auto; }
+  .lib-l .ext { width:34px; height:40px; font-size:10px; padding-bottom:5px; }
+  .lib-l .ext::after { width:11px; height:11px; }
+
+  /* ── 모달 ── */
+  .scrim { position:fixed; inset:0; background:rgb(20 20 18/.38); z-index:90; display:none; align-items:flex-start; justify-content:center; padding-top:9vh; backdrop-filter:blur(1px); }
+  .scrim.on { display:flex; }
+  .modal { width:640px; max-height:78vh; display:flex; flex-direction:column; background:var(--surface); border-radius:14px; box-shadow:var(--shadow-overlay); border:1px solid var(--line); overflow:hidden; }
+  .m-head { padding:18px 22px 14px; border-bottom:1px solid var(--line); }
+  .m-head .row { display:flex; align-items:center; gap:10px; }
+  .m-head h3 { margin:0; font-size:17px; font-weight:700; flex:1; }
+  .steps { display:flex; gap:6px; font-size:12px; color:var(--faint); margin-top:4px; }
+  .steps .on { color:var(--primary); font-weight:600; }
+  .m-search { margin-top:12px; display:flex; align-items:center; gap:8px; height:40px; padding:0 12px; border:1px solid var(--primary); box-shadow:0 0 0 3px var(--pri-wash); border-radius:8px; color:var(--faint); font-size:14px; }
+  .m-body { overflow:auto; padding:6px 0 10px; }
+  .m-grp { padding:12px 22px 6px; font-size:12px; font-weight:700; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .m-grp .sub { font-weight:500; color:var(--faint); }
+  .pick { display:flex; gap:12px; align-items:center; padding:10px 22px; cursor:pointer; }
+  .pick:hover, .pick.kb { background:var(--sunken); }
+  .pick .grow { flex:1; min-width:0; }
+  .pick .t { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pick .m { font-size:13px; color:var(--muted); }
+  .tag { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; padding:0 8px; line-height:22px; border-radius:999px; white-space:nowrap; }
+  .tag.org { background:var(--pri-wash); color:var(--pri-ink); }
+  .tag.sim { background:var(--sunken); color:var(--muted); }
+  .tag svg.i { width:12px; height:12px; }
+  .m-foot { display:flex; align-items:center; gap:8px; padding:12px 22px; border-top:1px solid var(--line); background:var(--sunken); font-size:12px; color:var(--muted); }
+  .m-foot .sp { flex:1; }
+  .doc-opt { display:flex; align-items:center; gap:12px; margin:6px 22px; padding:12px 14px; border:1px solid var(--line); border-radius:10px; cursor:pointer; }
+  .doc-opt.on { border-color:var(--primary); box-shadow:0 0 0 3px var(--pri-wash); }
+  .radio { width:18px; height:18px; border-radius:99px; border:2px solid var(--line-strong); flex-shrink:0; }
+  .doc-opt.on .radio { border:5px solid var(--primary); }
+  .doc-opt .grow { flex:1; min-width:0; } .doc-opt .t { font-weight:600; } .doc-opt .m { font-size:13px; color:var(--muted); }
+
+  /* ── 결과 ── */
+  .crumb { font-size:13px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .crumb a { color:inherit; text-decoration:none; } .crumb a:hover { color:var(--ink); }
+  .r-head { display:flex; align-items:flex-start; gap:20px; margin-top:8px; }
+  .r-title { flex:1; min-width:0; display:grid; grid-template-columns:auto auto minmax(0,1fr); align-items:center; gap:2px 12px; }
+  .r-title .lbl { font-size:12px; font-weight:700; letter-spacing:0; }
+  .r-title .lbl.prev { color:var(--muted); } .r-title .lbl.next { color:var(--primary); }
+  .r-title .nm { font-size:15px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .r-title .nm.next { font-size:22px; font-weight:700; color:var(--ink); letter-spacing:-0.02em; }
+  .r-title .arr { color:var(--faint); grid-row:1 / span 2; }
+  .r-acts { display:flex; gap:6px; flex-shrink:0; }
+
+  .tiles { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)) 220px; gap:12px; margin-top:22px; }
+  .tile { position:relative; text-align:left; padding:14px 16px 13px; border-radius:10px; border:1px solid var(--line); background:var(--surface); box-shadow:var(--shadow-card); cursor:pointer; transition:background .15s, border-color .15s; }
+  .tile .k { display:flex; align-items:center; gap:7px; font-size:14px; font-weight:600; color:var(--muted); }
+  .tile .k .dot { width:9px; height:9px; border-radius:3px; }
+  .tile .v { font-size:28px; font-weight:750; letter-spacing:-0.03em; margin-top:2px; font-variant-numeric:tabular-nums; }
+  .tile .s { font-size:12px; color:var(--faint); }
+  .tile .chk { position:absolute; top:12px; right:12px; width:20px; height:20px; border-radius:6px; border:1.5px solid var(--line-strong); display:grid; place-items:center; color:transparent; }
+  .tile.on .chk { color:#fff; }
+  .tile.off { background:transparent; box-shadow:none; }
+  .tile.off .v, .tile.off .k { color:var(--faint); }
+  .tile[data-s=changed].on { border-color:color-mix(in srgb, var(--warn) 45%, var(--line)); } .tile[data-s=changed].on .chk { background:var(--warn); border-color:var(--warn); }
+  .tile[data-s=added].on { border-color:color-mix(in srgb, var(--ok) 45%, var(--line)); } .tile[data-s=added].on .chk { background:var(--ok); border-color:var(--ok); }
+  .tile[data-s=removed].on { border-color:color-mix(in srgb, var(--danger) 45%, var(--line)); } .tile[data-s=removed].on .chk { background:var(--danger); border-color:var(--danger); }
+  .tile[data-s=same].on .chk { background:var(--muted); border-color:var(--muted); }
+  .review { padding:14px 16px; border-radius:10px; background:var(--surface); border:1px solid var(--line); box-shadow:var(--shadow-card); display:flex; gap:14px; align-items:center; }
+  .ring { --p:0; width:52px; height:52px; border-radius:99px; background:conic-gradient(var(--ink) calc(var(--p)*1%), var(--sunken) 0); display:grid; place-items:center; flex-shrink:0; }
+  .ring::before { content:''; width:40px; height:40px; border-radius:99px; background:var(--surface); grid-area:1/1; }
+  .ring span { grid-area:1/1; font-size:12px; font-weight:700; z-index:1; }
+  .review .k { font-size:14px; font-weight:600; } .review .s { font-size:12px; color:var(--muted); }
+  .review .nx { margin-top:5px; }
+  .stack { display:flex; height:6px; gap:2px; border-radius:99px; overflow:hidden; margin-top:12px; }
+  .stack-l { font-size:12px; color:var(--faint); margin-top:6px; }
+
+  .toolbar { display:flex; align-items:center; gap:8px; margin-top:22px; }
+  .search { width:280px; height:36px; border:1px solid var(--line-strong); border-radius:6px; background:var(--surface); color:var(--faint); font-size:14px; display:flex; align-items:center; gap:8px; padding:0 12px; }
+  .sel { height:36px; border:1px solid var(--line-strong); border-radius:6px; background:var(--surface); font-size:14px; display:flex; align-items:center; gap:8px; padding:0 10px 0 12px; }
+  .chip-t { height:32px; border:1px solid var(--line-strong); border-radius:999px; padding:0 12px; display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; color:var(--muted); background:var(--surface); cursor:pointer; }
+  .chip-t.on { background:var(--ink); border-color:var(--ink); color:var(--surface); }
+  .toolbar .sp { flex:1; }
+  .kb-hint { font-size:12px; color:var(--faint); display:flex; gap:10px; align-items:center; }
+
+  .md { display:grid; grid-template-columns:minmax(0,5fr) minmax(0,8fr); gap:16px; margin-top:12px; align-items:start; }
+  .lst { overflow:hidden; }
+  .grp-h { position:sticky; top:42px; z-index:2; display:flex; align-items:center; gap:8px; padding:9px 16px; background:var(--sunken); border-top:1px solid var(--line); font-size:13px; font-weight:700; }
+  .grp-h:first-child { border-top:0; }
+  .grp-h .pf { font-family:ui-monospace,Menlo,monospace; letter-spacing:0; }
+  .grp-h .nm { font-weight:500; color:var(--muted); }
+  .grp-h .ct { margin-left:auto; font-weight:500; color:var(--faint); font-size:12px; }
+  .it { position:relative; display:grid; grid-template-columns:20px minmax(0,1fr) auto; gap:10px; align-items:start; padding:11px 16px 11px 14px; border-top:1px solid var(--line); cursor:pointer; }
+  .it:hover { background:var(--sunken); }
+  .it.sel { background:var(--select); }
+  .it.sel::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--ink); }
+  .it .st { width:10px; height:10px; border-radius:3px; margin-top:6px; justify-self:center; }
+  .it .id { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:4px; }
+  .it .id svg.i { width:11px; height:11px; color:var(--faint); }
+  .it .nm { font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .it.same .nm { color:var(--muted); font-weight:500; }
+  .it .hints { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+  .h { font-size:11px; font-weight:600; line-height:18px; padding:0 6px; border-radius:4px; background:var(--sunken); color:var(--muted); letter-spacing:0; display:inline-flex; gap:3px; align-items:center; }
+  .h.num { background:var(--warn-wash); color:var(--warn); }
+  .h.col { background:var(--danger-wash); color:var(--danger); }
+  .h.ren { background:var(--pri-wash); color:var(--pri-ink); }
+  .h .p { color:var(--ok); } .h .m { color:var(--danger); }
+  .it .ck { width:20px; height:20px; border-radius:6px; border:1.5px solid var(--line-strong); display:grid; place-items:center; color:transparent; margin-top:2px; }
+  .it.done .ck { background:var(--ok); border-color:var(--ok); color:#fff; }
+  .it.done .nm { color:var(--muted); }
+  .s-changed { background:var(--warn); } .s-added { background:var(--ok); } .s-removed { background:var(--danger); } .s-same { background:var(--line-strong); }
+
+  .det { position:sticky; top:58px; overflow:hidden; }
+  .d-head { padding:18px 22px 16px; border-bottom:1px solid var(--line); }
+  .d-badges { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .sbadge { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; padding:0 10px; line-height:26px; border-radius:999px; }
+  .sbadge.changed { background:var(--warn-wash); color:var(--warn); } .sbadge.added { background:var(--ok-wash); color:var(--ok); }
+  .sbadge.removed { background:var(--danger-wash); color:var(--danger); } .sbadge.same { background:var(--sunken); color:var(--muted); }
+  .sbadge::before { content:''; width:8px; height:8px; border-radius:2px; background:currentColor; }
+  .match { font-size:13px; color:var(--muted); display:inline-flex; align-items:center; gap:5px; }
+  .match svg.i { width:14px; height:14px; }
+  .d-name { margin:10px 0 0; font-size:20px; font-weight:700; letter-spacing:-0.02em; line-height:1.4; }
+  .d-ids { margin-top:4px; display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); }
+  .d-ids svg.i { width:13px; height:13px; color:var(--faint); }
+  .d-tools { display:flex; align-items:center; gap:8px; margin-top:14px; }
+  .seg { display:inline-flex; padding:2px; border-radius:8px; background:var(--sunken); border:1px solid var(--line); }
+  .seg button { border:0; background:transparent; height:26px; padding:0 10px; border-radius:6px; font-size:13px; color:var(--muted); cursor:pointer; }
+  .seg button.on { background:var(--surface); color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgb(0 0 0/.1); }
+  .d-tools .sp { flex:1; }
+  .cols-h { display:grid; grid-template-columns:76px minmax(0,1fr) minmax(0,1fr); gap:0; border-bottom:1px solid var(--line); background:var(--sunken); font-size:12px; font-weight:700; }
+  .cols-h div { padding:8px 14px; } .cols-h .p { color:var(--muted); } .cols-h .n { color:var(--primary); border-left:1px solid var(--line); }
+  .fld { display:grid; grid-template-columns:76px minmax(0,1fr) minmax(0,1fr); border-bottom:1px solid var(--line); }
+  .fld .lb { padding:12px 0 12px 22px; font-size:13px; font-weight:600; color:var(--muted); }
+  .fld .c { padding:12px 14px; font-size:14px; line-height:1.75; white-space:pre-wrap; }
+  .fld .c + .c { border-left:1px solid var(--line); }
+  .fld .c.wide { grid-column:2 / 4; }
+  .hidden-same { display:flex; align-items:center; gap:8px; width:100%; border:0; border-top:1px dashed var(--line-strong); background:var(--sunken); padding:13px 16px; font-size:13px; color:var(--muted); cursor:pointer; text-align:left; }
+  .hidden-same b { color:var(--ink); } .hidden-same span { margin-left:auto; color:var(--primary); font-weight:600; }
+  .hidden-same:hover { color:var(--ink); }
+  .ln { border-radius:4px; padding:1px 8px; margin:0 -8px; }
+  .ln + .ln { margin-top:3px; }
+  .ln.del { background:var(--del-bg); box-shadow:inset 3px 0 0 var(--danger); }
+  .ln.ins { background:var(--ins-bg); box-shadow:inset 3px 0 0 var(--ok); }
+  .chg-dot { display:inline-block; width:7px; height:7px; border-radius:99px; background:var(--warn); margin-left:6px; vertical-align:middle; }
+  .chg-sum { margin-top:8px; font-size:13px; color:var(--muted); }
+  .chg-sum b { color:var(--ink); font-weight:600; } .chg-sum b.p { color:var(--ok); } .chg-sum b.m { color:var(--danger); }
+  .legend-d { display:flex; gap:8px; align-items:center; font-size:12px; color:var(--muted); }
+  .legend-d .ln { margin:0; padding:0 7px; line-height:20px; }
+  .fld .c.empty { color:var(--faint); font-style:normal; display:flex; align-items:center; gap:6px; background:repeating-linear-gradient(135deg, transparent 0 8px, var(--sunken) 8px 9px); }
+  .fld.same-f { cursor:pointer; }
+  .fld.same-f .c { color:var(--faint); padding-top:9px; padding-bottom:9px; font-size:13px; }
+  .fld.same-f:hover .c { color:var(--muted); }
+  .fld.inline { grid-template-columns:76px minmax(0,1fr); }
+  ins, del { text-decoration:none; border-radius:3px; padding:1px 1px; }
+  ins { background:var(--ins-bg); } del { background:var(--del-bg); text-decoration:line-through; text-decoration-color:color-mix(in srgb, var(--danger) 60%, transparent); }
+  ins.x { background:var(--ins-strong); font-weight:600; } del.x { background:var(--del-strong); font-weight:600; }
+  .d-foot { display:flex; align-items:center; gap:6px; padding:14px 22px; background:var(--sunken); }
+  .d-foot .sp { flex:1; }
+  .done-btn.on { background:var(--ok); border-color:var(--ok); color:#fff; }
+  .grp-link { margin:14px 22px 0; padding:10px 12px; border-radius:8px; background:var(--info-wash); font-size:13px; display:flex; gap:8px; align-items:center; }
+  .grp-link a { color:var(--primary); font-weight:600; cursor:pointer; text-decoration:none; }
+  .warnbox { margin:14px 22px 0; padding:10px 12px; border-radius:8px; background:var(--danger-wash); color:var(--danger); font-size:13px; display:flex; gap:8px; align-items:flex-start; }
+
+  /* AI 패널 */
+  .aip { margin-top:16px; border:1px solid var(--ai-line); background:var(--ai-surface); border-radius:12px; box-shadow:var(--shadow-card); overflow:hidden; display:none; }
+  .aip.on { display:block; }
+  .aip-h { display:flex; align-items:center; gap:10px; padding:14px 20px; background:var(--ai-wash); color:var(--ai-ink); }
+  .aip-h b { font-size:15px; } .aip-h .sp { flex:1; } .aip-h .m { font-size:12px; opacity:.85; }
+  .aip-b { padding:18px 20px; display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:24px; }
+  .aip-b p { margin:0; line-height:1.75; }
+  .aip-b h4 { margin:0 0 8px; font-size:13px; color:var(--muted); font-weight:700; }
+  .hl { display:flex; gap:10px; padding:9px 10px; margin:0 -10px; border-radius:8px; cursor:pointer; align-items:flex-start; }
+  .hl:hover { background:var(--sunken); }
+  .imp { flex-shrink:0; font-size:11px; font-weight:700; padding:0 6px; line-height:20px; border-radius:4px; }
+  .imp.high { background:var(--danger-wash); color:var(--danger); } .imp.medium { background:var(--warn-wash); color:var(--warn); } .imp.low { background:var(--sunken); color:var(--muted); }
+  .hl .id { font-size:12px; color:var(--muted); } .hl .t { font-size:14px; }
+  .risk { margin:12px 0 0; padding:0 0 0 18px; font-size:14px; } .risk li { margin:3px 0; }
+  .pre { padding:18px 20px; display:flex; gap:24px; align-items:center; }
+  .pre .est { flex:1; }
+  .pre .big { font-size:15px; } .pre .big b { font-variant-numeric:tabular-nums; }
+  .pre .s { font-size:13px; color:var(--muted); margin-top:3px; }
+  .meter { height:6px; border-radius:99px; background:var(--sunken); overflow:hidden; margin-top:10px; width:340px; } .meter i { display:block; height:100%; background:var(--ai-ink); opacity:.6; }
+
+  /* 상태 갤러리 */
+  .gal { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; margin-top:20px; }
+  .gal .cap { font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px; }
+  .progress-steps { margin-top:auto; display:grid; gap:10px; }
+  .pstep { display:flex; align-items:center; gap:10px; font-size:14px; }
+  .pstep .b { width:20px; height:20px; border-radius:99px; display:grid; place-items:center; flex-shrink:0; }
+  .pstep.done .b { background:var(--ok); color:#fff; } .pstep.done { color:var(--muted); }
+  .pstep.run .b { border:2px solid var(--primary); border-right-color:transparent; animation:spin 0.9s linear infinite; }
+  .pstep.wait { color:var(--faint); } .pstep.wait .b { border:2px solid var(--line-strong); }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .skel { height:10px; border-radius:99px; background:linear-gradient(90deg,var(--sunken),var(--line),var(--sunken)); background-size:200% 100%; animation:sh 1.3s infinite; }
+  @keyframes sh { to { background-position:-200% 0; } }
+  .issue { margin-top:14px; padding:11px 13px; border-radius:8px; font-size:13px; display:flex; gap:9px; align-items:flex-start; line-height:1.55; }
+  .issue.warn { background:var(--warn-wash); color:var(--ink); } .issue.warn svg.i { color:var(--warn); margin-top:2px; }
+  .issue.err { background:var(--danger-wash); } .issue.err svg.i { color:var(--danger); margin-top:2px; }
+  .issue.mute { background:var(--sunken); } .issue.mute svg.i { color:var(--muted); margin-top:2px; }
+  .issue b { display:block; font-size:14px; }
+  .empty-r { padding:56px 24px; text-align:center; }
+  .empty-r .ic { width:56px; height:56px; border-radius:99px; background:var(--ok-wash); color:var(--ok); display:grid; place-items:center; margin:0 auto 12px; }
+  .empty-r .ic svg.i { width:26px; height:26px; }
+  .nd-head { padding:20px 24px; display:flex; gap:16px; align-items:flex-start; }
+  .nd-head .grow { flex:1; }
+  .nd-head .t { font-size:20px; font-weight:700; letter-spacing:-0.02em; }
+  .nd-head .m { color:var(--muted); font-size:14px; margin-top:2px; }
+  .callout { position:relative; outline:2px solid var(--primary); outline-offset:3px; border-radius:8px; }
+  .callout::after { content:'새로 추가'; position:absolute; top:-30px; left:50%; transform:translateX(-50%); font-size:11px; font-weight:700; color:#fff; background:var(--primary); padding:2px 8px; border-radius:999px; white-space:nowrap; }
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1b1b19; color:#e9e9e5; padding:10px 16px; border-radius:10px; font-size:14px; box-shadow:var(--shadow-overlay); display:none; z-index:100; gap:12px; align-items:center; }
+  .toast.on { display:flex; }
+  .toast button { background:none; border:0; color:#9bb8e8; font-weight:600; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div class="mk-bar">
+  <b>실데이터: 전자출하(HWP) → 축산물원패스(HWPX)</b>
+  <button data-go="s1">① 처음 진입</button>
+  <button data-go="s2">② 공고 상세에서 진입</button>
+  <button data-go="s3">③ 두 문서 준비됨</button>
+  <button data-go="s4" class="on">④ 비교 결과</button>
+  <button data-go="s5">⑤ 상태 모음</button>
+  <span class="sp"></span>
+  <button id="themeBtn">다크 모드</button>
+</div>
+
+<div class="app">
+  <aside class="side">
+    <div class="logo"><div class="mark">B</div><div><div class="t1">BidMate</div><div class="t2">비드메이트</div></div></div>
+    <nav class="menu">
+      <a><i data-i="home"></i>홈</a>
+      <a><i data-i="list"></i>공고</a>
+      <a><i data-i="mail"></i>메일 관리</a>
+      <a><i data-i="chart"></i>평가분석</a>
+      <a class="on" id="navRfp"><i data-i="compare"></i>RFP 비교<span class="new">NEW</span></a>
+      <a><i data-i="trophy"></i>실적</a>
+      <a><i data-i="users"></i>수신자</a>
+      <a><i data-i="file"></i>템플릿</a>
+      <a><i data-i="gear"></i>설정</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+
+    <!-- ① 처음 진입 -->
+    <section class="screen" id="s1">
+      <div class="wrap">
+        <h1 class="pt"><i data-i="compare"></i>RFP 비교</h1>
+        <p class="lead">이전 제안요청서와 이번 제안요청서의 요구사항을 번호와 내용으로 짝지어, 무엇이 새로 생기고 바뀌고 빠졌는지 보여 줍니다.</p>
+
+        <div class="slots">
+          <div class="slot empty" id="dz1">
+            <div class="slot-top"><span class="slot-tag prev">이전 문서</span></div>
+            <div class="big-ic"><i data-i="file"></i></div>
+            <h3>작년(이전) 제안요청서</h3>
+            <p>파일을 여기로 끌어다 놓거나 아래에서 고르세요</p>
+            <div class="acts">
+              <button class="btn" data-open-picker="prev"><i data-i="list"></i>공고에서 고르기</button>
+              <button class="btn"><i data-i="upload"></i>파일 올리기</button>
+            </div>
+            <button class="lib">올린 문서 3개에서 고르기</button>
+          </div>
+          <button class="swap" title="이전·이번 바꾸기"><i data-i="swap"></i></button>
+          <div class="slot empty">
+            <div class="slot-top"><span class="slot-tag next">이번 문서</span></div>
+            <div class="big-ic"><i data-i="file"></i></div>
+            <h3>올해(이번) 제안요청서</h3>
+            <p>입찰을 준비 중인 공고의 제안요청서</p>
+            <div class="acts">
+              <button class="btn" data-open-picker="next"><i data-i="list"></i>공고에서 고르기</button>
+              <button class="btn"><i data-i="upload"></i>파일 올리기</button>
+            </div>
+            <button class="lib">올린 문서 3개에서 고르기</button>
+          </div>
+        </div>
+        <div class="cta">
+          <button class="btn pri lg" disabled>변경점 비교하기 <i data-i="arrow"></i></button>
+          <span class="hint">두 문서를 모두 고르면 누를 수 있어요 · HWP·HWPX·DOCX·PDF</span>
+        </div>
+
+        <div class="sec-h"><h2>최근 비교</h2><span class="muted">결과와 검토 표시가 저장돼 있어 이어서 볼 수 있어요</span></div>
+        <div class="card list recent" id="recentList"></div>
+
+        <div class="sec-h"><h2>올린 문서</h2><span class="muted">직접 올린 파일은 여기에 보관돼 다시 쓸 수 있어요</span></div>
+        <div class="card list lib-l" id="libList"></div>
+      </div>
+    </section>
+
+    <!-- ② 공고 상세에서 진입 -->
+    <section class="screen" id="s2">
+      <div class="wrap">
+        <div class="mk-cap muted" style="font-size:13px;margin-bottom:10px">공고 상세 헤더 — 오른쪽에 <b style="color:var(--ink)">[변경점 비교]</b> 버튼 추가</div>
+        <div class="card nd-head" style="margin-bottom:36px">
+          <div class="grow">
+            <div class="t">2026년 통합민원시스템 기능개선 및 유지관리 용역</div>
+            <div class="m">△△공단 · R26BK01722175 · 마감 11월 3일(월) 10:00</div>
+          </div>
+          <button class="btn ghost"><i data-i="mail"></i>메일 작성</button>
+          <button class="btn ghost callout" data-go="s2b"><i data-i="compare"></i>변경점 비교</button>
+        </div>
+        <div class="mk-cap muted" style="font-size:13px;margin-bottom:10px">버튼을 누르면 → 이번 문서가 채워진 채로 열리고, 이전 문서 고르기가 바로 뜸(추천 공고 위로)</div>
+        <h1 class="pt"><i data-i="compare"></i>RFP 비교</h1>
+        <p class="lead">이전 제안요청서와 이번 제안요청서의 요구사항을 번호와 내용으로 짝지어, 무엇이 새로 생기고 바뀌고 빠졌는지 보여 줍니다.</p>
+        <div class="slots">
+          <div class="slot empty picking">
+            <div class="slot-top"><span class="slot-tag prev">이전 문서</span></div>
+            <div class="big-ic" style="color:var(--primary)"><i data-i="search"></i></div>
+            <h3>비교할 이전 문서를 고르는 중…</h3>
+            <p>같은 기관의 지난 공고를 위에 모아 뒀어요</p>
+            <div class="acts">
+              <button class="btn soft" data-open-picker="prev"><i data-i="list"></i>공고에서 고르기</button>
+              <button class="btn"><i data-i="upload"></i>파일 올리기</button>
+            </div>
+          </div>
+          <button class="swap"><i data-i="swap"></i></button>
+          <div class="slot filled is-next" data-slot="next26"></div>
+        </div>
+        <div class="cta">
+          <button class="btn pri lg" disabled>변경점 비교하기 <i data-i="arrow"></i></button>
+          <span class="hint">이전 문서를 고르면 누를 수 있어요</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ③ 두 문서 준비됨 -->
+    <section class="screen" id="s3">
+      <div class="wrap">
+        <h1 class="pt"><i data-i="compare"></i>RFP 비교</h1>
+        <p class="lead">이전 제안요청서와 이번 제안요청서의 요구사항을 번호와 내용으로 짝지어, 무엇이 새로 생기고 바뀌고 빠졌는지 보여 줍니다.</p>
+        <div class="slots">
+          <div class="slot filled is-prev" data-slot="prev25"></div>
+          <button class="swap" title="이전·이번 바꾸기"><i data-i="swap"></i></button>
+          <div class="slot filled is-next" data-slot="next26"></div>
+        </div>
+        <div class="cta">
+          <button class="btn pri lg" data-go="s4">변경점 비교하기 <i data-i="arrow"></i></button>
+          <span class="hint">요구사항 91개 ↔ 97개 · 같은 기관(△△공단)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ④ 결과 -->
+    <section class="screen on" id="s4">
+      <div class="wrap wide">
+        <div class="crumb"><a data-go="s3">RFP 비교</a><i data-i="chev-r" style="width:12px;height:12px"></i><span>비교 결과</span></div>
+        <div class="r-head">
+          <div class="r-title">
+            <span class="lbl prev">이전</span><span class="nm">전자출하시스템 활성화 및 유지보수 사업 · (붙임2) 제안요청서.hwp</span><span></span>
+            <span class="lbl next">이번</span><span class="nm next">축산물원패스 기능 고도화 사업</span><span></span>
+          </div>
+          <div class="r-acts">
+            <button class="btn ghost" data-go="s3"><i data-i="file"></i>문서 바꾸기</button>
+            <button class="btn ghost"><i data-i="swap"></i>방향 바꾸기</button>
+            <button class="btn ghost"><i data-i="download"></i>내보내기</button>
+            <button class="btn ai" id="aiBtn"><i data-i="sparkle"></i>AI 변경점 요약</button>
+          </div>
+        </div>
+
+        <div class="tiles" id="tiles"></div>
+
+        <div class="aip" id="aip"></div>
+
+        <div class="toolbar">
+          <div class="search"><i data-i="search"></i>번호·명칭 검색</div>
+          <div class="sel">전체 분류 <i data-i="chev-d" style="width:14px;height:14px;color:var(--faint)"></i></div>
+          <button class="chip-t" id="fNum"><i data-i="hash" style="width:13px;height:13px"></i>수치 바뀐 것만</button>
+          <button class="chip-t" id="fTodo">미확인만</button>
+          <span class="sp"></span>
+          <span class="kb-hint"><span><kbd>↑</kbd><kbd>↓</kbd> 이동</span><span><kbd>Space</kbd> 확인</span><span><kbd>N</kbd> 다음 미확인</span></span>
+        </div>
+
+        <div class="md">
+          <div class="card lst" id="lst"></div>
+          <div class="card det" id="det"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑤ 상태 모음 -->
+    <section class="screen" id="s5">
+      <div class="wrap">
+        <h1 class="pt" style="font-size:20px">문서 칸 상태</h1>
+        <p class="lead">고른 뒤 분석이 끝날 때까지와, 잘 안 읽혔을 때 무엇이 보이고 무엇을 할 수 있는지.</p>
+        <div class="gal">
+          <div>
+            <div class="cap">파일을 끌어다 놓는 중</div>
+            <div class="slot empty drag">
+              <div class="slot-top"><span class="slot-tag prev">이전 문서</span></div>
+              <div class="big-ic"><i data-i="upload"></i></div>
+              <h3 style="color:var(--primary)">여기에 놓으면 이전 문서로 올라가요</h3>
+              <p>제안요청서.hwp · 2.4MB</p>
+            </div>
+          </div>
+          <div>
+            <div class="cap">분석 중</div>
+            <div class="slot filled is-prev">
+              <div class="slot-top"><span class="slot-tag prev">이전 문서</span></div>
+              <div class="doc-row"><div class="ext">HWP</div><div style="flex:1"><div class="doc-title">2025년 통합민원시스템 유지관리 용역</div><div class="doc-meta"><span>△△공단</span><span class="dot">제안요청서.hwp</span></div></div></div>
+              <div class="progress-steps" style="padding-top:22px">
+                <div class="pstep done"><span class="b"><i data-i="check" style="width:12px;height:12px;stroke-width:3"></i></span>파일 읽기</div>
+                <div class="pstep run"><span class="b"></span>요구사항 표 찾는 중… <span class="faint" style="margin-left:auto;font-size:13px">표 38/64</span></div>
+                <div class="pstep wait"><span class="b"></span>정리</div>
+                <div class="skel" style="width:70%;margin-top:6px"></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="cap">일부만 인식</div>
+            <div class="slot filled is-prev">
+              <div class="slot-top"><span class="slot-tag prev">이전 문서</span><button class="btn ghost sm"><i data-i="x"></i>비우기</button></div>
+              <div class="doc-row"><div class="ext pdf">PDF</div><div style="flex:1"><div class="doc-title">2025 통합민원 유지관리_제안요청서</div><div class="doc-meta"><span class="src-chip"><i data-i="upload" style="width:11px;height:11px"></i>올린 파일</span><span>3.1MB</span><span class="dot">10월 2일 올림</span></div></div></div>
+              <div class="req-sum"><div class="req-n"><b>14</b><span>요구사항</span><span class="q part"><i data-i="alert"></i>일부만 인식</span></div></div>
+              <div class="issue warn"><i data-i="alert"></i><div><b>PDF라서 표를 다 읽지 못했어요</b>번호처럼 보이는 줄 41개 중 14개만 요구사항으로 인식했어요. HWP 원본이 있으면 그 파일로 바꾸면 정확해져요.</div></div>
+              <div class="slot-foot"><button class="btn sm"><i data-i="eye"></i>원문 텍스트</button><button class="btn sm"><i data-i="upload"></i>다른 파일로 바꾸기</button></div>
+            </div>
+          </div>
+          <div>
+            <div class="cap">요구사항 없음 / 실패</div>
+            <div class="slot filled is-next">
+              <div class="slot-top"><span class="slot-tag next">이번 문서</span><button class="btn ghost sm"><i data-i="x"></i>비우기</button></div>
+              <div class="doc-row"><div class="ext">HWP</div><div style="flex:1"><div class="doc-title">2026년 통합민원시스템 기능개선 및 유지관리 용역</div><div class="doc-meta"><span>△△공단</span><span class="dot">과업지시서.hwp</span></div></div></div>
+              <div class="issue mute"><i data-i="file"></i><div><b>이 문서에서는 요구사항을 찾지 못했어요</b>요구사항 고유번호(SFR-001 등)가 있는 표가 없어요. 같은 공고의 다른 문서를 골라 보세요.</div></div>
+              <div class="file-sel" style="margin-top:12px"><i data-i="file" style="color:var(--faint)"></i><span class="grow">(붙임2) 제안요청서.hwp</span><span class="k">97개 · 분석됨</span><i data-i="chev-d" style="width:14px;height:14px;color:var(--faint)"></i></div>
+              <div class="issue err" style="margin-top:12px"><i data-i="alert"></i><div><b>(예시) 열 수 없는 파일이에요 — 암호가 걸려 있어요</b>암호를 푼 파일을 올리거나 다른 문서를 고르세요.</div></div>
+              <div class="slot-foot"><button class="btn sm">다른 문서 고르기</button><button class="btn sm ghost">다시 시도</button></div>
+            </div>
+          </div>
+        </div>
+
+        <h1 class="pt" style="font-size:20px;margin-top:56px">결과 화면 — 달라진 게 없을 때</h1>
+        <div class="card empty-r" style="margin-top:16px">
+          <div class="ic"><i data-i="check"></i></div>
+          <div style="font-size:17px;font-weight:700">달라진 요구사항이 없어요</div>
+          <div class="muted" style="margin-top:4px">요구사항 97개가 모두 이전 문서와 같아요.</div>
+          <button class="btn" style="margin-top:16px">같은 항목 보기</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- 공고 고르기 모달 -->
+<div class="scrim" id="picker">
+  <div class="modal">
+    <div class="m-head">
+      <div class="row"><h3 id="pkTitle">이전 문서 고르기</h3><button class="btn ghost icon" data-close><i data-i="x"></i></button></div>
+      <div class="steps"><span class="on" id="st1">1 공고 고르기</span><span>›</span><span id="st2">2 문서 확인</span></div>
+      <div class="m-search" id="pkSearch"><i data-i="search"></i>공고명, 공고번호, 기관명으로 검색</div>
+    </div>
+    <div class="m-body" id="pkBody"></div>
+    <div class="m-foot" id="pkFoot"></div>
+  </div>
+</div>
+
+<!-- 짝 맺기 모달 -->
+<div class="scrim" id="pairPk">
+  <div class="modal" style="width:600px">
+    <div class="m-head">
+      <div class="row"><h3>짝 맺기</h3><button class="btn ghost icon" data-close><i data-i="x"></i></button></div>
+      <div class="muted" style="font-size:14px;margin-top:4px" id="ppSub"></div>
+    </div>
+    <div class="m-body" id="ppBody"></div>
+    <div class="m-foot"><span>내용이 비슷한 순서로 보여요 · 짝을 맺으면 ‘수동’으로 표시되고 저장돼요</span></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastT"></span><button id="toastU">되돌리기</button></div>
+
+<script>
+const IC = {
+  home:'<path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  list:'<path d="M13 5h8M13 12h8M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/>',
+  mail:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/>',
+  compare:'<circle cx="5" cy="6" r="3"/><path d="M12 6h5a2 2 0 0 1 2 2v7"/><path d="m15 9-3-3 3-3"/><circle cx="19" cy="18" r="3"/><path d="M12 18H7a2 2 0 0 1-2-2V9"/><path d="m9 15 3 3-3 3"/>',
+  trophy:'<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  file:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M16 13H8M16 17H8M10 9H8"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68 1.65 1.65 0 0 0 10 3.17V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/>',
+  search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  swap:'<path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/>',
+  arrow:'<path d="M5 12h14M12 5l7 7-7 7"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  'chev-d':'<path d="m6 9 6 6 6-6"/>', 'chev-r':'<path d="m9 18 6-6-6-6"/>',
+  sparkle:'<path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.13-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.13a.5.5 0 0 1 .96 0l1.58 6.13a2 2 0 0 0 1.44 1.44l6.13 1.58a.5.5 0 0 1 0 .96l-6.13 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0z"/>',
+  link:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  unlink:'<path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71M5.17 11.75l-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71M8 2v3M2 8h3M16 19v3M19 16h3"/>',
+  eye:'<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
+  hash:'<path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/>',
+  building:'<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2M10 6h4M10 10h4M10 14h4M10 18h4"/>',
+  copy:'<rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  split:'<path d="M16 3h5v5M8 3H3v5M12 22v-8.3a4 4 0 0 0-1.17-2.87L3 3M15 9l6-6"/>',
+  hand:'<path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
+};
+const ic = (n, st='') => `<svg class="i" viewBox="0 0 24 24" ${st?`style="${st}"`:''}>${IC[n]||''}</svg>`;
+const hydrate = (root=document) => root.querySelectorAll('i[data-i]').forEach(el => { const s = document.createElement('span'); s.innerHTML = ic(el.dataset.i, el.getAttribute('style')||''); el.replaceWith(s.firstChild); });
+
+/* ── 테마 ── */
+document.getElementById('themeBtn').onclick = (e) => { const h = document.documentElement; h.classList.toggle('light'); e.target.textContent = h.classList.contains('light') ? '다크 모드' : '라이트 모드'; };
+
+/* ── 화면 전환 ── */
+function go(id) {
+  if (id === 's2b') { go('s2'); openPicker('prev'); return; }
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+  document.querySelectorAll('.mk-bar [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === id));
+  window.scrollTo(0, 0);
+}
+document.addEventListener('click', (e) => {
+  const g = e.target.closest('[data-go]'); if (g) { go(g.dataset.go); return; }
+  const p = e.target.closest('[data-open-picker]'); if (p) { openPicker(p.dataset.openPicker); return; }
+  if (e.target.closest('[data-close]') || e.target.classList.contains('scrim')) document.querySelectorAll('.scrim').forEach(s => s.classList.remove('on'));
+});
+
+/* ── 채워진 슬롯 ── */
+const PFX_C = { SFR:'#2b5cb0', PER:'#4f9a94', SER:'#b8382c', DAR:'#a1620a', INR:'#7a5bb5', COR:'#65655f', PMR:'#2f7a4f', PSR:'#a1a19b' };
+const SLOTS = {
+  prev25: { tag:'prev', ext:'HWP', title:'2025년 통합민원시스템 유지관리 용역', meta:['△△공단','2025.03.14 게시'], file:'2. 제안요청서.hwp', files:3, n:91, comp:{SFR:38,PER:9,SER:14,DAR:8,INR:6,COR:5,PMR:7,PSR:4} },
+  next26: { tag:'next', ext:'HWP', title:'2026년 통합민원시스템 기능개선 및 유지관리 용역', meta:['△△공단','2026.10.17 게시'], file:'(붙임2) 제안요청서.hwp', files:4, n:97, comp:{SFR:41,PER:9,SER:15,DAR:9,INR:6,COR:5,PMR:8,PSR:4} },
+};
+function slotHtml(d) {
+  const tot = Object.values(d.comp).reduce((a,b)=>a+b,0);
+  return `<div class="slot-top"><span class="slot-tag ${d.tag}">${d.tag==='prev'?'이전 문서':'이번 문서'}</span><button class="btn ghost sm">${ic('x')}비우기</button></div>
+    <div class="doc-row"><div class="ext">${d.ext}</div><div style="flex:1;min-width:0"><div class="doc-title">${d.title}</div>
+      <div class="doc-meta"><span class="src-chip">${ic('list','width:11px;height:11px')}수집 공고</span><span>${d.meta[0]}</span><span class="dot">${d.meta[1]}</span></div></div></div>
+    <div class="file-sel">${ic('file','color:var(--faint)')}<span class="grow">${d.file}</span><span class="k">첨부 ${d.files}개 중</span>${ic('chev-d','width:14px;height:14px;color:var(--faint)')}</div>
+    <div class="req-sum">
+      <div class="req-n"><b>${d.n}</b><span>요구사항</span><span class="q good">${ic('check','width:14px;height:14px;stroke-width:2.6')}잘 읽었어요</span></div>
+      <div class="comp">${Object.entries(d.comp).map(([k,v])=>`<i style="width:${v/tot*100}%;background:${PFX_C[k]}" title="${k} ${v}"></i>`).join('')}</div>
+      <div class="legend">${Object.entries(d.comp).slice(0,6).map(([k,v])=>`<span><i style="background:${PFX_C[k]}"></i><span class="mono">${k}</span><b>${v}</b></span>`).join('')}<span class="faint">+${Object.keys(d.comp).length-6}</span></div>
+    </div>
+    <div class="slot-foot"><button class="btn sm">${ic('eye')}원문 텍스트</button></div>`;
+}
+document.querySelectorAll('[data-slot]').forEach(el => el.innerHTML = slotHtml(SLOTS[el.dataset.slot]));
+
+/* ── 최근 비교 / 올린 문서 ── */
+const RECENT = [
+  { a:'2025년 통합민원시스템 유지관리 용역', b:'2026년 통합민원시스템 기능개선 및 유지관리', c:[7,4,2,84], done:12, tot:13, at:'오늘 14:20' },
+  { a:'2024 전자문서 유통 플랫폼 운영', b:'2025 전자문서 유통 플랫폼 고도화(올린 파일)', c:[22,15,6,61], done:5, tot:43, at:'10월 18일' },
+  { a:'○○시 스마트 주차 정보시스템 구축', b:'△△군 스마트 주차 통합관리 구축', c:[31,26,18,24], done:0, tot:75, at:'10월 11일' },
+];
+document.getElementById('recentList').innerHTML = RECENT.map(r => {
+  const t = r.c.reduce((a,b)=>a+b,0), col=['var(--warn)','var(--ok)','var(--danger)','var(--line-strong)'];
+  return `<div class="li"><div style="min-width:0"><div class="pair-t"><span class="a">${r.a}</span>${ic('arrow')}<span class="b">${r.b}</span></div><div class="muted" style="font-size:13px;margin-top:2px">${r.at}</div></div>
+    <div><div class="mini">${r.c.map((v,i)=>`<i style="width:${v/t*100}%;background:${col[i]}"></i>`).join('')}</div><div class="mini-l"><span>변경 ${r.c[0]}</span><span>신규 ${r.c[1]}</span><span>삭제 ${r.c[2]}</span></div></div>
+    <div class="prog">검토 ${r.done}/${r.tot}<div class="bar"><i style="width:${r.done/r.tot*100}%"></i></div></div>
+    <div style="display:flex;gap:4px;justify-content:flex-end"><button class="btn sm" data-go="s4">열기</button><button class="btn ghost sm icon" style="width:28px">${ic('x','width:14px;height:14px')}</button></div></div>`;
+}).join('');
+const LIB = [
+  { ext:'HWP', n:'2025 전자문서 유통 플랫폼 고도화 제안요청서', lab:'경쟁사 공유본', size:'2.4MB', at:'10월 18일', cnt:104, q:'good' },
+  { ext:'PDF', n:'2025 통합민원 유지관리_제안요청서.pdf', size:'3.1MB', at:'10월 2일', cnt:14, q:'part' },
+  { ext:'HWPX', n:'2023 차세대 민원 포털 구축 RFP.hwpx', size:'5.8MB', at:'9월 21일', cnt:132, q:'good' },
+];
+document.getElementById('libList').innerHTML = LIB.map(l => `<div class="li"><div class="ext ${l.ext==='PDF'?'pdf':''}">${l.ext}</div>
+  <div style="min-width:0"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.n}</div><div class="muted" style="font-size:13px">${l.lab?`<span class="src-chip" style="margin-right:6px">${l.lab}</span>`:''}${l.size} · ${l.at} 올림</div></div>
+  <div><span style="font-weight:700;font-variant-numeric:tabular-nums">${l.cnt}</span> <span class="muted" style="font-size:13px">요구사항</span></div>
+  <div>${l.q==='good'?`<span class="q good" style="margin:0">${ic('check','width:14px;height:14px')}잘 읽었어요</span>`:`<span class="q part" style="margin:0">${ic('alert','width:14px;height:14px')}일부만 인식</span>`}</div>
+  <div style="display:flex;gap:4px"><button class="btn sm">이전에 넣기</button><button class="btn sm">이번에 넣기</button></div></div>`).join('');
+
+/* ── 공고 고르기 모달 ── */
+const NOTICES = {
+  rec: [
+    { t:'2025년 통합민원시스템 유지관리 용역', m:'△△공단 · 2025.03.14 · 낙찰 결과 있음', tags:['org','sim:87%'] },
+    { t:'2024년 통합민원시스템 유지관리 용역', m:'△△공단 · 2024.02.27', tags:['org','sim:85%'] },
+    { t:'2025년 △△공단 홈페이지 운영 및 유지관리', m:'△△공단 · 2025.05.02', tags:['org'] },
+    { t:'2025 □□청 민원처리시스템 기능개선', m:'□□청 · 2025.08.11', tags:['sim:61%'] },
+  ],
+  all: [
+    { t:'2026 국가기록 디지털 전환 사업', m:'◇◇원 · 2026.10.15' },
+    { t:'○○시 스마트 주차 정보시스템 구축', m:'○○시 · 2026.10.09' },
+  ],
+};
+let pkSide = 'prev';
+function openPicker(side) {
+  pkSide = side;
+  document.getElementById('pkTitle').textContent = (side==='prev'?'이전':'이번') + ' 문서 고르기';
+  pkStep1();
+  document.getElementById('picker').classList.add('on');
+}
+function tagHtml(t) { return t==='org' ? `<span class="tag org">${ic('building')}같은 기관</span>` : `<span class="tag sim">제목 유사 ${t.split(':')[1]}</span>`; }
+function pkStep1() {
+  document.getElementById('st1').className='on'; document.getElementById('st2').className='';
+  document.getElementById('pkSearch').style.display='';
+  document.getElementById('pkBody').innerHTML =
+    `<div class="m-grp">${ic('sparkle','width:13px;height:13px')}추천 <span class="sub">· 이번 문서와 같은 기관이거나 제목이 비슷한 공고</span></div>` +
+    NOTICES.rec.map((n,i)=>`<div class="pick ${i===0?'kb':''}" data-pk="${i}"><div class="grow"><div class="t">${n.t}</div><div class="m">${n.m}</div></div><div style="display:flex;gap:4px">${n.tags.map(tagHtml).join('')}</div></div>`).join('') +
+    `<div class="m-grp" style="margin-top:6px">전체 공고 <span class="sub">· 최신순</span></div>` +
+    NOTICES.all.map(n=>`<div class="pick"><div class="grow"><div class="t">${n.t}</div><div class="m">${n.m}</div></div></div>`).join('');
+  document.getElementById('pkFoot').innerHTML = `<span><kbd>↑</kbd><kbd>↓</kbd> 이동 · <kbd>Enter</kbd> 선택</span><span class="sp"></span><span>찾는 공고가 없나요?</span><button class="btn sm">${ic('upload')}파일 올리기</button>`;
+  document.querySelectorAll('[data-pk]').forEach(el => el.onclick = () => pkStep2(NOTICES.rec[+el.dataset.pk]));
+}
+function pkStep2(n) {
+  document.getElementById('st1').className=''; document.getElementById('st2').className='on';
+  document.getElementById('pkSearch').style.display='none';
+  const docs = [
+    { t:'2. 제안요청서.hwp', m:'제안요청서 · 2.1MB · 이미 분석됨 — 요구사항 91개', on:true },
+    { t:'1. 입찰공고문.hwp', m:'공고문 · 선택하면 분석해요' },
+    { t:'3. 과업내용서(별첨).hwp', m:'제안요청서 · 선택하면 분석해요' },
+  ];
+  document.getElementById('pkBody').innerHTML =
+    `<div style="padding:12px 22px 4px"><button class="btn ghost sm" id="pkBack" style="margin-left:-10px">← 공고 다시 고르기</button><div style="font-weight:700;font-size:16px;margin-top:6px">${n.t}</div><div class="muted" style="font-size:13px">${n.m}</div></div>
+     <div class="m-grp">어떤 문서와 비교할까요? <span class="sub">· 제안요청서를 먼저 골라 뒀어요</span></div>` +
+    docs.map((d,i)=>`<div class="doc-opt ${d.on?'on':''}" data-do="${i}"><span class="radio"></span><div class="grow"><div class="t">${d.t}</div><div class="m">${d.m}</div></div></div>`).join('');
+  document.getElementById('pkFoot').innerHTML = `<span class="sp"></span><button class="btn" data-close>취소</button><button class="btn pri" id="pkUse">이 문서 사용</button>`;
+  document.getElementById('pkBack').onclick = pkStep1;
+  document.querySelectorAll('[data-do]').forEach(el => el.onclick = () => { document.querySelectorAll('[data-do]').forEach(x=>x.classList.remove('on')); el.classList.add('on'); });
+  document.getElementById('pkUse').onclick = () => { document.getElementById('picker').classList.remove('on'); go('s3'); };
+}
+
+/* ── 비교 데이터 ── */
+const PFX_NAME = { FUN:'기능', PER:'성능', SER:'보안', DAR:'데이터', COR:'제약사항', PMR:'프로젝트 관리', PSR:'프로젝트 지원', QUR:'품질', TER:'테스트', INT:'인터페이스', CSR:'컨설팅' };
+const D = [{"s":"changed","p":{"id":"COR-01","cat":"제약사항","name":"전자정부 표준프레임워크 적용","def":"전자정부 표준준수","det":"ㅇ전자정부 표준프레임워크를 적용하여 개발하며, 공통 컴포넌트 활용성 분석을 수행 후 가능한 부분은 적용\nㅇ전자정부 프레임워크 적용에 따른 성능 저하 및 HW, SW 구성상의 문제가 발생하지 않도록 사업 착수단계에서 관련 이슈를 종합적으로 점검/확인하고, 필요 시 개발 프레임워크를 최적화(Customizing)\nㅇ사업수행과정에서 전자정부프레임워크가 변경될 경우 관련 기능을 추가적으로 개발하여 오픈 시점에서 최신의 환경에서 시스템을 운용할 수 있도록 지원\nㅇ대내외 시스템과의 연계/연동, 배치작업 등을 처리하기 위해 필요 시 전자정부프레임워크 이외의 S/W 제안 가능\nㅇ분석/설계과정에서 개발프레임워크와 관련한 추가 요건이 도출될 경우, 수렴하여 개발 프레임워크에 반영\nㅇ개발 프레임워크 추가/변경 요건 구현은 전 공정에 걸쳐 주관기관과의 협의 하에 진행하여야 하며, 설계자/개발자들이 내용을 인지할 수 있도록 개발관리 절차에 따라 배포\nㅇ개발 프레임워크 추가/변경 기능, 기능 명세, 사용법 등은 어플리케이션 개발, 소프트웨어 설치, 환경 설정 등 관련 개발 표준 및 가이드에 반영하여야 하며, 개발 프레임워크에 반영하기 어려운 독립된 요소일 경우, 별도 추가 문서로 관리\nㅇ개발 프레임워크 성능 진단 및 최적화, 개발 환경 구축 및 가이드, 어플리케이션 및 시스템 간 연계 방안 정의 등을 전문적으로 수행할 수 있는 전자정부 프레임워크 기반의 응용 아키텍트를 투입"},"n":{"id":"COR-01","cat":"제약사항","name":"전자정부 표준프레임워크 적용","def":"전자정부 표준준수","det":"ㅇ전자정부 표준프레임워크를 적용하여 개발하며, 공통 컴포넌트 활용성 분석을 수행 후 가능한 부분은 적용\nㅇ전자정부 프레임워크 적용에 따른 성능 저하 및 HW, SW 구성상의 문제가 발생하지 않도록 사업 착수단계에서 관련 이슈를 종합적으로 점검/확인하고, 필요 시 개발 프레임워크를 최적화(Customizing)\nㅇ사업수행과정에서 전자정부프레임워크가 변경될 경우 관련 기능을 추가적으로 개발하여 오픈 시점에서 최신의 환경에서 시스템을 운용할 수 있도록 지원\nㅇ대내외 시스템과의 연계/연동, 배치작업 등을 처리하기 위해 필요 시 전자정부프레임워크 이외의 S/W 제안 가능\nㅇ분석/설계과정에서 개발프레임워크와 관련한 추가 요건이 도출될 경우, 수렴하여 개발 프레임워크에 반영\nㅇ개발 프레임워크 추가/변경 요건 구현은 전 공정에 걸쳐 주관기관과의 협의 하에 진행하여야 하며, 설계자/개발자들이 내용을 인지할 수 있도록 개발관리 절차에 따라 배포\nㅇ개발 프레임워크 추가/변경 기능, 기능 명세, 사용법 등은 어플리케이션 개발, 소프트웨어 설치, 환경 설정 등 관련 개발 표준 및 가이드에 반영하여야 하며, 개발 프레임워크에 반영하기 어려운 독립된 요소일 경우, 별도 추가 문서로 관리\nㅇ개발 프레임워크 성능 진단 및 최적화, 개발 환경 구축 및 가이드, 어플리케이션 및 시스템 간 연계 방안 정의 등을 전문적으로 수행할 수 있는 전자정부 프레임워크 기반의 응용 아키텍트를 투입\nㅇ｢전자정부 웹사이트 품질관리 지침｣(행정안전부고시)을 준수하야야 함\nㅇ｢장애인‧고령자 등의 정보 접근 및 이용 편의 증진을 위한 고시｣(과학기술정보통신부고시)을 준수하야야 함\nㅇ｢모바일 전자정부 서비스 관리지침｣(행정안전부예규)을 준수하야야 함"},"tags":[],"by":"id","score":0.9630922693266832},{"s":"same","p":{"id":"COR-03","cat":"제약사항","name":"웹접근성 준수 및 추가 장비 구성 준수사항","def":"웹접근성 준수 및 추가 장비 구성 준수","det":"ㅇ웹개발을 위한 코딩, 메뉴, 호환성 규칙 등은 웹 접근성 향상을 위한 국가표준 기술가이드 준수\nㅇ한국형 웹 콘텐츠 접근성 지침 준수\nㅇ H/W 및 상용 S/W 등 추가 인프라 도입이 필요할 시 「행정기관 및 공공기관의 클라우드컴퓨팅서비스 이용 기준 및 안전성 확보 등에 관한 고시」에 따라 클라우딩컴퓨팅서비스(SaaS) 이용을 우선 검토하여야함"},"n":{"id":"COR-02","cat":"제약사항","name":"웹접근성 준수 및 추가 장비 구성 준수사항","def":"웹접근성 준수 및 추가 장비 구성 준수","det":"ㅇ 웹개발을 위한 코딩, 메뉴, 호환성 규칙 등은 웹 접근성 향상을 위한 국가표준 기술가이드 준수\nㅇ 한국형 웹 콘텐츠 접근성 지침 준수\nㅇ H/W 및 상용 S/W 등 추가 인프라 도입이 필요할 시 「행정기관 및 공공기관의 클라우드컴퓨팅서비스 이용 기준 및 안전성 확보 등에 관한 고시」에 따라 클라우딩컴퓨팅서비스(SaaS) 이용을 우선 검토하여야함"},"tags":["renumbered"],"by":"sim","score":1},{"s":"changed","p":{"id":"COR-04","cat":"제약사항","name":"기타 정보화 기반 표준 준수사항","def":"기타 표준 준수","det":"ㅇ요구사항에서 제시되지 않은 정보화 기반 표준은 ‘행정기관 및 공공기관 정보시스템 구축·운영 지침’을 준수"},"n":{"id":"COR-03","cat":"제약사항","name":"기타 정보화 기반 표준 준수사항","def":"기타 표준 준수","det":"ㅇ 사업자는 본 과업을 수행함에 있어 관련법규, 기준 및 계약서 등에 의거하여 효율적이고 능률적이며 합리적으로 과업을 수행해야 하며, 계약서의 내용에 의문사항이 있을 경우에는 발주기관과 사전협의 후 과업을 수행하여야 함\nㅇ 관련법규 및 계약서 등에 명시되지 않는 사항은 발주기관과 사전협의하여 결정하여야 함\nㅇ 사업자가 수집한 자료와 관계기관이 제시하는 기초자료에 대하여는 충분한 검토, 분석과 협의를 거쳐서 과업수행에 착오가 없도록 하며, 본 사업에 적용되는 참고자료는 목록을 작성하여 별도 제출하여야 함\nㅇ 입찰 시 제출한 기술제안서의 내용이 본 제안요청서와 상이한 경우에는 발주기관이 인정하는 경우를 제외하고 제안요청서를 우선 적용함\nㅇ 요구사항에서 제시되지 않은 정보화 기반 표준은 ‘행정기관 및 공공기관 정보시스템 구축·운영 지침’을 준수"},"tags":["renumbered","major"],"by":"sim","score":0.7075268817204301},{"s":"same","p":{"id":"COR-05","cat":"제약사항","name":"제반법규 준수","def":"제반 규정 준수","det":"ㅇ사업자는 본 과업을 수행함에 있어 관련법규, 기준 및 계약서 등에 의거하여 효율적이고 능률적이며 합리적으로 과업을 수행해야 하며, 계약서의 내용에 의문사항이 있을 경우에는 주관기관과 사전협의 후 과업을 수행하여야 함\nㅇ관련법규 및 계약서 등에 명시되지 않는 사항은 주관기관과 사전협의하여 결정하여야 함\nㅇ사업자가 수집한 자료와 관계기관이 제시하는 기초자료에 대하여는 충분한 검토, 분석과 협의를 거쳐서 과업수행에 착오가 없도록 하며, 본 사업에 적용되는 참고자료는 목록을 작성하여 별도 제출하여야 함\nㅇ입찰 시 제출한 기술제안서의 내용이 본 제안요청서와 상이한 경우에는 주관기관이 인정하는 경우를 제외하고 제안요청서를 우선 적용함"},"n":{"id":"COR-04","cat":"제약사항","name":"제반법규 준수","def":"제반 규정 준수","det":"ㅇ사업자는 본 과업을 수행함에 있어 관련법규, 기준 및 계약서 등에 의거하여 효율적이고 능률적이며 합리적으로 과업을 수행해야 하며, 계약서의 내용에 의문사항이 있을 경우에는 주관기관과 사전협의 후 과업을 수행하여야 함\nㅇ관련법규 및 계약서 등에 명시되지 않는 사항은 주관기관과 사전협의하여 결정하여야 함\nㅇ사업자가 수집한 자료와 관계기관이 제시하는 기초자료에 대하여는 충분한 검토, 분석과 협의를 거쳐서 과업수행에 착오가 없도록 하며, 본 사업에 적용되는 참고자료는 목록을 작성하여 별도 제출하여야 함\nㅇ입찰 시 제출한 기술제안서의 내용이 본 제안요청서와 상이한 경우에는 주관기관이 인정하는 경우를 제외하고 제안요청서를 우선 적용함"},"tags":["renumbered"],"by":"sim","score":1},{"s":"changed","p":{"id":"COR-02","cat":"제약사항","name":"전자정부 웹호환성 지침 준수","def":"웹 호환성 지침준수","det":"ㅇ전자정부 웹사이트 품질관리 지침(행정안전부고시 제2025-46호)에 따른 웹호환성 지침 준수"},"n":{"id":"COR-05","cat":"제약사항","name":"전자정부 웹호환성 지침 준수","def":"웹 호환성 지침준수","det":"ㅇ전자정부 웹사이트 품질관리 지침(행정안전부고시)에 따른 웹호환성 지침 준수"},"tags":["renumbered","numeric"],"by":"sim","score":0.9516483516483516},{"s":"same","p":{"id":"COR-06","cat":"제약사항","name":"EA현행화","def":"EA 관련정보 현행화","det":"ㅇ범정부 EA포털(GEAP) 등록된 관련 정보(업무․데이터․응용․기술 아키텍쳐) 현행화\nㅇ별도 양식의 「EA 현행화 확인서」"},"n":{"id":"COR-06","cat":"제약사항","name":"EA현행화","def":"EA 관련정보 현행화","det":"ㅇ범정부 EA포털(GEAP) 등록된 관련 정보(업무․데이터․응용․기술 아키텍쳐) 현행화\nㅇ별도 양식의 「EA 현행화 확인서」"},"tags":[],"by":"id","score":1},{"s":"removed","p":{"id":"CSR-01","cat":"컨설팅","name":"구축 서비스에 대한 종합 기대효과 분석","def":"경제성, 탄소중립 등 종합 기대효과 분석","det":"ㅇ 전자출하시스템 고도화 구축사업에서 개선, 구축되는 서비스 및 운영중인 서비스에 대해 종합적인 기대효과를 분석하여 결과 제시\nㅇ 서비스를 구축·활용함에 따라 국민, 농가, 운송기사, 작업장, 지자체 등 이해관계자들에게 얼마큼의 효과가 나타날지에 대한 결과를 정량적으로 제시\nㅇ 시스템 사용으로 인한 경제성, 탄소중립 효과 등 종합적인 기대효과를 분석\nㅇ 분석 시 관련 서비스 이용자 인터뷰 후 방향설정\nㅇ 기관에 종합 기대효과 결과에 대한 보고서 제출"},"tags":["id_collision"]},{"s":"added","n":{"id":"CSR-01","cat":"컨설팅","name":"서비스 가치 평가","def":"서비스의 효과와 가치를 정량적, 정성적으로 분석","det":"ㅇ 축산물원패스 기능 개선 사업을 통한 사용자 경험(UX) 향상, 사용자 만족도, 민원 감소 등 구체적인 평가 기준 수립\nㅇ 서비스 개선이 국민, 농가, 지자체, 기업 등에 미치는 경제적 효과와 비경제적 가치를 평가하여 구체적 지표로 제시\nㅇ 주요 이용자(국민, 농가 등)의 인터뷰를 통한 서비스 가치 평가 방안 설정\nㅇ 서비스 가치 평가 결과에 대한 보고서 제출"},"tags":["id_collision"]},{"s":"same","p":{"id":"DAR-01","cat":"데이터","name":"데이터 표준화","def":"데이터 표준 원칙 및 가이드 수립","det":"ㅇ데이터 표준 원칙 및 가이드 수립\n- 구축되는 시스템의 데이터 특성을 고려하여 표준화 관리체계(데이터 표준화 지침 및 가이드 등)를 개선·정비하여야 함\nㅇ범정부 표준을 준수한 기관의 표준 원칙을 기반으로 데이터 표준화\n- 시스템 구축에 따라 추가가 필요한 데이터 표준항목(단어, 용어, 도메인)을 정의하고 데이터 표준사전 등에 반영하여야 함"},"n":{"id":"DAR-01","cat":"데이터","name":"데이터 표준화","def":"데이터 표준 원칙 및 가이드 수립","det":"ㅇ 데이터 표준 원칙 및 가이드 수립\n  - 구축되는 시스템의 데이터 특성을 고려하여 표준화 관리체계(데이터 표준화 지침 및 가이드 등)를 개선·정비하여야 함\nㅇ 범정부 표준을 준수한 기관의 표준 원칙을 기반으로 데이터 표준화\n  - 시스템 구축에 따라 추가가 필요한 데이터 표준항목(단어, 용어, 도메인)을 정의하고 데이터 표준사전 등에 반영하여야 함"},"tags":[],"by":"id","score":1},{"s":"changed","p":{"id":"DAR-02","cat":"데이터","name":"공통 데이터 표준화","def":"범정부 및 주관기관 표준 준수","det":"ㅇ범정부 표준 준수\n- 공공데이터 공통표준용어(행정안전부 고시 제2020-66호)를 준수하여야 함\n- 데이터 표준화 수립 전 구축 시스템과 관련된 분야별 표준 여부를 검토 후 반영하여야 함\n- 공공기관의 데이터베이스 표준화 지침(행정안전부 고시 제2021-32호)을 준수하여야 함\nㅇ주관기관 표준을 준수\n- 수행사는 축산물품질평가원의 데이터 사전을 준수하고 그와 상충되는 요소에 대해서는 주관기관과 협의하여 대응 방안을 수립하고 이력을 남겨야 함"},"n":{"id":"DAR-02","cat":"데이터","name":"공통 데이터 표준화","def":"범정부 및 주관기관 표준 준수","det":"ㅇ 범정부 표준 준수\n  - 공공데이터 공통표준용어(행정안전부 고시)를 준수하여야 함\n  - 데이터 표준화 수립 전 구축 시스템과 관련된 분야별 표준 여부를 검토 후 반영하여야 함 \n  - 공공기관의 데이터베이스 표준화 지침(행정안전부 고시)을 준수하여야 함\nㅇ 주관기관 표준을 준수\n  - 수행사는 축산물품질평가원의 데이터 사전을 준수하고 그와 상충되는 요소에 대해서는 주관기관과 협의하여 대응 방안을 수립하고 이력을 남겨야 함"},"tags":["numeric"],"by":"id","score":0.9769633507853404},{"s":"changed","p":{"id":"DAR-03","cat":"데이터","name":"데이터 표준 관리","def":"데이터 표준 관리 방안","det":"ㅇ데이터 표준관리 방안\n- 데이터 표준관리를 위한 표준화 도구(메타데이터관리시스템 등)와 이를 통한 변경이력을 효과적으로 관리 할 수 있는 방안을 제시하고 적용하여야 함\n※ 운영 중인 메타데이터관리시스템 가이드 등을 참조"},"n":{"id":"DAR-03","cat":"데이터","name":"데이터 표준 관리","def":"데이터 표준 관리 방안","det":"ㅇ 데이터 표준관리 방안\n  - 데이터 표준관리를 위한 표준화 도구(메타데이터관리시스템 등)와 이를 통한 변경이력을 효과적으로 관리 할 수 있는 방안을 제시하고 적용하여야 함\n   ※ 운영 중인 메타데이터관리시스템 가이드 등을 참조\nㅇ 본 사업으로 구축되는 정보시스템(DB)의 메타데이터는 발주기관의 메타관리시스템에 등록·관리하며, 중앙메타데이터 관리시스템과 연계·등록 하여야 함"},"tags":[],"by":"id","score":0.8985074626865672},{"s":"same","p":{"id":"DAR-04","cat":"데이터","name":"데이터 구조 설계","def":"데이터 구조설계 원칙","det":"ㅇ데이터 구조 설계 원칙 및 가이드 제시\n- 데이터 구조 설계(모델링) 원칙 및 가이드를 제시하고 이를 준수하여 데이터 구조를 설계, 구현하여야 함\n- 일관성, 데이터의 종속성, 무결성, DB 성능 등이 고려되어야 함\nㅇ데이터 주제영역 정의 및 개념·논리·물리 모델 설계\n- 데이터 공유 및 활용, 업무요건 변화, 시스템 변경으로 인한 DB의 구조적 변화가 최소화될 수 있도록 유연한 구조로 설계하여야 함\n- 데이터 분류체계, 명명 규칙, DB Object 사용기준이 반영되어야 함\n- 주제영역, 개념 데이터 모델, 논리 데이터 모델, 물리 데이터 모델의 설계 산출물을 사전에 검토할 수 있도록 제출하여야 함\nㅇ데이터 발생과 처리의 이해를 높이는 데이터 발생 규칙 정의\n- 인조 식별자가 많은 엔터티의 경우 데이터 구조만으로 발생 규칙을 이해하기 어려우므로 ‘데이터 발생 규칙 정의서’를 작성해야 함"},"n":{"id":"DAR-04","cat":"데이터","name":"데이터 구조 설계","def":"데이터 구조설계 원칙","det":"ㅇ 데이터 구조 설계 원칙 및 가이드 제시\n - 데이터 구조 설계(모델링) 원칙 및 가이드를 제시하고 이를 준수하여 데이터 구조를 설계, 구현하여야 함\n - 일관성, 데이터의 종속성, 무결성, DB 성능 등이 고려되어야 함\nㅇ 데이터 주제영역 정의 및 개념·논리·물리 모델 설계\n - 데이터 공유 및 활용, 업무요건 변화, 시스템 변경으로 인한 DB의 구조적 변화가 최소화될 수 있도록 유연한 구조로 설계하여야 함\n - 데이터 분류체계, 명명 규칙, DB Object 사용기준이 반영되어야 함\n - 주제영역, 개념 데이터 모델, 논리 데이터 모델, 물리 데이터 모델의 설계 산출물을 사전에 검토할 수 있도록 제출하여야 함\nㅇ 데이터 발생과 처리의 이해를 높이는 데이터 발생 규칙 정의\n - 인조 식별자가 많은 엔터티의 경우 데이터 구조만으로 발생 규칙을 이해하기 어려우므로 ‘데이터 발생 규칙 정의서’를 작성해야 함"},"tags":[],"by":"id","score":1},{"s":"changed","p":{"id":"DAR-05","cat":"데이터","name":"데이터 구조 검증","def":"데이터 모델 검증","det":"ㅇ데이터 모델 검증\n- 설계된 데이터 모델은 설계자 · 개발자 · 발주기관 · 전문가 등이 참여하여 검증하여야 함\n- 주제영역 도출, 개념모델, 논리모델, 물리모델 도출 시점을 전후로 검증과 교육을 수행하여야 함\n- 각 단계별 데이터 모델 검증 시 기준을 정의하고 실시하여야 함\n예) 논리 데이터 모델 검증 기준\n: 요구사항 대비 논리 모델의 완전성(논리 데이터 모델이 비즈니스 요구사항의 누락 여부)\n: 정규화 충족 여부\n예) 물리 데이터 모델 검증 기준\n: 중복 테이블 여부, 중복 칼럼 여부, 반정규화된 중복 데이터 정합성 유지 방안 여부"},"n":{"id":"DAR-05","cat":"데이터","name":"데이터 구조 검증","def":"데이터 모델 검증","det":"ㅇ 데이터 모델 검증 \n - 설계된 데이터 모델은 설계자 · 개발자 · 발주기관 · 전문가 등이 참여하여 검증하여야 함\n - 주제영역 도출, 개념모델, 논리모델, 물리모델 도출 시점을 전후로 검증과 교육을 수행하여야 함\n - 각 단계별 데이터 모델 검증 시 기준을 정의하고 실시하여야 함\n   예) 논리 데이터 모델 검증 기준\n     : 요구사항 대비 논리 모델의 완전성(논리 데이터 모델이 비즈니스 요구사항의 누락 여부), 정규화 충족 여부\n   예) 물리 데이터 모델 검증 기준\n     : 중복 테이블 여부, 중복 칼럼 여부, 반정규화된 중복 데이터 정합성 유지 방안 여부"},"tags":["minor"],"by":"id","score":0.9964125560538116},{"s":"same","p":{"id":"DAR-06","cat":"데이터","name":"데이터 구조 관리 도구","def":"데이터 구조 관리 방안","det":"ㅇ데이터 구조 관리 방안\n- 데이터 구조를 설계부터 구축, 운영 단계까지 지속적으로 관리 할 수 있는 방안을 제시하여야 함\n- 운영 중인 메타데이터관리시스템 가이드 등을 참조해야 함(운영 시스템·자료가 있는 경우)\n- 시스템 구축 기간 동안 DB의 형상과 물리 데이터 모델의 형상 일치 여부를 주기적으로 점검하고 보고하여야 함\nㅇ데이터 구조 변경이력 관리\n- 데이터 구조 변경이력에 대한 관리방안을 제시하고 적용하여야 함"},"n":{"id":"DAR-06","cat":"데이터","name":"데이터 구조 관리 도구","def":"데이터 구조 관리 방안","det":"ㅇ 데이터 구조 관리 방안\n - 데이터 구조를 설계부터 구축, 운영 단계까지 지속적으로 관리 할 수 있는 방안을 제시하여야 함\n - 운영 중인 메타데이터관리시스템 가이드 등을 참조해야 함(운영 시스템·자료가 있는 경우) \n - 시스템 구축 기간 동안 DB의 형상과 물리 데이터 모델의 형상 일치 여부를 주기적으로 점검하고 보고하여야 함\nㅇ 데이터 구조 변경이력 관리\n - 데이터 구조 변경이력에 대한 관리방안을 제시하고 적용하여야 함"},"tags":[],"by":"id","score":1},{"s":"same","p":{"id":"DAR-07","cat":"데이터","name":"데이터 값 검증","def":"데이터 값 검증 방안","det":"ㅇ 데이터 값 진단 계획 수립\n- 데이터(연계데이터 포함) 값 진단 수행 일정을 사업 계획에 명시하고 수행하여야 함\nㅇ 데이터 값 진단 수행 및 검증\n- 데이터 값 진단 범위(전체 또는 일부), 기준을 발주기관과 협의하여야 함\n- 범정부 또는 발주기관의 표준을 준수하여 진단기준을 제시하여야 함\n- 진단 결과에 따라 오류 데이터에 대해서는 개선방안을 제시하여야 함"},"n":{"id":"DAR-07","cat":"데이터","name":"데이터 값 검증","def":"데이터 값 검증 방안","det":"ㅇ 데이터 값 진단 계획 수립  \n  - 데이터(연계데이터 포함) 값 진단 수행 일정을 사업 계획에 명시하고 수행하여야 함\nㅇ 데이터 값 진단 수행 및 검증\n  - 데이터 값 진단 범위(전체 또는 일부), 기준을 발주기관과 협의하여야 함\n  - 범정부 또는 발주기관의 표준을 준수하여 진단기준을 제시하여야 함\n  - 진단 결과에 따라 오류 데이터에 대해서는 개선방안을 제시하여야 함"},"tags":[],"by":"id","score":1},{"s":"changed","p":{"id":"DAR-08","cat":"데이터","name":"데이터 관리체계 수립","def":"데이터 관리체계 수립","det":"ㅇ 데이터 관리체계 정의\n- 표준, 구조, 연계 등 데이터 핵심 요소의 지속적인 관리를 위한 조직과 역할을 정의하여야 함\n- 데이터 값의 진단 및 개선 등 품질관리 조직과 역할을 정의하여야 함\n- 데이터 값 진단 방안(기능, 진단 프로그램 등)을 제시하여야 함\n- 데이터 표준(단어 · 용어 · 도메인 · 코드)의 추가, 변경, 삭제 절차를 수립하여야 함\n- 데이터 구조(논리 · 물리)와 관련된 추가, 변경, 삭제 절차를 수립하여야 함\n- 데이터 연계 목록 및 항목의 추가, 변경, 삭제 절차의 정의 절차를 수립하여야 함\n※ 연계 시스템 도입 시 시스템과 연계된 체계 수립\n- 오류 데이터의 진단 및 개선 절차를 제시하여야 함"},"n":{"id":"DAR-08","cat":"데이터","name":"데이터 관리체계 및 연계 데이터 관리체계 수립","def":"데이터 관리체계 및 연계 데이터 관리체계 수립","det":"ㅇ 데이터 관리체계 정의\n - 표준, 구조, 연계 등 데이터 핵심 요소의 지속적인 관리를 위한 조직과 역할을 정의하여야 함\n - 데이터 값의 진단 및 개선 등 품질관리 조직과 역할을 정의하여야 함\n - 데이터 값 진단 방안(기능, 진단 프로그램 등)을 제시하여야 함\n - 데이터 표준(단어 · 용어 · 도메인 · 코드)의 추가, 변경, 삭제 절차를 수립하여야 함\n - 데이터 구조(논리 · 물리)와 관련된 추가, 변경, 삭제 절차를 수립하여야 함\n - 데이터 연계 목록 및 항목의 추가, 변경, 삭제 절차의 정의 절차를 수립하여야 함\n  ※ 연계 시스템 도입 시 시스템과 연계된 체계 수립\n - 오류 데이터의 진단 및 개선 절차를 제시하여야 함\nㅇ 데이터 연계 관리 방안 제시\n - 제공기관 및 활용기관 간 연계데이터의 정합성이 유지되도록 방안을 제시하고 구축하여야 함\n - 연계데이터에 대한 메타데이터를 작성하고 표준화 및 현행화를 위한 방안을 제시하여야 함\n - 연계데이터를 제공 및 활용하는 기관 상호 간의 데이터 품질 확보를 위한 협의체(가칭) 등을 구성하여 연계표준이나 기준 등을 협의하고, 정기적인 연계데이터 정합성 검증을 통해 연계데이터 누락을 검증하는 등의 협조체계를 제시하여야 함"},"tags":[],"by":"id","score":0.6573225913254608},{"s":"changed","p":{"id":"DAR-09","cat":"데이터","name":"연계 데이터 관리체계 수립","def":"연계 데이터 관리체계 수립","det":"ㅇ데이터 연계 관리 방안 제시\n- 제공기관 및 활용기관 간 연계데이터의 정합성이 유지되도록 방안을 제시하고 구축하여야 함\n- 연계데이터에 대한 메타데이터를 작성하고 표준화 및 현행화를 위한 방안을 제시하여야 함\n- 연계데이터를 제공 및 활용하는 기관 상호 간의 데이터 품질 확보를 위한 협의체(가칭) 등을 구성하여 연계표준이나 기준 등을 협의하고, 정기적인 연계데이터 정합성 검증을 통해 연계데이터 누락을 검증하는 등의 협조체계를 제시하여야 함"},"n":{"id":"DAR-09","cat":"데이터","name":"데이터 개방 관리체계","def":"개방데이터 서비스 연속성 확보 및 메타데이터 현행화","det":"ㅇ 개방 데이터 서비스 연속성 확보\n - 본 사업을 통해 구축되는 시스템과 연관된 개방데이터 목록을 식별하고 개방데이터의 서비스 연속성 확보 방안을 제시하여야 함 \nㅇ 메타데이터 현행화\n - 본 사업을 통해 구축되는 시스템의 데이터베이스에 대해 발주기관의 메타데이터관리시스템과 중앙메타관리시스템에 메타데이터 표준 관리항목이 등록 및 현행화 되도록 지원하여야 함"},"tags":["weak","major"],"by":"id","score":0.44073059360730593},{"s":"removed","p":{"id":"DAR-10","cat":"데이터","name":"데이터 개방 관리체계","def":"개방데이터 서비스 연속성 확보 및 메타데이터 현행화","det":"ㅇ 개방 데이터 서비스 연속성 확보\n- 본 사업을 통해 구축되는 시스템과 연관된 개방데이터 목록을 식별하고 개방데이터의 서비스 연속성 확보 방안을 제시하여야 함\n- 행정안전부와 사전에 협의하고 개발대상 API는 표준을 준수하여야함\n* 「민간서비스 활용을 통한 전자적 대민서비스 제공 등에 관한 규정」 및  「디지털서비스개방 표준 API 명세서」 참고\nㅇ 메타데이터 현행화\n- 본 사업을 통해 구축되는 시스템의 데이터베이스에 대해 발주기관의 메타데이터관리시스템과 중앙메타관리시스템에 메타데이터 표준 관리항목이 등록 및 현행화 되도록 지원하여야 함"},"tags":["id_collision"]},{"s":"added","n":{"id":"DAR-10","cat":"데이터","name":"데이터 마트 구축","def":"데이터 마트 정의","det":"ㅇ 축산 관련 데이터를 주제 영역에 따라 데이터 마트 구축\nㅇ 관련 기관에서 수집한 데이터를 통합하여 검증 및 정제 후에 농장, 사육, 가축종류, 방역, 친환경 등 주제 영역별 데이터 마트 구축\nㅇ 데이터 마트 구축에 필요한 데이터를 확보하기 위해서 필요시 타 정보기관에서 제공하는 데이터를 OPEN API 이용하여 수집\nㅇ 다양한 통계/분석이 가능하도록 정확하고 신뢰성 있는 데이터 구축\nㅇ 원천데이터 모델을 분석하여 효과적인 테이블 모델설계"},"tags":["id_collision"]},{"s":"removed","p":{"id":"FUN-01","cat":"기능","name":"실시간 정보 연계","def":"전자출하시스템 및 도축장 ERP 실시간 연계","det":"ㅇ 전자출하신청 내역 연계를 위한 API 개발\nㅇ 도축장 ERP 담당과 연계 방법 협의 후 실시간 연계 및 테스트 진행\nㅇ 도축장 ERP에서 송신하는 정보 수신 기능 개발(사전협의 必)\nㅇ 도축장 ERP 내 농장정보 등 활용 병행\nㅇ 안전관리시스템 및 이력관리시스템으로 파일 전송 등 (ERP 없는 경우)"},"tags":["id_collision"]},{"s":"added","n":{"id":"FUN-01","cat":"기능","name":"주요 행정 정보(등급결과·전자문서지갑) 대상 ‘실시간 알림’ 제공","def":"주요 행정 정보(등급결과·전자문서지갑) 대상 ‘실시간 알림’ 제공","det":"ㅇ (알림매체) 앱 설치자 : '앱 Push 알림', 미설치자 : '카카오 알림톡' 자동 발송\nㅇ (알림시기) 등급판정 결과 확정, 통합증명서 수·발신, 공공급식 검수 요청 발생\n - (농가) 등급판정 결과 확정 및 신청서 처리 상태 변경 시\n - (유통업체) 전자문서지갑 내 통합증명서 수·발신 완료 \n - (검수기관) 전자문서지갑 내 통합증명서 도착 알림 및 공공급식 검수 요청 시\n - (전체) 시스템 공지사항, 변동사항 발생 시\nㅇ (바로가기 적용) 메시지 터치 시 해당 문서함으로 즉시 이동하는 ‘바로가기’를 적용하여 사용자 편의성 강화\nㅇ 발송 관리 화면\n - 알림 템플릿 관리\n - 발송 성공/실패 결과 리포트 및 미수신자 재발송, 알림 관련 통계 제공"},"tags":["id_collision"]},{"s":"removed","p":{"id":"FUN-02","cat":"기능","name":"시스템 화면 개선","def":"전자출하시스템 화면 개선","det":"ㅇ 유사 사이트 벤치마킹 및 사용자 특성 분석 등을 근거로 메인화면 및 메뉴체계의 접근성·사용성 등 기반으로 재구축\nㅇ 멀티디바이스 구성요소 정의의 일관성 고려하여 설계\nㅇ 유사 사이트 벤치마킹 및 사용자 특성 분석에 근거한 디자인 전략 수립\nㅇ 사용자별 권한 관리 및 기능 개선 및 고도화\nㅇ 모바일 환경에서 사용 가능하도록 기존의 앱 상 기능 추가\nㅇ 행정안전부 모바일 전자정부 서비스 구축 지침 및 가이드라인 준수"},"tags":["id_collision"]},{"s":"added","n":{"id":"FUN-02","cat":"기능","name":"등급판정시스템(KGrade) 내 통합증명서 발급 기반 마련","def":"등급판정 시스템(K-Grade) 내에 ‘통합증명서 발급 모듈’을 직접 연계","det":"ㅇ 현장 평가사가 상시 사용하는 등급판정 시스템(K-Grade) 내에 ‘통합증명서 발급 모듈’을 직접 연계하여, 별도 사이트 접속 없는 원스톱 발급 환경 구축\n - 개발 불확실성을 제거하고, 현장에 즉시 적용 가능한 최적의 통합 모델 도출\nㅇ 멀티디바이스 환경을 고려한 일관성 있는 설계"},"tags":["id_collision"]},{"s":"removed","p":{"id":"FUN-03","cat":"기능","name":"시스템 화면 개선","def":"모바일 전자출하신청 화면 개선","det":"ㅇ 유사 사이트 벤치마킹 및 사용자 특성 분석 등을 근거로 메인화면 및 메뉴체계의 접근성·사용성 등 기반으로 재구축\nㅇ 멀티디바이스 구성요소 정의의 일관성 고려하여 설계\nㅇ 사용자 입장에서 주요 정보 및 사용 편의성 재설계\nㅇ 유사 사이트 벤치마킹 및 사용자 특성 분석에 근거한 디자인 전략 수립\nㅇ 사용자별 권한 관리 및 기능 개선 및 고도화\nㅇ 모바일 환경에서 사용 가능하도록 기존의 앱 상 기능 추가\nㅇ 행정안전부 모바일 전자정부 서비스 구축 지침 및 가이드라인 준수"},"tags":["id_collision"]},{"s":"added","n":{"id":"FUN-03","cat":"기능","name":"저탄소 인증축산물 표기 추가(자녀급식정보조회 및 공공급식 검수)","def":"자녀 급식 정보 및 공공급식 검수 화면 내 ‘인증 마크’ 표시","det":"ㅇ 학부모(자녀급식정보 조회) 및 학교 급식 담당자(공공급식 검수)가 탄소 중립 기여 축산물임을 알 수 있도록 저탄소 인증 정보를 시각적으로 표기\n - 원패스 공공급식 검수에 저탄소 인증축산물(한우, 돼지고기) 인증 표시를 추가하여 검수인(영양교사)이 바로 확인하도록 기능 신설\n - 조회 단위(확인서 발급번호) 안에 여러 이력번호가 있을 시 포함된 모든 이력번호가 인증 축산물일 경우에만 ‘저탄소 인증’ 표시\n - 자녀급식 정보 조회 시 한우, 돼지 저탄소 인증 정보(마크) 연계(모바일 포함)\n - 소, 돼지, 가금 전 축종 ‘저탄소 인증 여부’ 칸 신설\n - 축산물 조회 시 전 축종 동일한 시스템 양식 통일 운영\n - (표시) ① 묶인 이력번호 모두 저탄소 ‘인증마크’ 표시. ② 저탄소가 아닌 이력번호 1개 이상 포함 및 가금류 ‘빈칸’"},"tags":["id_collision"]},{"s":"removed","p":{"id":"FUN-04","cat":"기능","name":"서비스 개선","def":"등급판정 제외 신청서 전산화","det":"ㅇ ｢축산법 시행규칙｣에 따른 등급판정 제외 신청서 전산화 구축\nㅇ 등급판정시스템 연계 기능 개발\nㅇ 서명파일등록 및 레포트 기능 등 개발"},"tags":["id_collision"]},{"s":"added","n":{"id":"FUN-04","cat":"기능","name":"등급판정 분석 서비스 고도화","def":"등급판정 분석 서비스 고도화","det":"ㅇ (시각화) 현장 수요를 반영한 시각화 및 서비스 직관성 강화\n - 1분기 서비스 수요조사 결과를 토대로, 복잡한 통계 수치가 담긴 시각화 도구 도입\nㅇ (고도화) 농가 유형별 특성을 고려한 맞춤형 정밀 분석 제공\n - 농가의 사육 단계 및 사육 규모별로 데이터를 세분화하여 분석해 주는 타겟형 분석 기능 탑재\n - 상용 생성형AI를 활용한 농가별 개선항목 분석 연계"},"tags":["id_collision"]},{"s":"removed","p":{"id":"FUN-05","cat":"기능","name":"농장통합번호 연계","def":"농장통합번호 연계","det":"ㅇ 농장통합번호 기준 농장정보, 인증정보 등 연계\nㅇ 출하 시 관련 정보 조회 기능 구축\nㅇ 전자출하시스템에서 관련 정보 송수신 기능 개발"},"tags":["id_collision"]},{"s":"added","n":{"id":"FUN-05","cat":"기능","name":"등급판정신청 서비스 제공 축종 확대","def":"가금류(닭·오리) 등급판정신청 전자적 창구 도입","det":"ㅇ 닭·오리 도축장의 수기 신청 업무를 전산으로 전환하여, 신청 절차 간소화·행정 처리 시간 단축\nㅇ 축산물이력시스템 도축신고 정보를 연계하여 등급판정신청 가능 목록 조회 필요\nㅇ 원패스 메뉴 ‘등급판정신청’ - ‘닭’, ‘오리’ 각각 신청 페이지 구축\nㅇ 기존 축종 ‘소’, ‘돼지’ 신청 페이지를 참고하여 레이아웃, 버튼 디자인, 기능 구축"},"tags":["id_collision"]},{"s":"removed","p":{"id":"FUN-06","cat":"기능","name":"서비스 개선","def":"등급판정 상황 관리 서비스 개선","det":"ㅇ 이용자 중심의 UI 개발\nㅇ 도축두수, 등급판정 신청 두수 관리 기능 개선\nㅇ 월마감, 월간 누계 산정 등 개선\nㅇ 등급판정시스템 연계 기능 개선"},"tags":["id_collision"]},{"s":"added","n":{"id":"FUN-06","cat":"기능","name":"대형마트 지점별 독립 사용 환경 구축","def":"ㅇ 계정 식별 기준 개편(사업자번호→지점코드)을 통한 독립 사용 지원","det":"ㅇ (사용자 구분 키(Key) 값을 기존 사업자번호에서 ‘지점 고유 코드’로 변경하여 지점별 계정 분리 운영 지원\nㅇ (권한관리) 지점별 담당자가 해당 지점의 증명서만 독립적으로 관리(보관·제출)할 수 있도록 기능 고도화\nㅇ 관리자시스템 페이지 내 회원정보에서도 해당 키값 표현"},"tags":["id_collision"]},{"s":"removed","p":{"id":"FUN-07","cat":"기능","name":"기능 개선","def":"대상 축종 고도화 및 확대","det":"ㅇ 출하시스템 관련 소·돼지 기능 개선\nㅇ 전자출하시스템 활용 대상 축종 확대(가금)"},"tags":["id_collision"]},{"s":"added","n":{"id":"FUN-07","cat":"기능","name":"급식 검수 담당자의 이용 편의를 위한 ‘QR 스캔 기능’ 개선","def":"급식 검수 담당자의 이용 편의를 위한 ‘QR 스캔 기능’ 개선","det":"ㅇ 조회와 검수 기능을 연계한 선택형 화면 적용\nㅇ 축산물원패스 모바일앱 검수기관 로그인 시, 통합증명서 QR코드 스캔 시 [①통합정보조회], [②검수하기]를 사용자가 직접 선택할 수 있도록 기능 개선\nㅇ 선택페이지 구축\nㅇ 멀티디바이스 환경을 고려한 일관성 있는 설계"},"tags":["id_collision"]},{"s":"removed","p":{"id":"FUN-08","cat":"기능","name":"회원가입 및 관리기능","def":"회원가입 및 관리기능","det":"ㅇ 웹, 모바일 환경에서 동일한 회원가입 및 관리기능 구현\nㅇ 축산물 원패스 회원가입 기능과 연계하여 일관성 있는 화면 설계 진행"},"tags":["id_collision"]},{"s":"added","n":{"id":"FUN-08","cat":"기능","name":"실시간 이용 현황 분석을 위한 관리자 통계 기능 도입","def":"실시간 이용 현황 분석을 위한 관리자 통계 기능 도입","det":"ㅇ 축산물원패스 관리자 시스템 내 업체별·업종별·발행건수·인증 축산물 등 이용 지표 실시간 시각화, 엑셀 다운로드 기능 구축\nㅇ 조건별(기간, 지역, 축종) 필터링 및 데이터 추출 속도 최적화\nㅇ 멀티디바이스 환경을 고려한 일관성 있는 설계"},"tags":["id_collision"]},{"s":"added","n":{"id":"FUN-09","cat":"기능","name":"전자문서지갑 내 ‘저탄소 인증 증명서‘, ’위임장‘ 수·발신 가능 문서 추가","def":"전자문서지갑 내 ‘저탄소 인증 증명서‘ 및 기타증명서 수·발신 가능 문서 추가","det":"ㅇ 전자문서지갑 내 ‘저탄소 인증 증명서‘ 수·발신 가능하도록 기능 구축\nㅇ 전자문서지갑(발신함), 전자문서지갑(수신함) 시범용 페이지 재구성\nㅇ 그 외 「축산물등급판정결과」 열람에 대한 위임장 등 수·발신 설계 및 시범 구축\nㅇ 멀티디바이스 환경을 고려한 일관성 있는 설계"},"tags":["id_collision"]},{"s":"same","p":{"id":"FUN-09","cat":"기능","name":"교육 및 홍보","def":"교육 및 홍보","det":"ㅇ 이용자별 사용 매뉴얼 작성 및 배포\nㅇ 전자출하시스템 활용 및 안내를 위한 홍보자료 제작(카드뉴스, 리플렛 등)\nㅇ 이용자별 사용 방법 교육 및 시연(교육자료 포함)"},"n":{"id":"FUN-10","cat":"기능","name":"교육 및 홍보","def":"교육 및 홍보","det":"ㅇ 이용자별 사용 매뉴얼 작성 및 배포\nㅇ 전자출하시스템 활용 및 안내를 위한 홍보자료 제작(카드뉴스, 리플렛 등)\nㅇ 이용자별 사용 방법 교육 및 시연(교육자료 포함)"},"tags":["renumbered"],"by":"sim","score":1},{"s":"removed","p":{"id":"FUN-10","cat":"기능","name":"통계 및 조사","def":"통계 및 조사","det":"ㅇ 전자출하신청 통계 기능(이용자별 출하통계, 작업장별 출하 신청 내역)\nㅇ 출하시스템 이용 현황 통계 기능 개발(이용자별 접속현황, 체류시간, 지역별 분포 등)\nㅇ 작업장별 ERP 특성 및 요구사항을 반영한 기능 및 통계 개선\nㅇ 출하자 대상 만족도 조사 실시 및 피드백 방안 마련"},"tags":["id_collision"]},{"s":"removed","p":{"id":"FUN-11","cat":"기능","name":"관리자 페이지 개선","def":"관리자 페이지 개선","det":"ㅇ 전자적 도축신청 통계 서비스 개선\n- 전국 도축 통계 확인 페이지 등\n- 기능별 활용여부 점검이 가능하도록 기능 구현\nㅇ 도축장별 출하 신청 모니터링 서비스 구축\nㅇ 권역별 출하 물량 비교 페이지 구축\nㅇ 기능별 활용여부 점검이 가능하도록 기능 구현\nㅇ 연계된 ERP의 출하 내역 조회 기능 구축\nㅇ 출하 내역에 대한 알림톡 관리 기능"},"tags":[]},{"s":"removed","p":{"id":"FUN-12","cat":"기능","name":"ERP 기능 제공","def":"ERP 미보유 작업장을 위한 전자출하시스템 내부 ERP 기능 통합 제공","det":"ㅇ 별도 시스템 구축 없이 전자출하시스템 내 모듈 형태로 구현\nㅇ 최소 기능 ERP 제공\n- 출하관리\n- 도축결과 관리\n- 기본 정산·이력 관리\nㅇ 기존 전자출하시스템 데이터 구조와 완전 연계\nㅇ ERP 기능 사용 여부에 따라 메뉴 노출 제어\nㅇ 향후 ERP 기능 확장 고려한 구조 설계\nㅇ 모든 기능은 모바일과 웹에 동시에 구현되어야함"},"tags":[]},{"s":"removed","p":{"id":"FUN-13","cat":"기능","name":"이동승인 전산 행정 처리 기능 구축","def":"출하 축산물 이동승인 신청·처리 전 과정 전산화","det":"ㅇ 이동승인 신청, 검토, 승인, 반려 전 과정 전산 처리\nㅇ 공수의사·공중방역수의사 업무 연계\nㅇ 처리 이력 관리 및 행정 책임·권한 관리 기능 제공\nㅇ 종이 없는 행정 구현을 위한 전자문서 기반 설계\nㅇ 모든 기능은 모바일과 웹에 동시에 구현되어야함"},"tags":[]},{"s":"removed","p":{"id":"FUN-14","cat":"기능","name":"출하 관련 서류 전산화 관리","def":"출하 관련 행정 서류의 전자문서화","det":"ㅇ 출하신청서, 이동승인서, 차량소독증 등 전산화\nㅇ 전자서명 및 파일 첨부 기능 제공\nㅇ 행정시스템 및 관련 내부 시스템 연계\nㅇ 모든 기능은 모바일과 웹에 동시에 구현되어야함"},"tags":[]},{"s":"removed","p":{"id":"FUN-15","cat":"기능","name":"사용자 편의 기능 강화","def":"고령자·현장 사용자 중심 편의 기능 강화","det":"ㅇ 생체인증, 카카오톡 간편 로그인 등 간편 인증 제공\nㅇ 실시간 알림 서비스(알림톡 등)\nㅇ 차량번호 사전 등록 기능\nㅇ 농장 구분 없는 이력번호 일괄 등록 기능\nㅇ 모든 고도화된 기능은 대민서비스로 사용자에게 개방함\nㅇ 모든 기능은 모바일과 웹에 동시에 구현되어야함"},"tags":[]},{"s":"removed","p":{"id":"FUN-16","cat":"기능","name":"전자출하 축종 확대","def":"돼지 축종 전자출하 기능 최적화","det":"ㅇ 돼지 축종 출하 절차에 맞는 전자출하 신청 화면 개선\n- 돼지 축종 특성을 반영한 입력 항목 구성\n- 불필요한 입력 단계 최소화\nㅇ 돼지 축종 출하 현황 관리 기능 구축\n- 출하 신청·승인·처리 현황 조회 기능 구축\n- 도축장 연계 정보 확인 기능 구현\nㅇ 모든 기능은 모바일과 웹에 동시에 구현되어야함"},"tags":[]},{"s":"removed","p":{"id":"FUN-17","cat":"기능","name":"이력제 도축장 관리자 계정 연계","def":"출하행정 일원화를 위한 계정 연계 기능 구축","det":"ㅇ 전자출하시스템과 축산물이력제 간 계정 통합 관리 기능 구축\n- 단일 계정 기반 로그인 기능 구현\n- 사용자 계정 정보 연계 기능 제공\nㅇ 사용자 권한 정보 연계 및 관리 기능 구현\n- 사용자 권한 매핑 기능 구축\n- 권한 변경 이력 관리 기능 제공\nㅇ 계정 연계 보안 강화 기능 구현\n- 개인정보 보호를 고려한 계정 연계 처리\n- 계정 연계 로그 관리 기능 구축\nㅇ 계정 연계 상태 확인 기능 구축\n- 계정 연계 여부 조회 기능 제공\n- 연계 오류 발생 시 안내 기능 구현\nㅇ 모든 기능은 모바일과 웹에 동시에 구현되어야함"},"tags":[]},{"s":"removed","p":{"id":"FUN-18","cat":"기능","name":"자료연계 및 데이터 정합성 검사 등 관리 기능","def":"자료연계 및 통합정보데이터 검증 기능 제공","det":"ㅇ 관계기관과 정보 연계를 추진할 시 행정정보공동이용시스템 활용 방안을 우선 검토하며, 대상 기관 및 연계시스템 상황을 고려한 유연하고 다양한 연계 방안 마련(신규 연계 시 발주기관을 통한 행정안전부 협의 필요)\nㅇ 데이터 종류 및 특성에 따른 데이터 수집 방안 제시\n- 수집 데이터 유형 분류별 수집 방안 제시\n. 예) DB to DB, DB to File, File to DB, File to File, API to DB, API to File 등\n. Open API 등 당양한 방법을 통한 수집기능 개발(주관사와 협의후 결정)\nㅇ 통합데이터(원천, 운영데이터)의 정합성(품질) 검증 방안 제시\n- 정합성 검사 실행 관리, 결과 등록, 이력관리 및 조회\n- 데이터 정합성 향상을 위한 표준 절차 수립 및 제시\n- 기 데이터 확인 및 검증절차의 편의성 향상 제공\n- 데이터 보기 기능에 대한 편의성 개선\n- 연계기관 및 정보에 대한 선택 기능 추가\nㅇ 정합성 검증을 위한 알림 기능 고도화(SMS, E-Mail 등)\n- 알림을 통해 보내진 데이터에 대한 바로보기 기능 제공\n- 바로보기 기능 구현 시 사용자 인증 간소화 모색\n- 알림 기능에 의한 feedback 내용 확인 및 이력관리 기능 제공\nㅇ 연계 누락 데이터에 대한 알림문자 전송 및 모니터링 기능 제공\n- 전체 연계데이터에 대해 누락 시 알림 문자 전송 및 모니터링 기능 제공\nㅇ 「행정기관 및 공공기관 정보시스템 구축·운영 지침」에 따라 타 정보시스템과의 연계 시 연계성 검토 및 검토한 증빙자료 제출\nㅇ 실시간 알림 서비스는 행정안전부의 국민비서와의 연계가능성을 검토하여 진행"},"tags":[]},{"s":"changed","p":{"id":"INT-02","cat":"인터페이스","name":"사용자 중심의 UI/UX 디자인","def":"서비스 표준 수립","det":"ㅇ범정부 UI/UX 공통가이드('디지털 정부서비스 UI/UX 가이드라인', '25.8.29 배포)를 준수하여야함\nㅇ축산물원패스, 전자출하시스템 장애인, 고령자를 위한 웹(정보통신)접근성 인증을 받아야함\nㅇ화면 및 인터페이스 디자인은 최신 웹,모바일 트랜드를 반영하여 사용자가 편리하게 사용할 수 있도록 사용성 및 경험성을 고려하여 설계해야 함\nㅇUI/UX 디자인 설계\n- UI표준 준수를 위한 구체적이고 실현 가능한 방안 제시  (예:전담 퍼블리싱(publishing) 팀 운영, UI 프레임워크 적용 등)\n- 전문 디자이너를 투입하여야 함\n- 안정적이고 균형있는 레이아웃, 메뉴 설계로 사용자가 이용하는 각종 서비스 및 기능을 직관적으로 이해하고 쉽게 사용할 수 있어야 함\n- 무분별한 이미지 사용을 최소화하고 CSS 디자인 적용으로 빠른 페이지 로딩과 편집, 수정이 용이하도록 설계하여야 함\n- 데이터 입력, 수정, 삭제 등 사용자의 수행활동에 대한 확인 및 오류에 대한 확인 메시지를 제공하여야 함\nㅇ사용자 편의성 및 다양한 디바이스(PC, 스마트폰, 태블릿 등) 환경 지원을 위한 반응형 웹 구현해야 함\nㅇ이용자의 서비스 환경에 무관하게 사용자 누구라도 서비스 이용이 가능하도록 웹 표준화 및 UI표준을 수립하여 적용해야 함\nㅇUI표준 수립 및 웹사이트 관련 다음 지침 준수\n- 웹 접근성 향상을 위한 국가표준기술 가이드라인\n- 한국형 웹 콘텐츠 접근성 지침\n- 전자정부 웹사이트 품질관리 지침(행정안전부고시 제2025-46호)\n- 장애인·고령자 등의 정보 접근 및 이용편의 증진을 위한 고시(과학기술정보통신부고시 제2025-55호)\nㅇ 모바일 전자정부 서비스 관리 지침 준수\nㅇ사업추진 중 요구사항/설계 단계에서 웹,모바일 앱 디자인에 대한 시안을 최소 3개 이상 제시하여야 함\nㅇ모든 구축 산출물은 디자인 관련 저작권 문제가 발생하지 않도록 하고, 저작권 분쟁 발생시 모든 책임은 구축 사업자에게 있음\nㅇ화면 UI 기획 및 디자인에 관련된 제반 사항을 발주기관과 긴밀한 협조를 통하여 시행토록 함"},"n":{"id":"INT-01","cat":"인터페이스","name":"사용자 중심의 UI/UX 디자인","def":"UI(User Interface) 표준 정의","det":"ㅇ 업무 처리 시 사용자의 화면 이동 경로와 사용 패턴을 분석하여 화면 표출 정보, 업무 담당자 UI 사용성 등을 고려 업무 프로세스 개선 사항이 최적으로 적용될 수 있도록 UI/UX 표준 수립\nㅇ 전체 시스템 간 통일성을 부여하여 UI를 구성하여야 함\nㅇ UI는 사용편의성을 고려하여 직관적이면서도 다양한 요구를 수용할 수 있도록 유연하여야 함\n - UI관련 트렌드 분석 및 벤치마킹 실시\n - 시스템의 추후 확장성을 고려, 구조화하여 표준 수립시 반영해야 함\nㅇ 입력항목은 필수, 선택 등 항목별 정확한 안내와 함께 입력사항에 대한 체크 및 정확한 경고, 오류 메시지를 표시해야 함\nㅇ 사용자의 수행 활동(삭제, 입력정보 완료/미완료 후 저장 등)에 대한 정확한 확인 메시지 제공\nㅇ 시스템에서 검색, 조회 등 문자 입력시 입력항목의 문자형식(한글/영문/숫자 등)을 알맞게 적용해야 하며 혼합일 경우 한글 우선 적용\nㅇ 간격이나 들여쓰기 등에는 공백 문자 대신 NBSP(Non Breaking Space, &nbsp, &#160)를 하용하며, 간단한 웹페이지를 제외하고는 NBSP 대신 CSS(Cascade style Sheets)를 사용\nㅇ 특정 해상도에 단일화된 웹디자인은 지양하며, 콘텐츠의 경우 상대단위로 CSS를 지정하여 브라우저 설정에 따라 글자의 크기를 조절해야 함\n(양식이 있는 출력용 조회화면은 예외)\nㅇ 사용자 편의성 및 다양한 디바이스(PC, 스마트폰, 태블릿 등) 환경 지원을 위한 반응형 웹 구현\nㅇ 이용자의 서비스 환경에 무관하게 사용자 누구라도 서비스 이용이 가능하도록 웹 표준화를 적용해야 함\nㅇ UI표준 수립시 다음 지침 준수\n - 웹 접근성 향상을 위한 국가표준기술 가이드라인, 한국형 웹 콘텐츠 접근성 지침, 행정‧공공기관 웹사이트 구축‧운영 가이드"},"tags":["renumbered","major"],"by":"sim","score":0.7363004172461752},{"s":"added","n":{"id":"INT-02","cat":"인터페이스","name":"UI표준 준수","def":"UI표준 정의","det":"-  ｢디지털 정부서비스 UI/UX 가이드라인｣(2025) 준수\nㅇ UI표준에 근거한 일관성 있는 사용자 인터페이스 설계\n - UI표준 준수를 위한 구체적이고 실현 가능한 방안 제시 \n(예:전담 퍼블리싱(publishing) 팀 운영, UI 프레임워크 적용 등)\nㅇ 사용자의 편의성이 높은 UI 개발을 위해 제안 개발 툴을 활용한 UI 기획자 및 웹 디자이너를 투입해야 함\nㅇ 화면 변경 시 트랜잭션에 변경이 없어야 함\nㅇ 사용자 인터페이스 응용 서비스의 캐랙터 셋은 UTF-8을 적용해야 하며, 웹 표준 및 웹 접근성을 준수해야 함\nㅇ 사용자 화면의 특정 기능 구현을 위한 방법으로 Non-ActiveX 사용\nㅇ 전체 시스템의 통일성을 부여하여 UI를 구성하여야 함\nㅇ 시스템의 성격, 특성 등 고유 아이덴티티를 반영한 창의적 디자인 적용\nㅇ 화면 UI 기획 및 디자인에 관련된 제반 사항을 발주기관과 긴밀한 협조를 통하여 시행토록 함"},"tags":["id_collision"]},{"s":"removed","p":{"id":"INT-03","cat":"인터페이스","name":"행정업무 시스템 연계","def":"이동승인·검역 등 행정업무 시스템 연계","det":"ㅇ 이동승인 관련 내부·외부 행정시스템 연계\nㅇ 표준 API 기반 연계\nㅇ 연계 이력 및 오류 관리 기능 제공"},"tags":["id_collision"]},{"s":"added","n":{"id":"INT-03","cat":"인터페이스","name":"웹브라우저 호환성 제공","def":"모든 디바이스와 플랫폼에서 일관된 사용자 경험을 보장하는 호환성 제공","det":"ㅇ 다양한 웹브라우저별·버전별 호환성 제공\n - Edge, Firefox, Chrome, Safari 등\n - 사업기간 중 발생한 웹 브라우저 버전 업그레이드에 대한 지원\nㅇ 전자정부 웹사이트 품질관리 지침(행정안전부 고시) 준수\nㅇ 장애인·고령자 등의 정보 접근 및 이용 편의 증진을 위한 고시(과학기술정보통신부 고시) 준수\nㅇ 모바일 전자정부 서비스 관리 지침 준수"},"tags":["id_collision"]},{"s":"added","n":{"id":"INT-04","cat":"인터페이스","name":"메시지 처리","def":"메시지 처리 기능 정의","det":"ㅇ 시스템 사용자에게 제공하는 메시지는 표준화하여 DB로 관리해야 함\n - 오류 메시지ㄹ, 안내 메시지, 확인 메시지 등\nㅇ 오류 메시지는 상황에 맞는 구체적인 오류 내용과 대처 방안 안내 제공\nㅇ 입력 누락 등 오류가 발생한 경우 커서가 오류 발생한 항목에 위치하도록 하는 등 사용자 편의성을 우선하여 구현해야 함"},"tags":[]},{"s":"added","n":{"id":"INT-05","cat":"인터페이스","name":"연계 표준 프로세스","def":"서비스 연계 프로세스 정의","det":"ㅇ 유관기관 연계대상 정보에 대해 실시간 또는 일괄배치로 구분\nㅇ 실시간/일괄배치 연계 적용에 대한 표준 프로세스 수립\nㅇ 연계자료 정합성 검증 및 중복·누락 방지\nㅇ 데이터 송수신시 네트워크 구간 암호화 및 데이터 암호화, 무결성 검증을 위한 표준 알고리즘 수립\nㅇ 유관기관 데이터의 실시간/일괄배치 수집 및 연계 프로세스 표준 수립\n - 기술 표준 수립 및 연계 환경 구성 검토"},"tags":[]},{"s":"changed","p":{"id":"INT-01","cat":"인터페이스","name":"내･외부 시스템 연계","def":"서비스 연계","det":"ㅇ축산물원패스, KGRADE 등 내부 시스템과 연계되어야 함\nㅇ기존 연계되어있는 외부 시스템들을 그대로 연계하여 결과를 보여주어야 함\nㅇ 우리원의 데이터 연계 솔루션을 이용하여 데이터 연계\nㅇ 연계 대상 IP를 지정하여 대상서버만 데이터 연계 허용"},"n":{"id":"INT-06","cat":"인터페이스","name":"내･외부 시스템 연계","def":"서비스 연계","det":"ㅇ축산물원패스, KGRADE 등 내부 시스템과 연계되어야 함\nㅇ기존 연계 되어있는 외부 시스템들을 그대로 연계하여 결과 반영\nㅇ내부 시스템의 신규 기능 개발 시, 기존 시스템의 프로세스와 동일한 방식으로 반영\nㅇ우리원의 데이터 연계 솔루션을 이용하여 데이터 연계\nㅇ연계 대상 IP를 지정하여 대상서버만 데이터 연계 허용"},"tags":["renumbered"],"by":"sim","score":0.9253112033195021},{"s":"changed","p":{"id":"PER-01","cat":"성능","name":"성능 일반사항","def":"성능 관련 일반사항","det":"ㅇ사업대상 시스템의 성능을 고려한 개발 방안을 제시하여야 함\nㅇ시스템 개발 중 로그 또는 툴(도구)을 이용하여 시스템 성능 상태를 모니터링하며 성능상 문제를 미리 파악하여 조치한 후 시스템을 오픈하여야 함\nㅇ데이터양의 증가나 접속량이 증가하여 시스템 성능저하가 발생할 경우 이에 대한 개선책(튜닝)을 마련하여 튜닝을 실시하여야 함\nㅇ기존 인프라 및 SW와의 완벽한 호환 및 안정성을 보장하여야 함"},"n":{"id":"PER-01","cat":"성능","name":"성능 요구사항 일반사항","def":"성능 관련 일반사항","det":"ㅇ 시스템의 특성과 통상적인 품질 수준을 고려하여 시스템 운영, 품질, 부하분산, 동시처리 품질 목표성능(수치)를 제시하여야 함\nㅇ 목표성능의 품질검증을 위한 테스트 계획서를 발주기관과 협의하여 확정\nㅇ 확정된 목표성능 및 테스트 계획서를 기반으로 시험운영 결과 판정\nㅇ 성능진단 도구를 활용하여 정확한 성능진단 및 결과에 따른 DB튜닝, 프로그램 개선 등을 통한 시스템 최적화 후 시스템 오픈하여야 함"},"tags":["weak","major"],"by":"id","score":0.4422791081750619},{"s":"added","n":{"id":"PER-02","cat":"성능","name":"업무 응답시간 목표 정의","def":"업무 프로그램 응답시간 목표 정의","det":"ㅇ 소용량 데이터를 처리하는 어플리케이션은 3초 이내, 대용량 데이터를 처리하는 어플리케이션은 5초 이내 실행 결과를 응답할 수 있도록 개발\nㅇ 온라인 배치성 업무에 대해 3분 이내 결과를 보여주어야 함\nㅇ 일일 배치 업무는 5분 이내 처리되어야 함\nㅇ 월 배치 업무는 20분 이내 처리되어야 함\n * 이 요구사항은 임의의 선택 기준이 허용되는 대량의 데이터 처리에는 적용되지 않음"},"tags":["id_collision"]},{"s":"added","n":{"id":"PER-03","cat":"성능","name":"오류 응답시간 목표 정의","def":"오류 응답시간 정의","det":"ㅇ 사용자가 입력한 정보에서 발생할 수 있는 모든 오류에 대한 메시지를 정보 입력 후 3초 이내에 적절한 메시지를 사용자에게 제시하여야 함\nㅇ 대량 데이터 조회, 생성, 외부연계 등 많은 시간이 소요되는 작업의 경우, 사용자에게 처리중임을 표시하고 10초 이상 소요 예상되는 업무는 사전에 안내 메시지 출력"},"tags":["id_collision"]},{"s":"same","p":{"id":"PER-02","cat":"성능","name":"동시 사용자 접속 수","def":"동시 사용자 접속 관리 정의","det":"ㅇ대용량 데이터의 조회･검색･추출, 업무처리 등 서비스의 관리와 이용에 지장이 발생하지 않도록 기능의 설계･구축 등 안정적 성능을 구현해야 함\nㅇ어플리케이션 처리구조의 적정성 확보, 적절한 어플리케이션 응답시간과 속도, 서비스처리율, 안정적 시스템 자원의 사용과 관련 H/W 및 S/W   성능을 유지해야 함\nㅇ시스템 당 평균적으로 동시 사용자 접속 100명 이상 지원 및 대량의 데이터 조회 및 처리에 있어 시스템 성능의 저하가 발생하지 않아야 함\n- 세션 로그인 시간을 연장할 수 있어야 함\n- 로그인된 세션을 관리할 수 있어야 함"},"n":{"id":"PER-04","cat":"성능","name":"동시 사용자 접속 수","def":"동시 사용자 접속 관리 정의","det":"ㅇ대용량 데이터의 조회･검색･추출, 업무처리 등 서비스의 관리와 이용에 지장이 발생하지 않도록 기능의 설계･구축 등 안정적 성능을 구현해야 함\nㅇ어플리케이션 처리구조의 적정성 확보, 적절한 어플리케이션 응답시간과 속도, 서비스처리율, 안정적 시스템 자원의 사용과 관련 H/W 및 S/W   성능을 유지해야 함\nㅇ시스템 당 평균적으로 동시 사용자 접속 100명 이상 지원 및 대량의 데이터 조회 및 처리에 있어 시스템 성능의 저하가 발생하지 않아야 함\n - 세션 로그인 시간을 연장할 수 있어야 함\n - 로그인된 세션을 관리할 수 있어야 함"},"tags":["renumbered"],"by":"sim","score":1},{"s":"same","p":{"id":"PER-03","cat":"성능","name":"시스템 자원과의 호환성 및 성능 보장","def":"호환·확장성 및 성능관리","det":"ㅇ 기존 인프라 및 SW에 호환 및 성능이 보장되도록 구축\nㅇ 시스템에 적용하고자 하는 기술이 향후 확장성을 고려하여 구축\nㅇ 시스템 자원(CPU, 메모리, 디스크) 평균 사용들은 최대 90%를 초과하지 않도록 고려"},"n":{"id":"PER-05","cat":"성능","name":"시스템 자원과의 호환성 및 성능 보장","def":"호환·확장성 및 성능관리","det":"ㅇ 기존 인프라 및 SW에 호환 및 성능이 보장되도록 구축\nㅇ 시스템에 적용하고자 하는 기술이 향후 확장성을 고려하여 구축\nㅇ 시스템 자원(CPU, 메모리, 디스크) 평균 사용들은 최대 90%를 초과하지 않도록 고려"},"tags":["renumbered"],"by":"sim","score":1},{"s":"added","n":{"id":"PER-06","cat":"성능","name":"오류 응답시간 목표 정의","def":"오류 응답시간 정의","det":"ㅇ 사용자가 입력한 정보에서 발생할 수 있는 모든 오류에 대한 메시지를 정보 입력 후 5초 이내에 적절한 메시지를 사용자에게 제시하여야 함\nㅇ 대량 데이터 조회, 생성, 외부연계 등 많은 시간이 소요되는 작업의 경우, 사용자에게 처리중임을 표시하고 10초 이상 소요 예상되는 업무는 사전에 안내 메시지 출력"},"tags":[]},{"s":"removed","p":{"id":"PMR-01","cat":"프로젝트 관리","name":"개발방법론","def":"개발관련 준수사항","det":"ㅇ제안 시 개발방법론에 대한 전 과정의 설명, 특징, 장단점, 저작권, 선정사유 및 적용사례 등을 제시하여야 하며 개발과제 특성상 여러 개의 개발방법론을 적용할 경우에는 각각 사용범위를 구별하여 제시\nㅇ제안된 방법론은 정보시스템 개발 시 발생되는 착오 및 소프트웨어 품질 저하, 생산성 저하 등의 위험 요소를 방지하고, 시스템 개발의 표준 및 절차의 확립을 통해 유지보수 용이성을 확보할 수 있는 검증된 것이어야 함\nㅇ사업자의 참여의지 및 조직적 대응 정도 사업참여의 준비성과 관련하여 개발환경의 구성여부 및 해결방안을 명확히 제시\nㅇ사용될 개발방법론이 전과정에 적용되는지 또는 수정되어 적용되는지 여부와 그 적용 범위, 과정, 사유를 제시\nㅇ개발 업무별로 개발방법론이 다를 경우 이를 구별하여 제시하고, 특히 개발에 이용할 개발도구 또는 소프트웨어 특성상 개발방법론을 수정, 보완하여 적용할 경우 이를 상세히 제시"},"tags":["id_collision"]},{"s":"added","n":{"id":"PMR-01","cat":"프로젝트 관리","name":"사업관리 방안","def":"사업관리 방안 제시","det":"ㅇ 위험관리, 품질관리, 일정관리, 자원관리, 형상관리 등 프로젝트 관리 방법론을 통한 체계적인 사업 관리 방안 제시\nㅇ 전자정부지원사업 사업관리방안 준수\nㅇ 개발의 완성도를 높이기 위해서 프로젝트 착수에서 종료까지 체계적으로 프로젝트를 관리(관리도구 이용)해야 함\nㅇ 범위관리 계획 수립\n - 프로젝트 범위를 정의·확인 및 통제하는 방법을 기술한 프로젝트관리 계획서 작성\nㅇ 요구사항 수집\n - 요구사항과 이해관계자의 요구를 판별할 수 있는 요구사항정의서 작성\n - 각각의 요구사항이 분석, 설계, 시험단계 등 개발 전 단계의 관련 산출물에 반영여부를 확인할 수 있도록 요구사항추적표 작성\nㅇ 범위정의\n - 프로젝트 의사결정의 기초가 되는 상세화된 범위기술서 작성\nㅇ 작업분류체계(WBS) 작성\n - 프로젝트 실행 작업들을 세분화하여 계층적으로 WBS를 작성\nㅇ 범위검수\n - 발주처는 제안사에서 제출한 모든 산출물을 통해 범위검수 진행\nㅇ 범위통제\n - 프로젝트 범위에 대한 상태 감시, 범위 기준선 변경 관리할 수 있는 변경요청서 작성"},"tags":["id_collision"]},{"s":"removed","p":{"id":"PMR-02","cat":"프로젝트 관리","name":"수행조직구성","def":"조직 및 인력 등 준수사항","det":"ㅇ본 사업을 수행할 추진조직, 프로젝트 단계별 추진계획 및 역할 등을 제시\nㅇ사업관리자(PM)는 반드시 주관사업자 소속이어야 하며 참여율은 100%로 함\nㅇ사업종료 후 안정화 수행방안 제시\nㅇ본 사업은 컨소시엄 구성을 허용하지 않음"},"tags":["id_collision"]},{"s":"added","n":{"id":"PMR-02","cat":"프로젝트 관리","name":"프로젝트 관리","def":"프로젝트 요구사항","det":"ㅇ 사업관리자(PM)는 프로젝트 관리기법(방법론)에 입각하여 프로젝트 관리를 수행하여야 하며, 프로젝트 관리 단계별 필수 산출물을 반드시 생산관리 제출하여야 함\n  - 사업관리자에 대한 자격, 경력, 사업 참여 실적을 상세하게 제시. 단, 하도급예정자 소속인력은 기술자등급별 인원 현황만 제시\nㅇ 전자정부지원사업 사업관리방안을 참고하며, 구체적인 범위관리, 일정관리, 품질관리, 보고관리 등의 방안을 제시하여야 하고, 구축 및 운영 기간별, 단계별 산출물 내역(회의록 포함) 및 산출물 관리 방안을 제시하여야 함\nㅇ 사업수행계획서는 제안요청서와 제안서의 내용을 포함하여 향후 용역수행 시 지침으로 활용할 수 있는 수준으로 작성하여야 함\nㅇ 계약기간 내에 사업이 완료되지 못하였을 경우『국가를 당사자로 하는 계약에 관한 법률』 등 관련 규정에 의한 지체 상금을 적용함\nㅇ 과업수행 기간 중 당초 계획 대비 정책, 설계, 전체일정 지연 및 변경 등 여건상 변동이 발생한 경우, 수요기관에게 변경사유서를 제출하여 승인을 득해야 함\nㅇ 본 사업에 투입예정인 제안 인력의 경우 계약기간 동안 타 사업에 중복 투입되지 않는 인력으로 구성해야함\nㅇ 사업자는 프로젝트 관리에 있어 착수부터 완료까지 발주처와 긴밀히 의사소통 및 상호작용해야 하며 프로젝트 단계별로 반드시 발주처와 협의 및 승인을 득한 후 프로젝트를 진행하여야 함\nㅇ 검수 시 요구사항 준수율, 목표대비 정보 진행률 등을 활용"},"tags":["id_collision"]},{"s":"removed","p":{"id":"PMR-03","cat":"프로젝트 관리","name":"핵심투입인력(PM) 자격","def":"핵심투입 인력(PM) 준수사항","det":"ㅇ핵심투입인력은 가급적 유사 프로젝트 개발경험이 있는 전문기술 인력을 포함해야 하며, 사업관리조직은 사업관리 전문자격 또는 전문교육 수료 직원으로 구성하여야 함(권장사항)\nㅇ하도급예정자 소속인력은 기술자등급별 인원 현황만 제시"},"tags":["id_collision"]},{"s":"added","n":{"id":"PMR-03","cat":"프로젝트 관리","name":"프로젝트관리 일반","def":"프로젝트관리 일반 요구사항","det":"ㅇ 사업관리자 변경 시 최소한 14일 이전에 유자격 대체인력을 포함한 변경사실을 사전 통보하여 협의해야 하며, 변경으로 인한 업무 공백이 발생하지 않도록 업무의 안정화 및 품질저하 방지대책, 교육 및 백업계획을 수립하여 제시\nㅇ 사업관리자 변경 시, 동급 이상의 대체인력을 투입하여 최소 7일 이상의 병행근무를 통해 업무인수인계 실시\nㅇ 프로젝트의 지연, 품질 저하를 초래하는 사항에 대해 대체 및 해결방안을 제시하고 승인 후 추진해야함"},"tags":["id_collision"]},{"s":"removed","p":{"id":"PMR-04","cat":"프로젝트 관리","name":"핵심투입인력(PM) 관련 제출서류","def":"제출서류","det":"ㅇ사업자는 계약체결 시까지 해당 기술자의 증빙서류를 제출하여 확인을 득한 후 투입\nㅇ증빙서류 : 인적사항, 자격사항, 경력사항\n※ 근무/경력 관련 증빙서류는 소프트웨어기술자 경력관리기관 등에서 발급한 서류 제출을 원칙으로 함"},"tags":["id_collision"]},{"s":"added","n":{"id":"PMR-04","cat":"프로젝트 관리","name":"신원조사","def":"신원조사","det":"ㅇ 발주기관의 보안규정에 따라 사업자 선정 후 실시예정인 투입인력에 대한 신원조사에 응해야 하며, 조사결과 결격사유가 없어야 함"},"tags":["id_collision"]},{"s":"changed","p":{"id":"PMR-07","cat":"프로젝트 관리","name":"일정관리 방안","def":"관리방안 제시","det":"ㅇ구축단계별 일정관리 및 사업수행 계획 대비 진도 관리방안 제시\nㅇ사업을 기간 내에 완수하기 위한 개발 단계별 추진일정 및 세부 활동 내용 등이 포함된 개발 일정계획을 제시\nㅇ사업수행에 필요한 활동을 도출하여 정확한 활동 기간, 자원, 인력, 조직 등을 제시함\nㅇ사업영역별 작성된 WBS(Work Breakdown Structure) 및 사업수행계획서의 타당성 검토 및 피드백 방안 제시\nㅇ일정 및 진척에 대한 보고방법, 주기 및 일정계획 수립, 조정, 통제 등 통합적인 일정 및 진척사항에 대한 관리 방안 제시\n- 사업진행에 대한 핵심인력투입, 업무내용, 진척사항, 기타 특기사항을 기록한 업무일지를 작성하여 주간, 월간 단위로 작성․제출하여야 함\n-원활한 과업 추진을 위해 필요시 비정기적인 보고 요청에 대응함\nㅇ일정변경 발생 시 통합 차원의 영향도 분석 및 일정조정 방안 제시"},"n":{"id":"PMR-05","cat":"프로젝트 관리","name":"일정관리 방안","def":"일정관리 방안 제시","det":"ㅇ 사업을 기간 내에 완수하기 위한 개발 단계별 추진일정 및 세부 활동 내용 등이 포함된 개발 일정계획을 제시하여야 함\nㅇ 사업자는 WBS 기반으로 사업수행 전반에 대한 활동내역, 담당자, 기간 등을 구체적으로 제시\nㅇ 사업을 기간 내에 완수하기 위한 프로젝트의 세부 작업 분할구조(WBS)와 단계별 산출물을 명확하게 제시하여야 함\nㅇ wbs에 의한 일정 지연 시 기간 내 완수하기 위한 추가방안을 1주이내에 제시하고 승인 후 추진해야함\nㅇ 작업 수행공정간 상호연계가 될 수 있도록 일정계획이 제시되어야 하며, 품질보증기간 등을 고려하여 상세하게 기술\nㅇ 사업추진 일정이 변경될 경우 사업수행업체는 추진일정 변경 사유와 변경 내용에 대해 발주기관에 보고하고 협의하여 확정\nㅇ 사업기간 동안에 내‧외부 관계자를 참석시켜 착수·중간·최종보고회를 각각 실시하여 도출 내용을 수행하고 그 결과를 산출물에 반영하여 제출하여야 함\nㅇ 계약일로부터 사업완료일까지 착수일 기준 주·월간 보고의 수행계획에 따라 현재 시점의 구체적인 공정 및 진행사항, 업무 추진 상 이슈 및 대응방안 등을 보고(대면보고를 원칙으로 함)하고 작성·제출 하여야 함\n  ①추진계획 대비 실적분석 ② 주요추진내용 및 단계별 산출내역 ③차주·월 계획 및 계획 변경사항 ④주요 의사결정 및 협조사항 ⑤ 변경요청서 및 변경요청 목록대장 ⑥기타 필요 사항\n※ 회의록은 제안사가 작성, 축산물품질평가원 책임자의 인증을 받음으로써 유효함"},"tags":["renumbered","major"],"by":"sim","score":0.7194029850746269},{"s":"removed","p":{"id":"PMR-05","cat":"프로젝트 관리","name":"핵심투입인력 변경","def":"핵심투입인력 변경 준수","det":"ㅇ핵심투입인력 변경 시 최소한 14일 이전에 유자격 대체인력을 포함한 변경사실을 사전 통보하며, 변경으로 인한 업무 공백이 발생하지 않도록 철저한 업무의 안정화 및 품질저하 방지대책, 교육 및 백업계획을 수립하여 제시\nㅇ핵심투입인력 변경 시, 동급 이상의 대체인력을 투입하여 최소 7일 이상의 병행근무를 통해 업무인수인계 실시"},"tags":["id_collision"]},{"s":"same","p":{"id":"PMR-09","cat":"프로젝트 관리","name":"품질관리 및 품질보증활동","def":"품질관리 방안제시","det":"ㅇ품질보증을 보장하기 위한 품질보증방안을 제시\nㅇ품질보증의 범위, 품질보증을 위한 조직, 절차, 점검방법 등을 제시\nㅇ성과품의 품질확보를 위한 품질관리자의 지속적인 품질보증활동 수행\nㅇ품질보증계획 수립, 품질보증 목표 및 표준에 대한 교육\nㅇ계획에 따른 품질보증 수행, 품질결함분석 및 시정조치, 변경요청\nㅇ단계별 품질목표 달성, 품질표준 준수 등에 관한 보고서 제출"},"n":{"id":"PMR-06","cat":"프로젝트 관리","name":"품질관리 및 품질보증활동","def":"품질관리 방안제시","det":"ㅇ 품질보증을 보장하기 위한 품질보증방안을 제시\nㅇ 품질보증의 범위, 품질보증을 위한 조직, 절차, 점검방법 등을 제시\nㅇ 성과품의 품질확보를 위한 품질관리자의 지속적인 품질보증활동 수행\nㅇ 품질보증계획 수립, 품질보증 목표 및 표준에 대한 교육\nㅇ 계획에 따른 품질보증 수행, 품질결함분석 및 시정조치, 변경요청\nㅇ 단계별 품질목표 달성, 품질표준 준수 등에 관한 보고서 제출"},"tags":["renumbered"],"by":"sim","score":1},{"s":"removed","p":{"id":"PMR-06","cat":"프로젝트 관리","name":"지원 및 자문조직 구성","def":"지원 및 자문조직 역할","det":"ㅇ추진 조직 외에 본 사업을 성공적으로 수행할 수 있도록 지원 또는 자문조직의 구성을 제시 가능. 단, 자문조직의 수행 역할과 결과물을 명확히 제시"},"tags":["id_collision"]},{"s":"changed","p":{"id":"PMR-10","cat":"프로젝트 관리","name":"범위 대비 수행관리 방안","def":"수행관리 방안제시","det":"ㅇ사업범위 대비 수행결과 관리 방안 제시\nㅇ사업범위 검토 명확화 및 과업내역 검토 방안 제시\nㅇ요구사항 정의서 검토 및 분석·설계 반영사항의 추적 및 검증 방안 제시"},"n":{"id":"PMR-07","cat":"프로젝트 관리","name":"요구사항 및 범위 대비 수행관리 방안","def":"요구사항 및 범위 대비 수행관리 방안제시","det":"ㅇ 사업자는 기능/비기능 요구사항을 빠짐없이 관리하고, 각각의 요구사항이 분석, 설계, 시험단계 등 개발 전 단계의 관련 산출물에 반영여부를 확인할 수 있도록 관리(요구사항 추적)해야 함\nㅇ 사업범위 대비 수행결과 관리 방안 제시\nㅇ 사업범위 검토 명확화 및 과업내역 검토 방안 제시\nㅇ 요구사항 정의서 검토 및 분석·설계 반영사항의 추적 및 검증 방안 제시\nㅇ 본 사업은 「소프트웨어 진흥법」 제50조, 같은 법 시행령 제47조 제1항 제2호, 제3호에 따른 과업내용 변경 및 그에 따른 계약금액·계약기간 조정이 필요한 경우, 계약상대자는 국가기관등의 장에게 소프트웨어사업 과업변경요청서*를 제출하여 과업심의위원회의 개최를 요청할 수 있음\n  * 「소프트웨어사업 계약 및 관리감독에 관한 지침」 별지 8호서식 참조"},"tags":["renumbered","major"],"by":"sim","score":0.6187880153187655},{"s":"changed","p":{"id":"PMR-11","cat":"프로젝트 관리","name":"형상관리 방안","def":"형상관리 세부방안","det":"ㅇ일정관리를 통해 남긴 기록에 대해 지시사항, 보고문서, 업무일지, 특이사항 등에 관한 일지 및 일지별 진척률을 관리할 수 있는 기능 제공\nㅇ기존 시스템에서 사용되고 있는 형상관리 툴을 이용하여 형상관리 진행 하여야함\nㅇ기존 시스템과 관련하여 지속적인 통합 방안 및 개발 내역을 지속적으로 추적, 버전별로 관리 할 수 있는 방안 제시\nㅇ지속적인 서비스 및 배포 상황 제시"},"n":{"id":"PMR-08","cat":"프로젝트 관리","name":"형상관리 방안","def":"형상관리 세부방안","det":"ㅇ 일정관리를 통해 남긴 기록에 대해 지시사항, 보고문서, 업무일지, 특이사항 등에 관한 일지 및 일지별 진척률을 관리할 수 있는 기능 제공"},"tags":["renumbered"],"by":"sim","score":0.8316742081447964},{"s":"removed","p":{"id":"PMR-08","cat":"프로젝트 관리","name":"요구사항 관리","def":"요구사항 관리방안","det":"ㅇ사업자는 기능/비기능 요구사항을 빠짐없이 관리하고, 각각의 요구사항이 분석, 설계, 시험단계 등 개발 전 단계의 관련 산출물에 반영여부를 확인할 수 있도록 관리(요구사항 추적)해야 함"},"tags":["id_collision"]},{"s":"same","p":{"id":"PMR-12","cat":"프로젝트 관리","name":"위험 및 이슈관리 방안","def":"위험 및 이슈관리 방안제시","det":"ㅇ위험 및 이슈관리 프로세스 수립 방안 제시\nㅇ발생 가능한 위험·이슈 파악 및 대응 방안 제시\nㅇ위험‧이슈에 대한 제거, 해소를 위한 발주기관과의 조정·통제 방안 제시\nㅇ위험‧이슈별 영향 평가 및 제거, 해소결과 추적관리 방안 제시\nㅇ위험사항의 식별·분석·대응계획 검토 및 조정, 조치방안 등\nㅇ법·제도 변화 등 내·외부적인 변화 대응 방안 제시"},"n":{"id":"PMR-09","cat":"프로젝트 관리","name":"위험 및 이슈관리 방안","def":"위험 및 이슈관리 방안제시","det":"ㅇ 위험 및 이슈관리 프로세스 수립 방안 제시\nㅇ 발생 가능한 위험·이슈 파악 및 대응 방안 제시\nㅇ 위험‧이슈에 대한 제거, 해소를 위한 발주기관과의 조정·통제 방안 제시\nㅇ 위험‧이슈별 영향 평가 및 제거, 해소결과 추적관리 방안 제시\nㅇ 위험사항의 식별·분석·대응계획 검토 및 조정, 조치방안 등\nㅇ 법·제도 변화 등 내·외부적인 변화 대응 방안 제시"},"tags":["renumbered"],"by":"sim","score":1},{"s":"added","n":{"id":"PMR-10","cat":"프로젝트 관리","name":"의사소통 및 내외부 이해관계자 협의체 운영","def":"의사소통 및 내외부 이해관계자 협의체 운영방안 제시","det":"ㅇ 사업 전반의 이해관계자간 효율적 의사소통 방안 제시\nㅇ 신속한 의사결정을 위한 프로세스 제시\nㅇ 이해관계자에 대한 주기적인 프로젝트 진행 보고\nㅇ 발주기관의 의사결정 지원\nㅇ 사업추진 상황 및 쟁점사항의 정기·비정기 보고\nㅇ 사업 이해관계자별 역할 정의 및 책임의 적절성 이해관계자 구성도 제시\nㅇ 이해관계자 의견 반영여부 점검 및 조치사항 지시\nㅇ 전문기관, 발주기관, 사업자, 감리, 지자체, 정부, 농가, 그 외 서비스 이용자 등 사업 전반의 이해관계자간 역할 및 협조 방안 제시\nㅇ 이해관계자 대상 의견수렴을 위한 협의체 워크숍 및 설명회 개최(2회)\nㅇ 협의체 운영을 성공적으로 수행할 수 있도록 지원 및 자문조직을 구성하여 결과물을 명확히 제시"},"tags":["id_collision"]},{"s":"same","p":{"id":"PMR-15","cat":"프로젝트 관리","name":"테스트 및 이해 관리 방안","def":"테스트 및 이해 관리 방안제시","det":"ㅇ프로그램별 단위테스트, 업무간 결합테스트 및 전체 통합테스트 등 종합적인 테스트 계획에 대한 검토 및 관리 방안 제시\nㅇ테스트 진행현황 모니터링 방안 및 도출 결함에 대한 조치·관리 방안제시\nㅇ테스트 결과에 대한 문서화 및 수행결과 검토 방안 제시\nㅇ시스템 이행 및 운영전환 일정, 조직, 비상시 대처 계획 등 안정적 이행관리방안 제시\nㅇ데이터 마이그레이션, AP 포팅, 연계 점검 등 상세 전환방안 제시"},"n":{"id":"PMR-11","cat":"프로젝트 관리","name":"테스트 및 이해 관리 방안","def":"테스트 및 이해 관리 방안제시","det":"ㅇ 프로그램별 단위테스트, 업무간 결합테스트 및 전체 통합테스트 등 종합적인 테스트 계획에 대한 검토 및 관리 방안 제시\nㅇ 테스트 진행현황 모니터링 방안 및 도출 결함에 대한 조치·관리 방안제시\nㅇ 테스트 결과에 대한 문서화 및 수행결과 검토 방안 제시\nㅇ 시스템 이행 및 운영전환 일정, 조직, 비상시 대처 계획 등 안정적 이행관리방안 제시\nㅇ 데이터 마이그레이션, AP 포팅, 연계 점검 등 상세 전환방안 제시"},"tags":["renumbered"],"by":"sim","score":1},{"s":"changed","p":{"id":"PMR-16","cat":"프로젝트 관리","name":"산출물 관리 방안","def":"산출물 관리 방안제시","det":"ㅇ수행사는 사업추진과정에서 생산되는 제반 작업 단위별 산출물에 대하여 작업 일정계획 및 품질보증계획과 연계하여 산출물의 종류, 주요내용, 작성 및 제출시기, 제출 부수 등 제시\nㅇ개발 및 커스터마이징 보고서 제출\nㅇ기술적용계획표의 기술표준을 준수하여야 하며, 사업수행계획서 작성 시 주관기관 상호 협의하여 조정할 수 있음\nㅇ검사 전 기술준수결과표를 제출하여야 하며, 기술적용계획의 변경이 필요한 경우 주관기관의 승인을 받아야 함"},"n":{"id":"PMR-12","cat":"프로젝트 관리","name":"산출물 관리 방안","def":"산출물 관리 방안제시","det":"ㅇ 수행사는 사업추진과정에서 생산되는 제반 작업 단위별 산출물에 대하여 작업 일정계획 및 품질보증계획과 연계하여 산출물의 종류, 주요내용, 작성 및 제출시기, 제출 부수 등 제시\nㅇ 개발 및 커스터마이징 보고서 제출\nㅇ 기술적용계획표의 기술표준을 준수하여야 하며, 사업수행계획서 작성 시 발주기관 상호 협의하여 조정할 수 있음\nㅇ 검사 전 기술준수결과표를 제출하여야 하며, 기술적용계획의 변경이 필요한 경우 발주기관의 승인을 받아야 함"},"tags":["renumbered"],"by":"sim","score":0.9873684210526316},{"s":"changed","p":{"id":"PMR-17","cat":"프로젝트 관리","name":"작업장소 협의","def":"작업장소 협의방안","det":"ㅇ사업수행을 위한 장소는 발주기관과 사업자가 협의하여 결정\nㅇ발주자는 SW사업 수행을 위하여 필요한 장소 및 설비, 기타 작업장소를 상호협의 하여 결정(소용되는 모든 비용은 사업예산에 계상되어 있음)"},"n":{"id":"PMR-13","cat":"프로젝트 관리","name":"작업장소 협의 및 업무환경 구성","def":"작업장소 협의방안","det":"ㅇ 사업수행을 위한 장소는 발주기관과 사업자가 협의하여 결정\nㅇ SW사업 수행을 위하여 필요한 장소 및 설비, 기타 작업장소를 상호협의하여 결정\nㅇ 업무환경은 계약 후 최대 10일 이내에 구성을 완료하여 실제 프로젝트를 수행\nㅇ 사업자(공급자)는 작업장소 상호협의 시 제안요청서 내 명시된 보안요구사항을 준수한 작업장소를 제시할 수 있으며, 발주기관에서는 제시된 작업장소에 관하여 우선 검토한다. 다만, 발주기관에서는 사업자(공급자)가 제시한 작업장소가 보안요구사항을 준수하지 못한 경우 거부할 수 있음\nㅇ 작업장소 구성을 위하여 소용되는 모든 비용은 사업예산에 계상되어 있음(사업자 부담)"},"tags":["renumbered","major"],"by":"sim","score":0.5472268907563025},{"s":"removed","p":{"id":"PMR-13","cat":"프로젝트 관리","name":"의사소통 관리 방안","def":"의사소통 관리 및 보고","det":"ㅇ사업 전반의 이해관계자간 효율적 의사소통 방안 제시\nㅇ신속한 의사결정을 위한 프로세스 제시\nㅇ이해관계자에 대한 주기적인 프로젝트 진행 보고 및 이해관계자 대상 교육·워크숍 수행 방안 제시\nㅇ주관기관의 의사결정 지원\nㅇ사업추진 상황 및 쟁점사항의 정기·비정기 보고\nㅇ사업 이해관계자별 역할 정의 및 책임의 적절성 검토"},"tags":["id_collision"]},{"s":"changed","p":{"id":"PMR-19","cat":"프로젝트 관리","name":"하도급 관리 방안","def":"하도급 세부 관리준수 사항","det":"◦제안사 소속 이외의 인력은 하도급으로 간주하며, 하도급 계약 시 관계 법률에 의하여 사전 승인을 받아야 함\n- 제안사는 하도급 계약의 준수실태를 ‘하도급 준수실태보고서’에 의하여 상·하반기 2회 보고하여야 함\n- 하도급 업체 투입인력에 대한 관리방안을 제시해야 함\n- 행정기관 및 공공기관 정보시스템 구축·운영 지침(행정안전부고시 제2022-31호) 제19조에 따라 하도급 대금지급 기준을 준수하여야 함\n- 하도급의 계약부터 대금지급 및 실적관리를 조달청 ‘정부계약하도급관리시스템(하도급지킴이)’을 이용하여 실행하여야 함"},"n":{"id":"PMR-14","cat":"프로젝트 관리","name":"하도급 관리 방안","def":"하도급 세부 관리준수 사항","det":"◦ 제안사 소속 이외의 인력은 하도급으로 간주하며, 하도급 계약 시 관계 법률에 의하여 사전 승인을 받아야 함\n  - 제안사는 하도급 계약의 준수실태를 ‘하도급 준수실태보고서’에 의하여 상·하반기 2회 보고하여야 함\n  - 하도급 업체 투입인력에 대한 관리방안을 제시해야 함\n  - 행정기관 및 공공기관 정보시스템 구축·운영 지침(행정안전부 고시) 제19조에 따라 하도급 대금지급 기준을 준수하여야 함\n  - 하도급의 계약부터 대금지급 및 실적관리를 조달청 ‘정부계약하도급관리시스템(하도급지킴이)’을 이용하여 실행하여야 함"},"tags":["renumbered","numeric"],"by":"sim","score":0.9904967602591792},{"s":"removed","p":{"id":"PMR-14","cat":"프로젝트 관리","name":"이해관계자 관리 방안","def":"이해관계자 관리 방안제시","det":"ㅇ이해관계자 식별 및 영향도 분석\nㅇ이해관계자 의견 반영여부 점검 및 조치사항 지시\nㅇ전문기관, 주관기관, 사업자, 감리, 서비스 이용자 등 사업 전반의 이해관계자간 역할 및 협조 방안 제시"},"tags":["id_collision"]},{"s":"changed","p":{"id":"PMR-20","cat":"프로젝트 관리","name":"정기 및 비정기 보고","def":"정기 및 비정기 보고방안","det":"ㅇ주/월간 보고는 수행 시 주관기관과 일정 협의에 의하여 변경 가능 하고, 원활한 과업추진을 위해 필요시 비정기적인 보고를 요청할 수 있음\nㅇ어플리케이션 유지관리 및 개/보수를 위하여 상용S/W를 제외한 소스코드를 제공하여야 하며, 개발시 형상 관리서버에 등록·관리하여야 함\nㅇ프로젝트 착수시점에 주석에 대한 규정 등을 포함한 코딩 가이드를 수립하고, 해당 가이드를 준수한 소스코드를 작성하여 제공하여야 함\n구분\n보고명\n보고내용\n시 기\n정기\n보고\n주간보고\n- 진도관리(계획대비 실적)\n- 문제점 보고 및 특이사항\n- 차주계획\n매주\n수요일\n비정기\n보고\n착수보고\n- 착수계 및 사업수행계획 보고\n· 비밀유지계약, 서약서 등 포함\n착수후 10일\n이내\n완료보고\n- 개발완료 보고 및 관련 산출물\n· 보안 확약서 등 포함\n완료 시\n수시보고\n- 이슈사항 및 문제점 협의 등\n- 긴급변경 및 서면 요구사항\n수시"},"n":{"id":"PMR-15","cat":"프로젝트 관리","name":"정기 및 비정기 보고","def":"정기 및 비정기 보고회","det":"ㅇ 보고회는 협의에 의하여 일정변경이 가능 \nㅇ 원활한 과업추진을 위해 필요시 비정기적인 보고를 요청할 수 있으며 제안사는 이에 응하여야 한다.\n구분\n보고명\n보고내용\n시 기\n정기\n보고\n주간보고\n- 주간계획대비 실적, 차주계획\n- 문제점 보고 및 특이사항\n매주 수요일\n월간보고\n- 월간계획대비 실적, 차월계획\n마지막주 수요일\n비정기\n보고\n착수보고\n- 착수계 및 사업수행계획 보고\n · 과업수행과 관련된 방향 및 계획, 공정별 세부추진계획 등이 포함된 착수보고서 제출 및 착수보고회 개최\n착수 후 \n14일 이내\n중간보고\n사업수행 중간 업무의 진척도, 진행상황 보고 및 중간보고회 개최\n착수 4개월 전후\n완료보고\n- 사업종료 이전(발주자와 협의)에 최종보고서(안)을 제출해야하며 필요시 내용의 보안을 지시할 수 있음\n · 완료 보고 및 관련 산출물, 보안확약서 등 포함하여 제출 및 완료보고회 개최\n사업 완료시점에\n협의\n수시보고\n- 이슈사항 및 문제점 협의 등\n- 긴급변경 및 서면 요구사항\n수시"},"tags":["renumbered","major"],"by":"sim","score":0.793939393939394},{"s":"removed","p":{"id":"PMR-18","cat":"프로젝트 관리","name":"원격지 개발장소 제시","def":"작업장소 협의 및 보안요구사항 준수","det":"ㅇ사업자(공급자)는 작업장소 상호협의 시 제안요청서 내 명시된 보안요구사항을 준수한 작업장소를 제시할 수 있으며, 발주기관에서는 제시된 작업장소에 관하여 우선 검토한다. 다만, 발주기관에서는 사업자(공급자)가 제시한 작업장소가 보안요구사항을 준수하지 못한 경우 거부할 수 있음"},"tags":[]},{"s":"removed","p":{"id":"PMR-21","cat":"프로젝트 관리","name":"과업내용 변경","def":"소프트웨어사업 과업내용을 변경하는 경우","det":"◦ 본 사업은 「소프트웨어 진흥법」 제50조, 같은 법 시행령 제47조 제1항 제2호, 제3호에 따른 과업내용 변경 및 그에 따른 계약금액‧ 계약기간 조정이 필요한 경우, 계약상대자는 국가기관 등의 장에게 소프트웨어사업 과업변경요청서*를 제출하여야 함  -｢ 소프트웨어사업 계약 및 관리감독에 관한 지침｣ 별지 8호서식 참조"},"tags":[]},{"s":"removed","p":{"id":"PMR-22","cat":"프로젝트 관리","name":"현장 적용 및 확산 관리","def":"현장 적용 안정화 및 확산 관리 방안","det":"ㅇ 집중 적용 도축장 현장 지원 계획 수립\nㅇ 현장 이슈 대응 및 개선 관리 체계 마련\nㅇ 전국 확산을 위한 단계별 관리 방안 제시"},"tags":[]},{"s":"removed","p":{"id":"PMR-23","cat":"프로젝트 관리","name":"현장 교육 및 홍보","def":"찾아가는 현장 서비스 지원 및 사용자 매뉴얼 제작","det":"ㅇ 찾아가는 현장 서비스 지원\n- 현장 서비스 지원을 위해 상황에 따라 전담 지원 담당자 혹은 수행업체 담당자를 지정하여, 현장 문의 대응 및 시스템 사용 오류를 즉각적으로 해결하여야 됨\nㅇ 사용자 맞춤형 매뉴얼 제작 및 배포\nㅇ 시스템 안착을 위한 홍보 및 설명회 지원"},"tags":[]},{"s":"same","p":{"id":"PSR-01","cat":"프로젝트 지원","name":"시험운영 및 취약점 점검","def":"시험운영 및 취약점 점검방안","det":"ㅇ수행사는 구축시스템에 대한 시험운영 계획을 발주기관과 협의하여 수립하고 시험운영을 실시\nㅇ시스템 저해요소 분석 및 개선, 취약점 대체방안, 해결안 마련, 제공이 가능하도록 취약점 점검\nㅇ모의해킹 범위와 대상을 선정하고 시나리오를 작성하여 취약점 진단 후 모의해킹 수행 결과물을 제출"},"n":{"id":"PSR-01","cat":"프로젝트 지원","name":"시험운영 및 취약점 점검","def":"시험운영 및 취약점 점검방안","det":"ㅇ 수행사는 구축시스템에 대한 시험운영 계획을 발주기관과 협의하여 수립하고 시험운영을 실시\nㅇ 시스템 저해요소 분석 및 개선, 취약점 대체방안, 해결안 마련, 제공이 가능하도록 취약점 점검\nㅇ 모의해킹 범위와 대상을 선정하고 시나리오를 작성하여 취약점 진단 후 모의해킹 수행 결과물을 제출"},"tags":[],"by":"id","score":1},{"s":"removed","p":{"id":"PSR-02","cat":"프로젝트 지원","name":"교육지원","def":"교육지원 세부사항","det":"ㅇ수행사는 본 사업 완료 전까지 시스템 운영(운영 및 유지보수)에 필요한 기술교육을 실시하여야 하며, 교육계획서를 작성하여 발주기관에 제출 및 승인\nㅇ발주기관의 정보시스템 내부 사용자 및 관련기관의 사용자에게 시스템 사용에 대한 교육을 실시하여야 함\nㅇ교육내용은 시스템의 운영, 감시 및 보안, 비상복구 방법 등 운영에 필요한 시스템 구성방법 및 장애 대처 방법과 기타 시스템 운영에 관한 사항을 포함하여야 하며, 관련기관 사용자를 위한 매뉴얼을 토대로 집합교육을 실시\nㅇ교육계획서에는 교육 훈련에 대한 목적 및 내용, 대상, 방법, 일정, 장소, 강사진 등에 대한 상세사항을 포함\nㅇ목표 시스템의 운영을 위해 실시되는 교육에 대한 비용은 사업자가 부담하고, 주관기관과 상호 협의 하에 교육내용을 조정"},"tags":["id_collision"]},{"s":"added","n":{"id":"PSR-02","cat":"프로젝트 지원","name":"시스템 운영 및 유지관리","def":"시스템 운영 및 유지관리 목표 및 범위","det":"ㅇ 시스템 운영을 위한 관련 시스템에 대하여 무중단 운영 및 장애 발생에 대한 복구대책 마련과 기술지원\nㅇ 유지관리 대상 시스템은 아래와 같으며 시스템 세부 정보는 담당자 입회하에 열람 가능\n - (HW) 물리서버, 가상화서버, 네트워크장비, 보안장비 등 \n - (상용SW) 서버 가상화, WEB, WAS, 상담관리, 서버보안, 서버백신, 메타데이터·데이터품질관리, 데이터연계, 데이터분석, 차트, 리포트툴, BI, 개인정보 접속기록관리, eCross 등\n - (DB) 통합정보시스템 및 상담관리 DB\nㅇ 이용자 문자 알림메시지 혹은 카카오톡 발송 지원(1,000,000건)\nㅇ 다양한 이용자 서비스 오류민원 대응 및 테스트를 위한 단말기 도입\n - 다양한 OS(Android, iOS, Windows) 및 단말기(스마트폰, 태블릿) 등 테스트 및 모니터링 환경 구성\nㅇ 시스템 운영 시 아래 사항을 수행해야 하며 시스템 구축인력과 운영인력은 겹쳐서는 안되고 분리해서 운영\n - 매핑 고도화 전 현재 운영중인 매핑관련 화면 및 프로세스 유지보수\n - 현재 운영중인 전체 서비스 유지보수\n - 통합검색 등 일부 조회시간 오래걸리는 서비스 개선요청\n - ORACLE EXADATA DB 튜닝 지원\n - 권한관리, 메뉴관리 등 전체 관리자 기능 고도화\n - 공지사항, Q&A 게시판 서비스 활성화\n - 기본통계 및 BI를 활용한 통계 서비스 유지보수\n - 농식품부 등 정책지원 서비스 내역 유지보수\n - 개발환경 및 시스템·보안 인프라 지원 및 솔루션들의 기술지원\n - 우리원 서버 이관 등 인프라 작업 시 연관되어 있으면 협조\n - 보안 취약점 해결방법 강구 및 조치\n - 그 외 정부 및 고객민원으로 인한 시스템 개선 요청 건"},"tags":["id_collision"]},{"s":"changed","p":{"id":"PSR-03","cat":"프로젝트 지원","name":"교육자료 제작","def":"교육자료 작성방안","det":"ㅇ제안사는 본 사업 완료 전까지 운영에 필요한 기술교육을 실시하여야 하며, 교육계획서를 작성하여 발주자에 제출, 승인을 얻어야 함\nㅇ교육계획서는 교육 훈련에 대한 목적 및 내용, 교육대상, 방법, 인원, 횟수, 일정, 장소에 대한 상세사항이 포함되어야 함\nㅇ교육내용은 시스템의 운영, 감시 및 보안, 비상복구 방법과 같이 운영에 필요한 시스템 구성방법 및 장애 대처 방법과 기타 시스템 운영에 관한 사항이 포함되어야 함\nㅇ교육 대상자별 교육 내용\n- 개발자 : 제안사가 투입하는 인력에 대한 교육으로써, 사업관리 및 개발 산출물의 이해, 개발절차에 따른 개발언어, 자동화 툴 이해가 선행되어야 함\n- 사용자 : 발주자의 현업 평가업무 담당자에 대한 시스템 사용 교육으로써, 사업의 이해 및 업무 흐름의 이해, 시스템 구성 및 기능, 시스템 사용 절차 및 방법, 시스템 오류시 조치 방법에 대한 교육을 실시함\n- 운영자 : 본 사업 완료 후 시스템을 운영하는 인력에 대한 기술 교육으로써, 시스템 개요 및 구성, 개발 표준, 시스템 운영 절차 및 운영 방법, 사용자관리, 메뉴관리, 시스템 관리자 기능, 유지보수를 위한 프로그램 및 개발 내용에 대한 기술 교육, 장애대처방안, 에러처리 방안, 기타 운영 및 유지보수에 필요한 기술 교육\nㅇ 사용자별 서비스 매뉴얼 등 이용 매뉴얼 제작(단, 수정 가능한 파일로 작성)"},"n":{"id":"PSR-03","cat":"프로젝트 지원","name":"교육지원","def":"교육지원 세부사항","det":"ㅇ 수행사는 본 사업 완료 전까지 시스템 운영(운영 및 유지보수)에 필요한 기술교육을 실시하여야 하며, 교육계획서를 작성하여 발주기관에 제출\nㅇ 발주기관의 정보시스템 내부 사용자 및 관련기관의 사용자에게 시스템 사용에 대한 교육을 실시하여야 함\nㅇ 교육내용은 시스템의 운영, 감시 및 보안, 비상복구 방법 등 운영에 필요한 시스템 구성방법 및 장애 대처 방법과 기타 시스템 운영에 관한 사항을 포함하여야 하며, 관련기관 사용자를 위한 매뉴얼을 토대로 집합교육을 실시\nㅇ 교육계획서에는 교육 훈련에 대한 목적 및 내용, 대상, 방법, 일정, 장소, 강사진 등에 대한 상세사항을 포함\nㅇ 목표 시스템의 운영을 위해 실시되는 교육에 대한 비용은 사업자가 부담하고, 발주기관과 상호 협의하에 교육내용을 조정"},"tags":["major"],"by":"id","score":0.32922403003754697},{"s":"added","n":{"id":"PSR-04","cat":"프로젝트 지원","name":"교육자료 제작","def":"교육자료 작성방안","det":"ㅇ 제안사는 본 사업 완료 전까지 운영에 필요한 기술교육을 실시하여야 하며, 교육계획서를 작성하여 발주자에 제출, 승인을 얻어야 함\nㅇ 교육계획서는 교육 훈련에 대한 목적 및 내용, 교육대상, 방법, 인원, 횟수, 일정, 장소에 대한 상세사항이 포함되어야 함\nㅇ 교육내용은 시스템의 운영, 감시 및 보안, 비상복구 방법과 같이 운영에 필요한 시스템 구성방법 및 장애 대처 방법과 기타 시스템 운영에 관한 사항이 포함되어야 함\nㅇ 교육 대상자별 교육 내용\n  - 개발자 : 제안사가 투입하는 인력에 대한 교육으로써, 사업관리 및 개발 산출물의 이해, 개발절차에 따른 개발언어, 자동화 툴 이해가 선행되어야 함\n  - 사용자 : 발주자의 현업 평가업무 담당자에 대한 시스템 사용 교육으로써, 사업의 이해 및 업무 흐름의 이해, 시스템 구성 및 기능, 시스템 사용 절차 및 방법, 시스템 오류시 조치 방법에 대한 교육을 실시함\n  - 운영자 : 본 사업 완료 후 시스템을 운영하는 인력에 대한 기술 교육으로써, 시스템 개요 및 구성, 개발 표준, 시스템 운영 절차 및 운영 방법, 사용자관리, 메뉴관리, 시스템 관리자 기능, 유지보수를 위한 프로그램 및 개발 내용에 대한 기술 교육, 장애대처방안, 에러처리 방안, 기타 운영 및 유지보수에 필요한 기술 교육"},"tags":["id_collision"]},{"s":"changed","p":{"id":"PSR-04","cat":"프로젝트 지원","name":"기술이전 방안","def":"기술이전 세부요건","det":"ㅇ시스템 개발 및 운영에 필요한 내용으로 시스템의 운영, 감시 및 보안, 비상복구 방법 등 시스템 구성방법 및 장애 대처 방법, 기타 운영에 관한 사항 등 시스템 운영직원의 자체유지보수 능력 배양을 위한 기술이전 계획을 제시하여야 함\nㅇ기술이전 시 유지보수 업체와 아래의 내용이 포함된 인수인계 양식 작성 및 확인 후 공문 처리하여 발주기관에 제출\n- 항목별 점검 수행 시 유지보수 업체와 협업할 것\n- 매뉴얼 내용에 대한 유효성 유지보수 업체의 확인 필요\nㅇ기술이전 시 아래의 항목이 산출물에 포함되어야 함\n- 시스템 구성도, 서비스 구성도, SW 운영 매뉴얼, 개발(DB) 산출물 일체\nㅇ「소프트웨어 진흥법 제22조」에 따라 해당 사업 수주자는 SW 사업정보(SW사업 수행 및 실적 정보) 데이터를 작성하여 제출하여야 함\nㅇSW사업정보 데이터 작성 및 제출에 관한 사항은 www.spir.kr 자료실의 ‘SW사업정보 저장소 데이터 제출 안내’ 문서를 참조토록 함\nㅇSW사업정보 데이터는 사업수행계획서 작성 시 단계별 산출물 리스트에 반드시 명시하도록 함\nㅇSW사업정보 중 기능점수 데이터의 작성을 위해 사업수행 인원 중 기능점수 측정 전문가를 포함토록 함"},"n":{"id":"PSR-05","cat":"프로젝트 지원","name":"기술이전 방안","def":"기술이전 세부요건","det":"ㅇ 시스템 개발 및 운영에 필요한 내용으로 시스템의 운영, 감시 및 보안, 비상복구 방법 등 시스템 구성방법 및 장애 대처 방법, 기타 운영에 관한 사항 등 시스템 운영직원의 자체유지보수 능력 배양을 위한 기술이전 계획을 제시하여야 함\nㅇ 기술이전 시 유지보수 업체와 아래의 내용이 포함된 인수인계 양식 작성 및 확인 후 공문 처리하여 발주기관에 제출\n - 항목별 점검 수행 시 유지보수 업체와 협업할 것\n - 매뉴얼 내용에 대한 유효성 유지보수 업체의 확인 필요\n - 유지보수 업체에 대한 대면교육 및 관련자료 전달\nㅇ 기술이전 시 아래의 항목이 산출물에 포함되어야 함\n - 시스템 구성도, 서비스 구성도, SW 운영 매뉴얼, 개발(DB) 산출물 일체"},"tags":["renumbered","numeric"],"by":"sim","score":0.8753541076487252},{"s":"changed","p":{"id":"PSR-05","cat":"프로젝트 지원","name":"검수지원","def":"검수지원 방안","det":"ㅇ수행사는 사업완료 후 주관기관 지정하는 검사자의 최종검수를 받아야 함\nㅇ수행사는 검수 개시 1주전까지 본 제안요청서의 요구조건을 충분히 포함하는 시험항목 및 방법 등을 기술한 검수계획서를 서면으로 주관기관에 제출하여 승인을 받은 후 검수를 실시\nㅇ검수계획서는 다음 사항들을 포함\n- 개발 프로그램 목록\n- 제반 산출물 목록\n- 인프라 설치내역\n- 인수시험 항목 및 방법\n- 자체시험 결과\nㅇ검수는 주관기관이 지정한 검수요원들과 수행사의 피검수 요원들이 함께 수행하며, 검수과정을 관찰하고 시험결과를 확인\nㅇ시험결과 발견된 미비점에 대해서는 수행사가 즉시 보완하여, 주관기관에 의해 미비점 보완이 확인되어야 함\nㅇ테스트 및 검수, 시연 등에 필요한 장비 및 장소, 비용 등의 제반사항은 수행사에서 준비"},"n":{"id":"PSR-06","cat":"프로젝트 지원","name":"검수지원","def":"검수지원 방안","det":"ㅇ 수행사는 사업완료 후 발주기관 지정하는 검사자의 최종검수를 받아야 함\nㅇ 수행사는 검수 개시 1주전까지 본 제안요청서의 요구조건을 충분히 포함하는 시험항목 및 방법 등을 기술한 검수계획서를 서면으로 발주기관에 제출하여 승인을 받은 후 검수를 실시\nㅇ 검수계획서는 다음 사항들을 포함\n - 개발 프로그램 목록, 제반 산출물 목록, 인수시험 항목 및 방법, 자체시험 결과\nㅇ 검수는 발주기관이 지정한 검수요원들과 수행사의 피검수 요원들이 함께 수행하며, 검수과정을 관찰하고 시험결과를 확인\nㅇ 시험결과 발견된 미비점에 대해서는 수행사가 즉시 보완하여, 발주기관에 의해 미비점 보완이 확인되어야 함\nㅇ 테스트 및 검수, 시연 등에 필요한 장비 및 장소, 비용 등의 제반사항은 수행사에서 준비"},"tags":["renumbered"],"by":"sim","score":0.9724137931034482},{"s":"removed","p":{"id":"PSR-06","cat":"프로젝트 지원","name":"기술지원","def":"기술지원 세부방안","det":"ㅇ수행사는 주관기관이 사업완료 후 본 사업수행결과에 대한 보완을 하고자 할 경우, 필요한 제반 기술사항을 지원\nㅇ운영과 관련된 기술지원을 요청할 경우 전문기술지원 조직에 의한 기술지원 제공방안이 제시되어야 함\nㅇ운영의 경제성, 효율성, 생산성 향상을 중장기적으로 추진할 수 있는 방안을 종합적으로 제시해야 함\nㅇ주관기관이 본 시스템을 확장하거나 타 장비를 접속하고자 하는 경우 사업자는 인터페이스가 가능하도록 관련 기술을 지원해야 함\nㅇ장애발생이 예상되거나 시스템 운용에 필요하다고 판단되는 경우 주관기관은 특별점검을 요구할 수 있으며, 계약업체는 점검계획을 수립하여 시행해야 함"},"tags":["id_collision"]},{"s":"changed","p":{"id":"PSR-07","cat":"프로젝트 지원","name":"기술지원","def":"기술지원 세부방안","det":"ㅇ사업의 하자담보책임기간은 사업을 종료한 날부터 1년이며, 본 사업 시 납품한 하드웨어 운영 소프트웨어, 시스템 소프트웨어 및 응용프로그램에 대해 위의 기간 동안 결함이 발견될 경우, 사업자는 무상으로 결함에 대한 조치를 수행\nㅇ수행사는 사업종료 이후 시스템의 원활한 운영을 위해 하자보수/장애처리 지원체계 및 절차를 구체적으로 제시하여야 함\n- 지원범위, 지원방법(상주, 비상주 등) 및 지원인원을 포함하여 제시\nㅇ각종 장애 발생 시 즉각적인 원인분석 및 복구 등 하자보수를 보장하기 위하여 지원부서 및 전문인력을 확보하여 항시 운영 가능하도록 해야 하며, 구체적인 장애조치 계획을 제시하여야 함\nㅇ하자보수 기간 중 S/W 개발, 제작, 설치 등의 하자가 발견될 경우 즉시 필요한 조치를 취하여 문제를 해결\nㅇ시스템의 안정성 및 신뢰성 확보와 장애시간을 최소화하기 위하여 시스템을 단위 요소기술과 기능으로 구분하여 각각에 대한 세부 하자보수 계획을 제시\nㅇ수행사는 개발한 응용 어플리케이션에 대한 하자보수 책임을 가지며 산출물 제출시 하자보수체계 명시\nㅇ하자 발생 시 수행사와 소프트웨어공급자에게 문제 해결을 동시에 요청할 수 있음\nㅇ사업수행자는 다음과 같은 사항을 하자보수 활동에 포함하여 지원\n- 개발한 S/W 전 시스템\n- 장애발생에 대한 처리(Trouble Shooting)\n- 기타 시스템의 정상운영을 위한 기술지원 등\nㅇ사업수행자는 하자보수기간내 발견된 보안 취약점의 조치 진행하여야함"},"n":{"id":"PSR-07","cat":"프로젝트 지원","name":"기술지원","def":"기술지원 세부방안","det":"ㅇ 수행사는 발주기관이 사업완료 후 본 사업수행결과에 대한 보완을 하고자 할 경우, 필요한 제반 기술사항을 지원\nㅇ 운영과 관련된 기술지원을 요청할 경우 전문기술지원 조직에 의한 기술지원 제공방안이 제시되어야 함\nㅇ 운영의 경제성, 효율성, 생산성 향상을 중장기적으로 추진할 수 있는 방안을 종합적으로 제시해야 함\nㅇ 발주기관이 본 시스템을 확장하거나 타 장비를 접속하고자 하는 경우 사업자는 인터페이스가 가능하도록 관련 기술을 지원해야 함\nㅇ 장애발생이 예상되거나 시스템 운용에 필요하다고 판단되는 경우 발주기관은 특별점검을 요구할 수 있으며, 계약업체는 점검계획을 수립하여 시행해야 함"},"tags":["major"],"by":"id","score":0.6745341614906832},{"s":"added","n":{"id":"PSR-08","cat":"프로젝트 지원","name":"하자보수 지원","def":"하자보수 지원 정의","det":"ㅇ 사업의 하자담보책임기간은 사업을 종료한 날부터 1년이며, 본 사업 시 납품한 하드웨어 운영 소프트웨어, 시스템 소프트웨어 및 응용프로그램에 대해 위의 기간동안 결함이 발견될 경우, 사업자는 무상으로 결함에 대한 조치를 수행\nㅇ 수행사는 사업종료 이후 시스템의 원활한 운영을 위해 하자보수/장애처리 지원체계 및 절차를 구체적으로 제시하여야 함\n - 지원범위, 지원방법(상주, 비상주 등) 및 지원인원을 포함하여 제시\nㅇ 각종 장애 발생 시 즉각적인 원인분석 및 복구 등 하자보수를 보장하기 위하여 지원부서 및 전문인력을 확보하여 항시 운영 가능하도록 해야 하며, 구체적인 장애조치 계획을 제시하여야 함\nㅇ 하자보수 기간 중 S/W 개발, 제작, 설치 등의 하자가 발견될 경우 즉시 필요한 조치를 취하여 문제를 해결 \nㅇ 시스템의 안정성 및 신뢰성 확보와 장애시간을 최소화하기 위하여 시스템을 단위 요소기술과 기능으로 구분하여 각각에 대한 세부 하자보수 계획 제시\nㅇ 수행사는 개발한 응용 어플리케이션에 대한 하자보수 책임을 가지며 산출물 제출시 하자보수체계 명시\nㅇ 하자 발생 시 수행사와 소프트웨어공급자에게 문제 해결을 동시에 요청할 수 있음\nㅇ 사업수행자는 다음과 같은 사항을 하자보수 활동에 포함하여 지원\n  - 개발한 S/W 전 시스템\n  - 장애발생에 대한 처리, 하자보수기간내 발견된 보안 취약점의 조치\n  - 기타 시스템의 정상운영을 위한 기술지원 등\n  - 하자보수기간 내 발견된 보안 취약점의 조치"},"tags":["id_collision"]},{"s":"changed","p":{"id":"PSR-08","cat":"프로젝트 지원","name":"기타 지원요건","def":"기타 지원 세부사항","det":"ㅇ본 사업에 따른 계약목적물의 지식재산권은 주관기관과 계약상대자가 공동으로 소유하며, 별도의 정함이 없는 한 지분은 균등한 것으로 함. 다만, 개발의 기여도 및 계약목적물의 특수성을 고려하여 계약당사자간의 협의를 통해 지식재산권 귀속주체 등에 대해 공동소유와 달리 정할 수 있음\nㅇ수행사는 용역 수행에 의해 발생하는 제반 산출물에 대한 모든 지적재산권 관련 분쟁에 대한 책임을 져야함\nㅇ계약을 수행함에 있어 제3자의 특허권 및 저작권 등의 침해 관련사항은 수행사가 모든 민형사상의 책임을 짐\nㅇ사업공간은 사업 추진의 효율성을 고려하여 주관기관과 협의하여 결정"},"n":{"id":"PSR-09","cat":"프로젝트 지원","name":"기타 지원요건","def":"기타 지원 세부사항","det":"ㅇ 본 사업에 따른 계약목적물의 지식재산권은 발주기관과 계약상대자가 공동으로 소유하며, 별도의 정함이 없는 한 지분은 균등한 것으로 함. 다만, 개발의 기여도 및 계약목적물의 특수성을 고려하여 계약당사자간의 협의를 통해 지식재산권 귀속주체 등에 대해 공동소유와 달리 정할 수 있음\nㅇ 수행사는 용역 수행에 의해 발생하는 제반 산출물에 대한 모든 지적재산권 관련 분쟁에 대한 책임을 져야함\nㅇ 계약을 수행함에 있어 제3자의 특허권 및 저작권 등의 침해 관련사항은 수행사가 모든 민형사상의 책임을 짐\nㅇ 사업공간은 사업 추진의 효율성을 고려하여 발주기관과 협의하여 결정"},"tags":["renumbered","minor"],"by":"sim","score":0.9900826446280991},{"s":"removed","p":{"id":"PSR-09","cat":"프로젝트 지원","name":"현장 밀착 교육 및 운영 지원","def":"현장 사용자 중심 교육 및 운영 지원","det":"ㅇ 수행사는 다음을 필수 제공\n- 전자출하시스템 교육 및 홍보를 위한 전담 인력\n- 현장 방문 교육 지원\n- 사용자 매뉴얼, 홍보자료 제작\nㅇ 교육·홍보 내용은 발주기관과 협의하여 추진"},"tags":["id_collision"]},{"s":"added","n":{"id":"PSR-10","cat":"프로젝트 지원","name":"SW사업정보 제출","def":"SW사업정보 제출 관련 정의","det":"ㅇ 본 사업은 「소프트웨어 진흥법 제46조」에 따라 SW사업정보(SW사업 수행 및 실적정보) 데이터를 작성 및 제출하여야 함\nㅇ SW사업정보 데이터 작성 및 제출에 관한 사항은 www.spir.kr 참조\nㅇ SW사업정보 데이터는 사업수행계획서 작성 시 단계별 산출물 리스트에  명시하도록 함\nㅇ SW사업정보 중 기능점수 데이터의 작성을 위해 사업수행 인원 중 기능점수 산정 가능 전문가를 포함토록 함"},"tags":[]},{"s":"changed","p":{"id":"QUR-01","cat":"품질","name":"가용성 보장","def":"품질 요구사항 목표수립","det":"ㅇ시스템은 통상적인 업무시간 동안 가용성을 보장해야 하며, 시스템 조건에 무관하게 모든 채널에 동일한 자료 및 결과를 생성하고 인도해야 함\nㅇ시스템은 정상상태에서 24시간 365일 무중단 운영되어야 함"},"n":{"id":"QUR-01","cat":"품질","name":"가용성 보장","def":"품질 요구사항 목표수립","det":"ㅇ 시스템은 통상적인 업무시간동안 가용성을 보장해야 하며, 시스템 조건에 무관하게 모든 채널에 동일한 자료 및 결과를 생성하고 인도해야 함\nㅇ 시스템은 정상상태에서 24시간 365일 무중단 운영되어야 함"},"tags":["minor"],"by":"id","score":1},{"s":"changed","p":{"id":"QUR-02","cat":"품질","name":"백업방안 마련","def":"백업 관리방안 목표수립","det":"ㅇ수행사는 시스템의 신속한 장애 대응을 위하여 백업방안을 제시\nㅇ에러 복구, 장애 대책 확보 등 신뢰성 있는 서비스 환경을 제공\nㅇ테스트 결함 발생률 및 조치율\n- 테스트 기간 동안 발견된 결함 수와 결함의 지속 시간을 측정하여야 함\n※결함 발생률이 5% 이상이거나 중대 결함이 발생할 경우, 시스템 오픈 을 연장해야 하며, 결함 지속 시간의 최대 한계값은 1시간 이하여야 함\n- 테스트 기간 동안 발견된 결함에 대한 조치율은 100%이어야 하며, 결함조치로 인하여 계획된 일정에 영향을 주어서는 안 됨"},"n":{"id":"QUR-02","cat":"품질","name":"백업방안 마련","def":"백업 관리방안 목표수립","det":"ㅇ 수행사는 시스템의 신속한 장애 대응을 위하여 백업방안을 제시\nㅇ 에러 복구, 장애 대책 확보 등 신뢰성 있는 서비스 환경을 제공\nㅇ 테스트 결함 발생률 및 조치율\n - 테스트 기간 동안 발견된 결함 수와 결함의 지속 시간을 측정하여야 함\n ※ 결함 발생률이 5% 이상이거나 중대 결함이 발생할 경우, 시스템 오픈을 연장해야 하며, 결함 지속 시간의 최대 한계값은 1시간 이하여야 함\n - 테스트 기간 동안 발견된 결함에 대한 조치율은 100%이어야 하며, 결함조치로 인하여 계획된 일정에 영향을 주어서는 안 됨"},"tags":["minor"],"by":"id","score":1},{"s":"same","p":{"id":"QUR-03","cat":"품질","name":"기능구현 정확성","def":"기능구현 요구사항 준수","det":"ㅇ시스템은 제공되기로 한 요구사항을 모두 제공하며, 초기 협의한 요구사항에서 변경관리 절차를 통해 승인을 획득한 요구사항을 최종 베이스라인으로 간주\nㅇ제공되기로 한 요구사항을 제공하는지 여부는 각 기능요구사항의 검증(테스트) 활동을 통해 예상된 결과가 도출되었을 경우 요구사항을 제공한 것으로 평가\nㅇ기능 구현 정확성은 사용자가 직접 테스트 수행 기간에 테스트를 수행함으로써 평가"},"n":{"id":"QUR-03","cat":"품질","name":"기능구현 정확성","def":"기능구현 요구사항 준수","det":"ㅇ 시스템은 제공되기로 한 요구사항을 모두 제공하며, 초기 협의한 요구사항에서 변경관리 절차를 통해 승인을 획득한 요구사항을 최종 베이스라인으로 간주\nㅇ 제공되기로 한 요구사항을 제공하는지 여부는 각 기능요구사항의 검증(테스트) 활동을 통해 예상된 결과가 도출되었을 경우 요구사항을 제공한 것으로 평가\nㅇ 기능 구현 정확성은 사용자가 직접 테스트 수행 기간에 테스트를 수행함으로써 평가"},"tags":[],"by":"id","score":1},{"s":"changed","p":{"id":"QUR-04","cat":"품질","name":"유지보수 용이성 제공","def":"유지보수 준수사항","det":"ㅇ시스템 업그레이드: 시스템은 새로운 기능을 구현하기 위해 필요한 경우 업그레이드가 용이해야 하며, 보안사고 예방, 성능 개선 등이 발생하는 경우 패치를 제공하여야 함\nㅇ시스템의 무상 하자보수 기간은 검수 완료일로부터 12개월로 하며, 단, 납품 물품 중 무상보증기간이 12개월 이상인 경우 그에 따르며, 무상 하자보수는 개발 소프트웨어, 하드웨어, 소프트웨어 등 시스템 전체로 함\nㅇ시스템 확장: 유지보수에 용이하게 개발되어야 하며 시스템 확장 시 상호운영성, 이식성 등을 보장하여야 함"},"n":{"id":"QUR-04","cat":"품질","name":"유지보수 용이성 제공","def":"유지보수 준수사항","det":"◦ 시스템 업그레이드 : 시스템은 새로운 기능을 구현하기 위해 필요한 경우 업그레이드가 용이해야 하며, 보안사고 예방, 성능 개선 등이 발생하는 경우 업그레이드를 제공하여야 함\nㅇ 시스템의 무상 하자보수 기간은 검수완료일로부터 12개월로 하며, 단, 납품 물품 중 무상보증기간이 12개월 이상인 경우 그에 따르며, 무상 하자보수는 개발 소프트웨어, 하드웨어, 소프트웨어 등 시스템 전체로 함\nㅇ 시스템 확장 : 유지보수에 용이하게 개발되어야 하며 시스템 확장 시 상호운영성, 이식성 등을 보장하여야 함"},"tags":["minor"],"by":"id","score":0.991647331786543},{"s":"changed","p":{"id":"QUR-05","cat":"품질","name":"품질보증활동","def":"품질관리 계획 및 운영활동","det":"ㅇ구축된 시스템의 품질을 보증하기 위한 단계별 품질보증 활동계획을 수립하고 품질검토 수행\n- 품질보증활동 담당인력 지정 운영\n- 단계별 품질보증활동 시기, 수행내역을 구체적으로 제시"},"n":{"id":"QUR-05","cat":"품질","name":"품질보증활동 및 성과지표 달성","def":"품질관리 계획 및 운영활동","det":"ㅇ 구축된 시스템의 품질을 보증하기 위한 단계별 품질보증 활동계획을 수립하고 품질검토 수행\n - 품질보증활동 담당인력 지정 운영\n - 단계별 품질보증활동 시기, 수행내역을 구체적으로 제시\nㅇ 성과지표 달성을 위한 계획 수립 및 지표 달성 결과 제출\n - 요구사항 준수율, 웹표준화 준수율, 시스템 가동률, 농장정보 매칭률 등"},"tags":[],"by":"id","score":0.658718954248366},{"s":"changed","p":{"id":"SER-01","cat":"보안","name":"보안 지침 준수","def":"보안 지침 표준준수","det":"ㅇ국가 정보보안 기본지침(국가정보원, 2023.1.)\nㅇ홈페이지 개인정보 노출방지 안내서(개인정보위, 2020.12.)\nㅇ소프트웨어 개발보안 가이드(2021.11.)\nㅇ소프트웨어 보안약점 진단가이드(행안부 발간등록번호 11-1311000-000395-14, 2019.6.)\nㅇ공개SW를 활용한 소프트웨어 개발보안 점검가이드(행안부, 2019.6.)\nㅇ개인정보의 안전성 확보조치 기준(개인정보위 고시 제2020-2호, 2020.8.11.)\nㅇ모바일 전자정부 서비스 관리지침(행안부 예규 제214호, 2022.6.29.)\nㅇ본 사업은 위 지침 외에도 정부가 제정, 공포한 관계 제 법규(지침)을 준수하여야 하며, 법규가 개정·변경될 경우 해당 법규 준수\nㅇ용역사업 중 또는 종료 후라도 본 사업과 관련하여 국가정보원 등 관련 기관으로부터 보안에 문제가 있다고 지적될 경우 반드시 해결책을 강구하고 조치하여야 함"},"n":{"id":"SER-01","cat":"보안","name":"보안 기본 요건","def":"보안 지침 표준준수","det":"ㅇ국가 정보보안 기본지침(국가정보원)\nㅇ홈페이지 개인정보 노출방지 안내서(개인정보위\nㅇ소프트웨어 개발보안 가이드\nㅇ소프트웨어 보안약점 진단가이드(행안부)\nㅇ공개SW를 활용한 소프트웨어 개발보안 점검가이드(행안부.)\nㅇ개인정보의 안전성 확보조치 기준(개인정보위 고시)\nㅇ모바일 전자정부 서비스 관리지침(행안부 예규)\nㅇ본 사업은 위 지침 외에도 정부가 제정, 공포한 관계 제 법규(지침)을 준수하여야 하며, 법규가 개정·변경될 경우 해당 법규 준수\nㅇ용역사업 중 또는 종료 후라도 본 사업과 관련하여 국가정보원 등 관련 기관으로부터 보안에 문제가 있다고 지적될 경우 반드시 해결책을 강구하고 조치하여야 함"},"tags":["numeric"],"by":"id","score":0.4460188087774295},{"s":"same","p":{"id":"SER-03","cat":"보안","name":"시스템 보안 방안","def":"시스템 보안 요구사항","det":"ㅇ 구축 및 운용 시스템에 대한 서버 보안취약점 점검 및 FTP, Telnet, Finger 등 불필요한 서비스 포트 제거 등 보안사항을 점검하여 조치\nㅇ 네트워크는 업무망과 인터넷망으로 구분하여 운영하고 망간 데이터 연계시 망간자료전송 시스템을 통하여 송수신\nㅇ 정보보호 제품 납품시 관련 규정의 시험, 인증사항을 만족하는 제품 납품\nㅇ 데이터 전송을 위한 네트워크 전송구간은 암호화 적용\nㅇ 기관간 데이터 연계시 통신 구간 암호화 및 접근제어 적용\nㅇ 사전협의된 연계 데이터를 지정된 서버로만 통신 허용"},"n":{"id":"SER-02","cat":"보안","name":"시스템 보안 방안","def":"시스템 보안 요구사항","det":"ㅇ 구축 및 운용 시스템에 대한 서버 보안취약점 점검 및 FTP, Telnet, Finger 등 불필요한 서비스 포트 제거 등 보안사항을 점검하여 조치\nㅇ 네트워크는 업무망과 인터넷망으로 구분하여 운영하고 망간 데이터 연계시 망간자료전송 시스템을 통하여 송수신\nㅇ 정보보호 제품 납품시 관련 규정의 시험, 인증사항을 만족하는 제품 납품\nㅇ 데이터 전송을 위한 네트워크 전송구간은 암호화 적용\nㅇ 기관간 데이터 연계시 통신 구간 암호화 및 접근제어 적용\nㅇ 사전협의된 연계 데이터를 지정된 서버로만 통신 허용"},"tags":["renumbered"],"by":"sim","score":1},{"s":"removed","p":{"id":"SER-02","cat":"보안","name":"보안 기본 요건","def":"보안 기본 요구사항","det":"ㅇ외부PC(노트북 등) 반입 시 포맷 후 보안프로그램(백신, NAC, 매체제어, 개인정보탐지 등)을 반드시 설치하고 발주기관의 설치확인을 받아야 함\nㅇ외부로 시스템, PC, 노트북 등 반출 시 저장장치 분리 후 제출하여 자료 완전 삭제 및 승인 후 반출\nㅇ사업수행 기간 중 중요 데이터 등 정보 유출에 대비하여 구체적인 정보보호 계획 및 방안을 수립하여 제출\n- 시스템 측면에서 보안방법 및 절차\n- 정보 유출 및 변경 가능성 차단 등 데이터 보안방법\n- 운영자, 사용자에 대한 접근권한 부여 등 소프트웨어적 보안방법\n- 개인정보 및 데이터 등 기밀 유출 시 보상 계획\nㅇ해킹 및 사이버 공격 등의 취약점 노출 또는 발생 우려에 대비하여 신속히 대응할 수 있는 비상 대응체계 구축 및 운영\nㅇ정보보호를 위한 관리적, 기술적 대책을 강구하여 발주기관의 승인을 받아 물리적으로 설치해야 하며, 이에 따른 비용 발생 시 수행사가 부담\nㅇ사업 수행에 있어 악성코드에 감염된 도구를 사용하여서는 아니되며 인가받지 않은 보조기억매체(USB, 외장하드 등) 사용 금지\nㅇ사업 수행 시 승인되지 않은 외부 인터넷망 사용을 금지하며, 업무망PC와 인터넷망PC는 망 분리하여 사용\nㅇ사업 관련 자료는 인터넷 웹하드, 웹메일 등 외부에 저장 및 전송 금지"},"tags":["id_collision"]},{"s":"added","n":{"id":"SER-03","cat":"보안","name":"보안관리 방안","def":"보안 기본 요구사항","det":"ㅇ 보안 관리 접근 방식 및 본 사업에 적용할 보안 정책 및 프로세스 제시\nㅇ 보안관리 수행 방안 제시\n - 정보의 무결성과 정보유출 방지 대책\n - 인터넷 사용에 따른 보안 대응 방안\n - 투입인력에 대한 보안관리 방안\n - 보안에 대한 정기적인 점검 및 관리 방안\n - 사업기간 동안 취득한 정보에 대한 보안 대책 제시\n - 시스템 보안 및 사용자 보안 체계, 수행인원에 대한 보안관리 대책 제시\nㅇ 데이터 관리강화를 위한 보안방안 제시"},"tags":["id_collision"]},{"s":"same","p":{"id":"SER-04","cat":"보안","name":"관리적 보안 방안","def":"관리적 보안 준수","det":"ㅇ 인적, 물적 자원에 대한 보안정책 및 지침을 수립하여 적용하고 수시로 보안진단을 실시\nㅇ 외부 인력을 포함한 사업수행 인력을 대상으로 주기적인 보안교육 실시 및 보안서약서 작성 등 보안관리 철저\nㅇ 불의의 사고로 인하여 시스템이나 파일이 피해를 입더라도 최근에 백업한 시점의 내용으로 복구할 수 있는 백업정책을 수립 및 실행\nㅇ 해킹 및 사이버 공격 등의 취약점 노출 또는 발생우려에 대비하여 신속히 대응할 수 있는 비상 대응체계 구축 및 운영"},"n":{"id":"SER-04","cat":"보안","name":"관리적 보안 방안","def":"관리적 보안 준수","det":"ㅇ 인적, 물적 자원에 대한 보안정책 및 지침을 수립하여 적용하고 수시로 보안진단을 실시\nㅇ 외부 인력을 포함한 사업수행 인력을 대상으로 주기적인 보안교육 실시 및 보안서약서 작성 등 보안관리 철저\nㅇ 불의의 사고로 인하여 시스템이나 파일이 피해를 입더라도 최근에 백업한 시점의 내용으로 복구할 수 있는 백업정책을 수립 및 실행\nㅇ 해킹 및 사이버 공격 등의 취약점 노출 또는 발생우려에 대비하여 신속히 대응할 수 있는 비상 대응체계 구축 및 운영"},"tags":[],"by":"id","score":1},{"s":"same","p":{"id":"SER-05","cat":"보안","name":"물리적 보안 방안","def":"물리적 보안 준수","det":"ㅇ 프로젝트 사무실, 중요장비 설치장소에 대해 출입보안시스템, CCTV등 통제절차 마련\nㅇ 개인소유의 PC 및 보조기억장치 반입‧반출을 통제\nㅇ 비공개 문서는 별도 잠금장치가 된 곳에 안전하게 보관 및 관리\nㅇ 사업 산출물은 기관에서 지정한 PC 혹은 파일서버에 저장\nㅇ 폐기되는 문서는 파쇄, 소각 등 안전한 방법으로 폐기되도록 함\nㅇ 문서의 보안등급을 부여하고 등급에 따라 권한 관리"},"n":{"id":"SER-05","cat":"보안","name":"물리적 보안 방안","def":"물리적 보안 준수","det":"ㅇ 프로젝트 사무실, 중요장비 설치장소에 대해 출입보안시스템, CCTV등 통제절차 마련\nㅇ 개인소유의 PC 및 보조기억장치 반입‧반출을 통제\nㅇ 비공개 문서는 별도 잠금장치가 된 곳에 안전하게 보관 및 관리\nㅇ 사업 산출물은 기관에서 지정한 PC 혹은 파일서버에 저장\nㅇ 폐기되는 문서는 파쇄, 소각 등 안전한 방법으로 폐기되도록 함\nㅇ 문서의 보안등급을 부여하고 등급에 따라 권한 관리"},"tags":[],"by":"id","score":1},{"s":"changed","p":{"id":"SER-06","cat":"보안","name":"원격지 온라인 개발 장소 보안 요건","def":"원격지 온라인 개발 장소 보안 준수","det":"ㅇ 국가정보보안기본지침 제28조의2(원격지에서의 온라인 개발) 준수\n- 지정된 단말기에서만 접근, 해당 단말기에 대한 접근인원 통제\n- 지정 단말기는 온라인 용역 통제시스템 접속 전용으로 운용, 인터넷 접속 차단\n- 온라인 용역 통제시스템을 경유하여 개발에 필요한 정보시스템에 접속\n- 계약 시행일로부터 종류 후 30일이 경과하는 날까지 정기또는 수시보안점검을 실시\nㅇ 수행사는 원격지 온라인 개발에 따른 보안사고 등 위험요인을 식별하여 이에 대한 대응방안을 제시하여야 함\nㅇ 수행사는 원격지 개발에 따른 개발방법 등에 대한 구체적인 방안을 제시하여야 함\nㅇ 우리원 보안정책을 준수해야하며, 원격지 개발시 요구되는 보안장비(NAC, VPN 등)는 수행사에서 준비\nㅇ 원격지 개발에 따른 수행 장소 등에 대하여 구체적인 보안관리 대책(시건장치, 출입통제 등)을 실시하여야 함\n- 프로젝트 사무실, 주요장비 설치장소에 대한 출입보안\n- 개인소유 PC 및 보조기억장치 반입 통제\n- 전용선 혹은 기관과의 연계가 가능한 VPN망 가설(VPN은 수행사 준비)\n- NAC 장비를 이용한 네트워크접근 통제 수행(NAC는 장비는 수행사 준비)\nㅇ 사업수행 시 승인되지 않은 외부 인터넷망 사용을 금지하며, 업무망PC와 인터넷망PC는 망 분리하여 사용\nㅇ 외부로 시스템, PC, 노트북 등 반출 시 저장장치 분리 후 제출하여 자료 완전삭제 및 승인 후 반출\nㅇ 용역사업자의 다음 행위를 금지\n- 발주기관의 허가없이 네트워크에 접속하고, 정보를 수집하는 행위\n- 비인가 프로그램 설치, 취약점을 고의로 생성하거나 취약한상태를 방치\n- 발주기관 정보시스템의 자료를 무단 위조·변조·삭제·파괴·저장  및 반출"},"n":{"id":"SER-06","cat":"보안","name":"원격지 온라인 개발 장소 보안 요건","def":"원격지 온라인 개발 장소 보안 준수","det":"ㅇ 수행사는 원격지 개발에 따른 보안사고 등 위험요인을 식별하여 이에 대한 대응방안을 제시하여야 함\nㅇ 수행사는 원격지 개발에 따른 개발방법 등에 대한 구체적인 방안을 제시하여야 함\nㅇ 우리원 보안정책을 준수해야하며, 원격지 개발시 요구되는 보안장비(NAC, VPN 등)는 수행사에서 준비\nㅇ 원격지 개발에 따른 수행 장소 등에 대하여 구체적인 보안관리 대책(시건장치, 출입통제 등)을 실시하여야 함\n - 프로젝트 사무실, 주요장비 설치장소에 대한 출입보안\n - 개인소유 PC 및 보조기억장치 반입 통제\n - 전용선 혹은 기관과의 연계가 가능한 VPN망 가설(VPN은 수행사 준비)\n - NAC 장비를 이용한 네트워크접근 통제 수행(NAC는 장비는 수행사 준비)\nㅇ 사업수행 시 승인되지 않은 외부 인터넷망 사용을 금지하며, 업무망PC와 인터넷망PC는 망 분리하여 사용\nㅇ 외부로 시스템, PC, 노트북 등 반출 시 저장장치 분리 후 제출하여 자료 완전삭제 및 승인 후 반출"},"tags":["numeric"],"by":"id","score":0.8946946946946948},{"s":"same","p":{"id":"SER-07","cat":"보안","name":"기술적 보안 요건","def":"기술적 보안 준수","det":"ㅇ 소프트웨어 개발보안 가이드, 소프트웨어 보안약점 진단가이드 준수\nㅇ 시큐어코딩 준수 강화를 위해 개발·점검·승인·배포 프로세스 상세절차를 정의하고, 형상·배포서버를 포함하여 구축해야 함\nㅇ 정보화사업 종료 전에 공공기관 정보시스템 구축운영 지침 제54조(진단원)에 준한 인력(6년 이상 소프트웨어 개발분야 업무를 수행하고 정보보안관련 전문성을 인증할 수 있는 자격증, 경력있는 자) 보안약점 진단을 실시하고 발견된 약점을 조치해야 함\nㅇ 소스코드 보안취약점을 자체 진단하고 제거하기 위한 방안(진단도구, 전문조직 활용, 진단환경, 진단회수, 진단 및 조치방안 등)을 제시\nㅇ 공유자원에 대한 접근제어가 사용자 권한에 따라 이루어지는지 관리\nㅇ 연계기관과 주고받는 데이터에 대해서는 기밀성, 무결성 보장\nㅇ 정보자산(서버,DB,웹서비스) 보안취약점 점검을 수행하고 확인된 취약점을 조치 후 결과 제출\nㅇ 서버보안, 방화벽등의 차단·허용 정책을 점검하여 보안성을 점검·조치\nㅇ 사업계획 및 개발 단계에서부터 소스 프로그램의 안전성을 고려하여 개발하고, 시스템간 상호 연계시 표준 보안 API를 적용\nㅇ 개발 웹 프로그램에 대한 보안취약점에 대한 사전점검 및 보완조치\nㅇ 네트워크 장비, 서버 등에 설치되는 OS, 통신 프로토콜, SW 등에 대한 최신 보안패치 적용"},"n":{"id":"SER-07","cat":"보안","name":"기술적 보안 요건","def":"기술적 보안 준수","det":"ㅇ 소프트웨어 개발보안 가이드, 소프트웨어 보안약점 진단가이드 준수\nㅇ 시큐어코딩 준수 강화를 위해 개발·점검·승인·배포 프로세스 상세절차를 정의하고, 형상·배포서버를 포함하여 구축해야 함\nㅇ 정보화사업 종료 전에 공공기관 정보시스템 구축운영 지침 제54조(진단원)에 준한 인력(6년 이상 소프트웨어 개발분야 업무를 수행하고 정보보안관련 전문성을 인증할 수 있는 자격증, 경력있는 자) 보안약점 진단을 실시하고 발견된 약점을 조치해야 함\nㅇ 소스코드 보안취약점을 자체 진단하고 제거하기 위한 방안(진단도구, 전문조직 활용, 진단환경, 진단회수, 진단 및 조치방안 등)을 제시\nㅇ 공유자원에 대한 접근제어가 사용자 권한에 따라 이루어지는지 관리\nㅇ 연계기관과 주고받는 데이터에 대해서는 기밀성, 무결성 보장\nㅇ 정보자산(서버,DB,웹서비스) 보안취약점 점검을 수행하고 확인된 취약점을 조치 후 결과 제출\nㅇ 서버보안, 방화벽등의 차단·허용 정책을 점검하여 보안성을 점검·조치\nㅇ 사업계획 및 개발 단계에서부터 소스 프로그램의 안전성을 고려하여 개발하고, 시스템간 상호 연계시 표준 보안 API를 적용\nㅇ 개발 웹 프로그램에 대한 보안취약점에 대한 사전점검 및 보완조치\nㅇ 네트워크 장비, 서버 등에 설치되는 OS, 통신 프로토콜, SW 등에 대한 최신 보안패치 적용"},"tags":[],"by":"id","score":1},{"s":"changed","p":{"id":"SER-08","cat":"보안","name":"참여인력 보안관리 일반사항","def":"참여인력 보안관리 준수","det":"ㅇ 소프트웨어 개발 보안 가이드에 따른 소스코드 보안성 확보를 위해 착수단계에서 표준 코딩스타일 정의 및 적절한 개발 절차 및 개발방법론 교육을 이수한 개발자를 개발에 투입\nㅇ 시스템 및 데이터에 대한 철저한 보안 유지 및 관리\nㅇ PC 등 장비의 반·출입에 대해 관리대장에 등록 및 관리 실시\nㅇ 발주기관 및 협업하는 기관의 보안업무 규정 준수\nㅇ 주요 데이터에 대한 반출입 관리 대책 마련\nㅇ 사용자 PC 백신 프로그램 최신 상태를 유지\nㅇ 정기적 바이러스 및 해킹도구 검사를 실시\nㅇ 사업 관련 자료는 인터넷 웹하드, 웹메일 등 외부에 저장 및 전송 금지"},"n":{"id":"SER-08","cat":"보안","name":"참여인력 보안관리 일반사항","def":"참여인력 보안관리 준수","det":"ㅇ 소프트웨어 개발 보안 가이드에 따른 소스코드 보안성 확보를 위해 착수단계에서 표준 코딩스타일 정의 및 적절한 개발 절차 및 개발방법론 교육 계획을 이수한 개발자를 개발에 투입\nㅇ 시스템 및 데이터에 대한 철저한 보안 유지 및 관리\nㅇ PC 등 장비의 반·출입에 대해 관리대장에 등록 및 관리 실시\nㅇ 발주기관 및 협업하는 기관의 보안업무 규정 준수\nㅇ 주요 데이터에 대한 반출입 관리 대책 마련\nㅇ 사용자 PC 백신 프로그램 최신 상태를 유지\nㅇ 정기적 바이러스 및 해킹도구 검사를 실시\nㅇ 사업 관련 자료는 인터넷 웹하드, 웹메일 등 외부에 저장 및 전송 금지"},"tags":["minor"],"by":"id","score":0.9964601769911504},{"s":"changed","p":{"id":"SER-9","cat":"보안","name":"참여인력 보안관리 착수단계","def":"참여인력 보안관리 준수","det":"ㅇ 용역사업자 대표명의 “보안서약서”제출\nㅇ 사업 참여인원에 대해서는 사업투입 전 “보안서약서”제출\nㅇ 수행사는 용역사업 수행 전 참여인원에 대해 법률 또는 규정에 의한 비밀유지의무 준수 및 위반 시 처벌내용 등에 대한 보안교육을 실시"},"n":{"id":"SER-09","cat":"보안","name":"참여인력 보안관리","def":"참여인력 보안관리 준수","det":"ㅇ 착수단계\n - 용역사업자 대표명의 “보안서약서”제출\n - 사업 참여인원에 대해서는 사업투입 전 “보안서약서”제출\n - 수행사는 용역사업 수행 전 참여인원에 대해 법률 또는 규정에 의한 비밀유지의무 준수 및 위반 시 처벌내용 등에 대한 보안교육을 실시\nㅇ 수행단계\n - 수행사는 보안인식 강화를 위해 주기적으로 자체 보안교육을 실시해야 하며, 발주기관이 요구하는 보안교육 참석\n - 중요정보 및 자료에 대한 ‘자료제공관리 대장’을 작성 운영\n - 외부PC(노트북 등) 반입 시 포맷 후 보안프로그램(백신, NAC, 매체제어, 개인정보탐지 등)을 반드시 설치하고 발주기관의 설치확인을 받아야 함\n - 사업수행에 있어 악성코드에 감염된 도구를 사용하여서는 아니되며 인가받지 않은 보조기억매체(USB, 외장하드 등) 사용 금지\nㅇ 종료단계\n - 사업에 참여한 사업자가 활용한 PC 및 서버의 경우, 사업 완료 후 자료의 복구가 불가능하도록 조치\n - ‘자료제공관리 대장’에 기록된 모든 자료의 파기 및 반납\n - 계약업체는 사업관련 자료를 보유해서는 안 되며, 이를 위반 시 향후 법적 책임이 있음을 포함한 “대표자용 보안확약서” 및 “참여자용 보안확약서”를 작성하여 제출"},"tags":["major"],"by":"id","score":0.6193939393939394},{"s":"changed","p":{"id":"SER-12","cat":"보안","name":"개인정보보호","def":"개인정보보호 준수사항","det":"ㅇ 시스템 개발·운영자를 위한 개인정보보호 가이드라인(행안부, 2018.6.) 준수\nㅇ 개인정보의 안전성 확보조치 기준(개인정보보호위원회고시 제2021-2호) 준수\n- 개인정보접속기록 관리, 개인정보 권한변경사항 기록 관리\n- 개인정보 다운로드 사유 기록 저장\nㅇ ‘개인정보보호법’ 및 이에 따른 ‘개인정보의 안정성 확보조치 기준’ 요구사항(암호화, 접근권한관리, 접근통제 등)을 충족하여 서비스, 연계 기능이 구현되도록 구축\nㅇ 시스템에서 관리되는 개인정보(패스워드 등)는 암호화하여 DB에 저장하여야 함\nㅇ 개인정보가 안전하게 수집･활용･폐기될 수 있도록 개인정보보호법 및 관련 시행령, 시행규칙, 지침, 규정을 준수하여 개발해야 함"},"n":{"id":"SER-10","cat":"보안","name":"개인정보보호","def":"개인정보보호 준수사항","det":"ㅇ 시스템 개발·운영자를 위한 개인정보보호 가이드라인(행안부) 준수\nㅇ 개인정보의 안전성 확보조치 기준(개인정보보호위원회 고시) 준수\n - 개인정보접속기록 관리, 개인정보 권한변경사항 기록 관리, \n - 개인정보 다운로드 사유 기록 저장\nㅇ ‘개인정보보호법’ 및 이에 따른 ‘개인정보의 안정성 확보조치 기준’ 요구사항(암호화, 접근권한관리, 접근통제 등)을 충족하여 서비스, 연계 기능이 구현되도록 구축\nㅇ 시스템에서 관리되는 개인정보(패스워드 등)는 암호화하여 DB에 저장하여야 함\nㅇ 개인정보가 안전하게 수집･활용･폐기될 수 있도록 개인정보보호법 및 관련 시행령, 시행규칙, 지침, 규정을 준수하여 개발해야 함"},"tags":["renumbered","numeric"],"by":"sim","score":0.9835420393559928},{"s":"removed","p":{"id":"SER-10","cat":"보안","name":"참여인력 보안관리 수행단계","def":"참여인력 보안관리 준수","det":"ㅇ 수행사는 보안인식 강화를 위해 주기적으로 자체 보안교육을 실시해야 하며, 발주기관이 요구하는 보안교육 참석\nㅇ 외부PC(노트북 등) 반입 시 포맷 후 보안프로그램(백신, NAC, 매체제어, 개인정보탐지 등)을 반드시 설치하고 발주기관의 설치확인을 받아야 함\nㅇ 사업수행에 있어 악성코드에 감염된 도구를 사용하여서는 아니되며 인가받지 않은 보조기억매체(USB, 외장하드 등) 사용 금지"},"tags":["id_collision"]},{"s":"changed","p":{"id":"SER-13","cat":"보안","name":"사용자 인증","def":"사용자 인증 준수사항","det":"ㅇ표준 로그인 창을 통하여 사용자 인증을 수행해야 함\nㅇ비밀번호는 발주기관의 기준과 정책을 준수하여야 함\nㅇ관리자와 사용자에 대한 소속그룹과 그룹 정책을 적용해야 함\nㅇ비밀번호를 연속적(일정 횟수)으로 틀릴 경우 로그인 제한 및 계정 잠금 기능을 구현해야 함\nㅇ사용자 등급 및 역할에 따라 접근할 수 있는 화면･기능을 통제할 수 있어야 함\nㅇ사용자 인증정보, 패스워드 등 보안이 요구되는 정보를 소스에 하드코딩 하지 않아야 함"},"n":{"id":"SER-11","cat":"보안","name":"사용자 인증","def":"사용자 인증 준수사항","det":"ㅇ표준 로그인 창을 통하여 사용자 인증을 수행해야 함\nㅇ비밀번호는 발주기관의 기준과 정책을 준수하여야 함\nㅇ관리자와 사용자에 대한 소속그룹과 그룹 정책을 적용해야 함\nㅇ비밀번호를 연속적(일정 횟수)으로 틀릴 경우 로그인 제한 및 계정 잠금 기능을 구현\nㅇ사용자 등급 및 역할에 따라 접근할 수 있는 화면･기능을 통제할 수 있어야 함\nㅇ사용자 인증정보, 패스워드 등 보안이 요구되는 정보를 소스에 하드코딩 하지 않아야 함"},"tags":["renumbered","minor"],"by":"sim","score":0.9944289693593314},{"s":"removed","p":{"id":"SER-11","cat":"보안","name":"참여인력 보안관리 종료단계","def":"종료단계 준수사항","det":"ㅇ 사업에 참여한 사업자가 활용한 PC 및 서버의 경우, 사업 완료 후 자료의 복구가 불가능하도록 조치\nㅇ 계약업체는 사업관련 자료를 보유해서는 안 되며, 이를 위반 시 향후 법적 책임이 있음을 포함한 “대표자용 보안확약서” 및 “참여자용 보안확약서”를 작성하여 제출"},"tags":["id_collision"]},{"s":"changed","p":{"id":"TER-01","cat":"테스트","name":"테스트 계획 수립 및 실시 요구사항","def":"테스트 계획 수립 및 실시방안","det":"ㅇ제안사는 기능 요구사항, 성능 요구사항, 보안 요구사항 등 각 요구사항에 대한 충족여부를 검증할 수 있도록 구체적인 테스트방안(테스트범위, 절차, 일정, 시험환경, 평가기준 등)을 제시하여야 하며, 테스트 실시 후 그 결과를 제출하여야 함\nㅇ발생 가능한 상황에 대해서 실제 데이터(오류 데이터 포함)를 입력하여 테스트하여야 하며 각종 유형별 테스트 계획서를 구체적으로 작성\n- 테스트 환경을 구현하기 위해 필요시 테스트용 프로그램 구현\nㅇ사용자 요구 및 프로그램 오류, 성능을 점검하는 단순 시험부터 실제 사용자 환경에서 실 업무적용에 이르기까지 종합적인 시험방법 및 시험 시나리오 등 세부 시험절차를 수립하여 제시"},"n":{"id":"TER-01","cat":"테스트","name":"테스트 계획 수립","def":"테스트 계획 수립 및 실시방안","det":"ㅇ 각 단계별, 기능별 시스템의 기능을 명확히 하여 타당성 있고 현실성 있는 테스트 일정 수립 및 제시\nㅇ 대상 업무별 단위/통합/성능/장애/인수테스트 방안 제시\nㅇ 발생 가능한 상황에 대해서 실제 데이터(오류 데이터 포함)를 입력하여 테스트하여야 하며 각종 유형별 테스트 계획서를 구체적으로 작성\n - 테스트 환경을 구현하기 위해 필요시 테스트용 프로그램 구현\nㅇ 테스트 계획서에는 테스트 조직, 데이터, 절차 및 방법, 일정 및 주기 등을 포함하여 테스트를 체계적이고 효율적으로 진행할 수 있는 방안 제시\nㅇ 사용자 요구 및 프로그램 오류, 성능을 점검하는 단순시험부터 실제 사용자 환경에서 실 업무적용에 이르기까지 종합적인 시험방법 및 시험 시나리오 등 세부 시험절차를 수립하여 제시"},"tags":[],"by":"id","score":0.6427771556550952},{"s":"changed","p":{"id":"TER-02","cat":"테스트","name":"단위 테스트","def":"단위 테스트 방안","det":"ㅇ단위 테스트의 대상, 범위, 절차, 조직, 일정, 환경, 평가기준을 구체적으로 작성하여 제출\n- 프로그램 개발 공정률 50% 이상 진행시 월별 개발된 프로그램에 대한 단위 테스트 수행 방안을 수립하여 제출\n- 전문 테스트 인력이 투입되어, 개발규칙 가이드 준수 여부 등을 확인하여 조치 결과 제출\nㅇ테스트 시나리오, 처리절차, 테스트 데이터, 목표결과(수준)을 사전에 정의\nㅇ단위 테스트시 다음의 내용은 필수로 점검하며 그 외 점검항목 수립\n- 결함유형 분석(결함 발생건수, 결함비율)\n- 결함 심각도 분석(치명적 결함, 주요 결함, 단순 결함, 사소한 결함, 개선사항 별 발생결함 건수)\n- 결함발견 추세분석(시험일시, 발견결함 수)"},"n":{"id":"TER-02","cat":"테스트","name":"단위 테스트","def":"단위 테스트 방안","det":"ㅇ 단위 테스트의 대상, 범위, 절차, 조직, 일정, 환경, 평가기준을 구체적으로 작성하여 제출\n - 프로그램 개발 공정률 50% 이상 진행시 월별 개발된 프로그램에 대한 단위 테스트 수행 방안을 수립하여 제출\n - 전문 테스트 조직을 구성, 개발규칙 가이드 준수 여부 등을 확인하여 조치 결과 제출\nㅇ 테스트 시나리오, 처리절차, 테스트 데이터, 목표결과(수준)을 사전에 정의\nㅇ 단위 테스트시 다음의 내용은 필수로 점검하며 그 외 점검항목 수립\n - 결함유형 분석(결함 발생건수, 결함비율)\n - 결함 심각도 분석(치명적 결함, 주요 결함, 단순 결함, 사소한 결함, 개선사항 별 발생결함 건수)\n - 결함발견 추세분석(시험일시, 발견결함 수)"},"tags":["minor"],"by":"id","score":0.9895522388059701},{"s":"same","p":{"id":"TER-03","cat":"테스트","name":"통합 테스트","def":"통합 테스트 방안","det":"ㅇ통합 테스트 시나리오에 따라 단위 테스트가 완료된 프로그램들을 대상으로 다음 사항을 검증해야 함\n- 기능, 성능 등의 요구사항 및 설계사양 충족여부\n- 단위기능 및 연계기능의 정상적인 수행 여부\n- 기능 수행 후의 결과가 사전에 예측된 결과와 일치여부\n- 시스템의 접근 권한 및 업무 권한에 대한 적정성\n- 대내 시스템간, 영역간 연계 및 이를 포함하는 업무 흐름 검증\n- 대외기관 연계 및 이를 포함하는 업무 흐름 검증\nㅇ결함을 파악하고 원인을 추적하여 결함을 제거하여야 함\nㅇ통합 테스트는 동일 시나리오/시험 데이터의 결함이 조치될 때 까지 실시\nㅇ제3자 테스터가 투입되어 전체 테스트를 진행\nㅇ통합 테스트를 토대로 안정적인 서비스 품질이 실현되도록 검증"},"n":{"id":"TER-03","cat":"테스트","name":"통합 테스트","def":"통합 테스트 방안","det":"ㅇ 통합 테스트 시나리오에 따라 단위 테스트가 완료된 프로그램들을 대상으로 다음 사항을 검증해야 함\n - 기능, 성능 등의 요구사항 및 설계사양 충족여부\n - 단위기능 및 연계기능의 정상적인 수행 여부\n - 기능 수행 후의 결과가 사전에 예측된 결과와 일치여부\n - 시스템의 접근 권한 및 업무 권한에 대한 적정성\n - 대내 시스템간, 영역간 연계 및 이를 포함하는 업무 흐름 검증\n - 대외기관 연계 및 이를 포함하는 업무 흐름 검증\nㅇ결함을 파악하고 원인을 추적하여 결함을 제거하여야 함\nㅇ통합 테스트는 동일 시나리오/시험 데이터의 결함이 조치될 때 까지 실시\nㅇ제3자 테스터가 투입되어 전체 테스트를 진행\nㅇ통합 테스트를 토대로 안정적인 서비스 품질이 실현되도록 검증"},"tags":[],"by":"id","score":1},{"s":"changed","p":{"id":"TER-04","cat":"테스트","name":"성능 테스트","def":"성능테스트 방안","det":"ㅇ실제 운영환경에서 성능 목표를 정의하고 성능 테스트 실시\nㅇ목표 성능에 미치지 못할 경우 목표에 부합하도록 개선 후 재시험"},"n":{"id":"TER-04","cat":"테스트","name":"성능 테스트 및 장애복구 테스트","def":"성능 테스트 및 장애복구 테스트 방안","det":"ㅇ 성능테스트\n - 실제 운영환경에서 성능 목표를 정의하고 성능 테스트 실시\n - 목표 성능에 미치지 못할 경우 목표에 부합하도록 개선 후 재시험\nㅇ 장애복구 테스트\n - 다양한 장애 상황을 재현하여 복구목표를 정의하고 장애복구 테스트 실시\n - 시스템은 장애 복구 시간 중에 장애상황을 사용자에게 공지하여야 함"},"tags":[],"by":"id","score":0.531578947368421},{"s":"removed","p":{"id":"TER-05","cat":"테스트","name":"장애복구 테스트","def":"장애대응 방안","det":"ㅇ다양한 장애 상황을 재현하여 복구목표를 정의하고 장애복구 테스트 실시\nㅇ모바일 웹에서 장애 복구 시간 중에 장애상황을 사용자에게 공지하여야 함"},"tags":["id_collision"]},{"s":"added","n":{"id":"TER-05","cat":"테스트","name":"인수 테스트","def":"인수 방안","det":"ㅇ 사용자 승인을 위한 검사 및 테스트 수행방법, 절차, 참여인원 및 역학, 점검사항, 최종 점수 기준, 점검 후 조치방안 등을 세부적으로 기술하여 계획을 수립하고 제출\nㅇ 요구사항별 적합/부적합 판정을 할 수 있도록 항목별 테스트를 실시하여야 하며, 이에 따른 테스트 데이터를 준비하여야 함\nㅇ 발주기관과 협의하여 승인 검사/테스트를 계획하고, 발주기관이 승인 검사/테스트를 이행하기 위하여 필요한 모든 지원을 제공하여야 함\nㅇ 개발 완료 후 최종산출물 및 테스트 결과물을 첨부하여 발주기관에게 승인검사 및 테스트롤 요청하여야 하며, 승인검사 및 테스트 과정에서 발견된 하자사항은 목표수준에 이를때까지 보완 및 테스트를 반복 실시\nㅇ 최종 승인 처리는 별도의 문서에 의하여 발주기관의 승인을 받은 일자에 완료된 것으로 함"},"tags":["id_collision"]},{"s":"added","n":{"id":"TER-06","cat":"테스트","name":"데이터 정합성 테스트","def":"데이터 검증 방안","det":"ㅇ 원천데이터에 대한 초기데이터 구축 시 정합성 검증 방안 제출\n - 원천데이터와 동일함을 검증할 수 있는 방법 및 절차 제시\nㅇ 원천데이터에 대한 변경데이터 반영에 대한 정합성 검증 방안 제출\n - 원천데이터와 동일함을 검증할 수 있는 방법 및 절차 제시"},"tags":[]}];
+D.forEach((d,i) => { d.k = i; d.pfx = (d.n||d.p).id.split('-')[0]; d.done = false; });
+const AI_KEYS = { 0:'high', 3:'medium', 6:'high', 8:'medium', 13:'high', 16:'medium' };
+
+/* ── 간단 diff (목업용: 어절 LCS + 짧은 교체는 글자 단위) ── */
+function lcs(a, b) {
+  const n=a.length, m=b.length, T=Array.from({length:n+1},()=>new Uint16Array(m+1));
+  for (let i=n-1;i>=0;i--) for (let j=m-1;j>=0;j--) T[i][j] = a[i]===b[j] ? T[i+1][j+1]+1 : Math.max(T[i+1][j],T[i][j+1]);
+  const out=[]; let i=0,j=0;
+  while (i<n&&j<m) { if (a[i]===b[j]) { out.push(['eq',a[i]]); i++; j++; } else if (T[i+1][j]>=T[i][j+1]) out.push(['del',a[i++]]); else out.push(['ins',b[j++]]); }
+  while (i<n) out.push(['del',a[i++]]); while (j<m) out.push(['ins',b[j++]]);
+  return out;
+}
+function merge(ops) { const r=[]; for (const [o,t] of ops) { const l=r[r.length-1]; if (l&&l[0]===o) l[1]+=t; else r.push([o,t]); } return r; }
+function diff(a, b) {
+  const tk = s => s.split(/(\s+)/).filter(Boolean);
+  const seg = merge(lcs(tk(a), tk(b))), out=[];
+  for (let i=0;i<seg.length;i++) {
+    const [o,t]=seg[i], nx=seg[i+1];
+    if (o==='del' && nx && nx[0]==='ins' && t.length<=30 && nx[1].length<=30) {
+      merge(lcs([...t],[...nx[1]])).forEach(([oo,tt]) => out.push([oo==='eq'?'eq':oo, tt, oo!=='eq']));
+      i++;
+    } else out.push([o,t,false]);
+  }
+  return out;
+}
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function side(segs, which) {
+  return segs.map(([o,t,x]) => o==='eq' ? esc(t) : o===which ? `<${which} class="${x?'x':''}">${esc(t)}</${which}>` : '').join('');
+}
+function both(segs) { return segs.map(([o,t,x]) => o==='eq' ? esc(t) : `<${o} class="${x?'x':''}">${esc(t)}</${o}>`).join(''); }
+
+/* ── 결과 화면 ── */
+const ST = { changed:'변경', added:'신규', removed:'삭제', same:'동일' };
+const SUB = { changed:'내용이 바뀐 요구사항', added:'이번에 새로 생김', removed:'이번에 빠짐', same:'그대로' };
+const filt = { changed:true, added:true, removed:true, same:false, num:false, todo:false };
+let sel = 0, view = 'side', openSame = new Set();
+const cnt = s => D.filter(d => d.s===s).length;
+
+function renderTiles() {
+  const tot = D.length, todo = D.filter(d=>d.s!=='same');
+  const done = todo.filter(d=>d.done).length;
+  document.getElementById('tiles').innerHTML = ['changed','added','removed','same'].map(s =>
+    `<button class="tile ${filt[s]?'on':'off'}" data-s="${s}"><span class="chk">${ic('check','width:12px;height:12px;stroke-width:3')}</span>
+      <div class="k"><span class="dot s-${s}"></span>${ST[s]}</div><div class="v">${cnt(s)}</div><div class="s">${SUB[s]}</div></button>`).join('') +
+    `<div class="review"><div class="ring" style="--p:${done/todo.length*100}"><span>${Math.round(done/todo.length*100)}%</span></div>
+      <div><div class="k">검토 ${done}/${todo.length}</div><div class="s">달라진 항목 중 확인한 것</div>
+      <button class="btn sm nx" id="nextTodo">다음 미확인 <kbd>N</kbd></button></div></div>`;
+  document.querySelectorAll('.tile').forEach(t => t.onclick = () => { filt[t.dataset.s] = !filt[t.dataset.s]; renderAll(); });
+  document.getElementById('nextTodo').onclick = nextTodo;
+}
+function visible() { return D.filter(d => filt[d.s] && (!filt.num || (d.tags||[]).includes('numeric')) && (!filt.todo || !d.done)); }
+function hints(d) {
+  const h = [], t = d.tags||[];
+  if (t.includes('renumbered')) h.push(`<span class="h ren">번호 바뀜</span>`);
+  if (t.includes('numeric')) h.push(`<span class="h num">${ic('hash','width:10px;height:10px')}수치</span>`);
+  if (t.includes('minor')) h.push(`<span class="h">띄어쓰기·오탈자</span>`);
+  if (t.includes('weak')) h.push(`<span class="h col">다른 항목일 수도</span>`);
+  else if (t.includes('major')) h.push(`<span class="h num">대폭 변경</span>`);
+  if (t.includes('id_collision')) h.push(`<span class="h col">같은 번호, 다른 내용</span>`);
+  if (d.group==='split') h.push(`<span class="h">${ic('split','width:10px;height:10px')}나뉨</span>`);
+  if (d.s==='changed' && !t.includes('minor')) {
+    const st = lineStats(d), p = [];
+    if (st.mod) p.push(`고침 ${st.mod}`); if (st.add) p.push(`<span class="p">+${st.add}줄</span>`); if (st.del) p.push(`<span class="m">−${st.del}줄</span>`);
+    if (p.length) h.push(`<span class="h">${p.join(' ')}</span>`);
+  }
+  return h.join('');
+}
+
+/* ── 줄 단위 diff: 같은 줄 / 빠진 줄 / 새 줄 / 고친 줄(그 안만 글자 강조) ── */
+const lineKey = l => l.replace(/^[o○ㅇ●•·\-–]+\s*/, '').replace(/\s+/g, '');
+function dice2(a, b) {
+  if (a.length < 2 || b.length < 2) return a === b ? 1 : 0;
+  const bg = s => { const m = new Map(); for (let i=0;i<s.length-1;i++) { const k=s.slice(i,i+2); m.set(k,(m.get(k)||0)+1); } return m; };
+  const A = bg(a), B = bg(b); let x = 0; for (const [k,v] of A) x += Math.min(v, B.get(k)||0);
+  return 2*x / (a.length-1 + b.length-1);
+}
+function lineDiff(a, b) {
+  const A = a.split('\n').map(s=>s.trim()).filter(Boolean), B = b.split('\n').map(s=>s.trim()).filter(Boolean);
+  const ka = A.map(lineKey), kb = B.map(lineKey), n = A.length, m = B.length;
+  const T = Array.from({length:n+1}, () => new Uint16Array(m+1));
+  for (let i=n-1;i>=0;i--) for (let j=m-1;j>=0;j--) T[i][j] = ka[i]===kb[j] ? T[i+1][j+1]+1 : Math.max(T[i+1][j], T[i][j+1]);
+  const raw = []; let i = 0, j = 0;
+  while (i<n && j<m) { if (ka[i]===kb[j]) raw.push({o:'eq',a:A[i++],b:B[j++]}); else if (T[i+1][j]>=T[i][j+1]) raw.push({o:'del',a:A[i++]}); else raw.push({o:'ins',b:B[j++]}); }
+  while (i<n) raw.push({o:'del',a:A[i++]}); while (j<m) raw.push({o:'ins',b:B[j++]});
+  // 연속된 빠짐/생김 묶음 안에서 비슷한 줄(≥0.5)끼리 '고친 줄'로 짝짓는다
+  const out = [];
+  for (let s = 0; s < raw.length;) {
+    if (raw[s].o === 'eq') { out.push(raw[s++]); continue; }
+    let e = s; while (e < raw.length && raw[e].o !== 'eq') e++;
+    const dels = raw.slice(s,e).filter(x=>x.o==='del'), inss = raw.slice(s,e).filter(x=>x.o==='ins'), used = new Set(), mods = new Map();
+    for (const d of dels) { let best = -1, bs = 0.5; inss.forEach((x,k) => { if (used.has(k)) return; const sc = dice2(lineKey(d.a), lineKey(x.b)); if (sc >= bs) { bs = sc; best = k; } }); if (best >= 0) { used.add(best); mods.set(d, inss[best]); } }
+    for (const d of dels) out.push(mods.has(d) ? {o:'mod',a:d.a,b:mods.get(d).b} : d);
+    inss.forEach((x,k) => { if (!used.has(k)) out.push(x); });
+    s = e;
+  }
+  return out;
+}
+const lnHtml = (cls, html) => `<div class="ln ${cls}">${html||'&nbsp;'}</div>`;
+function renderLines(ops, which) {
+  return ops.map(x => {
+    if (x.o==='eq') return lnHtml('', esc(which==='next' ? x.b : x.a));
+    if (x.o==='del') return which==='next' ? '' : lnHtml('del', esc(x.a));
+    if (x.o==='ins') return which==='prev' ? '' : lnHtml('ins', esc(x.b));
+    const sg = diff(x.a, x.b);
+    return lnHtml('mod', which==='prev' ? side(sg,'del') : which==='next' ? side(sg,'ins') : both(sg));
+  }).join('');
+}
+function lineStats(d) {
+  let add = 0, del = 0, mod = 0;
+  for (const f of ['name','def','det']) { const a = d.p?.[f]||'', b = d.n?.[f]||''; if (a===b) continue;
+    for (const x of lineDiff(a,b)) { if (x.o==='ins') add++; else if (x.o==='del') del++; else if (x.o==='mod') mod++; } }
+  return { add, del, mod };
+}
+function renderList() {
+  const v = visible(), el = document.getElementById('lst');
+  if (!v.length) { el.innerHTML = `<div class="empty-r"><div style="font-weight:700">조건에 맞는 항목이 없어요</div><div class="muted" style="font-size:14px">위 칸을 눌러 보이는 종류를 바꿔 보세요</div></div>`; return; }
+  if (!v.includes(D[sel])) sel = v[0].k;
+  let html = '', cur = '';
+  for (const d of v) {
+    if (d.pfx !== cur) {
+      cur = d.pfx; const g = D.filter(x=>x.pfx===cur);
+      html += `<div class="grp-h"><span class="pf">${cur}</span><span class="nm">${PFX_NAME[cur]||''}</span><span class="ct">${g.length}개 · 달라짐 ${g.filter(x=>x.s!=='same').length}</span></div>`;
+    }
+    const idHtml = d.p && d.n && d.p.id!==d.n.id ? `<span class="mono">${d.p.id}</span>${ic('arrow')}<span class="mono">${d.n.id}</span>` : `<span class="mono">${(d.n||d.p).id}</span>`;
+    html += `<div class="it ${d.s} ${d.k===sel?'sel':''} ${d.done?'done':''}" data-k="${d.k}">
+      <span class="st s-${d.s}" title="${ST[d.s]}"></span>
+      <div style="min-width:0"><div class="id">${idHtml}</div><div class="nm">${(d.n||d.p).name}</div>${d.s!=='same'?`<div class="hints">${hints(d)}</div>`:''}</div>
+      ${d.s!=='same'?`<span class="ck" data-ck="${d.k}">${ic('check','width:12px;height:12px;stroke-width:3')}</span>`:'<span></span>'}</div>`;
+  }
+  if (!filt.same && cnt('same')) html += `<button class="hidden-same" id="showSame">${ic('eye')}이전과 똑같은 요구사항 <b>${cnt('same')}개</b>는 숨겨져 있어요<span>보기</span></button>`;
+  el.innerHTML = html;
+  const ss = document.getElementById('showSame'); if (ss) ss.onclick = () => { filt.same = true; renderAll(); };
+  el.querySelectorAll('.it').forEach(r => r.onclick = (e) => {
+    if (e.target.closest('[data-ck]')) { toggleDone(+r.dataset.k); return; }
+    sel = +r.dataset.k; renderList(); renderDetail();
+  });
+}
+function renderDetail() {
+  const d = D[sel], el = document.getElementById('det');
+  const by = d.by==='id' ? `${ic('hash')}번호로 짝지음` : d.by==='sim' ? `${ic('link')}내용이 비슷해 짝지음 · ${Math.round(d.score*100)}%` : d.by==='manual' ? `${ic('hand')}직접 짝지음` : '';
+  const ids = d.p && d.n ? (d.p.id!==d.n.id ? `<span class="mono">${d.p.id}</span>${ic('arrow')}<span class="mono">${d.n.id}</span><span class="h ren">번호 바뀜</span>` : `<span class="mono">${d.n.id}</span>`) : `<span class="mono">${(d.n||d.p).id}</span>`;
+  const F = [['cat','분류'],['name','명칭'],['def','정의'],['det','세부내용']];
+  let rows = '';
+  const changedF = d.p && d.n && d.s==='changed' ? F.filter(([f]) => (d.p[f]||'') !== (d.n[f]||'')).map(([,l]) => l) : [];
+  const lb = (l, ch) => `<div class="lb">${l}${ch ? '<span class="chg-dot" title="바뀜"></span>' : ''}</div>`;
+  if (view==='inline' && d.p && d.n) {
+    for (const [f,l] of F) {
+      const a=d.p[f]||'', b=d.n[f]||''; if (!a && !b) continue;
+      if (a===b && !openSame.has(f)) rows += `<div class="fld inline same-f" data-f="${f}">${lb(l)}<div class="c">동일 · 펼치기</div></div>`;
+      else rows += `<div class="fld inline">${lb(l, a!==b)}<div class="c">${renderLines(lineDiff(a,b),'both')}</div></div>`;
+    }
+  } else {
+    for (const [f,l] of F) {
+      const a=d.p?d.p[f]||'':null, b=d.n?d.n[f]||'':null;
+      if (!a && !b) continue;
+      if (d.p && d.n && a===b && !openSame.has(f) && d.s!=='same') { rows += `<div class="fld same-f" data-f="${f}">${lb(l)}<div class="c wide">동일 · 펼치기</div></div>`; continue; }
+      const ops = d.p && d.n ? lineDiff(a,b) : null;
+      const L = d.p ? (ops ? renderLines(ops,'prev') : esc(a)) : null, R = d.n ? (ops ? renderLines(ops,'next') : esc(b)) : null;
+      const emptyCell = (txt) => `<div class="c empty">${txt}</div>`;
+      rows += `<div class="fld">${lb(l, !!ops && a!==b)}${L!==null?`<div class="c">${L}</div>`:(f==='name'?emptyCell('이전 문서에 없음'):'<div class="c empty"></div>')}${R!==null?`<div class="c">${R}</div>`:(f==='name'?emptyCell('이번 문서에서 빠짐'):'<div class="c empty"></div>')}</div>`;
+    }
+  }
+  const st = changedF.length ? lineStats(d) : null;
+  const chgSum = st ? `<div class="chg-sum">바뀐 칸 <b>${changedF.join(' · ')}</b>${st.mod?` · 고친 줄 <b>${st.mod}</b>`:''}${st.add?` · 새 줄 <b class="p">${st.add}</b>`:''}${st.del?` · 빠진 줄 <b class="m">${st.del}</b>`:''}</div>` : '';
+  const extra = d.group==='split' ? `<div class="grp-link">${ic('split')}이전 <b class="mono">DAR-001 데이터 이관 및 정제</b>가 이번에 두 항목으로 나뉘었어요 → <a data-jump="11">DAR-001</a> · <a data-jump="12">DAR-002</a></div>` :
+    (d.tags||[]).includes('id_collision') ? `<div class="warnbox">${ic('alert')}<div>양쪽에 <b class="mono">${(d.n||d.p).id}</b>가 있지만 내용이 전혀 달라 짝짓지 않았어요. 같은 요구사항이 맞다면 [짝 맺기]로 이어 주세요.</div></div>` :
+    (d.tags||[]).includes('weak') ? `<div class="warnbox">${ic('alert')}<div>번호(<b class="mono">${d.n.id}</b>)는 같지만 명칭과 내용이 많이 달라요. 서로 다른 요구사항이면 아래 [짝 풀기]를 눌러 신규·삭제로 나누세요.</div></div>` : '';
+  const pairBtn = d.p && d.n ? `<button class="btn sm ghost" id="unpair">${ic('unlink')}짝 풀기</button>` : `<button class="btn sm" id="pairBtn">${ic('link')}짝 맺기…</button>`;
+  el.innerHTML = `<div class="d-head">
+      <div class="d-badges"><span class="sbadge ${d.s}">${ST[d.s]}</span>${by?`<span class="match">${by}</span>`:''}</div>
+      <h2 class="d-name">${(d.n||d.p).name}</h2>
+      <div class="d-ids">${ids}<span class="faint">·</span><span>${(d.n||d.p).cat}</span></div>
+      ${chgSum}
+      ${d.p&&d.n&&d.s!=='same'?`<div class="d-tools"><div class="seg"><button data-v="side" class="${view==='side'?'on':''}">나란히</button><button data-v="inline" class="${view==='inline'?'on':''}">한 줄로</button></div><span class="sp"></span><span class="legend-d"><span class="ln del">빠진 줄</span><span class="ln ins">새 줄</span><span><del>지운 말</del> <ins class="x">바뀐 말</ins></span></span></div>`:''}
+    </div>
+    ${extra}
+    ${view==='inline'&&d.p&&d.n ? '' : `<div class="cols-h" style="margin-top:${extra?'14px':'0'}"><div></div><div class="p">이전 · ${d.p?`<span class="mono">${d.p.id}</span>`:'—'}</div><div class="n">이번 · ${d.n?`<span class="mono">${d.n.id}</span>`:'—'}</div></div>`}
+    ${rows}
+    <div class="d-foot">
+      <button class="btn sm ghost">${ic('eye')}원문 위치 보기</button>
+      ${pairBtn}
+      ${d.s!=='same'?`<button class="btn sm ghost" style="color:var(--ai-ink)">${ic('sparkle')}이것만 AI 요약</button>`:''}
+      <span class="sp"></span>
+      ${d.s!=='same'?`<button class="btn sm done-btn ${d.done?'on':''}" id="doneBtn">${ic('check','stroke-width:2.6')}${d.done?'확인함':'확인함으로 표시'} <kbd style="margin-left:2px">Space</kbd></button>`:''}
+    </div>`;
+  el.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; renderDetail(); });
+  el.querySelectorAll('.same-f').forEach(r => r.onclick = () => { openSame.add(r.dataset.f); renderDetail(); });
+  el.querySelectorAll('[data-jump]').forEach(a => a.onclick = () => { sel = +a.dataset.jump; renderList(); renderDetail(); });
+  const db = document.getElementById('doneBtn'); if (db) db.onclick = () => toggleDone(sel);
+  const pb = document.getElementById('pairBtn'); if (pb) pb.onclick = openPair;
+  const ub = document.getElementById('unpair'); if (ub) ub.onclick = () => toast('짝을 풀었어요 — 두 항목이 각각 신규·삭제로 바뀌어요');
+}
+function toggleDone(k) { D[k].done = !D[k].done; renderAll(); }
+function nextTodo() {
+  const v = visible().filter(d => d.s!=='same' && !d.done); if (!v.length) { toast('달라진 항목을 모두 확인했어요'); return; }
+  const after = v.find(d => d.k > sel) || v[0]; sel = after.k; renderList(); renderDetail();
+  document.querySelector('.it.sel')?.scrollIntoView({ block:'nearest' });
+}
+function renderAll() { openSame.clear(); renderTiles(); renderList(); renderDetail(); }
+document.getElementById('fNum').onclick = (e) => { filt.num=!filt.num; e.currentTarget.classList.toggle('on', filt.num); renderAll(); };
+document.getElementById('fTodo').onclick = (e) => { filt.todo=!filt.todo; e.currentTarget.classList.toggle('on', filt.todo); renderAll(); };
+
+document.addEventListener('keydown', (e) => {
+  if (!document.getElementById('s4').classList.contains('on') || document.querySelector('.scrim.on')) return;
+  const v = visible(), i = v.findIndex(d => d.k===sel);
+  if (e.key==='ArrowDown' && i < v.length-1) { e.preventDefault(); sel=v[i+1].k; renderList(); renderDetail(); document.querySelector('.it.sel')?.scrollIntoView({block:'nearest'}); }
+  else if (e.key==='ArrowUp' && i > 0) { e.preventDefault(); sel=v[i-1].k; renderList(); renderDetail(); document.querySelector('.it.sel')?.scrollIntoView({block:'nearest'}); }
+  else if (e.key===' ' && D[sel].s!=='same') { e.preventDefault(); toggleDone(sel); }
+  else if (e.key==='n' || e.key==='N') nextTodo();
+});
+
+/* ── 짝 맺기 ── */
+function openPair() {
+  const d = D[sel], need = d.p ? 'n' : 'p';
+  const cands = D.filter(x => x !== d && (need==='n' ? (x.n && !x.p) : (x.p && !x.n)));
+  const score = [0.34, 0.21, 0.12, 0.08];
+  document.getElementById('ppSub').innerHTML = `<b class="mono" style="color:var(--ink)">${(d.n||d.p).id} ${(d.n||d.p).name}</b>와 짝지을 ${need==='n'?'이번':'이전'} 문서 항목을 고르세요`;
+  document.getElementById('ppBody').innerHTML = cands.map((c,i) => { const it = c[need]; const sc = score[i]||0.05;
+    return `<div class="pick" data-pp="${c.k}"><div class="grow"><div class="t"><span class="mono muted" style="font-weight:500;margin-right:6px">${it.id}</span>${it.name}</div><div class="m" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.def}</div></div>
+      <div style="width:110px"><div style="font-size:12px;color:var(--muted);text-align:right">비슷함 ${Math.round(sc*100)}%</div><div class="meter" style="width:110px;margin-top:4px"><i style="width:${sc*100}%;background:var(--primary)"></i></div></div></div>`; }).join('');
+  document.querySelectorAll('[data-pp]').forEach(el => el.onclick = () => { document.getElementById('pairPk').classList.remove('on'); toast('짝을 맺었어요 — ‘직접 짝지음’으로 저장돼요'); });
+  document.getElementById('pairPk').classList.add('on');
+}
+
+/* ── AI 요약 ── */
+let aiState = 0;
+document.getElementById('aiBtn').onclick = () => { const p = document.getElementById('aip'); if (p.classList.contains('on') && aiState===0) { p.classList.remove('on'); return; } p.classList.add('on'); renderAi(); };
+function renderAi() {
+  const p = document.getElementById('aip');
+  if (aiState === 0) {
+    p.innerHTML = `<div class="aip-h">${ic('sparkle')}<b>AI 변경점 요약</b><span class="m">달라진 항목만 보내요 · 같은 항목과 문서 전체는 보내지 않아요</span><span class="sp"></span><button class="btn ghost icon sm" data-aiclose style="color:inherit">${ic('x')}</button></div>
+      <div class="pre"><div class="est"><div class="big">변경 <b>${cnt('changed')}</b> · 신규 <b>${cnt('added')}</b> · 삭제 <b>${cnt('removed')}</b> → 약 <b>43000</b>자</div>
+        <div class="s">Gemini 2.5 Flash · 예상 비용 1원 미만 · 상한 60,000자</div><div class="meter"><i style="width:8%"></i></div></div>
+        <button class="btn ghost">${ic('copy')}프롬프트 복사</button><button class="btn ai" id="aiRun" style="height:38px;padding:0 18px">${ic('sparkle')}요약하기</button></div>`;
+    p.querySelector('#aiRun').onclick = () => toast('실데이터 목업: AI 요약은 구현 후 실제 호출로 채워져요');
+  } else {
+    const hl = [[6,'high','응답 시간 3초→2초, 동시 접속 1,000→3,000명으로 성능 기준이 크게 올랐어요. 성능 시험 계획과 서버 규모를 다시 산정해야 해요.'],
+                [14,'high','클라우드 사용 금지가 ‘G-클라우드 우선 적용’으로 뒤집혔어요. 구축 환경·아키텍처 장을 새로 써야 해요.'],
+                [0,'medium','간편인증(카카오·네이버·PASS)이 추가됐어요. 공동인증서 연계 설명을 간편인증 연계로 바꿔야 해요.'],
+                [16,'medium','투입 인력이 개발자 5명 + 품질관리 1명으로 늘었어요. 인력 구성표와 원가를 다시 맞춰야 해요.'],
+                [2,'low','AI 챗봇 상담 연계가 새로 생겼어요. 기존 제안서에 해당 장이 없어요.']];
+    p.innerHTML = `<div class="aip-h">${ic('sparkle')}<b>AI 변경점 요약</b><span class="m">Gemini 2.5 Flash · 오늘 14:32 · 입력 4,812자</span><span class="sp"></span><button class="btn ghost sm" style="color:inherit">이전 요약 ▾</button><button class="btn ghost sm" style="color:inherit" id="aiRe">다시 요약</button><button class="btn ghost icon sm" data-aiclose style="color:inherit">${ic('x')}</button></div>
+      <div class="aip-b"><div><h4>한눈에</h4><p>올해 사업은 작년 유지관리 범위에 <b>간편인증·AI 챗봇·제로트러스트</b>가 더해진 기능개선 성격이에요. 성능 기준(응답 2초, 동시 3,000명)과 투입 인력이 함께 늘었고, 구축 환경이 <b>전산실 → G-클라우드</b>로 바뀐 게 가장 큰 차이예요. 팩스 민원 접수는 빠졌어요.</p>
+        <h4 style="margin-top:16px">주의할 점</h4><ul class="risk"><li>COR-002는 번호가 같지만 정반대 내용이라, 작년 문구를 그대로 쓰면 감점될 수 있어요.</li><li>DAR-001이 두 항목으로 나뉘어 데이터 품질 보고(분기)가 새 의무로 생겼어요.</li></ul></div>
+        <div><h4>제안서에서 다시 써야 할 곳</h4>${hl.map(([k,im,t]) => `<div class="hl" data-hk="${k}"><span class="imp ${im}">${im==='high'?'큼':im==='medium'?'중간':'작음'}</span><div><div class="id mono">${(D[k].n||D[k].p).id}</div><div class="t">${t}</div></div></div>`).join('')}</div></div>`;
+    p.querySelectorAll('[data-hk]').forEach(h => h.onclick = () => { sel = +h.dataset.hk; if (!filt[D[sel].s]) filt[D[sel].s] = true; renderAll(); document.querySelector('.it.sel')?.scrollIntoView({block:'center', behavior:'smooth'}); });
+    p.querySelector('#aiRe').onclick = () => { aiState = 0; renderAi(); };
+  }
+  p.querySelectorAll('[data-aiclose]').forEach(b => b.onclick = () => p.classList.remove('on'));
+}
+
+/* ── 토스트 ── */
+let tt; function toast(t) { const el = document.getElementById('toast'); document.getElementById('toastT').textContent = t; el.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => el.classList.remove('on'), 3200); }
+document.getElementById('toastU').onclick = () => document.getElementById('toast').classList.remove('on');
+
+/* ── 드롭존 hover 데모 ── */
+const dz = document.getElementById('dz1');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); toast('목업: 파일을 놓으면 분석이 시작돼요'); });
+
+document.querySelectorAll('.mk-bar [data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+hydrate();
+renderAll();
+</script>
+</body>
+</html>

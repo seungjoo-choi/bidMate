@@ -76,13 +76,13 @@ describe('rowView', () => {
       job({ status: 'completed', result, handoff });
     const comp = (p: Partial<Job>): Job => job({ id: 'c1', type: 'compose', ...p });
     const at = '2026-10-18T10:00:00.000Z';
-    it('edit -> 수집 완료 ok + 편집 보조 버튼', () => {
+    it('edit -> 수집 완료 ok + 메일 작성 보조 버튼', () => {
       const r = v(entry({ job: done({ action: 'edit', opened: true, at }) }));
-      expect(r).toMatchObject({ kind: 'done', label: '수집 완료', tone: 'ok', canRetry: false, action: 'open-mail', actionLabel: '편집' });
+      expect(r).toMatchObject({ kind: 'done', label: '수집 완료', tone: 'ok', canRetry: false, action: 'open-mail', actionLabel: '메일 작성' });
     });
-    it('ask -> 수집 완료 ok + 편집 보조 버튼', () => {
+    it('ask -> 수집 완료 ok + 메일 작성 보조 버튼', () => {
       const r = v(entry({ job: done({ action: 'ask', at }) }));
-      expect(r).toMatchObject({ kind: 'done', label: '수집 완료', tone: 'ok', canRetry: false, action: 'open-mail', actionLabel: '편집' });
+      expect(r).toMatchObject({ kind: 'done', label: '수집 완료', tone: 'ok', canRetry: false, action: 'open-mail', actionLabel: '메일 작성' });
     });
     it('queued -> 수집 완료, 툴팁에 대기 문구', () => {
       const r = v(entry({ job: done({ action: 'compose', state: 'queued', at }) }));

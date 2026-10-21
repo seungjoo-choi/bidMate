@@ -1,3 +1,4 @@
+import { ArrowRight, ListChecks, Quote } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { criteriaOf, judge } from '../../../core/qualification/judge';
 import type { Extraction } from '../../../core/types/extraction';
@@ -39,7 +40,15 @@ export function QualificationCard({ notice, extraction }: { notice: Notice; extr
     <Card
       title={title}
       description={description}
-      action={<a className="text-sm text-primary underline" href={view.settingsHref}>실적 목록 관리</a>}
+      action={
+        <a
+          className="inline-flex h-9 items-center gap-1.5 rounded-btn border border-line-strong bg-surface px-3 text-sm font-semibold whitespace-nowrap text-ink shadow-btn transition-colors hover:bg-sunken motion-reduce:transition-none"
+          href={view.settingsHref}
+        >
+          <ListChecks className="size-[15px] stroke-[1.75] text-muted" aria-hidden />
+          실적 목록 관리
+        </a>
+      }
     >
       <div className="flex items-center gap-3">
         <StatusBadge status={view.badge.status}>{view.badge.text}</StatusBadge>
@@ -73,14 +82,26 @@ export function QualificationCard({ notice, extraction }: { notice: Notice; extr
       ))}
       {view.footnotes.length > 0 && (
         <div className="space-y-1 border-t border-line pt-4 text-sm text-muted">
-          {view.footnotes.map((f) => (
-            <p key={f}>
-              {f}
-              {conditionText && f.startsWith('인정조건 원문') && (
-                <> <a className="text-primary underline" href={`#/notices/${notice.id}/review`}>검토 탭</a></>
-              )}
+          {view.footnotes.map((f) => <p key={f}>{f}</p>)}
+        </div>
+      )}
+      {view.condition && conditionText && (
+        <div className="space-y-2 border-t border-line pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
+              <Quote className="size-3.5 text-muted" aria-hidden />인정조건 원문
             </p>
-          ))}
+            <a
+              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              href={`#/notices/${notice.id}/review`}
+            >
+              {view.condition.truncated ? '검토 탭에서 전체 보기' : '검토 탭에서 보기'}
+              <ArrowRight className="size-3.5" aria-hidden />
+            </a>
+          </div>
+          <blockquote className="rounded-md border-l-2 border-line-strong bg-sunken px-3 py-2 text-sm leading-6 text-muted">
+            {view.condition.text}{view.condition.truncated && '…'}
+          </blockquote>
         </div>
       )}
     </Card>

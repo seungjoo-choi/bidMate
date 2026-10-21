@@ -171,6 +171,7 @@ async function runCompose(p: JobRunPayload): Promise<Outcome> {
     signal: registry.signal(p.job.id), store: fileStore, checkPermission, emit: emitProgress,
     call: (type, payload, timeoutMs) => send(type, payload, { target: 'sw', timeoutMs }),
     selectorSets: SELECTOR_SETS,
+    sentCount: async (id) => (await sentStore.list(id)).filter((r) => !r.voidedAt).length,
   });
 }
 

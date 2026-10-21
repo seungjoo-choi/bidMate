@@ -31,7 +31,7 @@ export function GrantPage() {
   };
 
   const openSettings = async () => {
-    try { await send('ui/open', { page: 'settings' }); window.close(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    try { await send('ui/open', { page: 'settings', section: 'storage' }); window.close(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   };
 
   return (

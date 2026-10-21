@@ -11,12 +11,13 @@ export const OURS_ROW = 'bg-info-wash shadow-[inset_3px_0_0_var(--color-primary)
 export function Section({ title, sub, action, children, className = '' }: { title: string; sub?: string; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section className={`min-w-0 overflow-hidden rounded-card border border-line bg-surface shadow-card ${className}`}>
-      <header className="flex items-center justify-between gap-4 px-6 pt-4.5 pb-3.5">
-        <div className="min-w-0">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-6 pt-4.5 pb-3.5">
+        <div className="min-w-0 flex-1 basis-60">
           <h2 className="text-base font-bold whitespace-nowrap">{title}</h2>
           {sub && <p className="mt-0.5 truncate text-[0.8125rem] text-muted" title={sub}>{sub}</p>}
         </div>
-        {action && <div className="shrink-0">{action}</div>}
+        {/* 업체 탭이 많아 넓어지면 제목 아래로 내려가고, 그래도 넘치면 가로 스크롤 */}
+        {action && <div className="max-w-full overflow-x-auto">{action}</div>}
       </header>
       {children}
     </section>
@@ -27,7 +28,7 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
   value: T; options: Array<{ id: T; label: string; disabled?: boolean }>; onChange: (v: T) => void; label: string;
 }) {
   return (
-    <div role="group" aria-label={label} className="flex rounded-btn bg-select p-[3px]">
+    <div role="group" aria-label={label} className="flex w-max rounded-btn bg-select p-[3px]">
       {options.map((o) => (
         <button
           key={o.id} type="button" disabled={o.disabled} aria-pressed={value === o.id} onClick={() => onChange(o.id)}

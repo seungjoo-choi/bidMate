@@ -1,6 +1,8 @@
-import type { SettingsSection } from '../../messaging/protocol';
+import { isSettingsSection, type SettingsSection } from '../../messaging/protocol';
 
-export type Page = 'home' | 'notices' | 'mails' | 'evaluations' | 'stats' | 'recipients' | 'templates' | 'settings' | 'diagnostics';
+export type Page = 'home' | 'notices' | 'mails' | 'evaluations' | 'stats' | 'recipients' | 'templates' | 'settings';
+/** 설정 화면에서 열 수 있는 항목. 개발자 진단은 메시지로 여는 일이 없어 SettingsSection에 넣지 않는다. */
+export type SettingsView = SettingsSection | 'diagnostics';
 export const NOTICE_TABS = ['overview', 'files', 'history', 'review'] as const;
 export type NoticeTab = (typeof NOTICE_TABS)[number];
 export type MailsTab = 'drafts' | 'sent';
@@ -37,10 +39,11 @@ export const mailsHash = (tab: MailsTab = 'drafts'): string => (tab === 'sent' ?
 export const evaluationHash = (noticeId: string): string => `#/evaluations/${encodeURIComponent(noticeId)}`;
 
 /** `#/settings?section=...`에서 바로 보여 줄 카드를 꺼낸다. */
-export function settingsSectionOf(hash: string): SettingsSection | undefined {
+export function settingsSectionOf(hash: string): SettingsView | undefined {
+  if (hash === '#/diagnostics' || hash === '#diagnostics') return 'diagnostics';
   if (!hash.startsWith('#/settings?')) return undefined;
   const s = splitQuery(hash.slice('#/settings'.length)).query.section;
-  return s === 'storage' || s === 'mail-service' || s === 'auto-compose' || s === 'g2b' || s === 'company' || s === 'performances' || s === 'ai' || s === 'notify' ? s : undefined;
+  return isSettingsSection(s) || s === 'diagnostics' ? s : undefined;
 }
 
 export function parseRoute(hash: string): Route {
@@ -82,7 +85,8 @@ export function parseRoute(hash: string): Route {
   if (hash === '#/recipients') return { page: 'recipients' };
   if (hash === '#/templates') return { page: 'templates' };
   if (hash === '#/settings' || hash.startsWith('#/settings?')) return { page: 'settings' };
-  if (hash === '#/diagnostics' || hash === '#diagnostics') return { page: 'diagnostics' };
+  // 예전 진단 메뉴 주소는 설정 > 개발자 진단으로 보낸다.
+  if (hash === '#/diagnostics' || hash === '#diagnostics') return { page: 'settings' };
   return { page: 'home' };
 }
 

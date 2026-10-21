@@ -1,6 +1,7 @@
-import { ArrowLeft, Check, ClipboardCopy, Loader2, Plus, RotateCcw, Save, X } from 'lucide-react';
+import { ArrowLeft, Check, ClipboardCopy, Loader2, Plus, RotateCcw, Save, Send, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { kindOf, noticeLabel } from '../../core/model/ids';
+import { withoutNamePrefix } from '../../core/model/names';
 import { normalizeEmail } from '../../core/recipients/email';
 import { resolveRecipients } from '../../core/recipients/resolve';
 import { renderMail } from '../../core/templates/render';
@@ -18,13 +19,16 @@ import { inputClass } from '../../ui/components/Field';
 import { useRecipients, useTemplates } from '../../ui/hooks/useConfig';
 import { FsErrorAlert, type FsErrorInfo } from './FsErrorAlert';
 import { mailsHash, noticeHash } from './route';
-import { formatDateTime } from '../../ui/review/format';
+import { formatDateTimeSlash } from '../../core/model/format';
 import { ComposeStartButton, ComposeStatus, useComposeController } from '../../ui/compose/ComposeCard';
+import { SendPreviewDialog } from '../../ui/compose/SendPreviewDialog';
+import { SendProgressDialog } from '../../ui/compose/SendProgressDialog';
+import { draftFingerprint } from '../../core/mail/send-fingerprint';
 import { useJobs } from '../../ui/hooks/useJobs';
 import { useSettings } from '../../ui/hooks/useSettings';
 import { composeProvider, PROVIDER_LABEL } from '../../core/model/mail-provider';
 import { MailPreviewFrame } from './templates/MailPreviewFrame';
-import { SectionEditor } from './templates/SectionEditor';
+import { SectionEditor, sectionNumber } from './templates/SectionEditor';
 import { addRecipient, convertItem, overrideValue, patchTemplate, removeRecipient, resetRecipients, revertItem, startEditing, toggleAttachment, type Recipients, type Role } from './mail-edit-logic';
 
 const STATUS_LABEL: Record<MailStatus, string> = { none: '초안 없음', drafting: '초안 작성됨', ready_for_review: '검토 대기', delivered: '발송 완료' };
@@ -42,6 +46,8 @@ const CODE_MESSAGE: Record<string, string> = {
 
 /** 첨부 목록을 접어 둘 때 보여 줄 개수. */
 const FILE_PREVIEW = 3;
+/** mail/prepare는 SW가 offscreen 응답을 25초까지 기다린다. 기본 15초로 끊으면 실제 오류 대신 TIMEOUT만 보이므로 그보다 길게 둔다 */
+const PREPARE_TIMEOUT_MS = 35_000;
 
 /** 점검 패널 안의 한 구역. 카드 대신 구분선으로 나눈다. */
 function PanelSection({ title, meta, metaTone = 'text-muted', children }: { title: string; meta?: string; metaTone?: string; children: ReactNode }) {
@@ -68,6 +74,7 @@ function swap<T>(arr: T[], i: number, j: number): T[] {
 
 type Tab = 'edit' | 'preview';
 type Confirm = { kind: 'switch'; templateId: string } | { kind: 'reset' } | null;
+type SendPreview = { draft: MailDraft; sentCount: number; lastSentAt?: string };
 const ROLES: Role[] = ['to', 'cc'];
 const ADD_ERROR = { invalid: '올바른 이메일 주소를 입력하세요.', duplicate: '이미 들어 있는 주소입니다.' } as const;
 
@@ -87,6 +94,9 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
   const [showAllFiles, setShowAllFiles] = useState(false);
   const [tab, setTab] = useState<Tab>('preview'); // 수집 직후에도 결과부터 보고 편집으로 넘어간다
   const [confirm, setConfirm] = useState<Confirm>(null);
+  const [sendPreview, setSendPreview] = useState<SendPreview | null>(null);
+  const [preparingSend, setPreparingSend] = useState(false);
+  const [progress, setProgress] = useState<{ mode: 'send' | 'compose'; since: number } | null>(null);  // 진행 팝업: 누른 버튼과 시각
   const [addEmail, setAddEmail] = useState('');
   const [addRole, setAddRole] = useState<Role>('to');
   const [addError, setAddError] = useState<string | null>(null);
@@ -161,7 +171,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
     setError(null);
     try {
       const next = working ? { ...working, updatedAt: new Date().toISOString() } : null;
-      const r = await send('mail/prepare', { noticeId, ...(groupId ? { groupId } : {}), templateId, ...(next ? { edits: next } : {}) });
+      const r = await send('mail/prepare', { noticeId, ...(groupId ? { groupId } : {}), templateId, ...(next ? { edits: next } : {}) }, { timeoutMs: PREPARE_TIMEOUT_MS });
       setDraft(r.draft);
       setNotice(r.notice);
       setEdits(next);
@@ -184,7 +194,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
     setSaving(true);
     setError(null);
     try {
-      const r = await send('mail/prepare', { noticeId, ...(groupId ? { groupId } : {}), templateId: nextTemplateId, edits: null });
+      const r = await send('mail/prepare', { noticeId, ...(groupId ? { groupId } : {}), templateId: nextTemplateId, edits: null }, { timeoutMs: PREPARE_TIMEOUT_MS });
       setDraft(r.draft);
       setNotice(r.notice);
       setTplSel(nextTemplateId);
@@ -225,6 +235,52 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
     // 저장하지 않은 편집이 있으면 먼저 저장한다. 작성 잡은 저장된 초안을 쓴다.
     beforeStart: async () => (dirty ? save() : true),
   });
+
+  /**
+   * [바로 발송]: 편집을 먼저 저장한 뒤, 작성 잡과 같은 경로(mail/prepare, 저장된 편집 사용)로 초안을 새로 만들어 미리보기를 연다.
+   * 저장된 초안 파일을 그대로 보여 주면 그 사이 양식이 바뀐 본문이 미리보기 없이 나갈 수 있다.
+   */
+  const openSendPreview = async () => {
+    setError(null);
+    if (dirty && !(await save())) return;
+    setPreparingSend(true);
+    try {
+      const [prepared, records] = await Promise.all([
+        send('mail/prepare', { noticeId, ...(groupId ? { groupId } : {}), ...(templateId ? { templateId } : {}) }, { timeoutMs: PREPARE_TIMEOUT_MS }),
+        send('mail/sent-get', { noticeId }),
+      ]);
+      const d = prepared.draft;
+      setDraft(d);
+      const valid = records.filter((r) => !r.voidedAt);
+      const lastSentAt = valid.reduce<string | undefined>((m, r) => (!m || r.sentAt > m ? r.sentAt : m), undefined);
+      setSendPreview({ draft: d, sentCount: valid.length, lastSentAt });
+    } catch (e) {
+      setError(toInfo(e));
+    } finally {
+      setPreparingSend(false);
+    }
+  };
+
+  const confirmSend = () => {
+    const p = sendPreview;
+    setSendPreview(null);
+    if (!p) return;
+    setProgress({ mode: 'send', since: Date.now() });
+    void compose.startSend({
+      expectSentCount: p.sentCount,
+      fingerprint: draftFingerprint(p.draft),
+      confirmedAt: new Date().toISOString(),
+    });
+  };
+
+  // 작성/발송 잡이 끝나면 공고(mail 상태·마지막 발송)만 다시 읽는다. 편집 중인 값은 건드리지 않는다.
+  const composeDoneKey = compose.job && !['queued', 'running', 'cancelling'].includes(compose.job.status) ? `${compose.job.id}:${compose.job.status}` : null;
+  useEffect(() => {
+    if (!composeDoneKey) return;
+    let alive = true;
+    send('notice/get', { noticeId }).then((r) => { if (alive && r) setNotice(r.notice); }, () => undefined);
+    return () => { alive = false; };
+  }, [composeDoneKey, noticeId]);
 
   const recordSent = async () => {
     setStatusBusy(true);
@@ -312,7 +368,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
             <StatusBadge status={STATUS_TONE[mailStatus]}>{STATUS_LABEL[mailStatus]}</StatusBadge>
             {notice.mail.deliveredAt && (
               <span>
-                마지막 발송 <span className="font-mono tabular-nums">{formatDateTime(notice.mail.deliveredAt)}</span>
+                마지막 발송 <span className="font-mono tabular-nums">{formatDateTimeSlash(notice.mail.deliveredAt)}</span>
                 <a href={noticeHash(notice.id, 'history')} className="ml-2 text-accent hover:underline">이력 보기</a>
               </span>
             )}
@@ -325,10 +381,16 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
         <InlineAlert tone="info">수집이 끝났습니다. 보낼 내용을 확인하고 필요한 항목(예: 제안PM)을 채운 뒤 [{PROVIDER_LABEL[provider]}로 작성]을 누르세요.</InlineAlert>
       )}
       {stale && (
-        <InlineAlert tone="warn">
+        // 버튼이 있어 줄이 높아지므로 아이콘을 글자와 같은 세로 가운데에 맞춘다
+        <InlineAlert tone="warn" leading={<TriangleAlert className="size-4 shrink-0 self-center text-warn" />}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span>{stale === 'missing' ? '원본 템플릿이 삭제되었습니다.' : '원본 템플릿이 변경되었습니다.'} 이 공고 양식은 처음 고칠 때의 복사본입니다.</span>
-            {stale === 'changed' && <Button variant="secondary" icon={<RotateCcw />} disabled={locked} onClick={() => setConfirm({ kind: 'reset' })}>원본 양식으로 초기화</Button>}
+            <span>
+              {stale === 'missing'
+                ? '원본 템플릿이 삭제되었습니다. 이 공고 메일은 삭제 전 템플릿 내용으로 계속 작성됩니다.'
+                : '원본 템플릿이 수정되었습니다. 이 공고 메일은 수정 전 템플릿 내용으로 작성되고 있습니다.'}
+            </span>
+            {/* 경고 배경 위에서 떠 보이지 않게 면·그림자 없이 경고색 테두리만 둔다 */}
+            {stale === 'changed' && <Button variant="secondary" icon={<RotateCcw />} disabled={locked} className="border-warn/30 !bg-transparent !shadow-none hover:!bg-warn/10" onClick={() => setConfirm({ kind: 'reset' })}>수정된 템플릿으로 바꾸기</Button>}
           </div>
         </InlineAlert>
       )}
@@ -371,7 +433,14 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
           <Button variant={dirty ? 'secondary' : 'ghost'} loading={saving} disabled={statusBusy || !templateId || (!groupId && !overridden) || compose.view?.kind === 'progress'} icon={<Save />} onClick={() => void save()}>
             {dirty ? '변경 저장' : '초안 저장'}
           </Button>
-          <ComposeStartButton ctl={compose} label={`${PROVIDER_LABEL[provider]}로 작성`} />
+          <ComposeStartButton ctl={compose} label={`${PROVIDER_LABEL[provider]} 작성 탭 열기`} variant={provider === 'naverworks' ? 'secondary' : 'primary'} onStart={() => setProgress({ mode: 'compose', since: Date.now() })} />
+          {provider === 'naverworks' && (
+            <Button icon={<Send />} loading={preparingSend || compose.busy}
+              disabled={saving || statusBusy || !templateId || (!groupId && !overridden) || compose.granted === null || compose.view?.kind === 'progress'}
+              onClick={() => void openSendPreview()}>
+              메일 발송
+            </Button>
+          )}
         </div>
       </section>
 
@@ -404,9 +473,14 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
                 title="섹션"
                 description="공고 값 항목은 연필 버튼으로 이 메일에서만 값을 고칠 수 있습니다."
                 action={
-                  <Button variant="secondary" icon={<Plus />} onClick={() => edit((x) => patchTemplate(x, { sections: [...x.template.sections, { id: `sec_${crypto.randomUUID().slice(0, 8)}`, title: '새 섹션', items: [] }] }))}>
-                    섹션 추가
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="secondary" icon={<Plus />} onClick={() => edit((x) => patchTemplate(x, { sections: [...x.template.sections, { id: `sec_${crypto.randomUUID().slice(0, 8)}`, title: '', items: [], plain: true }] }))}>
+                      문구 추가
+                    </Button>
+                    <Button variant="secondary" icon={<Plus />} onClick={() => edit((x) => patchTemplate(x, { sections: [...x.template.sections, { id: `sec_${crypto.randomUUID().slice(0, 8)}`, title: '새 섹션', items: [] }] }))}>
+                      섹션 추가
+                    </Button>
+                  </div>
                 }
               >
                 {effective.sections.length === 0 && <p className="text-sm text-muted">섹션이 없습니다.</p>}
@@ -415,6 +489,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
                     key={s.id}
                     section={s}
                     index={i}
+                    number={sectionNumber(effective.sections, i)}
                     kind={kindOf(notice.ref)}
                     usedKeys={usedKeys}
                     onChange={(next) => edit((x) => patchTemplate(x, { sections: x.template.sections.map((y) => (y.id === s.id ? next : y)) }))}
@@ -497,7 +572,9 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
                     value={addEmail}
                     onChange={(e) => { setAddEmail(e.target.value); setAddError(null); }}
                   />
-                  <Button type="submit" variant="secondary" size="icon" aria-label="수신자 추가" disabled={recLocked || !addEmail.trim()} icon={<Plus />} />
+                  <Button type="submit" variant="secondary" disabled={recLocked || !addEmail.trim()}>
+                    추가
+                  </Button>
                 </div>
                 <datalist id="mail-recipient-options">
                   {(rec.data?.recipients ?? []).filter((r) => r.enabled).map((r) => <option key={r.id} value={r.email}>{r.name}</option>)}
@@ -526,7 +603,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
                 <ul className="space-y-1 text-xs text-muted">
                   {shownSaved.map((a) => {
                     const off = excluded.includes(a.id);
-                    const name = a.savedName ?? a.originalName;
+                    const name = a.savedName ? withoutNamePrefix(a.savedName, a.namePrefix) : a.originalName;
                     return (
                       <li key={a.id}>
                         <label className="flex items-baseline gap-1.5" title={off ? `${name} (보내지 않음)` : name}>
@@ -590,11 +667,20 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
         );
       })()}
 
+      {progress && <SendProgressDialog ctl={compose} mode={progress.mode} since={progress.since} onClose={() => setProgress(null)} />}
+
+      {sendPreview && (
+        <SendPreviewDialog
+          draft={sendPreview.draft} sentCount={sendPreview.sentCount} lastSentAt={sendPreview.lastSentAt} nameOf={nameOf}
+          onConfirm={confirmSend} onCancel={() => setSendPreview(null)}
+        />
+      )}
+
       <ConfirmDialog
         open={confirm !== null}
-        title={confirm?.kind === 'reset' ? '원본 양식으로 초기화할까요?' : '이 공고 양식 편집 내용을 버릴까요?'}
+        title={confirm?.kind === 'reset' ? '수정된 템플릿으로 바꿀까요?' : '이 공고 양식 편집 내용을 버릴까요?'}
         description="이 공고에서 고친 제목, 항목, 수신자, 첨부 선택이 모두 사라집니다."
-        confirmLabel={confirm?.kind === 'reset' ? '초기화' : '버리고 바꾸기'}
+        confirmLabel={confirm?.kind === 'reset' ? '바꾸기' : '버리고 바꾸기'}
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           const c = confirm;

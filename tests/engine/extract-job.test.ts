@@ -212,3 +212,15 @@ describe('옛 스키마 extraction 읽기 보정', () => {
     await expect(editExtraction(store, { noticeId: id, key: 'managementScore', value: '4' as never })).rejects.toMatchObject({ code: 'INVALID_VALUE' });
   });
 });
+
+describe('파일 이름 태그(기본 켜짐)', () => {
+  it('첨부 저장 파일명과 추출 텍스트 파일명 맨 앞에 태그가 붙는다', async () => {
+    const { store } = await runCollect({ files, parsers });
+    const n = readJsonFile<Notice>(store, '/notice.json');
+    const a = n.attachments[0]!;
+    expect(a).toMatchObject({ originalName: '1. 입찰공고문.hwp', savedName: '[대외비 2군] 1. 입찰공고문.hwp', namePrefix: '[대외비 2군]' });
+    const x = readJsonFile<Extraction>(store, '/extraction.json');
+    const tp = x.files.find((f) => f.textPath)?.textPath ?? '';
+    expect(tp.slice(tp.lastIndexOf('/') + 1)).toBe('[대외비 2군] 0_1. 입찰공고문.hwp.txt');
+  });
+});

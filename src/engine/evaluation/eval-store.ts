@@ -1,6 +1,7 @@
 import type { EvalIndexEntry, EvalIndexFile, EvalRecord } from '../../core/types/evaluation';
 import { readJson, writeJson } from '../file-store/json-store';
 import type { IFileStore } from '../file-store/types';
+import { decodeHtmlEntities as txt } from '../../core/templates/escape';
 
 const DIR = 'evaluations';
 const INDEX_PATH = `${DIR}/index.json`;
@@ -8,6 +9,22 @@ const ID_RE = /^R\d{2}[A-Z]{2}\d{8}-\d{3}$/;
 
 const isPermission = (e: unknown): boolean => (e as { code?: string })?.code === 'NEEDS_FS_PERMISSION' || (e as { code?: string })?.code === 'DISK_FULL';
 const err = (code: string, message: string) => Object.assign(new Error(message), { code });
+
+/** 엔티티 디코딩 이전에 저장된 기록(&#40;주&#41; 등)도 글자로 보이게 읽을 때 되돌린다 */
+function decodeRecord(r: EvalRecord): EvalRecord {
+  return {
+    ...r, title: txt(r.title), orgName: txt(r.orgName),
+    bidders: r.bidders.map((b) => ({ ...b, name: txt(b.name) })),
+    items: r.items.map((i) => ({ ...i, names: i.names.map(txt) })),
+  };
+}
+
+function decodeIndex(idx: EvalIndexFile): EvalIndexFile {
+  return {
+    ...idx,
+    entries: idx.entries.map((e) => ({ ...e, title: txt(e.title), orgName: txt(e.orgName), bidders: e.bidders.map((b) => ({ ...b, name: txt(b.name) })) })),
+  };
+}
 
 export function entryOf(r: EvalRecord): EvalIndexEntry {
   return {
@@ -68,7 +85,7 @@ export class EvalStore {
   async get(noticeId: string): Promise<EvalRecord | null> {
     try {
       const r = await readJson<EvalRecord>(this.store, this.pathOf(noticeId));
-      return r?.noticeId === noticeId ? r : null; // 파일명과 내용이 다른 사본은 무시
+      return r?.noticeId === noticeId ? decodeRecord(r) : null; // 파일명과 내용이 다른 사본은 무시
     } catch (e) {
       if (isPermission(e) || (e as { code?: string }).code === 'EVAL_BAD_ID') throw e;
       return null;
@@ -104,7 +121,7 @@ export class EvalStore {
   private async readIndex(): Promise<EvalIndexFile | null> {
     try {
       const idx = await readJson<EvalIndexFile>(this.store, INDEX_PATH);
-      if (idx && idx.schemaVersion === 1 && Array.isArray(idx.entries)) return idx;
+      if (idx && idx.schemaVersion === 1 && Array.isArray(idx.entries)) return decodeIndex(idx);
     } catch (e) { if (isPermission(e)) throw e; }
     return null;
   }
@@ -129,7 +146,7 @@ export class EvalStore {
       if (f.kind !== 'file' || !ID_RE.test(id)) continue; // index.json, 사본, *.crswap 제외
       try {
         const r = await readJson<EvalRecord>(this.store, `${DIR}/${f.name}`);
-        if (r?.noticeId === id) byId.set(id, entryOf(r));
+        if (r?.noticeId === id) byId.set(id, entryOf(decodeRecord(r)));
       } catch (e) { if (isPermission(e)) throw e; /* 손상된 항목은 건너뜀 */ }
     }
     return { schemaVersion: 1, generatedAt: new Date().toISOString(), entries: [...byId.values()] };

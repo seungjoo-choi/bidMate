@@ -64,10 +64,12 @@ function validateInput(input: TemplateInput): { name: string; kind?: NoticeKind;
   const sections = input.sections.map((s): TemplateSection => {
     if (typeof s !== 'object' || s === null || typeof s.title !== 'string' || !Array.isArray(s.items)) throw err('INVALID_VALUE', '섹션 형식이 올바르지 않습니다.');
     if (s.inlineValue !== undefined && typeof s.inlineValue !== 'string') throw err('INVALID_VALUE', 'inlineValue는 문자열이어야 합니다.');
+    if (s.plain !== undefined && typeof s.plain !== 'boolean') throw err('INVALID_VALUE', 'plain은 불리언이어야 합니다.');
     return {
       id: typeof s.id === 'string' && s.id ? s.id : newId('sec'),
       title: s.title,
       ...(s.inlineValue ? { inlineValue: s.inlineValue } : {}),
+      ...(s.plain ? { plain: true } : {}),
       items: s.items.map((it): TemplateItem => {
         if (typeof it !== 'object' || it === null) throw err('INVALID_VALUE', '항목 형식이 올바르지 않습니다.');
         const kind = (it as { kind?: unknown }).kind;

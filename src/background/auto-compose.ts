@@ -139,15 +139,10 @@ async function applyVerdict(job: Job, verdict: Verdict): Promise<void> {
   if (verdict.kind === 'skip') return d.setHandoff(job.id, none(verdict.reason));
   const noticeId = job.noticeId ?? (job.result as { noticeId?: string } | undefined)?.noticeId;
   if (!noticeId) return d.setHandoff(job.id, none('no_notice'));
-  if (verdict.kind === 'review') {
-    const opened = await d.openDashboard(`#/review/${encodeURIComponent(noticeId)}?handoff=${verdict.reasons.join(',')}`, { nearTabId: job.originTabId });
-    return d.setHandoff(job.id, { action: 'review', reasons: verdict.reasons, opened: opened !== undefined, at: d.now() });
-  }
+  // 대시보드는 저절로 열지 않는다. 완료 카드의 [상세]/[메일 작성]/[검수]를 눌러야 간다(사용자 결정 2026-10-21)
+  if (verdict.kind === 'review') return d.setHandoff(job.id, { action: 'review', reasons: verdict.reasons, opened: false, at: d.now() });
   if (verdict.kind === 'ask') return d.setHandoff(job.id, { action: 'ask', at: d.now() });
-  if (verdict.kind === 'edit') {
-    const opened = await d.openDashboard(`#/mail/${encodeURIComponent(noticeId)}?from=collect`, { nearTabId: job.originTabId });
-    return d.setHandoff(job.id, { action: 'edit', opened: opened !== undefined, at: d.now() });
-  }
+  if (verdict.kind === 'edit') return d.setHandoff(job.id, { action: 'edit', opened: false, at: d.now() });
   // compose: 중복 확인, 적재, pump (호출자의 q() 직렬화 구간 안)
   let granted = false;
   try { granted = await d.permissions.contains({ origins: [`https://${await d.getComposeHost()}/*`] }); } catch { /* 권한 확인 실패는 없음으로 본다 */ }

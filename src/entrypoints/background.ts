@@ -10,6 +10,7 @@ import { registerCoordinator } from '../background/job-coordinator';
 import { registerRouter } from '../background/router';
 import { registerSiteRegistry } from '../background/site-registry';
 import { registerSendSignal } from '../background/send-signal';
+import { registerSendTrigger } from '../background/send-trigger';
 import { registerSidePanelPorts } from '../background/sidepanel-ports';
 
 export default defineBackground({
@@ -21,6 +22,7 @@ export default defineBackground({
     registerAutoCompose();
     registerComposeRelay();
     registerSendSignal();
+    registerSendTrigger();
     registerNaverworksContacts();
     registerDetailReader();
     registerEvalCollector();

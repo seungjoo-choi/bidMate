@@ -10,6 +10,8 @@ export interface QualificationView {
   headline: string;
   lines: QualificationLineView[];
   footnotes: string[];
+  /** 인정조건 원문(길면 잘라 truncated=true). 없으면 null. */
+  condition: { text: string; truncated: boolean } | null;
   settingsHref: string;
 }
 
@@ -44,6 +46,8 @@ export function qualificationView(j: Judgement, _criteria: Criteria): Qualificat
   }));
   const footnotes: string[] = [];
   if (j.inProgress > 0) footnotes.push(`진행 중 실적 ${j.inProgress}건은 판정에서 제외했습니다`);
-  if (j.conditionText) footnotes.push(`인정조건 원문: ${j.conditionText.slice(0, MAX_CONDITION)}`);
-  return { badge: BADGE[j.verdict], headline: HEADLINE[j.verdict], lines, footnotes, settingsHref: '#/settings?section=performances' };
+  const condition = j.conditionText
+    ? { text: j.conditionText.slice(0, MAX_CONDITION), truncated: j.conditionText.length > MAX_CONDITION }
+    : null;
+  return { badge: BADGE[j.verdict], headline: HEADLINE[j.verdict], lines, footnotes, condition, settingsHref: '#/settings?section=performances' };
 }

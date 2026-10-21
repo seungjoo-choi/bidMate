@@ -1,16 +1,20 @@
 import { Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { cumulative, type Cumulative } from '../../../core/evaluation/analyze';
+import { normalizeBizNo } from '../../../core/evaluation/company';
 import type { EvalIndexEntry } from '../../../core/types/evaluation';
 import { send } from '../../../messaging/bus';
 import { EmptyState, StatusBadge } from '../../../ui/components';
 import { inputClass } from '../../../ui/components/Field';
+import { useSettings } from '../../../ui/hooks/useSettings';
 import { FsErrorAlert } from '../FsErrorAlert';
 import { evaluationHash } from '../route';
-import { dateOnly } from './eval-view';
+import { dateOnly, rankLabel } from './eval-view';
+import { StatsStrip } from './StatsStrip';
 import { PageTitle } from '../menu';
 import { SortHeader, useSort, type SortValue } from '../table-sort';
 
-const GRID = 'grid grid-cols-[40px_minmax(0,1fr)_64px_100px_64px] items-center gap-6 px-5';
+const GRID = 'grid grid-cols-[40px_minmax(0,1fr)_64px_72px_100px_64px] items-center gap-6 px-5';
 
 type SortKey = 'title' | 'bidders' | 'evaluatedAt' | 'status';
 const SORT_BY: Record<SortKey, (e: EvalIndexEntry) => SortValue> = {
@@ -35,6 +39,21 @@ export function EvaluationsPage() {
   }, []);
   useEffect(() => { void load(); }, [load]);
 
+  // 상단 누적 요약과 우리 순위 열. 전체 기록을 읽어야 해서 목록과 따로 불러오고, 실패하면 요약만 생략한다
+  const { settings } = useSettings();
+  const ourBiz = normalizeBizNo(settings?.company.bizNo ?? '');
+  const hasCompany = ourBiz.length === 10;
+  const [cum, setCum] = useState<Cumulative | null>(null);
+  useEffect(() => {
+    if (!list || list.length === 0 || !settings) return;
+    let alive = true;
+    send('eval/get-many', {})
+      .then((recs) => { if (alive) setCum(cumulative(recs, hasCompany ? ourBiz : null)); })
+      .catch(() => { if (alive) setCum(null); });
+    return () => { alive = false; };
+  }, [list, settings, hasCompany, ourBiz]);
+  const ourRankOf = useMemo(() => new Map((cum?.timeline ?? []).map((t) => [t.noticeId, t.ourRank] as const)), [cum]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (list ?? []).filter((e) => !q || `${e.title} ${e.noticeNo} ${e.orgName} ${e.bidders.map((b) => b.name).join(' ')}`.toLowerCase().includes(q));
@@ -50,15 +69,20 @@ export function EvaluationsPage() {
       )}
       {list && list.length > 0 && (
         <div className="space-y-3">
-        <div className="relative ml-auto w-80">
+        {cum && <StatsStrip cum={cum} list={list} hasCompany={hasCompany} />}
+        <div className="flex items-center justify-between gap-4 pt-2">
+          <span className="text-sm text-muted">{query.trim() ? `${rows.length} / ${list.length}건` : `${list.length}건`}</span>
+        <div className="relative w-80">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" />
           <input className={`${inputClass} pl-9`} placeholder="공고명, 번호, 기관, 업체 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </div>
         </div>
         <div className="max-h-[max(16rem,calc(100vh-20rem))] overflow-y-auto rounded-card border border-line bg-surface shadow-card">
           <div className={`${GRID} sticky top-0 z-10 bg-sunken py-3 text-sm text-muted`}>
             <div className="text-right">순번</div>
             <SortHeader label="공고명" k="title" sort={sort} onSort={toggle} />
             <SortHeader label="업체" k="bidders" sort={sort} onSort={toggle} />
+            <div>우리 순위</div>
             <SortHeader label="평가 종료" k="evaluatedAt" sort={sort} onSort={toggle} />
             <SortHeader label="상태" k="status" sort={sort} onSort={toggle} />
           </div>
@@ -71,6 +95,7 @@ export function EvaluationsPage() {
                 <div className="mt-0.5 truncate text-sm text-muted"><span className="font-mono">{e.noticeNo}-{e.round}</span>, {e.orgName}</div>
               </div>
               <div className="font-mono text-sm text-muted tabular-nums">{e.bidders.length}</div>
+              <OurRank rank={ourRankOf.get(e.noticeId)} known={cum !== null && hasCompany} />
               <div className="font-mono text-sm text-muted tabular-nums">{dateOnly(e.evaluatedAt) ?? '미상'}</div>
               <div><StatusBadge status={e.status === 'final' ? 'ok' : 'warn'}>{e.status === 'final' ? '확정' : '임시'}</StatusBadge></div>
             </a>
@@ -80,4 +105,11 @@ export function EvaluationsPage() {
       )}
     </div>
   );
+}
+
+/** 위원 평균 기준 우리 순위. 1위는 강조, 미참여는 흐리게 */
+function OurRank({ rank, known }: { rank: number | null | undefined; known: boolean }) {
+  if (!known || rank === undefined) return <div className="text-sm text-faint">—</div>;
+  if (rank === null) return <div className="text-sm text-faint">미참여</div>;
+  return <div className={`font-mono text-sm tabular-nums ${rank === 1 ? 'font-bold text-primary' : 'text-ink'}`}>{rankLabel(rank)}</div>;
 }

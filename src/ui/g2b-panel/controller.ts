@@ -33,7 +33,11 @@ export interface PanelState {
   orphaned: boolean;
   /** 평가점수 가져오기 진행 중(버튼이 다시 그려져도 중복 실행을 막는다) */
   evalBusy: boolean;
+  /** 평가점수 가져오기 진행 카드용. 끝나면 ok/error로 바뀌고 패널이 연출 뒤 지운다 */
+  evalRun: EvalRun | null;
 }
+
+export interface EvalRun { key: string; title: string; state: 'active' | 'ok' | 'error'; message?: string }
 
 const isActive = (j: Job | null): boolean => !!j && ACTIVE.has(j.status);
 /** 자동 작성 대기 중이라 compose 잡이 아직 없는 상태 */
@@ -44,7 +48,7 @@ const extAlive = (): boolean => !!globalThis.chrome?.runtime?.id;
 /** 상세화면 감지/잡 추적/SW 통신을 맡는 비-React 컨트롤러. 나라장터 DOM은 읽기만 한다. */
 export class PanelController {
   private state: PanelState = {
-    notice: null, job: null, compose: null, lookup: { found: false }, startError: null, sidePanelError: null, starting: false, otherTab: false, orphaned: false, evalBusy: false,
+    notice: null, job: null, compose: null, lookup: { found: false }, startError: null, sidePanelError: null, starting: false, otherTab: false, orphaned: false, evalBusy: false, evalRun: null,
   };
   private listeners = new Set<() => void>();
   private jobId: string | null = null;
@@ -327,23 +331,35 @@ export class PanelController {
     const n = this.state.notice;
     if (!n) return { ok: false, message: '공고를 확인하지 못했습니다.' };
     if (this.state.evalBusy) return { ok: false, message: '이미 평가점수를 가져오는 중입니다.' };
-    this.set({ evalBusy: true });
+    const run: EvalRun = { key: `eval:${Date.now()}`, title: this.state.title ?? readPageTitle(this.doc) ?? n.noticeNo, state: 'active' };
+    this.set({ evalBusy: true, evalRun: run });
+    const finish = (r: { ok: true } | { ok: false; message: string }) => {
+      if (this.state.evalRun?.key === run.key) {
+        this.set({ evalRun: r.ok ? { ...run, state: 'ok', message: '평가점수 저장 완료' } : { ...run, state: 'error', message: r.message } });
+      }
+      return r;
+    };
     try {
       let noticeId: string;
       try {
         noticeId = (await send('eval/collect', { ref: { noticeNo: n.noticeNo, round: n.round } }, { timeoutMs: EVAL_COLLECT_UI_TIMEOUT_MS })).noticeId;
       } catch (e) {
-        return { ok: false, message: evalErrorText((e as { code?: string }).code, e instanceof Error ? e.message : String(e)) };
+        return finish({ ok: false, message: evalErrorText((e as { code?: string }).code, e instanceof Error ? e.message : String(e)) });
       }
       try {
         await send('ui/open', { page: 'evaluation', noticeId });
       } catch {
-        return { ok: false, message: '저장했지만 분석 화면을 열지 못했습니다. 대시보드 평가분석에서 확인하세요' };
+        return finish({ ok: false, message: '저장했지만 분석 화면을 열지 못했습니다. 대시보드 평가분석에서 확인하세요' });
       }
-      return { ok: true };
+      return finish({ ok: true });
     } finally {
       this.set({ evalBusy: false });
     }
+  }
+
+  /** 진행 카드 연출이 끝난 평가점수 실행을 지운다 */
+  clearEvalRun(key: string): void {
+    if (this.state.evalRun?.key === key) this.set({ evalRun: null });
   }
 
   /** 현재 공고의 잡만 재시도한다. */
@@ -369,7 +385,7 @@ export class PanelController {
     this.set({ job: null, compose: null });
     this.ensurePoll();
   }
-  openUi(page: 'settings' | 'grant' | 'review' | 'mail', noticeId?: string): void { void send('ui/open', { page, noticeId }).catch(() => undefined); }
+  openUi(page: 'settings' | 'grant' | 'review' | 'mail' | 'notice', noticeId?: string): void { void send('ui/open', { page, noticeId }).catch(() => undefined); }
   /** 이 탭의 사이드 패널을 연다. 클릭 핸들러 안에서 바로 불러야 한다(사용자 제스처). */
   openSidePanel(): void {
     this.set({ sidePanelError: null });

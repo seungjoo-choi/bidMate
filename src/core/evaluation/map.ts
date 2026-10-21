@@ -1,6 +1,7 @@
 import type { EvalRaw } from '../../adapters/g2b/eval-api';
 import { noticeIdOf } from '../model/ids';
 import type { EvalBidder, EvalItem, EvalJudge, EvalRecord, EvalScore } from '../types/evaluation';
+import { decodeHtmlEntities as txt } from '../templates/escape';
 
 export type MapEvalResult = { ok: true; record: EvalRecord } | { ok: false; code: 'EVAL_PARSE'; message: string };
 
@@ -17,7 +18,7 @@ export function mapEvalRaw(raw: EvalRaw, ref: { noticeNo: string; round?: string
   const bidders: EvalBidder[] = raw.targets.map((t) => {
     const bizNo = t.bzmnRegNo.replace(/\D/g, '');
     if (bizNo.length !== 10) warnings.push(`사업자번호가 10자리가 아닙니다: ${t.etpsNm}`);
-    return { seq: t.evlTrgtSqno, bizNo, name: t.etpsNm, order: t.prsntnOdr, excluded: t.evlExclYn === 'Y' };
+    return { seq: t.evlTrgtSqno, bizNo, name: txt(t.etpsNm), order: t.prsntnOdr, excluded: t.evlExclYn === 'Y' };
   });
 
   const judgeOf = new Map<string, number>(); // 지역 변수로만 쓰고 버린다
@@ -28,7 +29,7 @@ export function mapEvalRaw(raw: EvalRaw, ref: { noticeNo: string; round?: string
 
   const parentNos = new Set(raw.items.map((i) => i.upEvlPritmNo).filter((v): v is string => !!v));
   const items: EvalItem[] = raw.items.map((i) => {
-    const names = [i.evlPritmNmDepth1, i.evlPritmNmDepth2, i.evlPritmNmDepth3, i.evlPritmNmDepth4].filter((n): n is string => !!n && n.trim() !== '');
+    const names = [i.evlPritmNmDepth1, i.evlPritmNmDepth2, i.evlPritmNmDepth3, i.evlPritmNmDepth4].filter((n): n is string => !!n && n.trim() !== '').map(txt);
     return {
       no: i.evlPritmNo, parentNo: i.upEvlPritmNo || null, sheetNo: i.evstNo, depth: names.length, names,
       maxScore: i.alptScr, method: i.evlPritmRsltApprMthdNm, leaf: !parentNos.has(i.evlPritmNo),
@@ -75,7 +76,7 @@ export function mapEvalRaw(raw: EvalRaw, ref: { noticeNo: string; round?: string
     record: {
       schemaVersion: 1,
       noticeId: noticeIdOf({ noticeNo: ref.noticeNo, round }), noticeNo: ref.noticeNo, round,
-      evalNo, title: base?.evlNm ?? '', orgName: base?.dmstUntyGrpNm ?? '',
+      evalNo, title: txt(base?.evlNm ?? ''), orgName: txt(base?.dmstUntyGrpNm ?? ''),
       evalKindName: base?.evlSeNm ?? null, techMethodName: base?.techEvlMthdNm ?? null, techWeight: base?.techEvlAlptRt ?? null,
       excludeBestWorst: base ? base.bestLwstScr2ExclYn === 'Y' : null,
       status: base?.evlPgstNm === '확정' ? 'final' : 'provisional', evaluatedAt: base?.evlEndDt ?? null,

@@ -13,7 +13,7 @@ export interface RowEntry {
 }
 
 /** 행 보조 버튼 동작 */
-export type RowSubAction = 'open-mail' | 'open-review' | 'settings' | 'sidepanel';
+export type RowSubAction = 'open-mail' | 'open-review' | 'open-notice' | 'settings' | 'sidepanel';
 
 export type RowView =
   | { kind: 'idle'; label: string; chip?: string; chipTone?: 'ok' | 'warn'; tone: 'primary' | 'secondary'; detail?: string }

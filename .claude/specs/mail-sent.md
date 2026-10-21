@@ -61,6 +61,7 @@ export interface SentIndexFile { schemaVersion: 1; generatedAt: ISODate; entries
 - 락 순서 고정: editLockKey(바깥) → mail-sent-index.json(안쪽). index 락 안에서 notice를 저장하지 않는다. `saveNoticeLatest` 금지(editLockKey 재진입 교착), `saveNotice` 직접 사용.
 
 ## 2. 자동 감지(관찰 전용)
+> 2026-10-21 예외: 대시보드 바로 발송은 `markSent('auto')`로 자동 클릭 신호를 낸다. 클릭은 send-watch가 아니라 `src/background/send-trigger.ts`에서만 한다(`.claude/specs/auto-send.md`).
 - 새 unlisted script `src/entrypoints/send-watch.ts`. `compose/open`에서 서비스, 셀렉터 검증 여부와 무관하게 항상 주입. DOM에 어떤 이벤트도 보내지 않고 `isTrusted === true` 이벤트만 듣는다. dom-actions.ts import 금지. `dispatchEvent`, `.click(`, `execCommand`, `submit(` 금지(소스 스캔 테스트).
 - 1차 신호 `click`: document 캡처 단계 click, isTrusted, 대상의 closest `button,a,[role=button],input`이 `sendWatch.buttons` 셀렉터에 맞거나 텍스트/aria-label/title이 `sendWatch.textPatterns`에 맞을 때.
 - 1차 신호 `hotkey`: 캡처 단계 keydown, isTrusted, `(ctrlKey || metaKey) && key === 'Enter'`, `sendWatch.hotkey`가 true.

@@ -11,10 +11,11 @@ import { useSettings } from '../../../ui/hooks/useSettings';
 import { FsErrorAlert } from '../FsErrorAlert';
 import type { EvalCtx } from './ctx';
 import { DuelSection } from './DuelSection';
-import { dateOnly, parseView, VIEW_KEY } from './eval-view';
+import { dateOnly, parseView, shortName, VIEW_KEY } from './eval-view';
 import { GapSection, HeatSection } from './GapHeatSection';
 import { GradeSection, JudgeSection, OfficialSection } from './InsightSections';
 import { Segmented } from './Section';
+import { SummaryStrip } from './SummaryStrip';
 import { TotalsSection } from './TotalsSection';
 
 const CHIP = 'rounded-full border border-line bg-surface px-2.5 py-0.5 whitespace-nowrap';
@@ -57,7 +58,7 @@ export function EvaluationDetailPage({ noticeId }: { noticeId: string }) {
     const rival = duel && ourSeq !== null ? (duel.lead === ourSeq ? duel.chase : duel.lead) : null;
     return {
       rec, isOurs: isOurs && ourSeq !== null, ourBizNo, ourSeq, excluded, opts, totals: bidderTotals(rec, opts), duel, rival,
-      nameOf: (seq) => rec.bidders.find((b) => b.seq === seq)?.name ?? `업체 ${seq}`,
+      nameOf: (seq) => { const n = rec.bidders.find((b) => b.seq === seq)?.name; return n ? shortName(n) : `업체 ${seq}`; },
     };
   }, [rec, isOurs, companyBiz, excluded]);
 
@@ -125,6 +126,7 @@ export function EvaluationDetailPage({ noticeId }: { noticeId: string }) {
       {refetchError && <InlineAlert tone="error">{refetchError}</InlineAlert>}
       {rec.warnings.length > 0 && <InlineAlert tone="warn">{rec.warnings.join(' / ')}</InlineAlert>}
 
+      <SummaryStrip ctx={ctx} />
       <DuelSection ctx={ctx} />
       <TotalsSection ctx={ctx} onToggle={toggle} onClear={() => setExcluded(new Set())} />
       <div className="grid items-start gap-5 2xl:grid-cols-2">

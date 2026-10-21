@@ -258,12 +258,13 @@ describe('compose 잡', () => {
     const r = await startJob({ type: 'compose', noticeId: 'N-000' });
     const j = await getJob(r.jobId);
     expect(j?.type).toBe('compose');
-    expect(j?.steps.map((s) => s.id)).toEqual(['render_mail', 'open_compose', 'fill_fields', 'attach_files', 'verify']);
+    expect(j?.steps.map((s) => s.id)).toEqual(['render_mail', 'open_compose', 'fill_fields', 'attach_files', 'verify', 'send_mail']);
   });
   it('retryOf는 done step도 전부 pending으로 초기화하고 이전 탭 정보를 지운다', async () => {
     const prev: Job = {
       id: 'c1', type: 'compose', noticeId: 'N-000', status: 'failed', attempt: 1, createdAt: 't', updatedAt: 't', errors: [],
       steps: [{ id: 'render_mail', status: 'done' }, { id: 'open_compose', status: 'failed' }], composeTabId: 7, composeFrameId: 2,
+      send: { clickedAt: 't', confirmed: false },
     };
     await session.set({ 'jobs.c1': prev, jobIds: ['c1'] });
     sendImpl = async () => ({ accepted: true, active: [] });
@@ -272,6 +273,7 @@ describe('compose 잡', () => {
     expect(j?.steps.every((s) => s.status === 'pending')).toBe(true);
     expect(j?.composeTabId).toBeUndefined();
     expect(j?.composeFrameId).toBeUndefined();
+    expect(j?.send).toBeUndefined();
   });
   it('g2b 발신 compose는 거부, 확장 페이지는 허용', async () => {
     const req = { type: 'compose' as const, noticeId: 'N-000' };

@@ -1,6 +1,6 @@
 import { createMascotImg, ensureMascotStyle, setMascotMood } from '../mascot/dom';
 import { STEP_ICON, STEP_ICON_CSS } from '../mascot/step-icons';
-import type { ProgressActionId, ProgressItem, ProgressPanelView } from './progress-view';
+import type { ProgressActionId, ProgressItem, ProgressPanelView } from './types';
 
 export interface ProgressCardHandle { host: HTMLElement; render(view: ProgressPanelView): void; flash(key: string): void; dispose(): void }
 
@@ -12,7 +12,7 @@ const FLASH_CSS = `
 `;
 
 const STYLE = `
-:host { all: initial; }
+:host { all: initial; display: block; }
 .root {
   --blue: #2563eb; --blue-soft: #eff6ff; --violet: #7c3aed; --violet-soft: #f5f3ff;
   --ok: #16a34a; --ok-soft: #f0fdf4; --warn: #d97706; --warn-soft: #fffbeb; --err: #dc2626; --err-soft: #fef2f2;
@@ -22,12 +22,16 @@ const STYLE = `
   --shade-1: rgba(15, 23, 42, 0.06); --shade-2: rgba(15, 23, 42, 0.14); --shade-3: rgba(15, 23, 42, 0.18);
   --bubble: #f8fafc; --bubble-line: #dbe3ee; --go-fill: #2563eb; --go-fill-hover: #1d4ed8; --go-ink: #fff;
   color-scheme: light;
+  display: flow-root;
   position: fixed; right: 20px; bottom: 20px; z-index: 2147483000; width: 340px; max-width: calc(100vw - 40px);
-  font-family: 'Pretendard', -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif; font-size: 12px; line-height: 17px; color: var(--ink-2);
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif; font-size: 12px; line-height: 17px; color: var(--ink-2);
   -webkit-font-smoothing: antialiased;
   word-break: keep-all; overflow-wrap: break-word;
 }
 * { box-sizing: border-box; }
+/* 인라인(나라장터 패널 안): fixed를 풀되 말풍선 등 absolute 자식의 기준은 루트로 유지한다. 알약일 때는 알약 크기만 차지해 페이지 클릭을 가리지 않는다 */
+.root.inline { position: relative; right: auto; bottom: auto; z-index: auto; }
+.root.inline:has(> .pill) { width: auto; }
 .card {
   background: var(--surface); border: 1px solid var(--edge); border-radius: 14px;
   box-shadow: 0 12px 32px var(--shade-2), 0 2px 6px var(--shade-1);
@@ -154,7 +158,7 @@ svg { display: block; }
 @media (prefers-reduced-motion: reduce) { *, *::after { animation: none !important; transition: none !important; } }
 `;
 
-const PHASE_CHIP = { collect: '수집', compose: '메일 작성' } as const;
+const PHASE_CHIP = { collect: '수집', compose: '메일 작성', eval: '평가점수' } as const;
 
 // 아이콘(정적 문자열, 사용자 입력 없음)
 const ICON = {
@@ -167,28 +171,28 @@ const ICON = {
 } as const;
 
 /** active가 끝난 직후 막대 위 마스코트가 도착(점프)/실패(흔들기)를 보여 주는 시간 */
-const TRANSIT_MS = 1300;
+export const PROGRESS_TRANSIT_MS = 1300;
 /** 진행률이 없는 단계 동안 막대가 단계 몫 안에서 차오르는 속도(시간 상수)와 상한(단계 몫 대비) */
 const CREEP_TAU_MS = 9000;
 const CREEP_MAX = 0.9;
 const CREEP_TICK_MS = 400;
 const clamp01 = (v: number): number => Math.max(0, Math.min(1, v));
 
+export interface ProgressCardCallbacks {
+  cancel(key: string): void; dismiss(key: string): void; dismissAll(): void;
+  toggleCollapse(): void; action(key: string, id: ProgressActionId): void; hover(over: boolean): void;
+  force?(key: string): void;
+}
+
 /** 웹메일 우측 하단 진행 팝업 카드. 상태는 갖지 않고 view를 그리기만 한다. */
-export function createProgressCard(
-  doc: Document,
-  on: {
-    cancel(key: string): void; dismiss(key: string): void; dismissAll(): void;
-    toggleCollapse(): void; action(key: string, id: ProgressActionId): void; hover(over: boolean): void;
-  },
-): ProgressCardHandle {
+export function createProgressCard(doc: Document, on: ProgressCardCallbacks, opts: { inline?: boolean } = {}): ProgressCardHandle {
   const host = doc.createElement('div');
   host.setAttribute('data-bidmate', 'progress');
   const shadow = host.attachShadow({ mode: 'open' });
   const style = doc.createElement('style');
   style.textContent = STYLE + STEP_ICON_CSS + FLASH_CSS;
   const root = doc.createElement('div');
-  root.className = 'root';
+  root.className = opts.inline ? 'root inline' : 'root';
   shadow.append(style, root);
   ensureMascotStyle(shadow);
   // 웹메일(Gmail 단축키 등)로 키·클릭이 새지 않게 한다. wheel은 목록 스크롤을 위해 막지 않는다
@@ -223,7 +227,7 @@ export function createProgressCard(
     el: HTMLElement; badge: HTMLElement; title: HTMLElement; chip: HTMLElement; step: HTMLElement; detail: HTMLElement;
     /** 설명이 두 줄을 넘을 때만 보이는 펼치기/접기 버튼과 펼침 상태 */
     moreBtn: HTMLButtonElement; expanded: boolean;
-    rail: HTMLElement; bar: HTMLElement; runner: HTMLElement; cancel: HTMLButtonElement; acts: HTMLButtonElement[]; dismiss: HTMLButtonElement;
+    rail: HTMLElement; bar: HTMLElement; runner: HTMLElement; cancel: HTMLButtonElement; force: HTMLButtonElement; acts: HTMLButtonElement[]; dismiss: HTMLButtonElement;
     actIds: Array<ProgressActionId | undefined>;
     state?: ProgressItem['state'];
     /** 배지에 그려 둔 아이콘 키. 같으면 다시 그리지 않는다(애니메이션이 처음부터 돌지 않게) */
@@ -320,14 +324,15 @@ export function createProgressCard(
     const rail = el('div', 'rail');
     rail.append(gauge, runner);
     const cancel = btn('취소', 'act stop', () => on.cancel(key));
+    const force = btn('강제 중단', 'act stop', () => on.force?.(key));
     // 끝난 항목 버튼 두 칸(첫 칸이 주 버튼). 눌린 시점의 동작은 node.actIds에서 읽는다
     const actIds: Array<ProgressActionId | undefined> = [undefined, undefined];
     const acts = [0, 1].map((i) => btn('', i === 0 ? 'act go' : 'act', () => { const id = actIds[i]; if (id) on.action(key, id); }));
     const actions = el('div', 'actions');
-    actions.append(cancel, ...acts);
+    actions.append(cancel, force, ...acts);
     body.append(row1, step, detail, moreBtn, rail, actions);
     item.append(badge, body);
-    return { el: item, badge, title, chip, step, detail, moreBtn, expanded: false, rail, bar, runner, cancel, acts, actIds, dismiss };
+    return { el: item, badge, title, chip, step, detail, moreBtn, expanded: false, rail, bar, runner, cancel, force, acts, actIds, dismiss };
   };
 
   /** 펼침 상태를 반영하고, 접힌 상태에서 두 줄을 넘칠 때만 버튼을 보인다(노드가 화면에 붙은 뒤 호출) */
@@ -348,7 +353,7 @@ export function createProgressCard(
         n.transit = undefined;
         n.transitTimer = undefined;
         if (lastView && host.isConnected) render(lastView);
-      }, TRANSIT_MS);
+      }, PROGRESS_TRANSIT_MS);
     } else if (it.state === 'active' && n.transit) {
       clearTimeout(n.transitTimer);
       n.transit = undefined;
@@ -391,6 +396,7 @@ export function createProgressCard(
     n.cancel.hidden = !(active && it.cancel);
     n.cancel.disabled = !!it.cancel?.cancelling;
     n.cancel.textContent = it.cancel?.cancelling ? '취소 중…' : '취소';
+    n.force.hidden = !(active && it.cancel?.cancelling && it.cancel.force && !!on.force);
     n.acts.forEach((b, i) => {
       const a = active ? undefined : it.actions?.[i];
       n.actIds[i] = a?.id;
@@ -463,7 +469,7 @@ export function createProgressCard(
   };
 
   const render = (view: ProgressPanelView): void => {
-    if (!host.isConnected) doc.body.append(host);
+    if (!opts.inline && !host.isConnected) doc.body.append(host);
     lastView = view;
     if (view.kind !== 'card') {
       stopTicker();

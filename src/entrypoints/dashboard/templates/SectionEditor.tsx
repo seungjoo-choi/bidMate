@@ -12,6 +12,8 @@ type FocusEl = HTMLInputElement | HTMLTextAreaElement;
 export interface SectionEditorProps {
   section: TemplateSection;
   index: number;
+  /** 화면에 보이는 섹션 번호(번호 없는 문구 블록을 건너뛴 순번). 생략하면 index + 1. */
+  number?: number;
   /** 템플릿 전체에서 이미 쓰는 fieldKey. 항목 추가 목록에서 제외한다. */
   usedKeys: Set<TemplateFieldKey>;
   onChange: (next: TemplateSection) => void;
@@ -27,6 +29,9 @@ export interface SectionEditorProps {
   /** 템플릿 종류. 항목 추가 목록을 이 종류의 변수로 제한한다. 생략하면 입찰공고. */
   kind?: NoticeKind;
 }
+
+/** i번째 섹션의 표시 번호. 번호 없는 문구 블록은 세지 않는다. */
+export const sectionNumber = (sections: TemplateSection[], i: number) => sections.slice(0, i + 1).filter((s) => !s.plain).length;
 
 function move<T>(arr: T[], from: number, to: number): T[] {
   if (to < 0 || to >= arr.length) return arr;
@@ -61,7 +66,7 @@ function withStyle(it: TemplateItem, style: TemplateStyle | undefined): Template
   return (style ? { ...rest, style } : rest) as TemplateItem;
 }
 
-export function SectionEditor({ section, index, usedKeys, onChange, onRemove, onMoveUp, onMoveDown, onFocusInput, onConvertToText, onRevertToField, kind = 'bid' }: SectionEditorProps) {
+export function SectionEditor({ section, index, number = index + 1, usedKeys, onChange, onRemove, onMoveUp, onMoveDown, onFocusInput, onConvertToText, onRevertToField, kind = 'bid' }: SectionEditorProps) {
   const [addKey, setAddKey] = useState('');
   const available = variablesFor(kind).filter((d) => !usedKeys.has(d.fieldKey));
   const focus = (e: { currentTarget: FocusEl }) => onFocusInput(e.currentTarget);
@@ -113,12 +118,34 @@ export function SectionEditor({ section, index, usedKeys, onChange, onRemove, on
     setAddKey('');
   };
 
+  if (section.plain) {
+    return (
+      <div className="space-y-2 rounded-ctl border border-dashed border-line bg-sunken p-4">
+        <div className="flex items-center gap-2">
+          <span className="flex-1 text-sm font-semibold text-muted">문구 (번호 없음)</span>
+          <Button variant="ghost" size="icon" aria-label="문구 위로" disabled={!onMoveUp} icon={<ArrowUp />} onClick={onMoveUp} />
+          <Button variant="ghost" size="icon" aria-label="문구 아래로" disabled={!onMoveDown} icon={<ArrowDown />} onClick={onMoveDown} />
+          <ConfirmDeleteButton title="이 문구를 삭제할까요?" onConfirm={onRemove} />
+        </div>
+        <textarea
+          aria-label="문구 내용"
+          rows={3}
+          className={inputClass}
+          placeholder="섹션 사이에 넣을 문구, {변수} 가능"
+          value={section.title}
+          onFocus={focus}
+          onChange={(e) => onChange({ ...section, title: e.target.value })}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="@container space-y-3 rounded-ctl border border-line bg-sunken p-4">
       <div className="flex items-center gap-2">
-        <span className="shrink-0 text-sm font-semibold text-muted">{index + 1}.</span>
+        <span className="shrink-0 text-sm font-semibold text-muted">{number}.</span>
         <input
-          aria-label={`섹션 ${index + 1} 제목`}
+          aria-label={`섹션 ${number} 제목`}
           className={inputClass}
           value={section.title}
           onFocus={focus}
@@ -126,10 +153,10 @@ export function SectionEditor({ section, index, usedKeys, onChange, onRemove, on
         />
         <Button variant="ghost" size="icon" aria-label="섹션 위로" disabled={!onMoveUp} icon={<ArrowUp />} onClick={onMoveUp} />
         <Button variant="ghost" size="icon" aria-label="섹션 아래로" disabled={!onMoveDown} icon={<ArrowDown />} onClick={onMoveDown} />
-        <ConfirmDeleteButton title={`'${section.title || `섹션 ${index + 1}`}' 섹션을 삭제할까요?`} description="섹션 안의 항목도 함께 지워집니다." onConfirm={onRemove} />
+        <ConfirmDeleteButton title={`'${section.title || `섹션 ${number}`}' 섹션을 삭제할까요?`} description="섹션 안의 항목도 함께 지워집니다." onConfirm={onRemove} />
       </div>
       <input
-        aria-label={`섹션 ${index + 1} 제목 옆 값`}
+        aria-label={`섹션 ${number} 제목 옆 값`}
         className={inputClass}
         placeholder="비우면 제목만 표시, {변수} 가능"
         value={section.inlineValue ?? ''}

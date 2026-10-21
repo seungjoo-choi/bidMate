@@ -7,7 +7,7 @@ import type { AfterCollect, MailProvider } from './settings';
 
 export type JobType = 'collect' | 'compose' | 'extract' | 'download_retry';
 export type JobStatus = 'queued' | 'running' | 'cancelling' | 'completed' | 'partial' | 'failed' | 'cancelled' | 'interrupted';
-export type StepId = 'fetch_basic' | 'fetch_html' | 'download_attachments' | 'extract' | 'render_mail' | 'open_compose' | 'fill_fields' | 'attach_files' | 'verify';
+export type StepId = 'fetch_basic' | 'fetch_html' | 'download_attachments' | 'extract' | 'render_mail' | 'open_compose' | 'fill_fields' | 'attach_files' | 'verify' | 'send_mail';
 export interface StepState { id: StepId; status: 'pending' | 'running' | 'done' | 'failed' | 'skipped'; progress?: { done: number; total: number }; bytes?: { received: number; total: number | null; name?: string }; startedAt?: ISODate; endedAt?: ISODate; error?: JobError; }
 export interface JobError { code: string; message: string; step?: StepId; retryable: boolean; detail?: unknown; }
 export type HandoffReason = 'collect_failed' | 'attachments_failed' | 'extract_failed' | 'needs_review' | 'detail_failed';
@@ -19,7 +19,14 @@ export type Handoff =
   // 수집 완료, 사용자가 팝업에서 편집/작성을 고르기 전
   | { action: 'ask'; at: ISODate }
   | { action: 'none'; reason: HandoffSkip; at: ISODate };
-export type ComposeParams = { groupId?: string; templateId?: string; recipients?: Array<{ recipientId: string; role: 'to' | 'cc' }> };
+export type SendConfirmation = 'ui_gone' | 'toast' | 'unload';
+export type SendSkipReason = 'NOT_SUPPORTED' | 'RETRY_ATTEMPT' | 'AUTO_JOB' | 'FIELDS_NOT_OK' | 'ATTACH_NOT_OK' | 'FINGERPRINT_MISMATCH' | 'SENT_COUNT_CHANGED' | 'BUTTON_NOT_FOUND' | 'BUTTON_DISABLED' | 'SUBJECT_MISMATCH' | 'RECIPIENT_MISMATCH' | 'ALREADY_FIRED' | 'CLICK_FAILED';
+export interface JobSendState { clickedAt: ISODate; composeRecordId?: string; confirmed: boolean; confirmation?: SendConfirmation; lastSignalAt?: ISODate; tabRemoved?: boolean }
+export type ComposeParams = {
+  groupId?: string; templateId?: string; recipients?: Array<{ recipientId: string; role: 'to' | 'cc' }>;
+  /** 대시보드 [바로 발송]. 확장 페이지 발신만 인정한다 */
+  autoSend?: { expectSentCount: number; fingerprint: string; confirmedAt: ISODate };
+};
 export interface Job {
   id: string; type: JobType; noticeId?: string; ref?: NoticeRef; status: JobStatus;
   steps: StepState[]; currentStep?: StepId; attempt: number; label?: string;
@@ -32,6 +39,8 @@ export interface Job {
   afterCollect?: AfterCollect;
   /** compose만: 자동 시작된 잡이면 원인 collect 잡 */
   auto?: { collectJobId: string };
+  /** compose만: 보내기 클릭 이후의 발송 상태 */
+  send?: JobSendState;
   createdAt: ISODate; updatedAt: ISODate; result?: unknown; errors: JobError[];
 }
 export interface JobProgress {
@@ -92,4 +101,5 @@ export interface ComposeResult {
   outcome: 'ready_for_review' | 'partial' | 'failed';
   recordId?: string;                       // mail.json에 기록된 ComposeRecord.id
   attachDir: string;                       // `${folder}/attachments`
+  send?: { state: 'sent' | 'unconfirmed' | 'skipped' | 'unknown'; reason?: SendSkipReason; confirmation?: SendConfirmation; tabClosed?: boolean; clickedAt?: ISODate };
 }

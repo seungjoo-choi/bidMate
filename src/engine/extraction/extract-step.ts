@@ -8,6 +8,7 @@ import type { RuleSet } from '../../core/extraction/rules/schema';
 import { docDateToIso } from '../../core/model/dates';
 import { mergeDocumentLayer } from '../../core/model/merge';
 import { EVALUATION_KEYS, getField, setFields, type FieldMap } from '../../core/model/notice-fields';
+import { withNamePrefix, withoutNamePrefix } from '../../core/model/names';
 import { sanitizeSegment } from '../../core/model/sanitize';
 import type { FieldValue } from '../../core/types/common';
 import { EXTRACTION_KEYS, EXTRACTION_SCHEMA_VERSION, type Extraction, type ExtractionFile, type ExtractionFileStatus, type ExtractedItem, type ExtractionKey, type EvidenceRef } from '../../core/types/extraction';
@@ -243,7 +244,9 @@ export async function runExtractStep(job: Job, notice: Notice, prior: Extraction
   /** 첨부 하나(zip이면 엔트리들)를 처리한다. */
   const processAttachment = async (att: Attachment, kind: DocKind, priority: number): Promise<ExtractionFile[] | 'cancelled'> => {
     const path = `${notice.folder}/attachments/${att.savedName}`;
-    const textBase = `${att.index}_${att.savedName}`;
+    // 추출 텍스트도 첨부와 같은 태그를 파일명 맨 앞에 붙인다: `[태그] 0_공고문.hwp.txt`
+    const bare = `${att.index}_${withoutNamePrefix(att.savedName ?? '', att.namePrefix)}`;
+    const textFile = (suffix = ''): string => `${withNamePrefix(`${bare}${suffix}`, att.namePrefix)}.txt`;
     if (att.savedSize !== null && att.savedSize > maxBytes) return [{ ...baseRow(att, kind, priority), skipReason: 'too_large' }];
     let bytes: Uint8Array;
     try {
@@ -254,7 +257,7 @@ export async function runExtractStep(job: Job, notice: Notice, prior: Extraction
     if (bytes.length > maxBytes) return [{ ...baseRow(att, kind, priority), skipReason: 'too_large' }];
     const fmt = deps.parsers.detect(att.originalName, bytes.subarray(0, 32), bytes);
     if (fmt !== 'zip') {
-      const r = await parseBytes(att, kind, priority, att.originalName, bytes, undefined, `${textBase}.txt`);
+      const r = await parseBytes(att, kind, priority, att.originalName, bytes, undefined, textFile());
       return r === 'cancelled' ? 'cancelled' : [r];
     }
     // zip: 엔트리를 1~4급만 풀고, 중첩 zip은 1단계까지만 연다.
@@ -289,7 +292,7 @@ export async function runExtractStep(job: Job, notice: Notice, prior: Extraction
           rows.push({ ...baseRow(att, c.kind, c.priority, inner), status: 'failed', error: e instanceof Error ? e.message : String(e) });
           continue;
         }
-        const r = await parseBytes(att, c.kind, c.priority, base, eb, inner, `${att.index}_${att.savedName}__${sanitizeSegment(inner, 80)}.txt`);
+        const r = await parseBytes(att, c.kind, c.priority, base, eb, inner, textFile(`__${sanitizeSegment(inner, 80)}`));
         if (r === 'cancelled') return 'cancelled';
         rows.push(r);
         await yieldToLoop();

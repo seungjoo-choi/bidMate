@@ -1,10 +1,7 @@
-import { Copy } from 'lucide-react';
+import { Copy, Mail } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { ComposeCard } from '../../ui/compose/ComposeCard';
 import type { AiProvider } from '../../core/types/ai';
 import { Button, ProviderIcon } from '../../ui/components';
-import type { Job } from '../../core/types/job';
-import type { NoticeRef } from '../../core/types/notice';
 import type { AiButtonView } from './ai-button';
 import type { ChipTone, ExtBadge, StatusChip, SummaryView } from './summary-view';
 
@@ -135,15 +132,15 @@ function AiResultBox({ ai }: { ai: SummaryAi }) {
 export interface SummaryCardProps {
   view: SummaryView;
   ai?: SummaryAi;
-  jobs: Job[];
-  noticeRef?: NoticeRef;
+  /** 메일 작성은 대시보드 메일 준비 화면에서만 한다 */
+  onMail: (noticeId: string) => void;
   copied: boolean;
   onReview: (noticeId: string) => void;
   onCopyFolder: (folder: string) => void;
 }
 
 /** 공고 요약 카드: 핵심 3칸, 기본 정보, 평가 기준, 첨부, 버튼. */
-export function SummaryCard({ view, ai, jobs, noticeRef, copied, onReview, onCopyFolder }: SummaryCardProps) {
+export function SummaryCard({ view, ai, copied, onMail, onReview, onCopyFolder }: SummaryCardProps) {
   const { actions } = view;
   return (
     <div data-ai={ai?.provider} className={`${CARD} sp-slide`}>
@@ -204,7 +201,7 @@ export function SummaryCard({ view, ai, jobs, noticeRef, copied, onReview, onCop
 
       <div className="grid grid-cols-2 gap-1.5 border-t border-line px-3.5 pt-3 pb-3.5">
         <div className="col-span-2">
-          <ComposeCard noticeId={actions.noticeId} noticeRef={noticeRef} params={{}} jobs={jobs} />
+          <Button className="w-full" icon={<Mail />} onClick={() => onMail(actions.noticeId)}>메일 작성</Button>
         </div>
         <Button variant="secondary" onClick={() => onReview(actions.noticeId)}>
           검수

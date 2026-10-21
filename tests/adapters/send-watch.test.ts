@@ -70,6 +70,32 @@ describe('send-watch 스크립트', () => {
     click(trusted({ target: b }));
     expect(sent).toEqual([{ jobId: 'j1', kind: 'click' }]);
   });
+  type Api = { configure(c: unknown): void; markSent(k: 'auto'): { armed: boolean }; state(): { fired: boolean; confirmed: boolean; confirmation?: string } };
+  const api = () => (window as unknown as { __bidMateSendWatch: Api }).__bidMateSendWatch;
+
+  it('markSent는 1회만 armed되고 auto 신호를 보낸다', () => {
+    expect(api().markSent('auto')).toEqual({ armed: true });
+    expect(api().markSent('auto')).toEqual({ armed: false });
+    expect(sent).toEqual([{ jobId: 'j1', kind: 'auto' }]);
+    expect(api().state()).toEqual({ fired: true, confirmed: false });
+  });
+  it('markSent 뒤 gone이 되면 confirm 신호를 보낸다', () => {
+    vi.useFakeTimers();
+    try {
+      document.body.innerHTML = '<input id="subj">';
+      api().configure({ jobId: 'j1', sendWatch: { ...CFG, gone: '#subj' } });
+      api().markSent('auto');
+      document.body.innerHTML = '';
+      vi.advanceTimersByTime(1_000);
+      expect(sent).toEqual([{ jobId: 'j1', kind: 'auto' }, { jobId: 'j1', kind: 'confirm', confirmation: 'ui_gone' }]);
+      expect(api().state()).toEqual({ fired: true, confirmed: true, confirmation: 'ui_gone' });
+    } finally { vi.useRealTimers(); }
+  });
+  it('사용자 클릭 뒤 markSent는 armed false', () => {
+    click(trusted({ target: document.getElementById('s') }));
+    expect(api().markSent('auto')).toEqual({ armed: false });
+    expect(sent).toEqual([{ jobId: 'j1', kind: 'click' }]);
+  });
   it('신뢰 hotkey도 보고하고 이후 클릭은 무시한다', () => {
     keydown(trusted({ key: 'Enter', metaKey: true, ctrlKey: false }));
     click(trusted({ target: document.getElementById('s') }));

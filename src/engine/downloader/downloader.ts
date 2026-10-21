@@ -1,10 +1,10 @@
 import { sanitizeSegment } from '../../core/model/sanitize';
-import { uniqueName } from '../../core/model/names';
+import { activeNamePrefix, uniqueName, withNamePrefix, type NamePrefixSetting } from '../../core/model/names';
 import { extOf } from '../../core/extraction/classify';
 import type { Attachment } from '../../core/types/notice';
 import type { IFileStore } from '../file-store/types';
 
-export interface DownloadSettings { concurrency: number; maxRetries: number; backoffMs: number; maxFileMB: number }
+export interface DownloadSettings { concurrency: number; maxRetries: number; backoffMs: number; maxFileMB: number; namePrefix?: NamePrefixSetting }
 
 export interface DownloadEvent {
   attachmentId: string;
@@ -112,11 +112,13 @@ export async function downloadAttachments(input: Attachment[], opts: DownloadOpt
   const idleMs = opts.idleTimeoutMs ?? 60_000;
   const maxBytes = opts.settings.maxFileMB * 1024 * 1024;
 
-  // savedName은 최초 1회만 결정한다.
+  // savedName은 최초 1회만 결정한다. 태그도 그때의 설정을 따르고, 이미 받은 파일 이름은 바꾸지 않는다.
+  const prefix = activeNamePrefix(opts.settings.namePrefix);
   const taken = new Set(atts.map((a) => a.savedName).filter((n): n is string => !!n));
   for (const a of atts) {
     if (a.savedName) continue;
-    a.savedName = uniqueName(safeFileName(a.originalName), taken);
+    if (prefix) a.namePrefix = prefix; else delete a.namePrefix;
+    a.savedName = uniqueName(withNamePrefix(safeFileName(a.originalName), a.namePrefix), taken);
     taken.add(a.savedName);
   }
 
@@ -158,7 +160,7 @@ export async function downloadAttachments(input: Attachment[], opts: DownloadOpt
         if (served) {
           if (a.savedName) taken.delete(a.savedName);
           a.originalName = served;
-          a.savedName = uniqueName(safeFileName(served), taken);
+          a.savedName = uniqueName(withNamePrefix(safeFileName(served), a.namePrefix), taken);
           taken.add(a.savedName);
           path = `${opts.folder}/attachments/${a.savedName}`;
         }

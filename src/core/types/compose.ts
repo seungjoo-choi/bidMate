@@ -1,6 +1,7 @@
 import type { ISODate } from './common';
 import type { NoticeKind } from './notice';
 import type { MailProvider } from './settings';
+import type { SendConfirmation } from './job';
 
 export interface FieldResult { field: 'to' | 'cc' | 'subject' | 'body'; requested: string[] | string; rendered: string[] | string | null; status: 'ok' | 'mismatch' | 'failed' | 'unsupported' | 'prefilled' /* 주소 파라미터로 전달, 화면 확인 안 함 */; method: string; error?: string; }
 export interface AttachResult { fileId: string; name: string; size: number; status: 'uploaded' | 'uploading_timeout' | 'failed' | 'not_in_dom' | 'size_mismatch' | 'skipped'; renderedName?: string; renderedSize?: string; method: 'input' | 'drop' | 'paste' | 'none'; elapsedMs: number; error?: string; }
@@ -14,9 +15,9 @@ export interface ComposeRecord {
 
 export type SendSource = 'auto' | 'manual';
 export interface SendSignal {
-  kind: 'click' | 'hotkey';
+  kind: 'click' | 'hotkey' | 'auto';
   confirmed: boolean;
-  confirmation?: 'ui_gone' | 'toast' | 'unload';
+  confirmation?: SendConfirmation;
 }
 export interface SendRecord {
   id: string;                 // crypto.randomUUID(), legacy는 `legacy-<noticeId>`
@@ -44,5 +45,6 @@ export interface SentIndexEntry {
   sentAt: ISODate; source: SendSource; provider?: MailProvider; confirmed?: boolean;
   subject: string; toCount: number; ccCount: number; attachmentCount: number;
   composeRecordId?: string; voidedAt?: ISODate;
+  signalKind?: SendSignal['kind'];
 }
 export interface SentIndexFile { schemaVersion: 1; generatedAt: ISODate; entries: SentIndexEntry[] }

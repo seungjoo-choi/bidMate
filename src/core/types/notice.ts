@@ -39,6 +39,7 @@ export interface Attachment {
   status: AttachmentStatus; attempts: number; lastError?: string; note?: string; savedAt?: ISODate;
   origin?: AttachmentOrigin;      // 없음=bid. 연계 사전규격에서 가져온 첨부면 'prespec'
   duplicateOf?: string;           // 입찰공고 첨부와 중복이라 파일을 지운 경우 그 bid 첨부 id
+  namePrefix?: string;            // savedName을 정할 때 앞에 붙인 태그. 화면 표시에서는 뗀다
 }
 export type AttachmentOrigin = 'bid' | 'prespec';   // 없음 = bid
 export interface LinkedPrespec {

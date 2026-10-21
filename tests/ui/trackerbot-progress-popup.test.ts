@@ -185,7 +185,7 @@ describe('ProgressPopup', () => {
 
   const askJob = (p: Partial<Job> = {}) => job({ status: 'completed', updatedAt: later(1), result, handoff: { action: 'ask', at }, ...p });
 
-  it('끝난 ask 항목 버튼 클릭 -> auto-compose/choose 후 job/get', async () => {
+  it('끝난 ask 항목: 메일 작성/상세 클릭 -> ui/open', async () => {
     document.body.innerHTML = page(row('R26BK01722175', 'A'));
     store.j1 = job();
     const { c, p, calls, flush } = setup({ 'job/start': () => ({ jobId: 'j1' }) });
@@ -194,10 +194,12 @@ describe('ProgressPopup', () => {
     store.j1 = askJob();
     c.onJobUpdate(store.j1); await flush();
     expect(stepText()).toBe('수집 완료');
-    const before = calls.filter((x) => x.type === 'job/get').length;
-    btn('바로 작성').click(); await flush();
-    expect(calls.filter((x) => x.type === 'auto-compose/choose').map((x) => x.payload)).toEqual([{ collectJobId: 'j1', afterCollect: 'compose' }]);
-    expect(calls.filter((x) => x.type === 'job/get').length).toBeGreaterThan(before);
+    expect(btn('바로 작성')).toBeUndefined();
+    expect(btn('대시보드 편집')).toBeUndefined();
+    btn('메일 작성').click(); await flush();
+    expect(calls.filter((x) => x.type === 'ui/open').map((x) => x.payload)).toMatchObject([{ page: 'mail' }]);
+    btn('상세').click(); await flush();
+    expect(calls.filter((x) => x.type === 'ui/open').map((x) => x.payload)).toMatchObject([{ page: 'mail' }, { page: 'notice' }]);
     p.stop(); c.stop();
   });
 
@@ -210,7 +212,7 @@ describe('ProgressPopup', () => {
     c.onJobUpdate(askJob()); await flush();
     await vi.advanceTimersByTimeAsync(30000);
     expect(items()).toHaveLength(1);
-    expect(btn('대시보드 편집')).toBeDefined();
+    expect(btn('메일 작성')).toBeDefined();
     p.stop(); c.stop();
   });
 
@@ -219,7 +221,9 @@ describe('ProgressPopup', () => {
     const { c, p, flush } = setup({ 'job/list-for-tab': () => [askJob({ updatedAt: '2026-10-18T10:04:00.000Z' })] });
     p.start(); c.scan(); await flush();
     expect(items()).toHaveLength(1);
-    expect(btn('바로 작성')).toBeDefined();
+    expect(btn('메일 작성')).toBeDefined();
+    expect(btn('상세')).toBeDefined();
+    expect(btn('바로 작성')).toBeUndefined();
     p.stop(); c.stop();
   });
 

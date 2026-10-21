@@ -1,4 +1,4 @@
-import { BarChart3, FileText, LayoutDashboard, ListChecks, Mail, Settings as SettingsIcon, Stethoscope, Trophy, Users } from 'lucide-react';
+import { BarChart3, FileText, LayoutDashboard, ListChecks, Mail, Settings as SettingsIcon, Trophy, Users } from 'lucide-react';
 import type { Page } from './route';
 
 export const MENU: Array<{ id: Page; label: string; Icon: typeof SettingsIcon }> = [
@@ -10,7 +10,6 @@ export const MENU: Array<{ id: Page; label: string; Icon: typeof SettingsIcon }>
   { id: 'recipients', label: '수신자', Icon: Users },
   { id: 'templates', label: '템플릿', Icon: FileText },
   { id: 'settings', label: '설정', Icon: SettingsIcon },
-  { id: 'diagnostics', label: '진단', Icon: Stethoscope },
 ];
 
 /** 사이드 메뉴와 같은 아이콘을 앞에 붙인 페이지 제목 */

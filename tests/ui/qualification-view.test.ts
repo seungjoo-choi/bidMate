@@ -42,9 +42,13 @@ describe('qualificationView', () => {
     expect(qualificationView(judgement('met', [line(matchedOf(5))]), criteria).lines[0]!.more).toBe(0);
   });
 
-  it('footnotes 2종', () => {
+  it('footnotes와 인정조건 원문', () => {
     const v = qualificationView(judgement('review', [], { inProgress: 2, conditionText: 'a'.repeat(300) }), criteria);
-    expect(v.footnotes).toEqual(['진행 중 실적 2건은 판정에서 제외했습니다', `인정조건 원문: ${'a'.repeat(200)}`]);
-    expect(qualificationView(judgement('met'), criteria).footnotes).toEqual([]);
+    expect(v.footnotes).toEqual(['진행 중 실적 2건은 판정에서 제외했습니다']);
+    expect(v.condition).toEqual({ text: 'a'.repeat(200), truncated: true });
+    expect(qualificationView(judgement('review', [], { conditionText: 'b' }), criteria).condition).toEqual({ text: 'b', truncated: false });
+    const none = qualificationView(judgement('met'), criteria);
+    expect(none.footnotes).toEqual([]);
+    expect(none.condition).toBeNull();
   });
 });

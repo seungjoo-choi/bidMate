@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createProgressCard } from '../../src/ui/trackerbot/progress-card';
-import type { ProgressItem, ProgressPanelView } from '../../src/ui/trackerbot/progress-view';
+import { createProgressCard } from '../../src/ui/progress-card/card';
+import type { ProgressItem, ProgressPanelView } from '../../src/ui/progress-card/types';
 
 beforeEach(() => { document.body.innerHTML = ''; });
-const cbs = () => ({ cancel: vi.fn(), dismiss: vi.fn(), dismissAll: vi.fn(), toggleCollapse: vi.fn(), action: vi.fn(), hover: vi.fn() });
+const cbs = () => ({ cancel: vi.fn(), dismiss: vi.fn(), dismissAll: vi.fn(), toggleCollapse: vi.fn(), action: vi.fn(), hover: vi.fn(), force: vi.fn() });
 const sr = (h: { host: HTMLElement }) => h.host.shadowRoot!;
 const btns = (h: { host: HTMLElement }) => Array.from(sr(h).querySelectorAll('button')).filter((b) => !b.hidden);
 const byText = (h: { host: HTMLElement }, t: string) => btns(h).find((b) => b.textContent === t)!;
@@ -118,5 +118,30 @@ describe('createProgressCard', () => {
     h.render(card(c, b, active));
     expect(titles()).toEqual(['공고 C', '공고 B', '공고 A']);
     expect(sr(h).querySelectorAll('.item')[1]).not.toBe(nodeB); // 빠졌다 돌아온 key는 새 노드
+  });
+  it('inline: true -> render 후에도 body에 붙지 않고 .root.inline', () => {
+    const h = createProgressCard(document, cbs(), { inline: true });
+    h.render(card(active));
+    expect(h.host.parentElement).toBeNull();
+    expect(sr(h).querySelector('.root.inline')).not.toBeNull();
+  });
+  it('강제 중단: cancelling+force+on.force일 때만 보이고 클릭 시 on.force(key)', () => {
+    const forced: ProgressItem = { ...active, cancel: { target: 'collect', cancelling: true, force: true } };
+    const on = cbs();
+    const h = createProgressCard(document, on);
+    h.render(card(forced));
+    const cancelBtn = byText(h, '취소 중…') as HTMLButtonElement;
+    expect(cancelBtn.disabled).toBe(true);
+    byText(h, '강제 중단').click();
+    expect(on.force).toHaveBeenCalledWith('a');
+
+    const { force: _f, ...noForce } = cbs();
+    const h2 = createProgressCard(document, noForce);
+    h2.render(card(forced));
+    expect(btns(h2).some((b) => b.textContent === '강제 중단')).toBe(false);
+
+    const h3 = createProgressCard(document, cbs());
+    h3.render(card({ ...active, cancel: { target: 'collect', cancelling: false, force: true } }));
+    expect(btns(h3).some((b) => b.textContent === '강제 중단')).toBe(false);
   });
 });

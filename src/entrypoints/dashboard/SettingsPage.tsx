@@ -1,4 +1,4 @@
-import { Bell, Building2, ClipboardList, FolderOpen, Landmark, Mail, Send, Sparkles, type LucideIcon } from 'lucide-react';
+import { Bell, Building2, ClipboardList, FolderOpen, Landmark, Mail, Send, Sparkles, Stethoscope, Tag, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { SettingsSection } from '../../messaging/protocol';
 import { statusTone } from '../../ui/theme';
@@ -9,8 +9,11 @@ import { AiCard } from './AiCard';
 import { CompanyCard } from './CompanyCard';
 import { PerformancesCard } from './PerformancesCard';
 import { NotifyCard } from './NotifyCard';
+import { FileNameCard } from './FileNameCard';
 import { AutoComposeCard } from './AutoComposeCard';
+import { DiagnosticsPanel } from './diagnostics/DiagnosticsPanel';
 import { PageTitle } from './menu';
+import type { SettingsView } from './route';
 import { useSettingsStatus, type SectionHealth } from './useSettingsStatus';
 
 const HIGHLIGHT_MS = 2400;
@@ -28,6 +31,14 @@ const GROUPS: Group[] = [
       { id: 'storage', label: '저장 폴더', Icon: FolderOpen, card: () => <StorageFolderCard /> },
       { id: 'mail-service', label: '메일 서비스', Icon: Mail, card: () => <MailServiceCard /> },
       { id: 'g2b', label: '나라장터 OpenAPI', Icon: Landmark, card: () => <G2bCard /> },
+    ],
+  },
+  {
+    id: 'files',
+    label: '파일 보관',
+    hint: '저장 폴더에 받는 파일의 이름 규칙을 정합니다.',
+    items: [
+      { id: 'file-name', label: '파일 이름 태그', Icon: Tag, card: () => <FileNameCard /> },
     ],
   },
   {
@@ -54,10 +65,10 @@ const GROUPS: Group[] = [
 const ITEMS = GROUPS.flatMap((g) => g.items.map((item) => ({ ...item, group: g })));
 const REQUIRED = GROUPS.filter((g) => g.required).flatMap((g) => g.items);
 
-export function SettingsPage({ section, nonce }: { section?: SettingsSection; nonce?: string }) {
+export function SettingsPage({ section, nonce }: { section?: SettingsView; nonce?: string }) {
   const status = useSettingsStatus();
-  const [active, setActive] = useState<SettingsSection>(section ?? 'storage');
-  const [lit, setLit] = useState<SettingsSection | undefined>(section);
+  const [active, setActive] = useState<SettingsView>(section ?? 'storage');
+  const [lit, setLit] = useState<SettingsView | undefined>(section);
   const picked = useRef(!!section);
 
   // 오류 화면에서 넘어오면 고칠 항목을 열고 잠깐 강조한다
@@ -80,7 +91,7 @@ export function SettingsPage({ section, nonce }: { section?: SettingsSection; no
     if (firstTodo) setActive(firstTodo);
   }, [requiredLoaded, firstTodo]);
 
-  const open = (id: SettingsSection) => {
+  const open = (id: SettingsView) => {
     picked.current = true;
     setActive(id);
     setLit(undefined);
@@ -127,8 +138,25 @@ export function SettingsPage({ section, nonce }: { section?: SettingsSection; no
               </ul>
             </div>
           ))}
+          {/* 개발자용이라 그룹으로 세우지 않고 맨 아래 작은 링크로만 둔다. */}
+          <div className="mt-2 border-t border-line pt-2">
+            <button
+              type="button"
+              aria-current={active === 'diagnostics' ? 'page' : undefined}
+              onClick={() => open('diagnostics')}
+              className={`flex w-full items-center gap-2 rounded-ctl px-3 py-1.5 text-left text-xs transition-colors motion-reduce:transition-none ${
+                active === 'diagnostics' ? 'bg-select font-semibold text-ink' : 'text-faint hover:bg-sunken hover:text-muted'
+              }`}
+            >
+              <Stethoscope className="size-3.5 shrink-0" aria-hidden />
+              개발자 진단
+            </button>
+          </div>
         </nav>
 
+        {active === 'diagnostics' ? (
+          <div className="min-w-0"><DiagnosticsPanel /></div>
+        ) : (
         <div className="min-w-0 space-y-3">
           <p className="flex flex-wrap items-baseline gap-x-2 px-1 text-sm text-muted">
             <span className="font-semibold text-ink">{cur.group.label}</span>
@@ -141,6 +169,7 @@ export function SettingsPage({ section, nonce }: { section?: SettingsSection; no
             {cur.card()}
           </div>
         </div>
+        )}
       </div>
     </>
   );

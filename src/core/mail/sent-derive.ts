@@ -53,7 +53,7 @@ export function sentIndexEntryOf(r: SendRecord, e: IndexEntry): SentIndexEntry {
     id: r.id, noticeId: r.noticeId, ...(e.kind ? { kind: e.kind } : {}),
     noticeNo: e.noticeNo, round: e.round, title: e.title, orderingOrg: e.orderingOrg, folder: e.folder,
     sentAt: r.sentAt, source: r.source, ...(r.provider ? { provider: r.provider } : {}),
-    ...(r.signal ? { confirmed: r.signal.confirmed } : {}),
+    ...(r.signal ? { confirmed: r.signal.confirmed, signalKind: r.signal.kind } : {}),
     subject: r.summary.subject, toCount: r.summary.toCount, ccCount: r.summary.ccCount, attachmentCount: r.summary.attachmentCount,
     ...(r.composeRecordId ? { composeRecordId: r.composeRecordId } : {}),
     ...(r.voidedAt ? { voidedAt: r.voidedAt } : {}),

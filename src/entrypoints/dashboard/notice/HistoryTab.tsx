@@ -144,7 +144,7 @@ export function HistoryTab({ notice, index, onNoticeChange }: { notice: Notice; 
     latestSent
       ? {
           label: '발송', state: 'done', when: formatDateTime(latestSent.sentAt),
-          sub: [latestSent.provider ? PROVIDER_LABEL[latestSent.provider] : '', latestSent.source === 'auto' ? '자동 기록' : '직접 기록', liveRecords.length > 1 ? `총 ${liveRecords.length}회` : ''].filter(Boolean).join(' · '),
+          sub: [latestSent.provider ? PROVIDER_LABEL[latestSent.provider] : '', latestSent.source === 'auto' ? (latestSent.signal?.kind === 'auto' ? '자동 발송' : '자동 기록') : '직접 기록', liveRecords.length > 1 ? `총 ${liveRecords.length}회` : ''].filter(Boolean).join(' · '),
         }
       : mail.deliveredAt
         ? { label: '발송', state: 'done', when: formatDateTime(mail.deliveredAt) }
@@ -200,7 +200,7 @@ export function HistoryTab({ notice, index, onNoticeChange }: { notice: Notice; 
                   <li key={r.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 px-6 py-3">
                     <span className={`font-mono text-[13px] whitespace-nowrap tabular-nums ${voided ? 'text-faint line-through' : 'text-muted'}`}>{formatDateTime(r.sentAt)}</span>
                     <span className="flex min-w-0 items-center gap-2">
-                      <Chip accent={r.source === 'auto'}>{r.source === 'auto' ? '자동' : '직접'}</Chip>
+                      <Chip accent={r.source === 'auto'}>{r.source === 'auto' ? (r.signal?.kind === 'auto' ? '자동 발송' : '자동') : '직접'}</Chip>
                       {r.provider && <span className="text-[13px] whitespace-nowrap text-muted">{PROVIDER_LABEL[r.provider]}</span>}
                       <span className={`min-w-0 truncate ${voided ? 'text-faint line-through' : ''}`}>{text || '—'}</span>
                       {r.source === 'auto' && !r.signal?.confirmed && <StatusBadge status="warn">완료 확인 없음</StatusBadge>}

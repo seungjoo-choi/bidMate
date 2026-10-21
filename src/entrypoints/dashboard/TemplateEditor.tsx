@@ -11,7 +11,7 @@ import { Button, Card, Field, InlineAlert, inputClass, StatusBadge, useToast } f
 import { useTemplates } from '../../ui/hooks/useConfig';
 import { FsErrorAlert } from './FsErrorAlert';
 import { templateErrorText } from './TemplatesPage';
-import { SectionEditor } from './templates/SectionEditor';
+import { SectionEditor, sectionNumber } from './templates/SectionEditor';
 import { VariablePalette } from './templates/VariablePalette';
 import { useVariableSuggest } from './templates/VariableSuggest';
 import { replaceRange, type FocusEl } from './templates/variable-suggest';
@@ -191,13 +191,22 @@ export function TemplateEditor({ id }: { id: string }) {
             <Card
               title="섹션"
               action={
-                <Button
-                  variant="secondary"
-                  icon={<Plus />}
-                  onClick={() => patch({ sections: [...draft.sections, { id: `sec_${crypto.randomUUID().slice(0, 8)}`, title: '새 섹션', items: [] }] })}
-                >
-                  섹션 추가
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    icon={<Plus />}
+                    onClick={() => patch({ sections: [...draft.sections, { id: `sec_${crypto.randomUUID().slice(0, 8)}`, title: '', items: [], plain: true }] })}
+                  >
+                    문구 추가
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    icon={<Plus />}
+                    onClick={() => patch({ sections: [...draft.sections, { id: `sec_${crypto.randomUUID().slice(0, 8)}`, title: '새 섹션', items: [] }] })}
+                  >
+                    섹션 추가
+                  </Button>
+                </div>
               }
             >
               {draft.sections.length === 0 && <p className="text-sm text-muted">섹션이 없습니다.</p>}
@@ -206,6 +215,7 @@ export function TemplateEditor({ id }: { id: string }) {
                   key={s.id}
                   section={s}
                   index={i}
+                  number={sectionNumber(draft.sections, i)}
                   usedKeys={usedKeys}
                   kind={kind}
                   onChange={(next) => patch({ sections: draft.sections.map((x) => (x.id === s.id ? next : x)) })}
@@ -224,7 +234,7 @@ export function TemplateEditor({ id }: { id: string }) {
 
           <div className="min-w-0 space-y-4 xl:sticky xl:top-6 xl:self-start">
             <Card title="미리보기" description={notice.id === sampleOf(kind).id ? '표본 공고로 보여 줍니다.' : `최근 공고: ${notice.basic.title.value ?? ""}`}>
-              {rendered ? <MailPreviewFrame html={rendered.html} subject={rendered.subject} /> : <p className="text-sm text-muted">미리보기를 만드는 중입니다.</p>}
+              {rendered ? <MailPreviewFrame html={rendered.html} subject={rendered.subject} height="max(560px, calc(100vh - 210px))" /> : <p className="text-sm text-muted">미리보기를 만드는 중입니다.</p>}
               {rendered && rendered.unresolved.length > 0 && (
                 <InlineAlert tone="warn">
                   <p className="font-semibold">확인 필요</p>

@@ -14,8 +14,10 @@ export type PanelView =
       kind: 'progress'; title?: string; foreignLabel?: string; label: string; ratio: number; attach?: { done: number; total: number };
       errorCount: number; cancelling: boolean; pillText: string;
     }
-  | { kind: 'completed'; headline: string; folder?: string; chip: CollectedView; title?: string; foreign: boolean; extractionLine?: string; reviewNoticeId?: string; handoff?: HandoffView }
-  | { kind: 'partial'; headline: string; failures: FailedFile[]; moreCount: number; folder?: string; title?: string; foreign: boolean; canRetry: boolean; retryLabel: string; extractionLine?: string; reviewNoticeId?: string; handoff?: HandoffView }
+  | { kind: 'completed'; headline: string; folder?: string; chip: CollectedView; title?: string; foreign: boolean; extractionLine?: string; reviewNoticeId?: string; handoff?: HandoffView;
+      /** 완료 카드의 [상세]/[메일 작성] 대상. 대시보드는 저절로 열지 않는다 */
+      noticeId?: string }
+  | { kind: 'partial'; headline: string; failures: FailedFile[]; moreCount: number; folder?: string; title?: string; foreign: boolean; canRetry: boolean; retryLabel: string; extractionLine?: string; reviewNoticeId?: string; handoff?: HandoffView; noticeId?: string }
   | { kind: 'error'; message: string; detail?: string; action: ErrorAction; actionLabel?: string; fix?: FixTarget; title?: string; foreign: boolean; hint?: string; handoff?: HandoffView };
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -111,6 +113,7 @@ export function panelView(job: Job | null, lookup: NoticeLookup, opts: PanelView
   const att = result?.attachments ?? [];
   const handoff = foreign ? undefined : handoffView(job, opts.compose ?? null) ?? undefined;
   const ho = handoff ? { handoff } : {};
+  const noticeIdPart = result?.noticeId ? { noticeId: result.noticeId } : {};
   const saved = att.filter((a) => a.status === 'saved').length;
 
   switch (job.status) {
@@ -133,7 +136,7 @@ export function panelView(job: Job | null, lookup: NoticeLookup, opts: PanelView
       return {
         kind: 'completed', headline: `수집 완료, 첨부 ${saved}/${att.length}`, folder: result?.folder, title: jobTitle, foreign,
         extractionLine: extractionLineOf(result), reviewNoticeId: extractionLineOf(result) ? result?.noticeId : undefined,
-        chip: collectedView(lookup) ?? { tone: 'ok', text: '수집 완료', dday: null }, ...ho,
+        chip: collectedView(lookup) ?? { tone: 'ok', text: '수집 완료', dday: null }, ...ho, ...noticeIdPart,
       };
     case 'partial': {
       const failed = att.filter((a) => a.status === 'failed' || a.status === 'size_mismatch');
@@ -145,7 +148,7 @@ export function panelView(job: Job | null, lookup: NoticeLookup, opts: PanelView
         reviewNoticeId: !extractFailed && extractionLineOf(result) ? result?.noticeId : undefined,
         retryLabel: extractOnly ? '평가정보 다시 추출' : extractFailed ? '실패 항목 재시도' : '실패 파일 재시도',
         failures: failed.slice(0, 5).map((a) => ({ name: a.name, reason: a.error ?? a.status })),
-        moreCount: Math.max(0, failed.length - 5), folder: result?.folder, title: jobTitle, foreign, canRetry: !foreign, ...ho,
+        moreCount: Math.max(0, failed.length - 5), folder: result?.folder, title: jobTitle, foreign, canRetry: !foreign, ...ho, ...noticeIdPart,
       };
     }
     case 'failed':

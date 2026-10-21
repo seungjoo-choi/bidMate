@@ -47,11 +47,11 @@ export function handoffView(collect: Job, compose: Job | null): HandoffView | nu
   }
 
   if (h.action === 'edit') {
-    return { kind: 'edit', text: '대시보드에서 메일 내용을 확인한 뒤 작성하세요', tone: 'info', action: 'open-mail', actionLabel: '편집', ...base };
+    return { kind: 'edit', text: '수집 완료. 상세를 보거나 메일을 작성하세요', tone: 'info', action: 'open-mail', actionLabel: '메일 작성', ...base };
   }
 
   if (h.action === 'ask') {
-    return { kind: 'ask', text: '수집 완료. 대시보드에서 편집하거나 바로 작성할 수 있습니다', tone: 'info', action: 'open-mail', actionLabel: '편집', ...base };
+    return { kind: 'ask', text: '수집 완료. 상세를 보거나 메일을 작성하세요', tone: 'info', action: 'open-mail', actionLabel: '메일 작성', ...base };
   }
 
   if (h.action === 'none') {
@@ -91,6 +91,11 @@ export function handoffView(collect: Job, compose: Job | null): HandoffView | nu
       };
     case 'done':
       return { kind: 'composed', text: '웹메일 탭에서 확인 후 보내 주세요', tone: 'ok', action: 'open-mail', actionLabel: '열기', ...idPart, ...base };
+    // 자동 작성 잡은 자동 발송하지 않지만 composeView의 모든 상태를 다룬다
+    case 'sent':
+      return { kind: 'composed', text: '메일을 보냈습니다', tone: 'ok', action: 'open-mail', actionLabel: '열기', ...idPart, ...base };
+    case 'send-issue':
+      return { kind: 'compose_partial', text: v.message, tone: v.state === 'unknown' ? 'error' : 'warn', action: 'open-mail', actionLabel: '열기', ...idPart, ...base };
     case 'manual':
       return { kind: 'manual', text: MANUAL_TEXT, tone: 'warn', action: 'open-mail', actionLabel: '열기', ...idPart, ...base };
     case 'partial':

@@ -79,6 +79,18 @@ export function renderMail(template: Template, notice: Notice, opts: { now?: Dat
   const listLines: string[] = [];
   let no = 0;
   for (const section of template.sections) {
+    if (section.plain) {
+      const body = substitute(section.title, section.id, ctx);
+      if (body.trim() === '') continue;
+      if (isList) {
+        htmlParts.push(`<div style="margin:0 0 8px 0;">${textToHtml(body)}</div>`);
+        listLines.push(body);
+      } else {
+        htmlParts.push(`<p>${textToHtml(body)}</p>`);
+        textParts.push(body);
+      }
+      continue;
+    }
     const items = section.items.filter((it) => it.visible);
     const hasInline = (section.inlineValue ?? '').trim() !== '';
     if (items.length === 0 && !hasInline) continue;

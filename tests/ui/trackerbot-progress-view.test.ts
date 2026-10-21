@@ -39,12 +39,18 @@ describe('progressPanelView', () => {
     expect(it.cancel).toEqual({ target: 'collect', cancelling: false });
     expect(it.ratio).toBe(progressRatio(st));
   });
-  it('끝난 ask 항목 -> 선택 버튼 2개, awaiting, state ok', () => {
+  it('끝난 ask 항목 -> [상세, 메일 작성] 버튼, awaiting, state ok', () => {
     const j = job({ status: 'completed', result, handoff: { action: 'ask', at } });
     const it = first(entry({ job: j }), sess({ seen: ['j1'] }))!;
     expect(it.state).toBe('ok');
     expect(it.awaiting).toBe(true);
-    expect(it.actions).toEqual([{ id: 'choose-dashboard', label: '대시보드 편집' }, { id: 'choose-compose', label: '바로 작성' }]);
+    expect(it.actions).toEqual([{ id: 'open-notice', label: '상세' }, { id: 'open-mail', label: '메일 작성' }]);
+  });
+  it('검수(review) 끝난 항목 -> [상세, 검수, 메일 작성]', () => {
+    const j = job({ status: 'completed', result, handoff: { action: 'review', reasons: ['needs_review'], opened: false, at } });
+    const it = first(entry({ job: j }), sess({ seen: ['j1'] }))!;
+    expect(it.actions?.map((a) => a.label)).toEqual(['상세', '검수', '메일 작성']);
+    expect(it.actions?.[1]?.id).not.toBe('open-mail');
   });
   it('handoff가 edit·compose면 awaiting 없음', () => {
     const e = job({ status: 'completed', result, handoff: { action: 'edit', opened: true, at } });

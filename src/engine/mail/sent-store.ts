@@ -84,7 +84,7 @@ export class SentStore {
   }
 
   async recordAuto(
-    p: { noticeId: string; jobId: string; composeRecordId?: string; provider?: MailProvider; kind: 'click' | 'hotkey' },
+    p: { noticeId: string; jobId: string; composeRecordId?: string; provider?: MailProvider; kind: 'click' | 'hotkey' | 'auto' },
     now: Date,
   ): Promise<{ record: SendRecord | null }> {
     const out = await this.mutate<SendRecord | null>(p.noticeId, async (records, notice) => {

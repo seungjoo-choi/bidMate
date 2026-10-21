@@ -1,4 +1,4 @@
-import { ArrowLeft, ClipboardCopy, ExternalLink, Loader2, Mail, RefreshCw } from 'lucide-react';
+import { ArrowLeft, BarChart3, ClipboardCopy, Download, ExternalLink, Loader2, Mail, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { Extraction } from '../../../core/types/extraction';
 import { handoffReasonLabel } from '../../../core/model/handoff';
@@ -6,6 +6,8 @@ import type { IndexEntry } from '../../../core/types/index-file';
 import type { HandoffReason } from '../../../core/types/job';
 import type { Notice } from '../../../core/types/notice';
 import { send } from '../../../messaging/bus';
+import { evalErrorText } from '../../../core/evaluation/error-text';
+import { EVAL_COLLECT_UI_TIMEOUT_MS } from '../../../core/evaluation/limits';
 import { kindOf, noticeLabel } from '../../../core/model/ids';
 import { Button, InlineAlert, StatusBadge, useToast } from '../../../ui/components';
 import { useJobs } from '../../../ui/hooks/useJobs';
@@ -13,7 +15,7 @@ import { COLLECT_BADGE, detailTabs, effectiveTab, folderRelPath } from '../../..
 import { dDayLevel, formatDDay, formatDateTime } from '../../../ui/review/format';
 import type { ReviewLeafKey } from '../../../core/extraction/review-rows';
 import type { EditError } from '../review/ReviewRows';
-import type { NoticeTab } from '../route';
+import { evaluationHash, type NoticeTab } from '../route';
 import { FilesTab } from './FilesTab';
 import { HistoryTab } from './HistoryTab';
 import { OverviewTab } from './OverviewTab';
@@ -22,6 +24,7 @@ import { TabBar } from './TabBar';
 import { FollowMenu, useFollowToggle } from '../FollowToggle';
 import { WonCard } from './ResultStrip';
 import { followButton, isWon, type FollowAction } from '../../../ui/notices/result-view';
+import { evalFetchable } from '../../../ui/notices/eval-fetch-view';
 import { useSettings } from '../../../ui/hooks/useSettings';
 
 const ACTIVE = new Set(['queued', 'running', 'cancelling']);
@@ -32,6 +35,9 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
   const [loadError, setLoadError] = useState<string | null>(null);
   const [alert, setAlert] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  /** 평가점수를 이미 가져왔는가. null = 모름(목록을 못 읽음) */
+  const [evalHave, setEvalHave] = useState<boolean | null>(null);
+  const [evalBusy, setEvalBusy] = useState(false);
   const toast = useToast();
   const jobs = useJobs();
   const running = jobs.find((j) => j.type !== 'compose' && j.noticeId === noticeId && ACTIVE.has(j.status));
@@ -49,11 +55,12 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
       setData(d);
       setIndex(list);
       setLoadError(null);
+      void send('eval/list', undefined).then((es) => setEvalHave(es.some((e) => e.noticeId === noticeId))).catch(() => setEvalHave(null));
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : String(e));
     }
   };
-  useEffect(() => { void load(); }, [noticeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setEvalHave(null); void load(); }, [noticeId]); // eslint-disable-line react-hooks/exhaustive-deps
   // 잡이 끝나면 결과를 다시 불러온다.
   useEffect(() => {
     if (wasRunning.current && !running) void load();
@@ -96,6 +103,21 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
     if (r.ok) void load();
   };
 
+  const fetchEval = async () => {
+    if (!data || evalBusy) return;
+    setAlert(null);
+    setEvalBusy(true);
+    try {
+      await send('eval/collect', { ref: { noticeNo: data.notice.ref.noticeNo, round: data.notice.ref.round || '000' } }, { timeoutMs: EVAL_COLLECT_UI_TIMEOUT_MS });
+      setEvalHave(true);
+      toast.show('평가점수를 가져왔습니다');
+    } catch (e) {
+      setAlert(evalErrorText((e as { code?: string }).code, e instanceof Error ? e.message : String(e)));
+    } finally {
+      setEvalBusy(false);
+    }
+  };
+
   const copyPath = async () => {
     if (!data) return;
     try { await navigator.clipboard.writeText(folderRelPath(data.notice.folder)); toast.show('복사됨'); } catch { toast.show('복사하지 못했습니다'); }
@@ -133,14 +155,14 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
       <header className="flex items-start justify-between gap-6">
         <div className="min-w-0">
           <h1 className="title-mark text-2xl leading-snug font-bold tracking-tight text-balance">{title}</h1>
-          <div className="mt-3 space-y-2 pl-[calc(3px+0.75rem)] text-sm">
-            {/* 정보: 이름표 + 값, 가는 세로선으로 구분 */}
-            <dl className="flex flex-wrap items-baseline gap-y-1 [&>div+div]:ml-4 [&>div+div]:border-l [&>div+div]:border-line [&>div+div]:pl-4">
+          <div className="mt-3 space-y-3 pl-[calc(3px+0.75rem)] text-sm">
+            {/* 정보: 이름표 열과 값 열을 맞춘 2열 목록 */}
+            <dl className="grid grid-cols-[max-content_1fr] items-baseline gap-x-4 gap-y-1.5">
               {notice.basic.orderingOrg.value && (
-                <div className="flex items-baseline gap-2"><dt className="text-muted">발주기관</dt><dd className="text-ink">{notice.basic.orderingOrg.value}</dd></div>
+                <div className="contents"><dt className="text-muted">발주기관</dt><dd className="text-ink">{notice.basic.orderingOrg.value}</dd></div>
               )}
-              <div className="flex items-baseline gap-2"><dt className="text-muted">공고번호</dt><dd className="font-mono text-ink tabular-nums">{noticeNo}</dd></div>
-              <div className="flex items-baseline gap-2">
+              <div className="contents"><dt className="text-muted">공고번호</dt><dd className="font-mono text-ink tabular-nums">{noticeNo}</dd></div>
+              <div className="contents">
                 <dt className="text-muted">{isPrespec ? '의견등록마감' : '입찰마감'}</dt>
                 <dd className="flex items-baseline gap-2">
                   <span className="font-mono text-ink tabular-nums">{formatDateTime(closeAt)}</span>
@@ -160,6 +182,10 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {entry && fb.visible && !fb.disabled && <FollowMenu variant="button" following={entry.following ?? null} rankDone={entry.result?.status === 'ranked'} notify={notify} busy={follow.isBusy(noticeId)} title={title} onSelect={(a) => void applyFollow(a)} />}
+          {evalHave && <Button variant="ghost" icon={<BarChart3 />} onClick={() => { window.location.hash = evaluationHash(noticeId); }}>평가점수 보기</Button>}
+          {!evalHave && entry && evalFetchable(entry, new Date()).ok && (
+            <Button variant="ghost" icon={<Download />} loading={evalBusy} title="나라장터에 로그인돼 있어야 합니다" onClick={() => void fetchEval()}>평가점수 가져오기</Button>
+          )}
           {safeUrl && <Button variant="ghost" icon={<ExternalLink />} onClick={() => window.open(safeUrl, '_blank', 'noopener')}>원문 보기</Button>}
           <Button variant="ghost" icon={<ClipboardCopy />} onClick={() => void copyPath()}>폴더 경로 복사</Button>
           <Button icon={<Mail />} onClick={() => { window.location.hash = `#/mail/${encodeURIComponent(noticeId)}`; }}>

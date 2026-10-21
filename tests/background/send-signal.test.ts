@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../src/background/job-coordinator', () => ({ getJob: vi.fn(), listJobs: vi.fn() }));
+vi.mock('../../src/background/job-coordinator', () => ({ getJob: vi.fn(), listJobs: vi.fn(), setSendState: vi.fn(async () => undefined) }));
 vi.mock('../../src/background/offscreen-manager', () => ({ ensureOffscreen: vi.fn() }));
 
 import { handleSendSignal, setSendSignalDeps } from '../../src/background/send-signal';
-import { getJob } from '../../src/background/job-coordinator';
+import { getJob, setSendState } from '../../src/background/job-coordinator';
 
 const RUNTIME = 'ext-id';
 const sender = (o: Partial<chrome.runtime.MessageSender> = {}) => ({ id: RUNTIME, tab: { id: 7 }, url: 'https://mail.example.com/', ...o }) as chrome.runtime.MessageSender;
@@ -59,6 +59,40 @@ describe('send-signal', () => {
     toOffscreen.mockRejectedValueOnce(new Error('x'));
     await expect(handleSendSignal({ jobId: 'j1', kind: 'confirm', confirmation: 'toast' }, sender())).resolves.toBeUndefined();
     expect((toOffscreen.mock.calls as unknown[][])[0]![1]).toMatchObject({ kind: 'confirm', confirmation: 'toast' });
+  });
+
+  it('kind auto를 전달한다', async () => {
+    vi.mocked(getJob).mockResolvedValue(composeJob() as never);
+    await handleSendSignal({ jobId: 'j1', kind: 'auto' }, sender());
+    expect((toOffscreen.mock.calls as unknown[][])[0]![1]).toMatchObject({ kind: 'auto' });
+  });
+
+  it('send가 있으면 ledger 상태를 갱신한다(confirm이면 confirmed true)', async () => {
+    vi.mocked(getJob).mockResolvedValue(composeJob({ send: { clickedAt: 't', confirmed: false } }) as never);
+    await handleSendSignal({ jobId: 'j1', kind: 'confirm', confirmation: 'ui_gone' }, sender());
+    expect(setSendState).toHaveBeenCalledWith('j1', expect.objectContaining({ confirmed: true, confirmation: 'ui_gone', lastSignalAt: expect.any(String) }));
+  });
+
+  it('click/auto는 기존 confirmed를 유지하고, send가 없으면 ledger를 건드리지 않는다', async () => {
+    vi.mocked(getJob).mockResolvedValue(composeJob({ send: { clickedAt: 't', confirmed: true } }) as never);
+    await handleSendSignal({ jobId: 'j1', kind: 'auto' }, sender());
+    expect(setSendState).toHaveBeenCalledWith('j1', expect.objectContaining({ confirmed: true }));
+    vi.mocked(setSendState).mockClear();
+    vi.mocked(getJob).mockResolvedValue(composeJob() as never);
+    await handleSendSignal({ jobId: 'j1', kind: 'click' }, sender());
+    expect(setSendState).not.toHaveBeenCalled();
+  });
+
+  it('composeRecordId는 job.send 값이 result.recordId보다 우선한다', async () => {
+    vi.mocked(getJob).mockResolvedValue(composeJob({ send: { clickedAt: 't', confirmed: false, composeRecordId: 'pre-1' } }) as never);
+    await handleSendSignal({ jobId: 'j1', kind: 'auto' }, sender());
+    expect((toOffscreen.mock.calls as unknown[][])[0]![1]).toMatchObject({ composeRecordId: 'pre-1' });
+  });
+
+  it('result가 없으면 send.composeRecordId만 쓴다', async () => {
+    vi.mocked(getJob).mockResolvedValue(composeJob({ result: undefined, send: { clickedAt: 't', confirmed: false, composeRecordId: 'pre-2' } }) as never);
+    await handleSendSignal({ jobId: 'j1', kind: 'auto' }, sender());
+    expect((toOffscreen.mock.calls as unknown[][])[0]![1]).toMatchObject({ noticeId: 'N-ledger', composeRecordId: 'pre-2' });
   });
 
   it('같은 jobId의 신호는 도착 순서대로 전달한다', async () => {

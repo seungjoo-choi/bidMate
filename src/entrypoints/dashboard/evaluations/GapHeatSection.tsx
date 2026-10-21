@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { heatmap, itemGaps } from '../../../core/evaluation/analyze';
 import type { EvalItem } from '../../../core/types/evaluation';
 import { TONE_TEXT, type EvalCtx } from './ctx';
-import { barOf, f2, GRADE_NAMES, HEAT_CLASS, judgeLabel, signed, toneOf } from './eval-view';
+import { barOf, f2, GRADE_NAMES, HEAT_CLASS, judgeLabel, shortName, signed, toneOf } from './eval-view';
 import { CenterBar, HEAD_ROW, ROW, Section, Segmented, TD, TH } from './Section';
+
+/** 상대보다 낮은 칸: 왼쪽 아래 모서리 삼각형. 칸 전체를 두르지 않아 많아도 숫자가 묻히지 않는다 */
+const LOST_MARK = 'pointer-events-none absolute bottom-0 left-0 size-2 rounded-bl-[5px] bg-warn [clip-path:polygon(0_0,0_100%,100%_100%)]';
 
 const leafName = (names: string[]): string => names[names.length - 1] ?? '';
 const groupName = (names: string[]): string | null => (names.length > 1 ? names[0]! : null);
@@ -37,7 +40,7 @@ export function GapSection({ ctx }: { ctx: EvalCtx }) {
                   <th scope="col" className={`${TH} text-right`}>격차</th>
                   <th scope="col" className={`${TH} w-40 pr-6 text-center`}><span className="sr-only">격차 막대</span></th>
                 </>
-              ) : bidders.map((b) => <th scope="col" key={b.seq} className={`${TH} text-right`}>{b.name}</th>)}
+              ) : bidders.map((b) => <th scope="col" key={b.seq} title={b.name} className={`${TH} text-right`}>{shortName(b.name)}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -94,13 +97,14 @@ export function HeatSection({ ctx }: { ctx: EvalCtx }) {
   // 우리 회사 기준이면 우리 업체 탭은 상대와, 상대 탭은 우리와 비교한다. 전체 보기는 다른 업체 최고값
   const against = isOurs && ctx.rival !== null && ctx.ourSeq !== null ? (seq === ctx.ourSeq ? ctx.rival : ctx.ourSeq) : null;
   const rowsAll = useMemo(() => heatmap(rec, seq, opts, against), [rec, seq, opts, against]);
+  const anyLost = rowsAll.some((r) => r.cells.some((c) => c.lost));
   let lastGroup: string | null | undefined;
 
   return (
     <Section
       title="위원 × 세부항목 히트맵"
-      sub="칸 색은 배점 대비 비율, 주황 테두리는 상대보다 낮은 칸"
-      action={<Segmented label="히트맵 업체" value={String(seq)} onChange={(v) => setPick(Number(v))} options={bidders.map((b) => ({ id: String(b.seq), label: b.name }))} />}
+      sub={anyLost ? '칸 색은 배점 대비 비율, 주황 모서리는 상대보다 낮은 칸, 오른쪽 숫자는 낮은 칸 수' : '칸 색은 배점 대비 비율'}
+      action={<Segmented label="히트맵 업체" value={String(seq)} onChange={(v) => setPick(Number(v))} options={bidders.map((b) => ({ id: String(b.seq), label: shortName(b.name) }))} />}
     >
       <div className="overflow-x-auto px-4 pb-1">
         <table className="w-full border-separate border-spacing-[3px] text-sm tabular-nums">
@@ -110,6 +114,7 @@ export function HeatSection({ ctx }: { ctx: EvalCtx }) {
               {rec.judges.map((j) => (
                 <th scope="col" key={j.index} title={judgeLabel(j.index)} className={`min-w-11 py-1 text-center text-[0.8125rem] font-semibold whitespace-nowrap ${ctx.excluded.has(j.index) ? 'text-faint line-through' : ''}`}>{j.index}</th>
               ))}
+              {anyLost && <th scope="col" className="py-1 pl-2 text-right text-[0.8125rem] font-semibold whitespace-nowrap">낮음</th>}
             </tr>
           </thead>
           <tbody>
@@ -117,8 +122,9 @@ export function HeatSection({ ctx }: { ctx: EvalCtx }) {
               const grp = groupName(r.names);
               const head = grp !== lastGroup && grp !== null;
               lastGroup = grp;
+              const lostCount = r.cells.filter((c) => c.lost).length;
               return (
-                <FragmentHeat key={r.itemNo} head={head ? grp : null} span={1 + rec.judges.length}>
+                <FragmentHeat key={r.itemNo} head={head ? grp : null} span={1 + rec.judges.length + (anyLost ? 1 : 0)}>
                   <tr>
                     <td className="py-0.5 pr-3 pl-4 whitespace-nowrap">{leafName(r.names)}</td>
                     {r.cells.map((c) => {
@@ -128,13 +134,19 @@ export function HeatSection({ ctx }: { ctx: EvalCtx }) {
                         <td
                           key={c.judge}
                           title={`${judgeLabel(c.judge)}, ${leafName(r.names)} ${c.score ?? '—'} / ${r.maxScore ?? '—'}${lostText}${revText}`}
-                          className={`relative h-7 rounded-[5px] text-center text-xs ${c.level === null ? 'bg-sunken text-faint' : HEAT_CLASS[c.level]} ${c.skipped ? 'opacity-30' : ''} ${c.lost ? 'font-bold ring-2 ring-warn ring-inset' : ''}`}
+                          className={`relative h-7 rounded-[5px] text-center text-xs ${c.level === null ? 'bg-sunken text-faint' : HEAT_CLASS[c.level]} ${c.skipped ? 'opacity-30' : ''}`}
                         >
                           {c.score ?? '—'}
+                          {c.lost && <span className={LOST_MARK} aria-label="상대보다 낮음" />}
                           {c.revised !== null && <span className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-warn" aria-label="수정 이력 있음" />}
                         </td>
                       );
                     })}
+                    {anyLost && (
+                      <td className={`py-0.5 pl-2 text-right text-xs whitespace-nowrap ${lostCount === 0 ? 'text-faint' : lostCount * 2 > r.cells.length ? 'font-bold text-warn' : 'text-muted'}`}>
+                        {lostCount}/{r.cells.length}
+                      </td>
+                    )}
                   </tr>
                 </FragmentHeat>
               );
@@ -146,7 +158,7 @@ export function HeatSection({ ctx }: { ctx: EvalCtx }) {
         {HEAT_CLASS.map((cls, k) => (
           <span key={k} className="inline-flex items-center gap-1.5 whitespace-nowrap"><span className={`size-3.5 rounded-[4px] ${cls}`} />{GRADE_NAMES[k]}</span>
         ))}
-        <span className="inline-flex items-center gap-1.5 whitespace-nowrap"><span className="size-3.5 rounded-[4px] ring-2 ring-warn ring-inset" />상대보다 낮음</span>
+        {anyLost && <span className="inline-flex items-center gap-1.5 whitespace-nowrap"><span className="relative size-3.5 overflow-hidden rounded-[4px] bg-sunken"><span className={LOST_MARK} /></span>상대보다 낮음</span>}
         <span className="inline-flex items-center gap-1.5 whitespace-nowrap"><span className="size-1.5 rounded-full bg-warn" />수정 이력</span>
       </div>
     </Section>

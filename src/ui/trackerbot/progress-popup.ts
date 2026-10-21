@@ -1,5 +1,5 @@
 import { handoffAsk, handoffQueued, isActive, type TrackerbotController } from './controller';
-import { createProgressCard, type ProgressCardHandle } from './progress-card';
+import { createProgressCard, type ProgressCardHandle } from '../progress-card/card';
 import { progressItems, progressPanelView, type ProgressItem, type ProgressSession } from './progress-view';
 
 const AUTO_DISMISS_MS = 8000;

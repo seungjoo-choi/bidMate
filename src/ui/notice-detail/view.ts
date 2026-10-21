@@ -5,6 +5,7 @@ import { KST_OFFSET_MS, kstParts } from '../../core/results/schedule';
 import { DEADLINE_OFFSETS, type DeadlineOffset } from '../../core/types/deadline';
 import type { Settings } from '../../core/types/settings';
 import { normalizePath } from '../../core/model/path';
+import { withoutNamePrefix } from '../../core/model/names';
 import type { FieldValue } from '../../core/types/common';
 import type { Extraction, ExtractionKey } from '../../core/types/extraction';
 import { NA_VALUE_TEXT, coveringKey, fieldReviewState } from '../../core/extraction/review-count';
@@ -179,12 +180,14 @@ export function attachmentRows(n: Notice): AttachmentRow[] {
   return n.attachments.map((a) => {
     const name = a.originalName;
     const ext = extOf(a.savedName ?? name);
+    // 내부 화면에서는 저장 파일명 앞 태그(예: [대외비 2군])를 보이지 않는다.
+    const shownSaved = a.savedName ? withoutNamePrefix(a.savedName, a.namePrefix) : null;
     const size = a.status === 'size_mismatch'
       ? `저장 ${formatBytes(a.savedSize)} / 예상 ${formatBytes(a.expectedSize)}`
       : formatBytes(a.savedSize ?? a.expectedSize);
     return {
       id: a.id, no: a.index + 1, name,
-      savedName: a.savedName && a.savedName !== name ? a.savedName : null,
+      savedName: shownSaved && shownSaved !== name ? shownSaved : null,
       kind: `${a.origin === 'prespec' ? '사전규격 / ' : ''}${a.docKind ? DOC_KIND_LABEL[a.docKind] ?? a.docKind : ext.toUpperCase() || EMPTY}`,
       ...(a.origin === 'prespec' ? { origin: 'prespec' as const } : {}),
       size, status: a.status, attempts: a.attempts, remark: a.lastError ?? a.note ?? '',
@@ -265,7 +268,7 @@ export function mailSummary(n: Notice, draft: MailDraft | null): MailSummary {
 export const STEP_LABEL: Record<StepId, string> = {
   fetch_basic: '공고정보 조회', fetch_html: '상세화면 읽기', download_attachments: '첨부파일 다운로드',
   extract: '평가정보 추출', render_mail: '메일 본문 생성', open_compose: '메일 창 열기',
-  fill_fields: '항목 입력', attach_files: '첨부', verify: '확인',
+  fill_fields: '항목 입력', attach_files: '첨부', verify: '확인', send_mail: '발송',
 };
 
 export const JOB_STATUS_LABEL: Record<JobStatus, string> = {

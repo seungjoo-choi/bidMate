@@ -1,6 +1,6 @@
 import type { DeadlinePlan, DeadlineRefreshSummary } from '../core/types/deadline';
 import type { AttachResult, FieldResult, SendRecord, SentIndexEntry, SentMailView } from '../core/types/compose';
-import type { ComposeParams, HtmlFields, Job, JobError, JobProgress, JobStatus } from '../core/types/job';
+import type { ComposeParams, HtmlFields, Job, JobError, JobProgress, JobStatus, SendConfirmation, SendSkipReason } from '../core/types/job';
 import type { AiKey } from '../core/ai/keys';
 import type { Extraction, ExtractionKey } from '../core/types/extraction';
 import type { IndexEntry } from '../core/types/index-file';
@@ -46,7 +46,9 @@ export type AttachStatus =
   | { done: true; result: AttachResult };
 export interface FileMeta { fileId: string; name: string; size: number; mime?: string; }
 /** 설정 화면에서 바로 보여 줄 카드 */
-export type SettingsSection = 'storage' | 'mail-service' | 'auto-compose' | 'g2b' | 'company' | 'performances' | 'ai' | 'notify';
+export const SETTINGS_SECTIONS = ['storage', 'mail-service', 'auto-compose', 'g2b', 'company', 'performances', 'ai', 'notify', 'file-name'] as const;
+export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
+export const isSettingsSection = (s: unknown): s is SettingsSection => (SETTINGS_SECTIONS as readonly unknown[]).includes(s);
 /** 오류를 고칠 수 있는 화면. ui/open 페이로드로 그대로 보낸다 */
 export type FixTarget = { page: 'recipients' } | { page: 'settings'; section: SettingsSection };
 export interface NoticeLookup { found: boolean; collectedAt?: string; collectStatus?: CollectStatus; noticeId?: string; bidCloseAt?: string; title?: string }
@@ -106,7 +108,7 @@ export type Msg =
   | { type: 'fs/permission-granted'; payload: void; response: void }  // grant 창→SW, SW→CS(target content)
   | { type: 'auto-compose/choose'; payload: { collectJobId: string; afterCollect: AfterCollect }; response: { applied: boolean } }  // ACTIVE collect면 스냅샷 변경, handoff ask 대기 중이면 즉시 해소
   | { type: 'auto-compose/dequeue'; payload: { collectJobId: string }; response: { removed: boolean } }
-  | { type: 'ui/open'; payload: { page: 'settings' | 'grant' | 'review' | 'mail' | 'recipients' | 'sidepanel' | 'evaluation'; noticeId?: string; section?: SettingsSection }; response: void }  // CS→SW: 확장 페이지 열기
+  | { type: 'ui/open'; payload: { page: 'settings' | 'grant' | 'review' | 'mail' | 'notice' | 'recipients' | 'sidepanel' | 'evaluation'; noticeId?: string; section?: SettingsSection }; response: void }  // CS→SW: 확장 페이지 열기
   | { type: 'notice/list'; payload: void; response: IndexEntry[] }  // 확장 페이지→SW→offscreen
   | { type: 'notice/get'; payload: { noticeId: string }; response: { notice: Notice; extraction: Extraction | null } | null }
   | { type: 'extraction/edit'; payload: { noticeId: string; key: ExtractionKey; value: unknown | null; note?: string }; response: { notice: Notice; extraction: Extraction } }
@@ -136,8 +138,11 @@ export type Msg =
   | { type: 'mail/sent-add'; payload: { noticeId: string; sentAt?: string; note?: string }; response: { record: SendRecord; notice: Notice } }
   | { type: 'mail/sent-void'; payload: { noticeId: string; recordId: string }; response: { notice: Notice } }
   | { type: 'mail/sent-view'; payload: { noticeId: string; recordId: string }; response: SentMailView | null }
-  | { type: 'mail/send-signal'; payload: { jobId: string; kind: 'click' | 'hotkey' | 'confirm'; confirmation?: 'ui_gone' | 'toast' | 'unload' }; response: void }  // CS→SW
-  | { type: 'mail/sent-record'; payload: { noticeId: string; jobId: string; composeRecordId?: string; provider?: MailProvider; kind: 'click' | 'hotkey' | 'confirm'; confirmation?: 'ui_gone' | 'toast' | 'unload' }; response: { recorded: boolean } }  // SW→offscreen
+  | { type: 'compose/send-click'; payload: { jobId: string; composeRecordId?: string; subject: string; /** 화면 주소 목록과 칸별 대조 */ to: string[]; cc: string[] }; response: { clicked: boolean; reason?: SendSkipReason } }  // offscreen→SW
+  | { type: 'compose/send-status'; payload: { jobId: string }; response: { tabAlive: boolean; clicked: boolean; confirmed: boolean; confirmation?: SendConfirmation } }  // offscreen→SW
+  | { type: 'compose/close-tab'; payload: { jobId: string }; response: { closed: boolean } }  // offscreen→SW
+  | { type: 'mail/send-signal'; payload: { jobId: string; kind: 'click' | 'hotkey' | 'auto' | 'confirm'; confirmation?: SendConfirmation }; response: void }  // CS→SW
+  | { type: 'mail/sent-record'; payload: { noticeId: string; jobId: string; composeRecordId?: string; provider?: MailProvider; kind: 'click' | 'hotkey' | 'auto' | 'confirm'; confirmation?: SendConfirmation }; response: { recorded: boolean } }  // SW→offscreen
   | { type: 'config/repair'; payload: { file: 'recipients' | 'groups' | 'templates' | 'performances' }; response: { backupPath: string } }
   | { type: 'g2b/detect'; payload: void; response: G2bDetected | null }  // popup→CS
   | { type: 'g2b/read-html'; payload: { noticeNo: string; round?: string };

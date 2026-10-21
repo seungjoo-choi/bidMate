@@ -1,6 +1,6 @@
 import type { ComposeSelectorSet, ComposeState } from '../../adapters/naverworks/types';
 import type { AttachResult, ComposeRecord, FieldResult } from '../../core/types/compose';
-import type { ComposeResult, Job, JobError, JobProgress, JobStatus, StepId } from '../../core/types/job';
+import type { ComposeResult, Job, JobError, JobProgress, JobStatus, SendSkipReason, StepId } from '../../core/types/job';
 import type { MailDraft } from '../../core/types/mail';
 import type { Settings } from '../../core/types/settings';
 import type { ComposeDetect, MsgType, PayloadOf, ResponseOf } from '../../messaging/protocol';
@@ -9,6 +9,7 @@ import { chunkBlob } from '../mail/chunker';
 import { draftToComposeFill, prepareMail } from '../mail/prepare';
 import { selectAttachTargets } from '../mail/attach-limits';
 import { planCompose } from '../mail/compose-plan';
+import { draftFingerprint } from '../../core/mail/send-fingerprint';
 import { appendComposeRecord, markComposed } from '../mail/record';
 
 export interface ComposeJobDeps {
@@ -16,11 +17,16 @@ export interface ComposeJobDeps {
   call: <T extends MsgType>(type: T, payload: PayloadOf<T>, timeoutMs: number) => Promise<ResponseOf<T>>;
   selectorSets: Record<string, ComposeSelectorSet>; now?: () => Date; sleep?: (ms: number) => Promise<void>;
   detectTimeoutMs?: number; attachPollMs?: number;
+  /** 취소되지 않은 발송 기록 수([바로 발송] 가드용) */
+  sentCount: (noticeId: string) => Promise<number>;
 }
 export interface ComposeJobOutcome { status: JobStatus; result?: ComposeResult; error?: JobError }
 
 const MB = 1024 * 1024;
-const T = { open: 60_000, detect: 10_000, fill: 90_000, attachBegin: 15_000, chunk: 30_000, end: 15_000, status: 10_000, verify: 15_000, short: 5_000 };
+const T = { open: 60_000, detect: 10_000, fill: 90_000, attachBegin: 15_000, chunk: 30_000, end: 15_000, status: 10_000, verify: 15_000, short: 5_000, sendClick: 10_000, sendStatus: 5_000 };
+const SEND_POLL_MS = 500;
+const CONFIRM_WAIT_MS = 15_000;
+const TAB_GONE_GRACE_MS = 3_000;
 const ATTACH_MIN_TIMEOUT_MS = 60_000;
 const ATTACH_BYTES_PER_SEC = 100 * 1024;
 
@@ -118,9 +124,9 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
     const isGmail = plan.provider === 'gmail';
     const attachDir = `${notice.folder}/attachments`;
 
-    const finish = async (
-      mode: ComposeResult['mode'], fields: FieldResult[], attachments: ComposeResult['attachments'], tabId: number | undefined,
-    ): Promise<ComposeJobOutcome> => {
+    type SendOut = NonNullable<ComposeResult['send']>;
+    interface WrittenRecord { recordId?: string; outcome: ComposeResult['outcome']; composedAt: Date }
+    const writeRecord = async (fields: FieldResult[], attachments: ComposeResult['attachments']): Promise<WrittenRecord> => {
       const allOk = fields.every((f) => f.status === 'ok') && attachments.every((a) => a.status === 'uploaded');
       const allFailed = fields.every((f) => f.status === 'failed');
       const outcome: ComposeResult['outcome'] = allFailed ? 'failed' : allOk ? 'ready_for_review' : 'partial';
@@ -137,13 +143,116 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
         recordId = record.id;
         await markComposed(deps.store, notice.id, outcome, composedAt);
       } catch { /* 기록 실패는 결과를 바꾸지 않는다(탭은 이미 열려 있음) */ }
-      check();
-      try { await deps.call('compose/focus', { jobId: job.id }, T.short); } catch { /* 무시 */ }
-      const result: ComposeResult = { noticeId: notice.id, folder: notice.folder, title: notice.basic.title.value ?? undefined, mode, provider: plan.provider, tabId, fields: fields.map(slim), attachments, outcome, recordId, attachDir };
+      return { recordId, outcome, composedAt };
+    };
+    const complete = async (
+      rec: WrittenRecord, mode: ComposeResult['mode'], fields: FieldResult[], attachments: ComposeResult['attachments'], tabId: number | undefined,
+      send: SendOut | undefined, focus: boolean, afterClick = false,
+    ): Promise<ComposeJobOutcome> => {
+      // 보내기를 누른 뒤에는 취소로 결과를 지우지 않는다(메일은 이미 나갔을 수 있다)
+      if (!afterClick) check();
+      if (focus) { try { await deps.call('compose/focus', { jobId: job.id }, T.short); } catch { /* 무시 */ } }
+      const { outcome, recordId } = rec;
+      const result: ComposeResult = { noticeId: notice.id, folder: notice.folder, title: notice.basic.title.value ?? undefined, mode, provider: plan.provider, tabId, fields: fields.map(slim), attachments, outcome, recordId, attachDir, ...(send ? { send } : {}) };
       if (outcome === 'failed') {
         return { status: 'failed', result, error: { code: 'COMPOSE_FILL_FAILED', message: '입력에 모두 실패했습니다.', step: 'fill_fields', retryable: true } };
       }
-      return { status: outcome === 'ready_for_review' ? 'completed' : 'partial', result };
+      const notSent = params.autoSend !== undefined && send?.state !== 'sent';
+      // 실제로 보냈으면 완료다(네이버웍스 수신자는 주소 전달이라 outcome이 partial이어도 클릭 직전 화면 대조를 통과했다)
+      if (send?.state === 'sent') return { status: 'completed', result };
+      return { status: outcome === 'ready_for_review' && !notSent ? 'completed' : 'partial', result };
+    };
+    const finish = async (
+      mode: ComposeResult['mode'], fields: FieldResult[], attachments: ComposeResult['attachments'], tabId: number | undefined,
+    ): Promise<ComposeJobOutcome> => complete(await writeRecord(fields, attachments), mode, fields, attachments, tabId, undefined, true);
+
+    const SKIP_LABEL: Record<SendSkipReason, string> = {
+      NOT_SUPPORTED: '이 웹메일은 자동 발송을 지원하지 않습니다', RETRY_ATTEMPT: '재시도 작업은 자동 발송하지 않습니다', AUTO_JOB: '자동 시작된 작업은 자동 발송하지 않습니다',
+      FIELDS_NOT_OK: '입력 확인이 끝나지 않았습니다', ATTACH_NOT_OK: '첨부 확인이 끝나지 않았습니다', FINGERPRINT_MISMATCH: '미리보기와 메일 내용이 달라졌습니다',
+      SENT_COUNT_CHANGED: '그 사이 발송 이력이 바뀌었습니다', BUTTON_NOT_FOUND: '보내기 버튼을 찾지 못했습니다', BUTTON_DISABLED: '보내기 버튼을 누를 수 없는 상태입니다',
+      SUBJECT_MISMATCH: '화면의 제목이 달라졌습니다', RECIPIENT_MISMATCH: '화면의 수신자가 초안과 다릅니다', ALREADY_FIRED: '이미 보내기가 눌렸습니다', CLICK_FAILED: '보내기를 누르지 못했습니다',
+    };
+    /** autoSend 요청 시 가드 → 클릭 → 확인. 가드 실패면 클릭하지 않고 skipped. 확인 대기 중에는 focus를 부르지 않는다. */
+    const finishWithSend = async (
+      mode: ComposeResult['mode'], fields: FieldResult[], attachments: ComposeResult['attachments'], tabId: number | undefined, verifyState: ComposeState | undefined,
+    ): Promise<ComposeJobOutcome> => {
+      const autoSend = params.autoSend;
+      if (!autoSend) {
+        emit('send_mail', 'skipped', '자동 발송 요청 없음');
+        return await finish(mode, fields, attachments, tabId);
+      }
+      const skipFinish = async (reason: SendSkipReason, rec?: WrittenRecord) => {
+        emit('send_mail', 'skipped', SKIP_LABEL[reason]);
+        return await complete(rec ?? await writeRecord(fields, attachments), mode, fields, attachments, tabId, { state: 'skipped', reason }, true);
+      };
+      const guardFail = (): SendSkipReason | undefined => {
+        if (!plan.selector?.set.autoSend?.button) return 'NOT_SUPPORTED';
+        if (job.attempt !== 1) return 'RETRY_ATTEMPT';
+        if (job.auto) return 'AUTO_JOB';
+        // 주소로 전달한 받는사람/참조(prefilled)는 화면 대조 셀렉터가 있으면 통과시키고, 클릭 직전 SW가 화면 수신자와 대조한다.
+        const chipCheck = !!plan.selector.set.autoSend.recipientLists;
+        const fieldOk = (f: FieldResult) => f.status === 'ok' || (chipCheck && f.status === 'prefilled' && (f.field === 'to' || f.field === 'cc'));
+        if (!verifyState || !fields.every(fieldOk)) return 'FIELDS_NOT_OK';
+        const attachOk = attachments.length === files.length && attachments.every((a) => a.status === 'uploaded')
+          && !verifyState.attachments.some((a) => a.uploading) && verifyState.attachments.length >= files.length;
+        if (!attachOk) return 'ATTACH_NOT_OK';
+        if (draftFingerprint(draft) !== autoSend.fingerprint) return 'FINGERPRINT_MISMATCH';
+        return undefined;
+      };
+      let reason = guardFail();
+      if (!reason) {
+        let count: number | undefined;
+        try { count = await deps.sentCount(notice.id); } catch { /* 확인 불가 → 가드 실패 */ }
+        if (count !== autoSend.expectSentCount) reason = 'SENT_COUNT_CHANGED';
+      }
+      if (reason) return await skipFinish(reason);
+      check();
+
+      // 클릭 전에 기록을 먼저 쓴다(recordId를 send-click에 동봉)
+      const rec = await writeRecord(fields, attachments);
+      check();
+      // 여기서부터는 abort와 경합하지 않는다. 클릭 rpc가 진행 중일 때 취소해도 SW가 이미 눌렀을 수 있으므로
+      // 결과(sent/unconfirmed/unknown)를 끝까지 받아 남긴다. 취소 중인 잡의 클릭은 SW가 거부한다.
+      const call = <K extends MsgType>(type: K, payload: PayloadOf<K>, ms: number) => deps.call(type, payload, ms) as Promise<ResponseOf<K>>;
+      emit('send_mail', 'running', '보내기를 누르는 중');
+      let clickedAt: string;
+      try {
+        const r = await call('compose/send-click', { jobId: job.id, ...(rec.recordId ? { composeRecordId: rec.recordId } : {}), subject: fill.subject, to: fill.to, cc: fill.cc }, T.sendClick);
+        if (!r.clicked) return await skipFinish(r.reason ?? 'CLICK_FAILED', rec);
+        clickedAt = now().toISOString();
+      } catch {
+        emit('send_mail', 'failed', '발송 여부를 알 수 없습니다');
+        return await complete(rec, mode, fields, attachments, tabId, { state: 'unknown' }, true, true);
+      }
+
+      emit('send_mail', 'running', '발송 완료를 확인하는 중');
+      const waitStart = now().getTime();
+      let goneAt: number | undefined;
+      for (;;) {
+        let st: ResponseOf<'compose/send-status'> | undefined;
+        try { st = await call('compose/send-status', { jobId: job.id }, T.sendStatus); } catch { /* 다음 폴링 */ }
+        if (st?.confirmed) {
+          let tabClosed = true;
+          if (st.tabAlive) {
+            try { tabClosed = (await call('compose/close-tab', { jobId: job.id }, T.short)).closed; } catch { tabClosed = false; }
+          }
+          emit('send_mail', 'done', '발송 완료');
+          return await complete(rec, mode, fields, attachments, tabId, { state: 'sent', confirmation: st.confirmation, tabClosed, clickedAt }, false, true);
+        }
+        // 숨은 탭은 보낸 뒤 스스로 닫힌다. SW의 탭 제거 기록(offscreen 왕복)이 끝날 시간을 준다.
+        if (st && !st.tabAlive) {
+          goneAt ??= now().getTime();
+          if (now().getTime() - goneAt >= TAB_GONE_GRACE_MS) {
+            emit('send_mail', 'failed', '발송 여부를 알 수 없습니다');
+            return await complete(rec, mode, fields, attachments, tabId, { state: 'unknown', clickedAt }, true, true);
+          }
+        }
+        if (now().getTime() - waitStart >= CONFIRM_WAIT_MS) {
+          emit('send_mail', 'failed', '발송 완료를 확인하지 못했습니다');
+          return await complete(rec, mode, fields, attachments, tabId, { state: 'unconfirmed', clickedAt }, true, true);
+        }
+        await sleep(SEND_POLL_MS);
+      }
     };
 
     // 3. open_compose
@@ -176,7 +285,7 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
       });
       const attachError = isGmail || plan.prefilled.length > 0 ? 'ATTACH_MANUAL' : 'SELECTOR_UNVERIFIED';
       const attachments = files.map((f): ComposeResult['attachments'][number] => ({ fileId: f.fileId, name: f.name, size: f.size, status: 'skipped', method: 'none', elapsedMs: 0, error: attachError }));
-      return await finish(plan.prefilled.length > 0 ? 'url' : 'manual', fields, attachments, tabId);
+      return await finishWithSend(plan.prefilled.length > 0 ? 'url' : 'manual', fields, attachments, tabId, undefined);
     }
 
     // 5. 감지
@@ -321,8 +430,10 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
 
     // 7. verify
     emit('verify', 'running', '입력 결과를 확인하는 중');
+    let verifyState: ComposeState | undefined;
     try {
       const state = await rpc('compose/verify', { jobId: job.id }, T.verify);
+      verifyState = state;
       fields = reverify(fields, state, draft, fill, notice.basic.title.value);
       emit('verify', 'done', '확인 완료');
     } catch (e) {
@@ -331,7 +442,7 @@ export async function runComposeJob(input: { job: Job; settings: Settings }, dep
     }
 
     // 8. 마무리
-    return await finish(plan.prefilled.length > 0 ? 'url' : 'auto', fields, attachments, tabId);
+    return await finishWithSend(plan.prefilled.length > 0 ? 'url' : 'auto', fields, attachments, tabId, verifyState);
   } catch (e) {
     if (e instanceof Aborted || signal.aborted) {
       if (opened) { try { await deps.call('compose/abort', { jobId: job.id }, T.short); } catch { /* 무시 */ } }

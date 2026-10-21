@@ -30,6 +30,11 @@ export const formatAmount = (x: number | null): string => (x === null ? DASH : `
 export const rankLabel = (r: number | null): string => (r === null ? DASH : `${r}위`);
 /** `2026-08-18 10:51:08` 같은 값에서 날짜만 */
 export const dateOnly = (s: string | null): string | null => (s ? s.slice(0, 10) : null);
+/** 화면 표시용 짧은 업체명. 법인 형태(주식회사, (주), ㈜ 등)를 뺀다. 다 빠지면 원래 이름 */
+export function shortName(name: string): string {
+  const s = name.replace(/주식회사|유한회사|합자회사|\((?:주|유|합)\)|㈜/g, ' ').replace(/\s+/g, ' ').trim();
+  return s || name;
+}
 export const judgeLabel = (index: number): string => `위원 ${index}`;
 
 export function excludedNote(indices: number[]): string {

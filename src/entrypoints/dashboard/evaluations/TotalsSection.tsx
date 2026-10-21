@@ -1,7 +1,7 @@
 import { columnMax, totalRanks } from '../../../core/evaluation/analyze';
 import { Button } from '../../../ui/components';
 import type { EvalCtx } from './ctx';
-import { excludedNote, f1, f2, judgeLabel, rankLabel } from './eval-view';
+import { excludedNote, f1, f2, judgeLabel, rankLabel, shortName } from './eval-view';
 import { HEAD_ROW, OURS_ROW, ROW, Section, TD, TH } from './Section';
 
 export function TotalsSection({ ctx, onToggle, onClear }: { ctx: EvalCtx; onToggle: (index: number) => void; onClear: () => void }) {
@@ -38,7 +38,7 @@ export function TotalsSection({ ctx, onToggle, onClear }: { ctx: EvalCtx; onTogg
               return (
                 <tr key={b.seq} className={`${ROW} ${mine ? OURS_ROW : ''}`}>
                   <th scope="row" className={`${TD} pl-6 text-left font-normal`}>
-                    <span className="font-semibold">{b.name}</span>
+                    <span className="font-semibold" title={b.name}>{shortName(b.name)}</span>
                     {mine && <span className="ml-2 rounded-full bg-primary px-2 py-px text-[0.6875rem] font-semibold text-primary-ink">우리</span>}
                     {b.excluded && <span className="ml-2 rounded-full bg-sunken px-2 py-px text-[0.6875rem] font-semibold text-muted">제외</span>}
                   </th>

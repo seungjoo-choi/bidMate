@@ -193,7 +193,7 @@ export function App() {
   const collect = () => startOnTab((id) => sendToTab(id, 'g2b/collect', undefined));
   const retry = () => { if (job) void startOnTab((id) => sendToTab(id, 'g2b/retry', { jobId: job.id })); };
   const cancel = (force: boolean, target: Job | null = job) => { if (target) void send('job/cancel', { jobId: target.id, force }).catch(() => undefined); };
-  const openUi = (page: 'settings' | 'grant' | 'review', noticeId?: string) => void send('ui/open', { page, noticeId }).catch(() => undefined);
+  const openUi = (page: 'settings' | 'grant' | 'review' | 'mail', noticeId?: string) => void send('ui/open', { page, noticeId }).catch(() => undefined);
   const openDashboard = () => void chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
   // 실행·취소만 한다. 적용은 대시보드 확인 탭에서(사이드패널에서 ai/apply 금지).
   const runAi = () => {
@@ -376,7 +376,7 @@ export function App() {
           <SummaryCard view={summary}
             ai={noticeId ? { view: aiBusy && aiView.kind === 'run' ? { ...aiView, disabled: true } : aiView, provider: aiProvider ?? 'claude', providerLabel: PROVIDERS[aiProvider ?? 'claude'].label,
               onRun: runAi, onCancel: cancelAi, onOpenReview: () => openUi('review', noticeId), onOpenSettings: () => void send('ui/open', { page: 'settings', section: 'ai' }).catch(() => undefined) } : undefined}
-            jobs={jobs} noticeRef={current.notice.ref} copied={copied}
+            copied={copied} onMail={(id) => openUi('mail', id)}
             onReview={(id) => openUi('review', id)} onCopyFolder={copyFolder} />
         )}
 

@@ -164,7 +164,7 @@ export function DiagnosticsSection({ tab }: { tab: TabInfo | null }) {
     }
   };
 
-  const openSettings = () => void chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html#/settings') });
+  const openSettings = () => void chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html#/settings?section=mail-service') });
 
   const mmss = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
 

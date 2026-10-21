@@ -17,13 +17,13 @@ describe('handoffView', () => {
   it('handoff 없음 -> null', () => {
     expect(handoffView(collect(), null)).toBeNull();
   });
-  it('edit -> 대시보드 확인 안내 + 편집', () => {
+  it('edit -> 상세/작성 안내 + 메일 작성', () => {
     expect(handoffView(collect({ action: 'edit', opened: true, at }), null))
-      .toMatchObject({ kind: 'edit', text: '대시보드에서 메일 내용을 확인한 뒤 작성하세요', tone: 'info', action: 'open-mail', actionLabel: '편집', noticeId: 'n1' });
+      .toMatchObject({ kind: 'edit', text: '수집 완료. 상세를 보거나 메일을 작성하세요', tone: 'info', action: 'open-mail', actionLabel: '메일 작성', noticeId: 'n1' });
   });
-  it('ask -> 선택 안내 + 편집', () => {
+  it('ask -> 상세/작성 안내 + 메일 작성', () => {
     expect(handoffView(collect({ action: 'ask', at }), null))
-      .toMatchObject({ kind: 'ask', text: '수집 완료. 대시보드에서 편집하거나 바로 작성할 수 있습니다', tone: 'info', action: 'open-mail', actionLabel: '편집', noticeId: 'n1' });
+      .toMatchObject({ kind: 'ask', text: '수집 완료. 상세를 보거나 메일을 작성하세요', tone: 'info', action: 'open-mail', actionLabel: '메일 작성', noticeId: 'n1' });
   });
   it('compose queued -> 대기 취소', () => {
     expect(handoffView(collect({ action: 'compose', state: 'queued', at }), null))
@@ -82,6 +82,13 @@ describe('handoffView', () => {
     expect(n('dequeued')).toMatchObject({ text: '자동 메일 작성을 취소했습니다', action: 'none' });
     expect(n('disabled')).toBeNull();
     expect(n('no_notice')).toBeNull();
+  });
+});
+
+describe('handoffView 발송 상태', () => {
+  it('send-issue(unknown) -> compose_partial, error', () => {
+    const c = compose({ status: 'partial', result: cres({ send: { state: 'unknown' } }) });
+    expect(handoffView(collect(started), c)).toMatchObject({ kind: 'compose_partial', tone: 'error' });
   });
 });
 

@@ -71,7 +71,7 @@ export function normalizeTemplate(raw: unknown, now: Date): { template: Template
       });
     }
     const inlineValue = typeof s.inlineValue === 'string' && s.inlineValue ? s.inlineValue : undefined;
-    sections.push({ id: typeof s.id === 'string' && s.id ? s.id : newId('sec'), title: str(s.title), ...(inlineValue ? { inlineValue } : {}), items });
+    sections.push({ id: typeof s.id === 'string' && s.id ? s.id : newId('sec'), title: str(s.title), ...(inlineValue ? { inlineValue } : {}), items, ...(s.plain === true ? { plain: true } : {}) });
   }
   const template: Template = {
     id, name, isDefault: r.isDefault === true,

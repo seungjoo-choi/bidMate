@@ -12,6 +12,7 @@ export const STEP_ICON: Record<string, string> = {
   fill_fields: stepSvg('si-type', '<rect x="2" y="6" width="20" height="12" rx="2"/><path class="txt" d="M6 12h8" stroke-width="2.6"/><path class="caret" d="M17 9v6"/>'),
   attach_files: stepSvg('si-clip', '<g class="clip"><path d="M21.4 11l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></g>'),
   verify: stepSvg('si-verify', '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path class="ck" d="M8.5 12l2.5 2.5 4.5-5"/>'),
+  send_mail: stepSvg('si-send', '<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>'),
 };
 
 export const STEP_ICON_CSS = `

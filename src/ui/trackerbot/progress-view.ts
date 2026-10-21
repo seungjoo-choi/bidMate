@@ -1,9 +1,10 @@
 import { noticeLabel } from '../../core/model/ids';
-import type { Job } from '../../core/types/job';
-import { COMPOSE_STEP_LABEL } from '../compose-view';
-import { COLLECT_STEP_LABEL, progressRatio, runningStepSpan } from '../g2b-panel/panel-view';
-import { handoffAsk, handoffQueued, isActive, type PopupChoiceAction } from './controller';
-import { rowView, type RowEntry, type RowSubAction } from './row-view';
+import { activeItem } from '../progress-card/active-item';
+import type { ProgressAction, ProgressItem, ProgressPanelView, ProgressState } from '../progress-card/types';
+import { handoffAsk, handoffQueued, isActive } from './controller';
+import { rowView, type RowEntry } from './row-view';
+
+export type { ProgressState, ProgressActionId, ProgressAction, ProgressItem, ProgressPanelView } from '../progress-card/types';
 
 const MAX_ITEMS = 5;
 
@@ -14,67 +15,18 @@ export interface ProgressSession {
   dismissed: ReadonlyMap<string, string>;
   collapsed: boolean;
 }
-export type ProgressState = 'active' | 'ok' | 'warn' | 'error';
-export type ProgressActionId = 'retry' | 'grant' | RowSubAction | PopupChoiceAction;
-export interface ProgressAction { id: ProgressActionId; label: string }
-export interface ProgressItem {
-  key: string;
-  title: string;
-  phase: 'collect' | 'compose';
-  state: ProgressState;
-  stepLabel: string;
-  /** active에서만. 진행 중 단계 id(COLLECT_STEP_LABEL, COMPOSE_STEP_LABEL의 키). 카드가 단계 아이콘을 고르는 데 쓴다 */
-  stepId?: string;
-  detail?: string;
-  /** active에서만 0..1 */
-  ratio?: number;
-  /** active에서만. 진행 중 단계가 ratio에서 차지하는 몫(단계 무게 기준). 진행률이 없는 단계 동안 카드가 막대를 조금씩 채우는 데 쓴다 */
-  stepSpan?: number;
-  cancel?: { target: 'collect' | 'compose'; cancelling: boolean };
-  /** 끝났지만 사용자의 완료 후 선택을 기다리는 항목(자동 소멸 제외) */
-  awaiting?: true;
-  /** 끝난 항목에서만. 행의 주 버튼과 같은 동작(메일 보기·검수·다시 시도 등) */
-  actions?: ProgressAction[];
-}
-export type ProgressPanelView =
-  | { kind: 'hidden' }
-  | { kind: 'pill'; text: string; activeCount: number }
-  | { kind: 'card'; headline: string; items: ProgressItem[]; moreCount: number; activeCount: number; settledCount: number };
-
-const fmtSize = (n: number): string => (n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`);
-
-/** 진행 중 잡 -> 항목. 라벨은 단계 라벨 맵을 쓰고 job.label은 detail 보조로만 쓴다. */
-function activeItem(key: string, title: string, a: Job): ProgressItem {
-  const phase = a.type === 'compose' ? 'compose' : 'collect';
-  const fallback = phase === 'collect' ? '수집 중' : '메일 작성 중';
-  let base = (phase === 'collect' ? COLLECT_STEP_LABEL : COMPOSE_STEP_LABEL)[a.currentStep ?? ''] ?? fallback;
-  if (a.status === 'queued' && !a.currentStep) base = '대기 중';
-  const step = a.steps.find((s) => s.id === a.currentStep);
-  const stepLabel = step?.progress ? `${base} (${step.progress.done}/${step.progress.total})` : base;
-  let detail: string | undefined;
-  if (step?.bytes?.name) {
-    const { name, received, total } = step.bytes;
-    detail = `${name} · ${fmtSize(received)}${total ? `/${fmtSize(total)}` : ''}`;
-  } else {
-    const rem = a.label?.startsWith(base) ? a.label.slice(base.length).replace(/^\s*\(\d+\/\d+\)\s*,?\s*/, '').trim() : (a.label ?? '');
-    detail = rem || undefined;
-  }
-  return {
-    key, title, phase, state: 'active', stepLabel, stepId: a.currentStep, detail,
-    ratio: progressRatio(a.steps), stepSpan: runningStepSpan(a.steps), cancel: { target: phase, cancelling: a.status === 'cancelling' },
-  };
-}
 
 /**
  * 끝난 행의 버튼 -> 팝업 버튼. 행에 버튼이 없는 성공 완료도 대시보드로 갈 길은 남긴다.
  * error의 'settings'는 행과 같은 '설정' 라벨을 쓴다.
  */
-function settledActions(rv: ReturnType<typeof rowView>, entry: RowEntry): ProgressAction[] | undefined {
+function settledActions(rv: ReturnType<typeof rowView>): ProgressAction[] | undefined {
   const out: ProgressAction[] = [];
-  if (rv.kind === 'done' && handoffAsk(entry.job)) {
-    out.push({ id: 'choose-dashboard', label: '대시보드 편집' }, { id: 'choose-compose', label: '바로 작성' });
-  } else if (rv.kind === 'done') {
-    out.push(rv.action ? { id: rv.action, label: rv.actionLabel ?? '대시보드에서 보기' } : { id: 'open-mail', label: '대시보드에서 보기' });
+  if (rv.kind === 'done') {
+    // 대시보드는 저절로 열지 않는다. [상세] [검수 등 행 버튼] [메일 작성] 중 눌러서 간다(바로 작성·고르기는 없앴다)
+    out.push({ id: 'open-notice', label: '상세' });
+    if (rv.action && rv.action !== 'open-mail') out.push({ id: rv.action, label: rv.actionLabel ?? '대시보드에서 보기' });
+    out.push({ id: 'open-mail', label: '메일 작성' });
   } else if (rv.kind === 'error') {
     if (rv.action !== 'none') out.push({ id: rv.action, label: rv.actionLabel ?? (rv.action === 'settings' ? '설정' : '다시 시도') });
     if (rv.subAction) out.push({ id: rv.subAction, label: rv.subActionLabel ?? '설정' });
@@ -118,7 +70,7 @@ export function progressItems(entries: RowEntry[], session: ProgressSession): Pr
     const phase = compose || job.handoff?.action === 'compose' ? 'compose' : 'collect';
     const at = compose && compose.updatedAt > job.updatedAt ? compose.updatedAt : job.updatedAt;
     const awaiting = rv.kind === 'done' && handoffAsk(job);
-    settled.push({ item: { key, title, phase, state, stepLabel: rv.label, detail, actions: settledActions(rv, entry), ...(awaiting ? { awaiting: true as const } : {}) }, at });
+    settled.push({ item: { key, title, phase, state, stepLabel: rv.label, detail, actions: settledActions(rv), ...(awaiting ? { awaiting: true as const } : {}) }, at });
   }
 
   actives.sort((x, y) => (x.at < y.at ? -1 : x.at > y.at ? 1 : 0));

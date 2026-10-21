@@ -3,6 +3,8 @@ import { BusError, listen, sendToTab } from '../messaging/bus';
 import { getJob, isOffscreenSender, setComposeTab } from './job-coordinator';
 import { getSettingsCache } from './site-registry';
 import { injectSendWatch, rememberSendWatch } from './send-signal';
+import type { ComposeSelectorSet } from '../adapters/naverworks/types';
+import { SELECTOR_SETS, mergeSelectorSet } from '../adapters/naverworks/selectors';
 
 const LOAD_WAIT_MS = 20_000;
 const CS_FILE = 'naverworks-compose.js';
@@ -13,6 +15,13 @@ type Cfg = ComposeSelectorConfig & { jobId?: string; maxFileMB?: number; anchor?
 
 // jobId별 셀렉터 설정(재주입용). SW가 재시작되면 사라지지만 detect는 offscreen 폴링으로 재시도된다.
 const selectors = new Map<string, Cfg>();
+
+/** 잡의 현재 셀렉터셋(기본셋+오버라이드). SW 재시작 등으로 설정이 없으면 undefined. */
+export function getComposeSelectorSet(jobId: string): ComposeSelectorSet | undefined {
+  const cfg = selectors.get(jobId);
+  const base = cfg && SELECTOR_SETS[cfg.selectorSetId];
+  return base ? mergeSelectorSet(base, cfg.selectorOverrides) : undefined;
+}
 
 const err = (code: string, message: string) => new BusError(code, message);
 
@@ -65,6 +74,7 @@ async function open(p: PayloadOf<'compose/open'>): Promise<{ tabId: number }> {
   // 주소/수동 방식은 사용자가 바로 이어서 작업하므로 앞에 띄운다.
   const tab = await chrome.tabs.create({ windowId: win.id, url: p.url, active: !p.selector });
   const tabId = tab.id as number;
+  try { await chrome.tabs.update(tabId, { autoDiscardable: false }); } catch { /* 실패 무시 */ }
   await setComposeTab(p.jobId, { composeTabId: tabId });
   if (p.sendWatch) rememberSendWatch(p.jobId, p.sendWatch);
   if (!p.selector) {   // 주소 방식: 셀렉터 저장과 CS 주입 없이 로딩만 기다린다

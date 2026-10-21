@@ -130,7 +130,7 @@ export function SentHistoryPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className={`text-sm ${voided ? 'text-faint' : 'text-muted'}`}>{r.source === 'auto' ? '자동' : '수동'}</span>
+                            <span className={`text-sm ${voided ? 'text-faint' : 'text-muted'}`}>{r.source === 'auto' ? (r.signalKind === 'auto' ? '자동 발송' : '자동') : '수동'}</span>
                             {voided
                               ? <StatusBadge status="idle">취소됨</StatusBadge>
                               : r.source === 'auto' && (r.confirmed ? <StatusBadge status="ok">확인됨</StatusBadge> : <StatusBadge status="warn">확인 없음</StatusBadge>)}

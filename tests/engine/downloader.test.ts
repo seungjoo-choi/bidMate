@@ -170,3 +170,39 @@ describe('downloadAttachments: 서버 파일명 반영', () => {
     expect(store.files.has('notices/2026/n/attachments/a (2).hwp')).toBe(true);
   });
 });
+
+describe('downloadAttachments: 파일 이름 태그', () => {
+  const tagged = { ...settings, namePrefix: { enabled: true, text: '[대외비 2군]' } };
+  const disp = (name: string) => ({ 'content-disposition': `attachment;filename=${encodeURIComponent(name)};` });
+  it('켜져 있으면 저장 파일명 앞에 태그 + 한 칸을 붙이고 namePrefix를 남긴다', async () => {
+    const store = new MemoryStore();
+    const [a] = await downloadAttachments([att('공고문.hwp')], { ...base(store, async () => body('hello')), settings: tagged });
+    expect(a).toMatchObject({ originalName: '공고문.hwp', savedName: '[대외비 2군] 공고문.hwp', namePrefix: '[대외비 2군]', status: 'saved' });
+    expect(store.files.has('notices/2026/n/attachments/[대외비 2군] 공고문.hwp')).toBe(true);
+  });
+  it('꺼져 있으면 붙이지 않는다', async () => {
+    const store = new MemoryStore();
+    const off = { ...settings, namePrefix: { enabled: false, text: '[대외비 2군]' } };
+    const [a] = await downloadAttachments([att('공고문.hwp')], { ...base(store, async () => body('hello')), settings: off });
+    expect(a?.savedName).toBe('공고문.hwp');
+    expect(a?.namePrefix).toBeUndefined();
+  });
+  it('원래 이름이 이미 태그로 시작하면 다시 붙이지 않는다', async () => {
+    const store = new MemoryStore();
+    const [a] = await downloadAttachments([att('[대외비 2군] 공고문.hwp')], { ...base(store, async () => body('hello')), settings: tagged });
+    expect(a?.savedName).toBe('[대외비 2군] 공고문.hwp');
+  });
+  it('이미 savedName이 있는 파일은 태그를 켜도 이름을 바꾸지 않는다', async () => {
+    const store = new MemoryStore();
+    store.files.set('notices/2026/n/attachments/a.pdf', new Uint8Array(5));
+    const [a] = await downloadAttachments([att('a.pdf', { savedName: 'a.pdf', status: 'saved', savedSize: 5 })], { ...base(store, vi.fn()), settings: tagged });
+    expect(a?.savedName).toBe('a.pdf');
+    expect(a?.namePrefix).toBeUndefined();
+  });
+  it('서버 파일명으로 바뀌어도 태그를 유지한다', async () => {
+    const store = new MemoryStore();
+    const [a] = await downloadAttachments([att('규격서1')], { ...base(store, async () => body('hello', disp('제안요청서.hwp'))), settings: tagged });
+    expect(a?.savedName).toBe('[대외비 2군] 제안요청서.hwp');
+    expect(store.files.has('notices/2026/n/attachments/[대외비 2군] 제안요청서.hwp')).toBe(true);
+  });
+});

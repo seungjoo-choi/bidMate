@@ -36,4 +36,7 @@ export const naverworksV1: ComposeSelectorSet = {
   },
   forbidden: { send: ['[data-hotkey="sendKey"]'], textPatterns: ['보내기', '전송', 'Send', '발송'] },
   sendWatch: { buttons: ['button[data-hotkey="sendKey"]'], textPatterns: ['보내기'], hotkey: true, gone: '#cont_flex_area input[name="subject"]' },
+  // 주소 목록은 2026-10-21 콘솔 실측: 칸마다 .list_addrobj(li 칩 + li.new_addr 입력), 화면 순서 받는사람·참조·숨은참조.
+  // 칩 주소는 div.addr_obj_wrap > div.addr_obj > span(이름이 붙으면 '이름 <주소>'). 세 칸 순서는 사용자 실측으로 확인.
+  autoSend: { button: 'button.lw_btn_point[data-hotkey="sendKey"]', recipientLists: { list: '.list_addrobj', chip: 'div.addr_obj_wrap > div.addr_obj > span' } },
 };

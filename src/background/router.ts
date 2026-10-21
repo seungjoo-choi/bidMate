@@ -5,7 +5,7 @@ import { withDefaults } from '../core/model/default-settings';
 import type { Settings } from '../core/types/settings';
 import { PROVIDERS } from '../engine/ai/providers';
 import { redactKey } from '../adapters/g2b/openapi';
-import { SIDEPANEL_FOCUS_KEY, type Envelope, type MsgType, type PayloadOf, type ResponseOf } from '../messaging/protocol';
+import { SIDEPANEL_FOCUS_KEY, isSettingsSection, type Envelope, type MsgType, type PayloadOf, type ResponseOf } from '../messaging/protocol';
 import { openDashboard } from './dashboard-tabs';
 import { assertExtensionSender, isOffscreenSender } from './job-coordinator';
 import { getInboxHost } from './site-registry';
@@ -360,6 +360,8 @@ function registerUiMessages(): void {
         await chrome.windows.create({ url: chrome.runtime.getURL('dashboard.html#/grant'), type: 'popup', width: 420, height: 300 });
       } else if (page === 'review' && enc) {
         await openDashboard(`#/review/${enc}`, { nearTabId: near });
+      } else if (page === 'notice' && enc) {
+        await openDashboard(`#/notices/${enc}`, { nearTabId: near });
       } else if (page === 'mail' && enc) {
         await openDashboard(`#/mail/${enc}`, { nearTabId: near });
       } else if (page === 'evaluation') {
@@ -368,8 +370,7 @@ function registerUiMessages(): void {
         await openDashboard('#/recipients', { nearTabId: near });
       } else {
         // 같은 카드로 다시 보내도 hashchange가 나도록 시각을 붙인다
-        const known = section === 'storage' || section === 'mail-service' || section === 'auto-compose' || section === 'g2b' || section === 'ai';
-        await openDashboard(known ? `#/settings?section=${section}&t=${Date.now()}` : '#/settings', { nearTabId: near });
+        await openDashboard(isSettingsSection(section) ? `#/settings?section=${section}&t=${Date.now()}` : '#/settings', { nearTabId: near });
       }
     },
     'sw',

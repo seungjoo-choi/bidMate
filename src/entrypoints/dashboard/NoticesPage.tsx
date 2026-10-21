@@ -1,9 +1,11 @@
-import { BellRing, Search } from 'lucide-react';
+import { BellRing, Download, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CollectStatus } from '../../core/types/notice';
 import type { ExtractionStatus } from '../../core/types/extraction';
 import type { IndexEntry } from '../../core/types/index-file';
 import { send } from '../../messaging/bus';
+import { evalErrorText } from '../../core/evaluation/error-text';
+import { EVAL_COLLECT_UI_TIMEOUT_MS } from '../../core/evaluation/limits';
 import { FsErrorAlert } from './FsErrorAlert';
 import { noticeHash } from './route';
 import { kindOf, noticeLabel } from '../../core/model/ids';
@@ -19,6 +21,7 @@ import { dDayLevel, formatDDay, formatDate, formatDateTime, isDueSoon, isPast } 
 import { AiBatchPanel } from './AiBatchPanel';
 import { FollowMenu, useFollowToggle } from './FollowToggle';
 import { followButton, followHint, type FollowAction, isFollowing, isWon, resultCell } from '../../ui/notices/result-view';
+import { type EvalBatchState, runEvalBatch, selectableForEval } from '../../ui/notices/eval-fetch-view';
 import { PageTitle } from './menu';
 import { ResultSummaryStrip } from './stats/ResultSummaryStrip';
 import { SortHeader, useSort, type SortValue } from './table-sort';
@@ -37,7 +40,7 @@ const EXTRACT_BADGE: Record<ExtractionStatus, { tone: BadgeStatus; text: string 
   unsupported: { tone: 'idle', text: '분석 불가' }, failed: { tone: 'error', text: '추출 실패' }, not_run: { tone: 'idle', text: '미분석' },
 };
 
-// 체크박스 열은 [AI로 보완할 공고 고르기]를 눌렀을 때만 둔다(평소 목록이 AI 분석처럼 보이지 않게).
+// 체크박스 열은 [AI로 보완할 공고 고르기]·[평가점수 가져올 공고 고르기]를 눌렀을 때만 둔다(평소 목록이 AI 분석처럼 보이지 않게).
 const GRID = 'grid grid-cols-[40px_minmax(0,1fr)_180px_110px_110px_130px_80px_32px] items-center gap-6 px-5';
 const GRID_PICK = 'grid grid-cols-[18px_40px_minmax(0,1fr)_180px_110px_110px_130px_80px_32px] items-center gap-6 px-5';
 
@@ -57,8 +60,12 @@ export function NoticesPage() {
   const [query, setQuery] = useState('');
   // 선택은 이 컴포넌트 state에만 둔다(필터·검색·정렬을 바꿔도 유지, 페이지를 떠나면 사라진다).
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
-  const [picking, setPicking] = useState(false);
-  const stopPicking = () => { setPicking(false); setSelected(new Set()); };
+  // 선택 모드: AI 일괄 보완 또는 평가점수 일괄 가져오기. 모드마다 고를 수 있는 공고가 다르다.
+  const [picking, setPicking] = useState<null | 'ai' | 'eval'>(null);
+  const stopPicking = () => { setPicking(null); setSelected(new Set()); };
+  const [evalHave, setEvalHave] = useState<Set<string>>(() => new Set());
+  const [evalBatch, setEvalBatch] = useState<EvalBatchState | null>(null);
+  const evalCancel = useRef(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const batch = useAiBatch();
@@ -79,6 +86,13 @@ export function NoticesPage() {
     }
   }, []);
   useEffect(() => { void load(); }, [load]);
+  // 평가점수를 이미 가져온 공고. 못 읽으면 비워 두고 SW가 다시 가져오게 둔다.
+  const loadEvalHave = useCallback(async () => {
+    try { setEvalHave(new Set((await send('eval/list', undefined)).map((e) => e.noticeId))); } catch { /* 선택 제한만 풀린다 */ }
+  }, []);
+  useEffect(() => { void loadEvalHave(); }, [loadEvalHave]);
+  // 페이지를 떠나면 지금 건까지만 하고 멈춘다.
+  useEffect(() => () => { evalCancel.current = true; }, []);
   // 목록을 열 때 낙찰 결과를 한 번 확인한다(SW가 10분 스로틀). 바뀐 게 있으면 다시 불러온다.
   useEffect(() => {
     void send('result/refresh', { reason: 'list' }, { timeoutMs: 150_000 })
@@ -139,7 +153,8 @@ export function NoticesPage() {
   const open = (id: string) => { location.hash = noticeHash(id); };
 
   const byId = useMemo(() => new Map((list ?? []).map((n) => [n.noticeId, n])), [list]);
-  const selectableIds = useMemo(() => new Set((list ?? []).filter((n) => selectableForAi(n).ok).map((n) => n.noticeId)), [list]);
+  const selOf = useCallback((n: IndexEntry) => (picking === 'eval' ? selectableForEval(n, new Date(), evalHave) : selectableForAi(n)), [picking, evalHave]);
+  const selectableIds = useMemo(() => new Set((list ?? []).filter((n) => selOf(n).ok).map((n) => n.noticeId)), [list, selOf]);
   const picked = useMemo(() => [...selected].filter((id) => selectableIds.has(id)), [selected, selectableIds]);
   const visibleSelectable = rows.filter((n) => selectableIds.has(n.noticeId)).map((n) => n.noticeId);
   const head = headerToggle(visibleSelectable, selected);
@@ -172,6 +187,20 @@ export function NoticesPage() {
       setStarting(false);
     }
   };
+  const runEval = async (ids: string[]) => {
+    if (evalBatch?.running) return;
+    const items = ids.flatMap((id) => { const n = byId.get(id); return n ? [{ noticeId: n.noticeId, noticeNo: n.noticeNo, round: n.round || '000' }] : []; });
+    if (items.length === 0) return;
+    evalCancel.current = false;
+    stopPicking();
+    await runEvalBatch(items, {
+      collect: (ref) => send('eval/collect', { ref }, { timeoutMs: EVAL_COLLECT_UI_TIMEOUT_MS }),
+      errorText: evalErrorText,
+      onUpdate: setEvalBatch,
+      cancelled: () => evalCancel.current,
+    });
+    void loadEvalHave();
+  };
   const openSettings = () => { void send('ui/open', { page: 'settings', section: 'ai' }).catch(() => undefined); };
   const now = new Date();
   // 낙찰 확인과 팔로우 알림에는 서비스키와 사업자번호가 둘 다 필요하다.
@@ -195,6 +224,32 @@ export function NoticesPage() {
         />
       )}
       {aiError && <InlineAlert tone="error">{aiError}</InlineAlert>}
+      {evalBatch && (
+        <div className="flex flex-wrap items-start gap-2.5 rounded-card border border-line bg-surface px-3.5 py-2.5 text-ink shadow-card tabular-nums">
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold">
+              {evalBatch.running
+                ? `평가점수 가져오는 중 ${evalBatch.done}/${evalBatch.total}`
+                : `평가점수 ${evalBatch.ok}건 가져옴${evalBatch.failed.length > 0 ? `, ${evalBatch.failed.length}건 실패` : ''}`}
+            </div>
+            {evalBatch.running && evalBatch.current && <div className="truncate text-xs text-muted">{titleOf(evalBatch.current)}</div>}
+            {evalBatch.stopped && <div className="text-xs text-danger">{evalBatch.stopped === '중단됨' ? '중단했습니다. 남은 공고는 가져오지 않았습니다' : `남은 공고를 멈췄습니다: ${evalBatch.stopped}`}</div>}
+            {!evalBatch.running && evalBatch.failed.length > 0 && (
+              <ul className="mt-1 space-y-0.5 text-xs text-muted">
+                {evalBatch.failed.map((f) => <li key={f.noticeId} className="truncate">{titleOf(f.noticeId)}: {f.message}</li>)}
+              </ul>
+            )}
+          </div>
+          {evalBatch.running ? (
+            <Button variant="ghost" className="!h-9 !px-3" onClick={() => { evalCancel.current = true; }}>중단</Button>
+          ) : (
+            <>
+              {evalBatch.ok > 0 && <Button variant="ghost" className="!h-9 !px-3" onClick={() => { location.hash = '#/evaluations'; }}>평가분석 보기</Button>}
+              <Button variant="ghost" className="!h-9 !px-3" onClick={() => setEvalBatch(null)}>닫기</Button>
+            </>
+          )}
+        </div>
+      )}
       {needsSetup && (
         <InlineAlert>
           <span className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
@@ -229,9 +284,14 @@ export function NoticesPage() {
           </div>
           <div className="mb-2 flex items-center gap-2.5">
           {!picking && (
-            <Button variant="ai" className="!h-9" icon={<ProviderIcon provider={provider} size={14} />} onClick={() => setPicking(true)}>
-              AI로 보완할 공고 고르기
-            </Button>
+            <>
+              <Button variant="secondary" className="!h-9" icon={<Download />} disabled={!!evalBatch?.running} title={evalBatch?.running ? '평가점수를 가져오는 중입니다' : undefined} onClick={() => setPicking('eval')}>
+                평가점수 가져올 공고 고르기
+              </Button>
+              <Button variant="ai" className="!h-9" icon={<ProviderIcon provider={provider} size={14} />} onClick={() => setPicking('ai')}>
+                AI로 보완할 공고 고르기
+              </Button>
+            </>
           )}
           <div className="relative w-80">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" />
@@ -239,7 +299,18 @@ export function NoticesPage() {
           </div>
           </div>
           </div>
-          {picking && (
+          {picking === 'eval' && (
+            <div className="flex flex-wrap items-center gap-2.5 rounded-card border border-line bg-surface px-3.5 py-2.5 text-ink shadow-card tabular-nums">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold">{picked.length > 0 ? `${picked.length}건 선택` : '평가점수를 가져올 공고를 고르세요'}</div>
+                <div className="text-xs text-muted">개찰이 끝난 입찰공고만 고를 수 있습니다. 나라장터에 로그인돼 있어야 하며, 한 건씩 차례로 가져옵니다.</div>
+              </div>
+              <span className="flex-1" />
+              <Button variant="ghost" className="!h-9 !px-3" onClick={stopPicking}>취소</Button>
+              <Button className="!h-9" icon={<Download />} disabled={picked.length === 0} onClick={() => void runEval(picked)}>선택한 공고 평가점수 가져오기</Button>
+            </div>
+          )}
+          {picking === 'ai' && (
             <div className="flex flex-wrap items-center gap-2.5 rounded-card border border-ai-line bg-surface px-3.5 py-2.5 text-ink shadow-card tabular-nums">
               <div className="min-w-0">
                 <div className="text-sm font-semibold">{confirming ? paidConfirmText(picked.length) : picked.length > 0 ? `${picked.length}건 선택` : 'AI 제안을 받을 공고를 고르세요'}</div>
@@ -271,7 +342,7 @@ export function NoticesPage() {
             <div className={`${picking ? GRID_PICK : GRID} sticky top-0 z-10 bg-sunken py-3 text-sm text-muted`}>
               {picking && (
                 <input
-                  ref={headerRef} type="checkbox" className="size-4 accent-primary" aria-label="보이는 공고 모두 선택" title="AI 제안을 받을 수 있는 공고 모두 선택"
+                  ref={headerRef} type="checkbox" className="size-4 accent-primary" aria-label="보이는 공고 모두 선택" title={picking === 'eval' ? '평가점수를 가져올 수 있는 공고 모두 선택' : 'AI 제안을 받을 수 있는 공고 모두 선택'}
                   disabled={visibleSelectable.length === 0} checked={head.checked}
                   onChange={() => setSelected(head.next)}
                 />
@@ -293,7 +364,7 @@ export function NoticesPage() {
               const ddayTone = past ? 'font-medium' : level === 'urgent' ? 'text-danger' : level === 'soon' ? 'text-warn' : 'font-medium text-muted';
               const cb = COLLECT_BADGE[n.collectStatus];
               const eb = EXTRACT_BADGE[n.extractionStatus ?? 'not_run'] ?? EXTRACT_BADGE.not_run;
-              const sel = selectableForAi(n);
+              const sel = selOf(n);
               const won = isWon(n);
               const rc = resultCell(n);
               const fb = followButton(n);
@@ -306,7 +377,7 @@ export function NoticesPage() {
                   onClick={() => open(n.noticeId)}
                   onKeyDown={(e) => { if (e.key === 'Enter') open(n.noticeId); }}
                   className={`${picking ? GRID_PICK : GRID} relative cursor-pointer border-t border-line py-4 transition-colors hover:bg-sunken motion-reduce:transition-none ${past ? 'text-faint' : ''} ${
-                    picking && selected.has(n.noticeId) && sel.ok ? 'bg-ai-wash/60' : ''
+                    picking && selected.has(n.noticeId) && sel.ok ? (picking === 'ai' ? 'bg-ai-wash/60' : 'bg-select') : ''
                   }`}
                 >
                   {picking && <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>

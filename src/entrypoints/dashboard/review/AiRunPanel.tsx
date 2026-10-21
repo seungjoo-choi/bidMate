@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { Check, ClipboardPaste, Copy, ExternalLink, Repeat2 } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { AiProvider, AiReviewFile, AiRun, AiRunState } from '../../../core/types/ai';
 import type { Extraction } from '../../../core/types/extraction';
 import { PROVIDERS } from '../../../engine/ai/providers';
@@ -28,6 +29,23 @@ const SUBMIT_ERROR: Record<string, string> = {
 };
 const errText = (e: unknown): { code?: string; message: string } => ({ code: (e as { code?: string }).code, message: e instanceof Error ? e.message : String(e) });
 
+/** 반자동 대기 화면의 번호 단계 한 칸 */
+function Step({ n, title, done, children }: { n: number; title: string; done?: boolean; children: ReactNode }) {
+  return (
+    <li className="flex min-w-0 flex-col gap-2.5 rounded-ctl border border-ai-line bg-surface/60 p-4">
+      <div className="flex items-center gap-2">
+        <span className={`grid size-6 shrink-0 place-items-center rounded-full text-xs font-bold tabular-nums ${done ? 'bg-ok text-surface' : 'border border-ai-line bg-ai-wash text-ai-ink'}`}>
+          {done ? <Check className="size-3.5" strokeWidth={3} /> : n}
+        </span>
+        <span className="text-sm font-semibold text-ink">{title}</span>
+      </div>
+      {children}
+    </li>
+  );
+}
+
+const linkBtn = 'inline-flex items-center gap-1 text-xs font-medium text-muted transition-colors hover:text-ink disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-3.5';
+
 function ManualWait({ noticeId, run, onReload, onOpenDialog }: { noticeId: string; run: AiRun; onReload: () => void; onOpenDialog: (preset?: AiDialogPreset) => void }) {
   const adapter = PROVIDERS[run.provider];
   const [text, setText] = useState('');
@@ -36,6 +54,7 @@ function ManualWait({ noticeId, run, onReload, onOpenDialog }: { noticeId: strin
   // 클릭 핸들러 안에서 await 없이 바로 writeText하려고 요청문을 미리 받아 둔다(복원 시에도 같다).
   const [prompt, setPrompt] = useState<string | null>(null);
   const [load, setLoad] = useState<PromptLoad>('loading');
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
     let alive = true;
     setPrompt(null); setLoad('loading');
@@ -52,6 +71,7 @@ function ManualWait({ noticeId, run, onReload, onOpenDialog }: { noticeId: strin
     let ok = true;
     try { await navigator.clipboard.writeText(prompt); } catch { ok = false; }
     const next = afterCopy(ok);
+    if (ok) setCopied(true);
     if (next.openTab && open) window.open(adapter.webUrl, '_blank', 'noopener');
     setMsg(next.message);
   };
@@ -80,23 +100,42 @@ function ManualWait({ noticeId, run, onReload, onOpenDialog }: { noticeId: strin
   };
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm">{adapter.label} 답변을 기다리는 중입니다. 열린 {adapter.label} 탭에 프롬프트를 붙여넣고, 답(코드 블록)을 복사해 여기로 가져오세요.</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ai" disabled={main.disabled} onClick={() => void copy(true)}>{main.label}</Button>
-        {main.hint && <span className="text-xs text-muted">{main.hint}</span>}
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <ProviderIcon provider={run.provider} size={20} />
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-ink">{adapter.label}에 직접 물어보기 · {scopeLabel(run)}</div>
+          <div className="text-xs text-muted">{adapter.label} 답변을 기다리는 중입니다. 아래 순서대로 진행하세요</div>
+        </div>
+        <button type="button" className={linkBtn} disabled={busy} onClick={() => void switchProvider()}><Repeat2 />다른 AI로 바꾸기</button>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="secondary" disabled={prompt === null} onClick={() => void copy(false)}>다시 복사</Button>
-        <Button variant="secondary" onClick={() => window.open(adapter.webUrl, '_blank', 'noopener')}>탭 다시 열기</Button>
-        <Button variant="secondary" onClick={() => void readClipboard()}>클립보드에서 읽기</Button>
-        <Button variant="secondary" disabled={busy} onClick={() => void switchProvider()}>다른 AI로 바꾸기</Button>
-      </div>
-      <textarea className={inputClass} rows={6} placeholder="AI의 답변(```json … ```)을 붙여넣으세요" value={text} onChange={(e) => setText(e.target.value)} />
+
+      <ol className="grid gap-3 md:grid-cols-3">
+        <Step n={1} title="프롬프트 복사" done={copied}>
+          <Button variant="ai" icon={<ExternalLink />} disabled={main.disabled} onClick={() => void copy(true)}>{main.label}</Button>
+          {main.hint
+            ? <span className="text-xs text-muted">{main.hint}</span>
+            : (
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                <button type="button" className={linkBtn} disabled={prompt === null} onClick={() => void copy(false)}><Copy />다시 복사</button>
+                <button type="button" className={linkBtn} onClick={() => window.open(adapter.webUrl, '_blank', 'noopener')}><ExternalLink />탭 다시 열기</button>
+              </div>
+            )}
+        </Step>
+        <Step n={2} title={`${adapter.label}에 붙여넣고 보내기`}>
+          <p className="text-sm text-muted">열린 {adapter.label} 탭의 입력창에 붙여넣고(Ctrl+V) 보내세요. 답이 끝날 때까지 기다립니다.</p>
+        </Step>
+        <Step n={3} title="답변 가져오기" done={text.trim().length > 0}>
+          <p className="text-sm text-muted">답변의 코드 블록(<span className="font-mono text-xs">```json</span>)을 복사해 아래 칸에 붙여넣으세요.</p>
+          <button type="button" className={linkBtn} onClick={() => void readClipboard()}><ClipboardPaste />클립보드에서 바로 읽기</button>
+        </Step>
+      </ol>
+
+      <textarea className={`${inputClass} font-mono text-xs leading-relaxed`} rows={6} aria-label="AI 답변" placeholder="AI의 답변(```json … ```)을 붙여넣으세요" value={text} onChange={(e) => setText(e.target.value)} />
       {msg && <InlineAlert tone={msg.tone === 'info' ? 'ai' : msg.tone}>{msg.text}</InlineAlert>}
       <FormActions>
         <Button variant="secondary" disabled={busy} onClick={() => void cancel()}>취소</Button>
-        <Button variant="ai" loading={busy} onClick={() => void submit()}>반영</Button>
+        <Button variant="ai" loading={busy} disabled={!text.trim()} onClick={() => void submit()}>반영</Button>
       </FormActions>
     </div>
   );
@@ -269,6 +308,6 @@ export function AiRunPanel({ noticeId, extraction, review, state, cards, others 
   } else {
     body = <DoneSummary run={run} extraction={extraction} olderCount={olderCardCount(cards, run)} />;
   }
-  const aiTone = run.status === 'done' || run.status === 'requesting';
+  const aiTone = run.status === 'done' || run.status === 'requesting' || run.status === 'awaiting';
   return <div data-ai={run.provider} className={`rounded-card border px-6 py-4 ${aiTone ? 'ai-tint border-ai-line bg-ai-wash' : 'border-line bg-surface shadow-card'}`}>{body}</div>;
 }
