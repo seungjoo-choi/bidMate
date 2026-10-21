@@ -35,7 +35,7 @@ describe('숫자 포맷', () => {
     expect(formatAmount(291990000)).toBe('291,990,000원');
     expect(formatAmount(null)).toBe(DASH);
     expect(rankLabel(2)).toBe('2위');
-    expect(dateOnly('2026-08-18 10:51:08')).toBe('2026-08-18');
+    expect(dateOnly('2026-08-18 10:51:08')).toBe('2026/08/18');
     expect(dateOnly(null)).toBeNull();
     expect([parseView('ours'), parseView('all'), parseView('x'), parseView(null)]).toEqual(['ours', 'all', null, null]);
   });

@@ -1,5 +1,5 @@
 import type { DocKind } from '../../core/extraction/classify';
-import { NA_NOTE, NA_VALUE_TEXT, coveringKey, itemReviewState } from '../../core/extraction/review-count';
+import { NA_NOTE, NA_VALUE_TEXT, coveringKey, itemReviewState, naNoteOf } from '../../core/extraction/review-count';
 import { NOT_RUN_TEXT, REVIEW_LABEL } from '../../core/extraction/review-rows';
 import type { EvidenceRef, Extraction, ExtractionFile, ExtractionKey, ExtractedItem } from '../../core/types/extraction';
 import { EXTRACTION_KEYS } from '../../core/types/extraction';
@@ -33,8 +33,17 @@ export function formatItemValue(key: ExtractionKey, value: unknown): string {
   }
 }
 
+/** 추출기 위치 코드(`표0 r175c25`, `블록16`)를 사람이 읽는 말로. 번호는 0부터라 1을 더한다. 모르는 형식은 그대로 */
+export function prettyLocation(loc: string): string {
+  const t = /^표(\d+) r(\d+)c(\d+)$/.exec(loc.trim());
+  if (t) return `표 ${Number(t[1]) + 1}, ${Number(t[2]) + 1}행 ${Number(t[3]) + 1}열`;
+  const b = /^블록(\d+)$/.exec(loc.trim());
+  if (b) return `본문 ${Number(b[1]) + 1}번째 문단`;
+  return loc;
+}
+
 export function evidenceMeta(e: EvidenceRef): string {
-  const parts = [e.sourceFile, e.location];
+  const parts = [e.sourceFile, prettyLocation(e.location)];
   if (e.page !== undefined) parts.push(`${e.page}쪽`);
   return `${e.origin === 'prespec' ? '사전규격 첨부: ' : ''}${parts.filter(Boolean).join(', ')}`;
 }
@@ -66,12 +75,12 @@ export function buildCard(key: ExtractionKey, item: ExtractedItem<unknown>, item
     const valueText = formatItemValue(key, c.value);
     return {
       value: c.value, valueText, evidence: c.evidence,
-      sourceText: `${c.evidence.origin === 'prespec' ? '사전규격 첨부: ' : ''}${c.evidence.sourceFile}, ${c.evidence.location}${c.evidence.page !== undefined ? `, ${c.evidence.page}쪽` : ''}`,
+      sourceText: evidenceMeta(c.evidence),
     };
   });
   return {
     key, label: ITEM_LABEL[key], kind: ITEM_KIND[key], badge,
-    reason: badge === 'covered' && coverKey ? `문서에 없음 (${ITEM_LABEL[coverKey]} 항목으로 충족)` : badge === 'notApplicable' ? NA_NOTE : badge === 'needs_review' ? (item.status === 'not_run' ? NOT_RUN_TEXT : reasonText(item.reason)) : undefined,
+    reason: badge === 'covered' && coverKey ? `문서에 없음 (${ITEM_LABEL[coverKey]} 항목으로 충족)` : badge === 'notApplicable' ? naNoteOf(item) : badge === 'needs_review' ? (item.status === 'not_run' ? NOT_RUN_TEXT : reasonText(item.reason)) : undefined,
     value, valueText: badge === 'notApplicable' ? NA_VALUE_TEXT : formatItemValue(key, value),
     evidence: item.evidence, candidates: candidates.length >= 2 ? candidates : [],
     userEdited: edited, note: item.userEdited?.note,

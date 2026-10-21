@@ -24,7 +24,7 @@ export function headerToggle(selectableVisible: string[], selected: ReadonlySet<
 }
 
 export const ITEM_REASON_LABEL: Record<string, string> = {
-  JOB_ALREADY_RUNNING: '추출 중',
+  JOB_ALREADY_RUNNING: '수집 중',
   AI_RUN_BUSY: 'AI 실행·대기 중',
   AI_ALREADY_RAN: '배치 중 직접 실행됨',
   NOT_FOUND: '추출 결과 없음',

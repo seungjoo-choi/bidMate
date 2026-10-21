@@ -36,7 +36,7 @@ describe('basic 사업기간 문서 보충', () => {
     const n = mk();
     fillDocOnlyFields(n, docOnlyFieldsOf({ projectPeriod: found }, NOW));
     fillDocOnlyFields(n, docOnlyFieldsOf({ projectPeriod: notFound }, NOW));
-    expect(n.basic.projectPeriod).toMatchObject({ value: '계약일로부터 12개월', status: 'needs_review', note: '최근 추출에서 값이 확인되지 않음' });
+    expect(n.basic.projectPeriod).toMatchObject({ value: '계약일로부터 12개월', status: 'needs_review', note: '최근 수집에서 값이 확인되지 않음' });
   });
   it('16. evaluation 키는 전후 동일', () => {
     const n = mk();

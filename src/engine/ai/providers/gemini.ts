@@ -1,5 +1,4 @@
 import type { AiErrorCode } from '../../../core/types/ai';
-import { outputSchema } from './schema';
 import type { AiError, AiParsedResponse, AiProviderAdapter } from './types';
 
 // 실측(S0, decisions.md "AI 공급자 실측"): x-goog-api-key 헤더, generateContent, responseJsonSchema(표준 JSON Schema),
@@ -36,7 +35,7 @@ export const geminiAdapter: AiProviderAdapter = {
         contents: [{ role: 'user', parts: [{ text: r.user }] }],
         generationConfig: {
           temperature: 0, maxOutputTokens: r.maxTokens,
-          responseMimeType: 'application/json', responseJsonSchema: outputSchema(r.spec),
+          responseMimeType: 'application/json', responseJsonSchema: r.schema,
           thinkingConfig: { thinkingLevel: 'low' },
         },
       },

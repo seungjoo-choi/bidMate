@@ -8,7 +8,8 @@ export function TabBar({ noticeId, tabs, active, query }: {
   active: NoticeTab;
 }) {
   return (
-    <div role="tablist" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-ctl border border-line bg-sunken p-1">
+    // 밑줄 탭: 아래 구분선 위에 고른 탭만 본문색 굵은 글자+2px 밑줄
+    <div role="tablist" className="flex max-w-full gap-7 overflow-x-auto shadow-[inset_0_-1px_0_var(--color-line)]">
       {tabs.map((t) => {
         const on = active === t.id;
         return (
@@ -17,13 +18,13 @@ export function TabBar({ noticeId, tabs, active, query }: {
             role="tab"
             href={noticeHash(noticeId, t.id, query)}
             aria-selected={on}
-            className={`inline-flex shrink-0 items-center gap-2 rounded-btn px-4 py-2 text-sm whitespace-nowrap transition-colors motion-reduce:transition-none ${
-              on ? 'bg-ink font-bold text-surface shadow-sm' : 'font-medium text-muted hover:bg-surface hover:text-ink'
+            className={`inline-flex shrink-0 items-center gap-1.5 border-b-2 pt-1 pb-2.5 text-sm whitespace-nowrap transition-colors motion-reduce:transition-none ${
+              on ? 'border-ink font-bold text-ink' : 'border-transparent font-medium text-muted hover:text-ink'
             }`}
           >
             {t.label}
             {t.count !== undefined && (
-              <span className={`min-w-5 rounded-full px-1.5 text-center font-mono text-xs tabular-nums ${on ? 'bg-surface/20 text-surface' : 'bg-surface text-faint'}`}>{t.count}</span>
+              <span className="text-xs text-faint tabular-nums">{t.count}</span>
             )}
           </a>
         );

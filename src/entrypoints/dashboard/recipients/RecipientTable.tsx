@@ -28,7 +28,7 @@ export function RecipientTable({ recipients, groups, busy, onAdd, onImport, onEd
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line px-6 pt-5 pb-4">
         <div className="min-w-0">
           <h2 className="title-mark text-lg font-semibold text-ink">주소록 전체</h2>
-          <p className="mt-1 pl-[11.5px] text-sm text-muted">수신자 {recipients.length}명. 메일은 그룹 단위로 보내므로, 추가한 뒤 그룹에 넣어 주세요.</p>
+          <p className="mt-1 text-sm text-muted">수신자 {recipients.length}명. 메일은 그룹 단위로 보내므로, 추가한 뒤 그룹에 넣어 주세요.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" icon={<Download />} disabled={busy} onClick={onImport}>네이버웍스에서 불러오기</Button>

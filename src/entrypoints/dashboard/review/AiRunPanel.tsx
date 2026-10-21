@@ -131,7 +131,7 @@ function ManualWait({ noticeId, run, onReload, onOpenDialog }: { noticeId: strin
         </Step>
       </ol>
 
-      <textarea className={`${inputClass} font-mono text-xs leading-relaxed`} rows={6} aria-label="AI 답변" placeholder="AI의 답변(```json … ```)을 붙여넣으세요" value={text} onChange={(e) => setText(e.target.value)} />
+      <textarea className={`${inputClass} font-code text-xs leading-relaxed`} rows={6} aria-label="AI 답변" placeholder="AI의 답변(```json … ```)을 붙여넣으세요" value={text} onChange={(e) => setText(e.target.value)} />
       {msg && <InlineAlert tone={msg.tone === 'info' ? 'ai' : msg.tone}>{msg.text}</InlineAlert>}
       <FormActions>
         <Button variant="secondary" disabled={busy} onClick={() => void cancel()}>취소</Button>
@@ -163,7 +163,7 @@ function DoneSummary({ run, extraction, olderCount }: { run: AiRun; extraction: 
             : <span>검증 실패 <b className="text-ink">0</b></span>}
         </span>
       </div>
-      {stale && <InlineAlert tone="warn">다시 추출되어 이전 AI 제안은 적용할 수 없습니다</InlineAlert>}
+      {stale && <InlineAlert tone="warn">다시 수집되어 이전 AI 제안은 적용할 수 없습니다</InlineAlert>}
       {!stale && olderCount > 0 && <p className="text-muted">이전 run의 제안 {olderCount}개 표시 중</p>}
       {open && (
         <ul className="space-y-1 rounded-ctl border border-line bg-sunken p-3">
@@ -202,7 +202,7 @@ function CompareSummary({ cmp, state, stale, cards, others, noticeId, onReload, 
   return (
     <div className="space-y-2 text-sm">
       <p className="font-semibold">AI 비교 · {scopeLabel(scopeRun)}</p>
-      {stale && <InlineAlert tone="warn">다시 추출되어 이전 AI 제안은 적용할 수 없습니다</InlineAlert>}
+      {stale && <InlineAlert tone="warn">다시 수집되어 이전 AI 제안은 적용할 수 없습니다</InlineAlert>}
       <ul className="space-y-1.5">
         {cmp.rows.map((r) => (
           <li key={r.provider} data-ai={r.provider} className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5">
@@ -304,7 +304,7 @@ export function AiRunPanel({ noticeId, extraction, review, state, cards, others 
       </InlineAlert>
     );
   } else if (run.status === 'cancelled') {
-    body = <p className="text-sm text-muted">AI 재검토가 취소되었습니다.</p>;
+    return null; // 사용자가 취소한 실행은 흔적을 남기지 않는다
   } else {
     body = <DoneSummary run={run} extraction={extraction} olderCount={olderCardCount(cards, run)} />;
   }

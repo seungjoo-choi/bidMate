@@ -74,5 +74,5 @@ export function RawDetails({ summary, children }: { summary: string; children: R
 }
 
 export function Code({ children }: { children: string }) {
-  return <pre className="max-h-72 overflow-auto rounded-ctl border border-line bg-surface p-3 font-mono text-xs leading-relaxed">{children}</pre>;
+  return <pre className="max-h-72 overflow-auto rounded-ctl border border-line bg-surface p-3 font-code text-xs leading-relaxed">{children}</pre>;
 }

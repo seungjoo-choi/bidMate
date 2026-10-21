@@ -119,7 +119,7 @@ describe('panelView 추출 실패 표시', () => {
     expect(mk([ok, bad], [])).toMatchObject({ retryLabel: '실패 파일 재시도' });
   });
   it('추출만 실패: result.extraction이 없어도 실패 줄 표시', () => {
-    expect(mk([ok], [err('EXTRACT_FAILED')])).toMatchObject({ retryLabel: '평가정보 다시 추출', extractionLine: '평가정보 추출 실패', reviewNoticeId: undefined });
+    expect(mk([ok], [err('EXTRACT_FAILED')])).toMatchObject({ retryLabel: '평가정보 다시 수집', extractionLine: '평가정보 추출 실패', reviewNoticeId: undefined });
   });
   it('둘 다 실패', () => {
     expect(mk([ok, bad], [err('EXTRACT_FAILED')])).toMatchObject({ retryLabel: '실패 항목 재시도', extractionLine: '평가정보 추출 실패' });

@@ -106,7 +106,7 @@ describe('statusChip', () => {
     expect(statusChip(job('running'), collect('collected'))).toEqual({ tone: 'run', text: '수집 중' });
   });
   it('잡 없이 저장된 결과: 완료 초록, 일부 실패 주황, 실패 빨강', () => {
-    expect(statusChip(null, collect('collected'))).toEqual({ tone: 'ok', text: '수집 완료, 10/19 14:31' });
+    expect(statusChip(null, collect('collected'))).toEqual({ tone: 'ok', text: '수집 완료, 2026/10/19 14:31' });
     expect(statusChip(null, collect('partial'))?.tone).toBe('warn');
     expect(statusChip(null, collect('failed'))?.tone).toBe('danger');
     expect(statusChip(null, null)).toBeNull();

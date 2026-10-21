@@ -1,5 +1,10 @@
 @import 'tailwindcss';
 
+/* dark: 변형도 테마 설정을 따른다(shadow host의 data-theme) */
+@custom-variant dark {
+  :host([data-theme='dark']) & { @slot; }
+}
+
 /* 사이트의 html 글꼴 크기(rem)에 영향받지 않도록 px 기준으로 고정한다. */
 @theme {
   --spacing: 4px;
@@ -21,8 +26,9 @@
 }
 
 /* 다크모드: 패널이 쓰는 팔레트 칸만 어두운 값으로 바꾼다. 색 계열은 사이드패널 테마(theme.css)와 맞춘다 */
-@media (prefers-color-scheme: dark) {
-  :host {
+/* 테마 설정(ui/theme/mode.ts)이 shadow host에 data-theme="dark"를 달면 적용된다 */
+:host([data-theme='dark']) {
+  & {
     color: #e9e9e5; color-scheme: dark;
     --color-surface: #1c1c1b;
     --color-slate-100: #2a2a28; --color-slate-200: #3a3a37;
@@ -37,6 +43,7 @@
     --bm-card-shadow: 0 8px 24px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .04);
     --bm-ok: #6cc08e; --bm-ok-wash: #18241c; --bm-ok-line: rgba(108, 192, 142, .35);
     --bm-warn: #e0a44a; --bm-warn-wash: #2a2216; --bm-warn-line: rgba(224, 164, 74, .35);
+    --bm-tip-bg: #e8e8e3; --bm-tip-fg: #1c1c1a;
   }
 }
 
@@ -49,11 +56,27 @@
 .tm-fold { animation: tm-fold 180ms ease-in forwards; }
 @keyframes tm-pop { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: none; } }
 .tm-pop { animation: tm-pop 180ms cubic-bezier(.3, .7, .4, 1.3); transform-origin: right center; }
+/* 알약 버튼 설명 말풍선: 마우스를 올리고 잠깐 뒤 위로 살짝 떠오르며 나타난다 */
+.tm-tip {
+  position: absolute; bottom: calc(100% + 10px); z-index: 10; pointer-events: none; white-space: nowrap;
+  padding: 5px 9px; border-radius: 8px; font-size: 11.5px; font-weight: 500; line-height: 1.35; letter-spacing: -.01em;
+  background: var(--bm-tip-bg, #1e293b); color: var(--bm-tip-fg, #f8fafc);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, .22), 0 1px 3px rgba(15, 23, 42, .18);
+  opacity: 0; translate: 0 4px; transition: opacity 120ms ease-out, translate 160ms cubic-bezier(.2, .8, .3, 1);
+}
+.tm-tip::after {
+  content: ''; position: absolute; top: 100%; left: var(--tip-arrow, 50%); margin-left: -5px;
+  border: 5px solid transparent; border-top-color: var(--bm-tip-bg, #1e293b);
+}
+.tm-tip[data-align='center'] { left: 50%; transform: translateX(-50%); }
+.tm-tip[data-align='start'] { left: -2px; --tip-arrow: 20px; }
+.tm-tip[data-align='end'] { right: -2px; --tip-arrow: calc(100% - 20px); }
+.group:hover > .tm-tip, .group:focus-visible > .tm-tip { opacity: 1; translate: 0 0; transition-delay: 250ms; }
 /* 마스코트 위 접기/펼치기 화살표: 평소엔 숨기고 마우스를 올렸을 때만 보인다 */
 .tm-hint { opacity: 0; transform: scale(.6); transition: opacity 120ms, transform 160ms cubic-bezier(.3, .7, .4, 1.4); pointer-events: none; box-shadow: 0 1px 3px rgba(15, 23, 42, .15); }
 .group:hover > .tm-hint, .group:focus-visible > .tm-hint { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
   .tm-in, .tm-unfold, .tm-pop { animation: none; }
-  .tm-hint { transition: none; }
+  .tm-hint, .tm-tip { transition: none; }
   .tm-bar { transition: none !important; }
 }

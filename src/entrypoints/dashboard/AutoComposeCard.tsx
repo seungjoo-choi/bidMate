@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { kindOf } from '../../core/model/ids';
 import { composeHost,originOf } from '../../core/model/mail-provider';
 import type { AutoComposeSettings, ReviewGate } from '../../core/types/settings';
-import { Button, Card, Field, FormActions, InlineAlert, Select, StatusBadge } from '../../ui/components';
+import { Button, Card, Field, FormActions, InlineAlert, Select, StatusBadge, useToast } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useRecipients, useTemplates } from '../../ui/hooks/useConfig';
 import { useSettings } from '../../ui/hooks/useSettings';
@@ -21,7 +21,7 @@ export function AutoComposeCard() {
   const tpls = useTemplates();
   const [draft, setDraft] = useState<AutoComposeSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
 
   const saved = settings?.autoCompose;
@@ -37,7 +37,7 @@ export function AutoComposeCard() {
   const broken = loaded ? findBroken(draft, groups, recipients, templates) : { groupMissing: false, templateMissing: false, prespecTemplateMissing: false, memberIds: [] as string[] };
   const members = draft.recipients.mode === 'custom' ? draft.recipients.members : [];
   const roles = countRoles(members, recipients);
-  const update = (patch: Partial<AutoComposeSettings>) => { setDraft({ ...draft, ...patch }); setNote(null); };
+  const update = (patch: Partial<AutoComposeSettings>) => { setDraft({ ...draft, ...patch }); };
 
   const toggle = async (on: boolean) => {
     setError(null);
@@ -52,14 +52,13 @@ export function AutoComposeCard() {
 
   const submit = async () => {
     setError(null);
-    setNote(null);
     const r = sanitizeForSave(draft, groups, recipients, templates);
     if (!r.ok) { setError(r.message); return; }
     setBusy(true);
     try {
       await save({ ...settings, autoCompose: r.value });
       setDraft(r.value);
-      if (r.removedMembers > 0) setNote(`삭제된 수신자 ${r.removedMembers}명을 제외하고 저장했습니다.`);
+      toast.saved(r.removedMembers > 0 ? `삭제된 수신자 ${r.removedMembers}명은 빼고 저장했습니다` : '저장했습니다');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -195,7 +194,7 @@ export function AutoComposeCard() {
         <Button icon={<Save />} loading={busy} disabled={!loaded} onClick={submit}>저장</Button>
       </FormActions>
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
-      {note && <InlineAlert tone="info">{note}</InlineAlert>}
+      {toast.node}
     </Card>
   );
 }

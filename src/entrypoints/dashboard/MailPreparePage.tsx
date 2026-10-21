@@ -177,7 +177,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
       setEdits(next);
       setWorking(next);
       setDirty(false);
-      toast.show('초안을 저장했습니다');
+      toast.saved('초안을 저장했습니다');
       return true;
     } catch (e) {
       setError(toInfo(e));
@@ -219,11 +219,11 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
         done++;
       }
       if (draft) await save();
-      else toast.show('공고 값을 저장했습니다');
+      else toast.saved('공고 값을 저장했습니다');
       return null;
     } catch (e) {
       const { code, message } = toInfo(e);
-      const why = code === 'JOB_ALREADY_RUNNING' ? '이 공고는 수집/추출 중입니다. 끝난 뒤 다시 시도하세요.' : `${code ?? ''} ${message}`.trim();
+      const why = code === 'JOB_ALREADY_RUNNING' ? '이 공고는 수집 중입니다. 끝난 뒤 다시 시도하세요.' : `${code ?? ''} ${message}`.trim();
       if (done > 0 && draft) await save();
       return done > 0 ? `${list.length}개 중 ${done}개만 저장했습니다. ${why}` : why;
     }
@@ -361,7 +361,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
       <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1 basis-[32rem]">
           <h1 className="title-mark text-2xl leading-snug font-bold tracking-tight text-balance">{title}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-[calc(3px+0.75rem)] text-sm text-muted">
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted">
             <span className="font-mono">{noticeNo}</span>
             {isPrespec && <StatusBadge status="idle">사전규격</StatusBadge>}
             <span aria-hidden className="text-faint">·</span>

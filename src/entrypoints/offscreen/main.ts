@@ -8,6 +8,7 @@ import type { JobError, JobStatus } from '../../core/types/job';
 import { runComposeJob } from '../../engine/jobs/compose-job';
 import { runExtractJob } from '../../engine/jobs/extract-job';
 import { createParserRegistry } from '../../engine/parsers/registry';
+import { createRfpService } from '../../engine/rfp/rfp-service';
 import { editExtraction, editNoticeField, getNotice, listNotices, readExtractionText } from '../../engine/notices/notice-api';
 import { repairConfig } from '../../engine/config/config-store';
 import { deletePerformance, importPerformances, listPerformances, savePerformance } from '../../engine/config/performances-api';
@@ -15,6 +16,8 @@ import { deleteGroup, deleteRecipient, importRecipients, listRecipients, saveGro
 import { deleteTemplate, listTemplates, saveTemplate, setDefaultTemplate } from '../../engine/config/templates-api';
 import { getDraft, getEdits, prepareMail } from '../../engine/mail/prepare';
 import { SentStore } from '../../engine/mail/sent-store';
+import { deleteNotices } from '../../engine/notices/delete-notice';
+import { jobsConflict } from '../../core/model/job-conflict';
 import { JobRegistry } from '../../engine/jobs/job-registry';
 import { listen, send } from '../../messaging/bus';
 import { fileStore } from '../../engine/file-store/file-store';
@@ -189,7 +192,10 @@ async function runCollect(p: JobRunPayload): Promise<Outcome> {
 
 listen('g2b/test', ({ serviceKey, kind }) => g2bTest(serviceKey, kind), 'offscreen');
 // 등록 전 await 금지: 검사와 등록은 한 동기 구간에서 끝낸다. 실행은 응답 후 시작한다.
+const deletingNotices = new Set<string>();
 listen('job/run', (p) => {
+  // collect 잡은 ref만 가질 수 있으므로 정규화한 공고 키로 비교한다(같은 군으로 맞춰 비교).
+  if ([...deletingNotices].some((id) => jobsConflict({ type: p.job.type, noticeId: id }, p.job))) return { accepted: false as const, code: 'JOB_ALREADY_RUNNING' as const, conflictJobId: '', active: registry.active() };
   const reg = registry.tryRegister(p.job);
   if (!reg.ok) return { accepted: false as const, code: 'JOB_ALREADY_RUNNING' as const, conflictJobId: reg.conflictJobId, active: registry.active() };
   setTimeout(() => { void runJob(p); }, 0);
@@ -224,10 +230,25 @@ listen('result/probe', ({ noticeNo, serviceKey }) => probeResult(noticeNo, servi
 listen('notice/list', () => listNotices(fileStore), 'offscreen');
 listen('deadline/plan', async () => buildPlan(await listNotices(fileStore), Date.now()), 'offscreen');
 listen('notice/get', ({ noticeId }) => getNotice(fileStore, noticeId), 'offscreen');
-const isNoticeBusy = (noticeId: string) => registry.findConflict({ type: 'extract', noticeId }) !== undefined;
+// 삭제 중인 공고도 바쁨으로 본다(AI 실행·편집·메일 준비가 지워지는 폴더에 쓰지 않도록). 삭제 루틴 자신은 이 함수를 쓰지 않는다.
+const isNoticeBusy = (noticeId: string) => deletingNotices.has(noticeId) || registry.findConflict({ type: 'extract', noticeId }) !== undefined;
 listen('extraction/edit', (p) => editExtraction(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
 listen('notice/field-edit', (p) => editNoticeField(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
 listen('extraction/text', (p) => readExtractionText(fileStore, p), 'offscreen');
+
+// RFP 요구사항 비교. 파일 쓰기는 이 서비스만 한다(단일 작성자).
+const rfp = createRfpService({ store: fileStore, parsers });
+listen('rfp/docs', ({ noticeId }) => rfp.listDocs(noticeId), 'offscreen');
+listen('rfp/extract', ({ ref, force }) => rfp.extract(ref, force), 'offscreen');
+listen('rfp/upload', (p) => rfp.upload(p), 'offscreen');
+listen('rfp/uploads', () => rfp.uploads(), 'offscreen');
+listen('rfp/upload-rename', ({ uploadId, label }) => rfp.renameUpload(uploadId, label), 'offscreen');
+listen('rfp/upload-delete', async ({ uploadId }) => { await rfp.deleteUpload(uploadId); }, 'offscreen');
+listen('rfp/text', ({ ref }) => rfp.text(ref), 'offscreen');
+listen('rfp/compare-save', ({ session }) => rfp.saveCompare(session), 'offscreen');
+listen('rfp/compare-list', () => rfp.listCompares(), 'offscreen');
+listen('rfp/compare-get', ({ compareId }) => rfp.getCompare(compareId), 'offscreen');
+listen('rfp/compare-delete', async ({ compareId }) => { await rfp.deleteCompare(compareId); }, 'offscreen');
 
 // AI 재검토. 실행 조율은 AiRunner가 한다(공고당 1개, 상태 push, 취소, 고아 정리). 키는 SW가 ai/exec·ai/models로 주입하며 저장하지 않는다.
 const aiDeps = async () => ({ rules: await loadExtractionRules(), isBusy: isNoticeBusy });
@@ -282,6 +303,18 @@ listen('mail/sent-get', ({ noticeId }) => sentStore.list(noticeId), 'offscreen')
 listen('mail/sent-add', (p) => sentStore.addManual(p, new Date()), 'offscreen');
 listen('mail/sent-void', (p) => sentStore.voidRecord(p, new Date()), 'offscreen');
 listen('mail/sent-view', (p) => sentStore.view(p), 'offscreen');
+listen('notice/delete', async ({ noticeIds }) => {
+  const r = await deleteNotices(noticeIds, {
+    store: fileStore,
+    isBusy: (id) => registry.findConflict({ type: 'extract', noticeId: id }) !== undefined
+      || registry.findConflict({ type: 'compose', noticeId: id }) !== undefined
+      || aiRunner.isRunning(id) || rfp.isNoticeBusy(id),
+    deleteCompares: (id) => rfp.deleteComparesForNotice(id),
+    mark: { begin: (id) => deletingNotices.add(id), end: (id) => deletingNotices.delete(id) },
+  });
+  if (r.nextFollowCheckAt !== undefined) void send('result/done', { events: [], nextFollowCheckAt: r.nextFollowCheckAt }, { target: 'sw' }).catch(() => undefined);
+  return { deleted: r.deleted, failed: r.failed };
+}, 'offscreen');
 listen('mail/sent-record', async ({ kind, confirmation, ...p }) => {
   if (kind === 'confirm') {
     if (!confirmation) return { recorded: false };

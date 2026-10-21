@@ -49,7 +49,7 @@ describe('headerToggle', () => {
 describe('사유·결과 라벨', () => {
   const err = (code: string, message = 'm'): Pick<AiBatchItem, 'error'> => ({ error: { code, message } });
   it('알려진 코드는 명세 문구, 그 외는 code와 message', () => {
-    expect(itemReasonLabel(err('JOB_ALREADY_RUNNING'))).toBe('추출 중');
+    expect(itemReasonLabel(err('JOB_ALREADY_RUNNING'))).toBe('수집 중');
     expect(itemReasonLabel(err('AI_RUN_BUSY'))).toBe('AI 실행·대기 중');
     expect(itemReasonLabel(err('AI_ALREADY_RAN'))).toBe('배치 중 직접 실행됨');
     expect(itemReasonLabel(err('NOT_FOUND'))).toBe('추출 결과 없음');
@@ -62,7 +62,7 @@ describe('사유·결과 라벨', () => {
   it('공고별 결과: 완료는 제안·일치(+못 찾음·검증 실패는 있을 때만), 건너뜀·실패는 사유', () => {
     expect(itemResult(item('a', 'done', { summary: { match: 3, proposals: 2, none: 0, rejected: 0 } }))).toEqual({ text: '제안 2 · 일치 3', tone: 'ok' });
     expect(itemResult(item('a', 'done', { summary: { match: 0, proposals: 1, none: 1, rejected: 2 } }))).toEqual({ text: '제안 1 · 일치 0 · 못 찾음 1 · 검증 실패 2', tone: 'ok' });
-    expect(itemResult(item('a', 'skipped', { error: { code: 'JOB_ALREADY_RUNNING', message: '' } }))).toEqual({ text: '건너뜀 · 추출 중', tone: 'muted' });
+    expect(itemResult(item('a', 'skipped', { error: { code: 'JOB_ALREADY_RUNNING', message: '' } }))).toEqual({ text: '건너뜀 · 수집 중', tone: 'muted' });
     expect(itemResult(item('a', 'failed', { error: { code: 'AI_QUOTA', message: '한도' } }))).toEqual({ text: 'AI_QUOTA 한도', tone: 'bad' });
     expect(itemResult(item('a', 'running')).tone).toBe('muted');
   });

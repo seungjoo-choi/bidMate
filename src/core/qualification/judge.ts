@@ -1,4 +1,4 @@
-import { NA_NOTE, isNotApplicable } from '../extraction/review-count';
+import { isNaNote, isNotApplicable, isNotApplicableField, naNoteOf } from '../extraction/review-count';
 import { parseKoreanAmount, parseYears } from '../extraction/normalize';
 import { formatAmountShort } from '../model/format';
 import type { FieldStatus, FieldValue } from '../types/common';
@@ -39,7 +39,7 @@ const toAmount = (v: unknown): number | null => {
 function criteriaFromItem<T>(item: ExtractedItem<unknown> | undefined, conv: (v: unknown) => T | null): Array<Criterion<T>> {
   if (!item) return [{ value: null, state: 'unknown', status: 'not_run', note: NOT_FOUND }];
   const edited = item.userEdited;
-  if (!edited && isNotApplicable(item)) return [{ value: null, state: 'unknown', status: item.status, note: NA_NOTE }];
+  if (!edited && isNotApplicable(item)) return [{ value: null, state: 'unknown', status: item.status, note: naNoteOf(item) }];
   if (edited && edited.value !== null && edited.value !== undefined) {
     const v = conv(edited.value);
     return [v === null
@@ -61,6 +61,7 @@ function criteriaFromItem<T>(item: ExtractedItem<unknown> | undefined, conv: (v:
 }
 
 function criterionFromField<T>(f: FieldValue<unknown>, conv: (v: unknown) => T | null): Criterion<T> {
+  if (isNotApplicableField(f)) return { value: null, state: 'unknown', status: f.status, note: f.note };
   if (f.value === null || f.value === undefined) return { value: null, state: 'unknown', status: f.status, note: NOT_FOUND };
   const v = conv(f.value);
   if (v === null) return { value: null, state: 'unknown', status: f.status, note: '값을 해석하지 못함' };
@@ -143,12 +144,12 @@ export function judge(criteria: Criteria, performances: PerformanceRecord[]): Ju
       const reasons: string[] = [];
       const suffix = (c: Criterion<number>) => (c.state === 'unknown' && c.value !== null ? ' (추출값 확인 필요)' : '');
       if (period) {
-        if (period.value === null) reasons.push(period.note === NA_NOTE ? '인정기간: 해당 없음(정량평가에 실적 항목 없음)' : `인정기간: 확인 필요 (${period.note ?? '추출값 없음'})`);
+        if (period.value === null) reasons.push(isNaNote(period.note) ? `인정기간: 해당 없음(${period.note})` : `인정기간: 확인 필요 (${period.note ?? '추출값 없음'})`);
         else if (postedAt === null) reasons.push(`공고게시일이 없어 기간을 판정할 수 없음${suffix(period)}`);
         else reasons.push(`인정기간 ${period.value}년: 기준일 ${postedAt} 기준 ${from} 이후 완료 실적 ${periodCount}건${suffix(period)}`);
       }
       if (amount) {
-        if (amount.value === null) reasons.push(amount.note === NA_NOTE ? '인정금액: 해당 없음(정량평가에 실적 항목 없음)' : `인정금액: 확인 필요 (${amount.note ?? '추출값 없음'})`);
+        if (amount.value === null) reasons.push(isNaNote(amount.note) ? `인정금액: 해당 없음(${amount.note})` : `인정금액: 확인 필요 (${amount.note ?? '추출값 없음'})`);
         else reasons.push(`인정금액 ${formatAmountShort(amount.value)} 이상: 비교 금액(계약금액 × 지분율) 충족 ${amountCount}건${suffix(amount)}`);
       }
       if (criteria.condition.present) reasons.push('인정조건 원문이 있어 사람이 확인해야 합니다');

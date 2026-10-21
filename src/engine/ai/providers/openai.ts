@@ -1,5 +1,4 @@
 import type { AiErrorCode } from '../../../core/types/ai';
-import { outputSchema } from './schema';
 import type { AiError, AiParsedResponse, AiProviderAdapter } from './types';
 
 // S0 실측 전: 엔드포인트·헤더·요청/응답/오류 형태는 명세 §4 표의 1차 후보(chat/completions)이며 실측 후 이 파일 안에서만 고친다.
@@ -27,7 +26,7 @@ export const openaiAdapter: AiProviderAdapter = {
       body: {
         model: r.model, temperature: 0, max_completion_tokens: r.maxTokens,
         messages: [{ role: 'system', content: r.system }, { role: 'user', content: r.user }],
-        response_format: { type: 'json_schema', json_schema: { name: 'bidmate_ai_review', schema: outputSchema(r.spec), strict: true } },
+        response_format: { type: 'json_schema', json_schema: { name: r.schemaName, schema: r.schema, strict: true } },
       },
     };
   },

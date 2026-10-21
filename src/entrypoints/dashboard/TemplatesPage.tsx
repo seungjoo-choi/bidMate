@@ -1,5 +1,6 @@
 import { Copy, FilePlus, Search, Star } from 'lucide-react';
 import { useState } from 'react';
+import { formatDate } from '../../ui/review/format';
 import { kindOf } from '../../core/model/ids';
 import { builtinDefaultTemplate, builtinPrespecTemplate } from '../../core/templates/default-template';
 import type { NoticeKind } from '../../core/types/notice';
@@ -185,7 +186,7 @@ export function TemplatesPage() {
                         {t.isDefault && <StatusBadge status="ok">기본</StatusBadge>}
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-muted tabular-nums">{t.updatedAt.slice(0, 10)}</td>
+                    <td className="px-3 py-2 text-muted tabular-nums">{formatDate(t.updatedAt)}</td>
                     <td className="px-3 py-2">
                       <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                         {!t.isDefault && <Button variant="ghost" icon={<Star />} disabled={busy} onClick={() => void handle(() => run('templates/set-default', { id: t.id }), '기본 템플릿을 변경했습니다')}>기본으로</Button>}

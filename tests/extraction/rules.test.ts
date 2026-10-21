@@ -458,6 +458,12 @@ describe('규칙 격리', () => {
       proposalEvalAt: { value: null, status: 'needs_review', reason: 'not_found' },
       quantEvalDoc: { value: null, status: 'needs_review', reason: 'not_found' },
       quantTable: { value: null, status: 'needs_review', reason: 'not_found' },
+      quantEvalNone: { value: null, status: 'needs_review', reason: 'not_found' },
+      perfAggregate: { value: null, status: 'needs_review', reason: 'not_found' },
+      perfPerCase: { value: null, status: 'needs_review', reason: 'not_found' },
+      perfRestriction: { value: null, status: 'needs_review', reason: 'not_found' },
+      qualOnlyTable: { value: null, status: 'needs_review', reason: 'not_found' },
+      quantMention: { value: null, status: 'needs_review', reason: 'not_found' },
     });
   });
 });

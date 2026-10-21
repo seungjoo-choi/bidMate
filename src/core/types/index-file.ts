@@ -6,6 +6,8 @@ import type { FollowTarget, ResultStatus } from './result';
 export interface IndexEntry {
   kind?: NoticeKind;   // 없음 = bid
   noticeId: string; noticeNo: string; round: string; title: string; orderingOrg: string; folder: string;
+  /** 수요기관(공고기관과 다를 수 있음, 예: 조달청 대행 공고). 값이 없으면 생략 */
+  demandOrg?: string;
   collectedAt: ISODate; bidCloseAt?: ISODate; collectStatus: CollectStatus;
   attachments: { total: number; saved: number; failed: number };
   extractionStatus: ExtractionStatus; mailStatus: MailStatus; lastComposedAt?: ISODate;
@@ -16,5 +18,5 @@ export interface IndexEntry {
   /** 입찰공고 일정(notice 파생, 재생성 안전). 사전규격은 없음. 값이 없는 키는 생략 */
   schedule?: { registrationDeadline?: ISODate; proposalEvalAt?: ISODate; openingAt?: ISODate };
 }
-export const INDEX_VERSION = 2 as const;
+export const INDEX_VERSION = 3 as const;
 export interface IndexFile { schemaVersion: 1; indexVersion?: typeof INDEX_VERSION; generatedAt: ISODate; notices: IndexEntry[]; }

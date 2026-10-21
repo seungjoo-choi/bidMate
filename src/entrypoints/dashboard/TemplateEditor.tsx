@@ -111,7 +111,7 @@ export function TemplateEditor({ id }: { id: string }) {
     if (!r.ok) { setOpError(r.error); return; }
     // run이 data를 응답 스냅샷으로 교체했다. 초안은 그 값으로 맞춘다.
     setSavedSnap(snapshotOf(draft));
-    toast.show('템플릿을 저장했습니다');
+    toast.saved('템플릿을 저장했습니다');
   };
 
   // 응답 스냅샷이 서버에서 보정된 경우를 반영한다(변경 없는 상태일 때만).

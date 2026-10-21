@@ -92,3 +92,24 @@ export async function setFollow(
     return { following: false, target: null, nextFollowCheckAt: minNext(results, follows), startAt: r?.startAt ?? null };
   });
 }
+
+/** 공고 삭제용. results/follows에서 id들을 지우고 다음 팔로우 확인 시각을 돌려준다. 바뀐 파일만 쓴다. */
+export async function removeTracking(store: IFileStore, noticeIds: string[], opts: { now?: () => Date } = {}): Promise<{ nextFollowCheckAt: ISODate | null }> {
+  const now = opts.now ?? (() => new Date());
+  const rs = new ResultStore(store);
+  const fs = new FollowStore(store, now);
+  return store.withLock(RESULTS_LOCK, async () => {
+    const t = now().toISOString();
+    const results = await rs.load();
+    const follows = await fs.load();
+    let rChanged = false;
+    let fChanged = false;
+    for (const id of noticeIds) {
+      if (id in results.entries) { delete results.entries[id]; rChanged = true; }
+      if (id in follows.entries) { delete follows.entries[id]; fChanged = true; }
+    }
+    if (rChanged) { results.updatedAt = t; await rs.save(results); }
+    if (fChanged) { follows.updatedAt = t; await fs.save(follows); }
+    return { nextFollowCheckAt: minNext(results, follows) };
+  });
+}

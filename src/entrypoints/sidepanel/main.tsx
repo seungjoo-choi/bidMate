@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../../ui/theme/theme.css';
+import { applyTheme } from '../../ui/theme/mode';
 import './sidepanel.css';
 import { SIDEPANEL_PORT } from '../../messaging/protocol';
 import { App } from './App';
@@ -14,6 +15,8 @@ function connectToSw(): void {
   port.onDisconnect.addListener(() => { setTimeout(connectToSw, 1000); });
 }
 connectToSw();
+
+applyTheme(document.documentElement);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

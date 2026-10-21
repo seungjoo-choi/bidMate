@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../src/messaging/bus', () => ({ listen: vi.fn(), send: vi.fn() }));
 
-import { QUEUE_KEY, dequeue, onFinal, pump, registerAutoCompose, setAutoComposeDeps } from '../../src/background/auto-compose';
+import { QUEUE_KEY, dequeue, dequeueByNotice, onFinal, pump, registerAutoCompose, setAutoComposeDeps } from '../../src/background/auto-compose';
 import { clearFinalListeners } from '../../src/background/job-coordinator';
 import { withDefaults } from '../../src/core/model/default-settings';
 import type { Handoff, Job } from '../../src/core/types/job';
@@ -149,6 +149,16 @@ describe('dequeue', () => {
     expect(await dequeue('a')).toBe(true);
     expect(handoffs.a).toMatchObject({ action: 'none', reason: 'dequeued' });
     expect(await dequeue('a')).toBe(false);
+  });
+  it('dequeueByNotice: 해당 공고 항목만 빼고 none(dequeued) 기록', async () => {
+    await session.set({ [QUEUE_KEY]: [
+      { collectJobId: 'a', noticeId: 'a-000', enqueuedAt: 'x' },
+      { collectJobId: 'b', noticeId: 'b-000', enqueuedAt: 'x' },
+    ] });
+    expect(await dequeueByNotice(['a-000'])).toBe(1);
+    expect((await queue()).map((e) => e.collectJobId)).toEqual(['b']);
+    expect(handoffs.a).toMatchObject({ action: 'none', reason: 'dequeued' });
+    expect(handoffs.b).toBeUndefined();
   });
   it('리스너: 확장 발신자는 허용, 사이트 발신자는 자기 탭 잡이 아니면 removed:false', async () => {
     vi.stubGlobal('chrome', {

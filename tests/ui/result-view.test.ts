@@ -28,7 +28,7 @@ describe('formatCheckAt', () => {
   it('오늘, 내일, 그 외 요일 표기', () => {
     expect(formatCheckAt(at(20, 15), NOW)).toBe('오늘 15:00');
     expect(formatCheckAt(at(21, 9, 5), NOW)).toBe('내일 09:05');
-    expect(formatCheckAt(at(23, 14), NOW)).toBe('10/23(금) 14:00');
+    expect(formatCheckAt(at(23, 14), NOW)).toBe('2026/10/23(금) 14:00');
     expect(formatCheckAt(null, NOW)).toBe('');
   });
 });
@@ -36,10 +36,10 @@ describe('formatCheckAt', () => {
 describe('followHint', () => {
   it('팔로우 아니면 null, 시작 전이면 시작 시각, 이후는 단계별 문구', () => {
     expect(followHint({ result: { status: 'waiting' } }, NOW)).toBeNull();
-    expect(followHint({ following: 'final', result: { status: 'waiting', startAt: at(23, 14) } }, NOW)).toBe('10/23(금) 14:00부터 결과 확인');
+    expect(followHint({ following: 'final', result: { status: 'waiting', startAt: at(23, 14) } }, NOW)).toBe('2026/10/23(금) 14:00부터 결과 확인');
     expect(followHint({ following: 'final', result: { status: 'waiting', startAt: at(19, 14) } }, NOW)).toBe('결과 확인 중');
     expect(followHint({ following: 'final', result: { status: 'ranked', startAt: at(19, 14) } }, NOW)).toBe('최종 결과 확인 중');
-    expect(followHint({ following: 'rank', result: { status: 'waiting', startAt: at(23, 14) } }, NOW)).toBe('10/23(금) 14:00부터 순위 확인');
+    expect(followHint({ following: 'rank', result: { status: 'waiting', startAt: at(23, 14) } }, NOW)).toBe('2026/10/23(금) 14:00부터 순위 확인');
     expect(followHint({ following: 'rank', result: { status: 'waiting', startAt: at(19, 14) } }, NOW)).toBe('순위 확인 중');
   });
 });
@@ -80,7 +80,7 @@ describe('followMenuItems', () => {
 describe('trackSteps', () => {
   it('개찰 전', () => {
     expect(trackSteps({ status: 'waiting', startAt: at(23, 14) }, NOW)).toEqual([
-      { label: '개찰 10/23(금) 14:00', state: 'now' }, { label: '순위 발표', state: 'todo' }, { label: '최종 결과', state: 'todo' },
+      { label: '개찰 2026/10/23(금) 14:00', state: 'now' }, { label: '순위 발표', state: 'todo' }, { label: '최종 결과', state: 'todo' },
     ]);
   });
   it('개찰 후 순위 대기', () => {
@@ -120,7 +120,7 @@ describe('resultCell', () => {
   });
   it('결과가 없으면 개찰일 기준', () => {
     const now = new Date('2026-10-21T12:00:00+09:00');
-    expect(resultCell({ schedule: { openingAt: '2026-10-23T11:00:00+09:00' } }, now)?.text).toBe('개찰 10/23(금)');
+    expect(resultCell({ schedule: { openingAt: '2026-10-23T11:00:00+09:00' } }, now)?.text).toBe('개찰 2026/10/23(금)');
     expect(resultCell({ schedule: { openingAt: '2026-10-20T11:00:00+09:00' } }, now)?.text).toBe('개찰 완료');
     expect(resultCell({ result: { status: 'waiting' }, schedule: { openingAt: '2026-10-20T11:00:00+09:00' } }, now)?.text).toBe('결과 대기');
     expect(resultCell({ result: { status: 'won' }, schedule: { openingAt: '2026-10-30T11:00:00+09:00' } }, now)?.text).toBe('낙찰');

@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* dark: 변형도 테마 설정을 따른다 */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 /* 본문 폰트. 시스템에 Pretendard가 없으면 Windows에서 맑은 고딕으로 떨어져 글자가 아래로 쏠리므로 확장에 번들한다(OFL, public/fonts/LICENSE.txt). */
 @font-face {
   font-family: 'Pretendard Variable';
@@ -11,15 +14,18 @@
 
 /* 색은 모두 토큰으로 쓴다. 다크 값은 아래 media 블록이 같은 변수를 덮어쓴다(시스템 설정을 따름). */
 @theme {
-  --color-canvas: #ebebe7;
-  --color-surface: #ffffff;
-  --color-sunken: #efefeb;
-  --color-select: #e9e9e4;
-  --color-line: #e2e2dd;
-  --color-line-strong: #cfcfc9;
-  --color-ink: #1b1b19;
-  --color-muted: #65655f;
-  --color-faint: #a1a19b;
+  /* 라이트 중성색은 강조색(파랑) 쪽으로 살짝 푸른 쿨 그레이. 카드 면은 순백 대신 회백으로 두어 바탕 위에 떠 보이지 않게 한다. */
+  --color-canvas: #f1f3f6;
+  --color-surface: #fcfcfd;
+  --color-sunken: #edf0f3;
+  --color-select: #e5e9ef;
+  --color-line: #e1e5ea;
+  --color-line-strong: #d0d6de;
+  --color-ink: #16191e;
+  --color-muted: #5a626d;
+  --color-faint: #959daa;
+  /* 보조 버튼 면. 카드 면보다 한 톤 낮아 흰 판처럼 튀지 않는다. */
+  --color-btn-face: #f6f7f9;
   /* 링크, 포커스, 선택 표시에만 쓴다. 버튼은 btn 색. */
   --color-accent: #2a4f86;
   --color-btn: #1b1b19;
@@ -34,7 +40,7 @@
   --color-btn-pri-line: #a8c1ea;
   --color-btn-pri-ink: #1c4592;
   --color-btn-danger-line: #efccc8;
-  --color-select-hover: #dcdcd6;
+  --color-select-hover: #dbe0e7;
   --color-ok: #2f7a4f;
   --color-warn: #a1620a;
   --color-danger: #b8382c;
@@ -56,6 +62,11 @@
   --color-star-wash: #fdf5dc;
   --color-ok-line: #c4e0cd;
   --color-ok-ink: #ffffff;
+  /* 줄 비교(RFP 비교) 추가·삭제 바탕과 글자 강조 */
+  --color-diff-ins: #dcf1e3;
+  --color-diff-ins-strong: #a6dcb8;
+  --color-diff-del: #fbe1de;
+  --color-diff-del-strong: #f2b2aa;
   /* 글자 단계. 본문은 base(15px). rem이 아니라 px로 고정해 html 크기와 무관하게 한다. */
   --text-xs: 0.8125rem;
   --text-xs--line-height: 1.5;
@@ -73,13 +84,17 @@
   --radius-ctl: 6px;
   --radius-btn: 8px;
   --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', 'Malgun Gothic', sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* 숫자·날짜용. 고정폭 글꼴(Consolas 등)은 한글이 없어 '원'·'마감됨' 같은 글자만 다른 글꼴로 떨어지므로
+     본문 글꼴을 쓰고 숫자 폭만 맞춘다(아래 base 레이어의 .font-mono 규칙). */
+  --font-mono: var(--font-sans);
+  /* 진짜 고정폭이 필요한 곳(로그·JSON·원본 텍스트 그대로)만 쓴다. */
+  --font-code: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   /* 그림자 색. shadow 값은 빌드 시 인라인되므로 색만 변수로 빼서 다크에서 덮어쓴다. */
-  --color-shade-1: rgb(27 27 25 / 0.06);
-  --color-shade-2: rgb(27 27 25 / 0.09);
-  --color-shade-3: rgb(27 27 25 / 0.18);
-  /* 1단: 놓인 카드 */
-  --shadow-card: 0 1px 2px var(--color-shade-1), 0 2px 8px -2px var(--color-shade-2);
+  --color-shade-1: rgb(22 28 40 / 0.05);
+  --color-shade-2: rgb(22 28 40 / 0.08);
+  --color-shade-3: rgb(22 28 40 / 0.16);
+  /* 1단: 놓인 카드. 그림자 없이 테두리로만 구분해 바탕에 붙인다. */
+  --shadow-card: 0 0 #0000;
   /* 2단: 들린 요소(hover한 클릭 카드, 토스트) */
   --shadow-raised: 0 2px 6px var(--color-shade-1), 0 10px 24px -6px var(--color-shade-3);
   /* 3단: 오버레이(서랍) */
@@ -90,8 +105,9 @@
   --inset-shadow-sunken: inset 0 1px 2px var(--color-shade-1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+/* 다크 값. 테마 설정(ui/theme/mode.ts)이 html에 data-theme="dark"를 달면 적용된다(시스템 모드면 OS 설정을 따름). */
+:root[data-theme='dark'] {
+  & {
     --color-canvas: #111110;
     --color-surface: #1c1c1b;
     --color-sunken: #171716;
@@ -113,6 +129,7 @@
     --color-btn-pri-ink: #b8cff8;
     --color-btn-danger-line: #4a2724;
     --color-select-hover: #353532;
+    --color-btn-face: #222221;
     --color-ok: #6cc08e;
     --color-warn: #e0a44a;
     --color-danger: #ec7a6d;
@@ -130,6 +147,10 @@
     --color-star-wash: #2c2614;
     --color-ok-line: #2b4a36;
     --color-ok-ink: #0f1a13;
+    --color-diff-ins: #1f3a28;
+    --color-diff-ins-strong: #2f6b45;
+    --color-diff-del: #3a1f1c;
+    --color-diff-del-strong: #7a3029;
     --color-shade-1: rgb(0 0 0 / 0.45);
     --color-shade-2: rgb(0 0 0 / 0.35);
     --color-shade-3: rgb(0 0 0 / 0.6);
@@ -142,11 +163,9 @@
 [data-ai='claude'] { --color-ai-wash: #fbf1ec; --color-ai-line: #f0d3c5; --color-ai-ink: #a5492a; }
 [data-ai='openai'] { --color-ai-wash: #f1f1ef; --color-ai-line: #d6d6d2; --color-ai-ink: #2b2b29; }
 [data-ai='gemini'] { --color-ai-wash: #eef4ff; --color-ai-line: #cfdffb; --color-ai-ink: #1f5fcc; }
-@media (prefers-color-scheme: dark) {
-  [data-ai='claude'] { --color-ai-wash: #2a1d18; --color-ai-line: #4d3026; --color-ai-ink: #eba98f; --color-ai-surface: #1f1613; }
-  [data-ai='openai'] { --color-ai-wash: #232322; --color-ai-line: #3d3d3a; --color-ai-ink: #dcdcd7; --color-ai-surface: #1a1a19; }
-  [data-ai='gemini'] { --color-ai-wash: #18202e; --color-ai-line: #2a3a55; --color-ai-ink: #9fc0f7; --color-ai-surface: #141a24; }
-}
+:root[data-theme='dark'] [data-ai='claude'] { --color-ai-wash: #2a1d18; --color-ai-line: #4d3026; --color-ai-ink: #eba98f; --color-ai-surface: #1f1613; }
+:root[data-theme='dark'] [data-ai='openai'] { --color-ai-wash: #232322; --color-ai-line: #3d3d3a; --color-ai-ink: #dcdcd7; --color-ai-surface: #1a1a19; }
+:root[data-theme='dark'] [data-ai='gemini'] { --color-ai-wash: #18202e; --color-ai-line: #2a3a55; --color-ai-ink: #9fc0f7; --color-ai-surface: #141a24; }
 
 /* AI 색 바탕 블록 안에서는 회색 면·테두리 대신 공급자 색을 쓴다(카드·버튼·입력창이 바탕 위에 뜨지 않게). */
 .ai-tint {
@@ -154,6 +173,11 @@
   --color-sunken: var(--color-ai-wash);
   --color-line: var(--color-ai-line);
   --color-line-strong: var(--color-ai-line);
+  --color-btn-face: var(--color-ai-surface);
+  /* 주 버튼도 파랑 대신 공급자 색으로 채운다(글자는 면 색이라 라이트·다크 모두 대비가 맞다). */
+  --color-primary: var(--color-ai-ink);
+  --color-primary-hover: var(--color-ai-ink);
+  --color-primary-ink: var(--color-ai-surface);
 }
 
 /* 대시보드는 넓은 화면에서 보므로 약 110%로 키운다(사이드패널·팝업은 폭이 좁아 기본 크기 유지). */
@@ -182,25 +206,16 @@ html.ui-scale { font-size: 110%; }
     line-height: 1.6;
   }
   button { cursor: pointer; }
-  /* 제목 앞 세로 막대. 첫 줄 가운데에 맞춰 여러 줄 제목에서도 위에 붙는다. */
-  .title-mark { display: flex; align-items: flex-start; gap: 0.5em; }
-  .title-mark::before {
-    content: '';
-    flex-shrink: 0;
-    width: 3px;
-    height: 0.95em;
-    margin-top: calc((1lh - 0.95em) / 2);
-    border-radius: 1px;
-    background: var(--color-ink);
-  }
+  /* 제목 표시. 예전엔 앞에 세로 막대를 붙였으나 커서처럼 보여 뺐다(호출부 호환용으로 클래스만 남김). */
+  .title-mark { display: block; }
+  /* 숫자·날짜: 본문 글꼴 + 숫자 폭 맞춤(--font-mono 주석 참고) */
+  .font-mono { font-variant-numeric: tabular-nums; }
   button:disabled { cursor: not-allowed; }
   :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 }
 
 /* 마스코트: 다크 모드에서 흰 몸통이 떠 보이지 않게 밝기와 채도를 낮춘다.
-   확장 페이지 전용 규칙이다(웹메일 진행 카드, 나라장터 패널은 다크에서도 흰 카드라 이 파일을 읽지 않는다).
+   확장 페이지 전용 규칙이다(웹메일 진행 카드, 나라장터 패널은 이 파일을 읽지 않는다).
    :root를 붙여 런타임에 주입되는 MASCOT_CSS의 갸웃(huh) 필터보다 우선한다. */
-@media (prefers-color-scheme: dark) {
-  :root .bm-mascot { filter: brightness(.82) saturate(.88); }
-  :root .bm-mascot[data-mood="huh"] { filter: brightness(.82) saturate(.55); }
-}
+:root[data-theme='dark'] .bm-mascot { filter: brightness(.82) saturate(.88); }
+:root[data-theme='dark'] .bm-mascot[data-mood="huh"] { filter: brightness(.82) saturate(.55); }

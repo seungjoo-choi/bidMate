@@ -1,5 +1,6 @@
 import type { ISODate } from './common';
 import type { NoticeKind } from './notice';
+import type { IndexEntry } from './index-file';
 import type { MailProvider } from './settings';
 import type { SendConfirmation } from './job';
 
@@ -46,5 +47,14 @@ export interface SentIndexEntry {
   subject: string; toCount: number; ccCount: number; attachmentCount: number;
   composeRecordId?: string; voidedAt?: ISODate;
   signalKind?: SendSignal['kind'];
+  /** 공고가 삭제되어 보관본에서 온 항목(folder는 ''). */
+  noticeDeleted?: true;
 }
 export interface SentIndexFile { schemaVersion: 1; generatedAt: ISODate; entries: SentIndexEntry[] }
+
+/** 공고 삭제 시 발송 이력을 공고 폴더 밖에 보관하는 파일(mail-sent-archive/<noticeId>.json). */
+export interface SentArchiveFile {
+  schemaVersion: 1; noticeId: string; deletedAt: ISODate;
+  entry: Pick<IndexEntry, 'kind' | 'noticeNo' | 'round' | 'title' | 'orderingOrg'>;
+  records: SendRecord[];
+}

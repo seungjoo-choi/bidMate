@@ -17,12 +17,10 @@ import { SentMailModal } from './SentMailModal';
 
 const toInfo = (e: unknown): FsErrorInfo => ({ code: (e as { code?: string }).code, message: e instanceof Error ? e.message : String(e) });
 
-/** 취소 버튼 라벨용 `YYYY-MM-DD HH:mm` */
+/** 취소 버튼 라벨용 `YYYY/MM/DD HH:mm` */
 function labelTime(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  const t = formatDateTime(iso);
+  return t === '—' ? iso : t;
 }
 
 /** datetime-local 입력값(로컬 시각)으로 쓸 현재 시각 */

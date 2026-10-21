@@ -14,7 +14,7 @@ export function resultCell(e: Pick<IndexEntry, 'result' | 'schedule' | 'kind'>, 
   if (!r || r.status === 'waiting') {
     const at = e.schedule?.openingAt ? new Date(e.schedule.openingAt) : null;
     if (at && !Number.isNaN(at.getTime())) {
-      if (at.getTime() > now.getTime()) return { tone: 'idle', text: `개찰 ${at.getMonth() + 1}/${at.getDate()}(${DOW[at.getDay()]})` };
+      if (at.getTime() > now.getTime()) return { tone: 'idle', text: `개찰 ${at.getFullYear()}/${p2(at.getMonth() + 1)}/${p2(at.getDate())}(${DOW[at.getDay()]})` };
       return { tone: 'idle', text: r ? '결과 대기' : '개찰 완료' };
     }
     return r ? { tone: 'idle', text: '결과 대기' } : null;
@@ -73,7 +73,7 @@ export function formatCheckAt(iso: string | undefined | null, now: Date = new Da
   const diff = Math.round((day(d) - day(now)) / 86_400_000);
   if (diff === 0) return `오늘 ${hm}`;
   if (diff === 1) return `내일 ${hm}`;
-  return `${d.getMonth() + 1}/${d.getDate()}(${DOW[d.getDay()]}) ${hm}`;
+  return `${d.getFullYear()}/${p2(d.getMonth() + 1)}/${p2(d.getDate())}(${DOW[d.getDay()]}) ${hm}`;
 }
 
 /** 목록 둘째 줄의 팔로우 안내. 팔로우 중이 아니면 null. */

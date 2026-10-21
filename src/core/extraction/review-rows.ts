@@ -2,7 +2,7 @@ import { getField } from '../model/notice-fields';
 import { sameKey } from '../model/merge';
 import type { Notice } from '../types/notice';
 import { EXTRACTION_KEYS, type Extraction, type ExtractionKey } from '../types/extraction';
-import { NA_NOTE, fieldReviewState, itemReviewState } from './review-count';
+import { NA_NOTE, fieldReviewState, isNaNote, itemReviewState, naNoteOf } from './review-count';
 
 export type ReviewLeafKey =
   | 'postedAt' | 'registrationDeadline' | 'proposalPeriod' | 'proposalEvalAt' | 'budgetAmount' | 'projectPeriod'
@@ -39,7 +39,7 @@ export const REVIEW_KIND: Record<ReviewLeafKey, ReviewValueKind> = {
 };
 
 export const isExtractionLeaf = (k: ReviewLeafKey): k is ExtractionKey => (EXTRACTION_KEYS as string[]).includes(k);
-export const NOT_RUN_TEXT = '이전 버전 결과, 다시 추출 필요';
+export const NOT_RUN_TEXT = '이전 버전 결과, 다시 수집 필요';
 
 export type LeafState = 'verified' | 'needs_review' | 'user_edited' | 'covered' | 'not_applicable' | 'not_run';
 export interface LeafJudgement { state: LeafState; reason?: string; value: unknown; editedOrigin?: 'ai' | 'confirm' }
@@ -54,7 +54,7 @@ export function leafReviewState(notice: Notice, x: Extraction | null, key: Revie
       const value = item.userEdited?.value ?? item.value;
       const j: LeafJudgement = { state, value };
       if (state === 'not_run') j.reason = NOT_RUN_TEXT;
-      if (state === 'not_applicable') j.reason = NA_NOTE;
+      if (state === 'not_applicable') j.reason = naNoteOf(item);
       if (state === 'user_edited') {
         if (item.userEdited?.origin?.kind === 'ai') j.editedOrigin = 'ai';
         else if (sameKey(item.userEdited?.value) === sameKey(item.value)) j.editedOrigin = 'confirm';
@@ -82,7 +82,7 @@ export function leafReviewState(notice: Notice, x: Extraction | null, key: Revie
     }
     case 'verified': return { state: 'verified', value: f.value };
     case 'covered': return { state: 'covered', value: f.value };
-    case 'not_applicable': return { state: 'not_applicable', reason: NA_NOTE, value: f.value };
+    case 'not_applicable': return { state: 'not_applicable', reason: isNaNote(f.note) ? f.note! : NA_NOTE, value: f.value };
     case 'needs_review': return { state: 'needs_review', reason: f.note ?? '출처별 값이 서로 다름', value: f.value };
     case 'not_run': return { state: 'not_run', value: f.value };
     default: return { state: 'needs_review', reason: '공고정보에 값 없음', value: null };

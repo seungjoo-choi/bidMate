@@ -66,7 +66,7 @@ describe('progressPanelView', () => {
   });
   it('extract label 잔여 파일명 -> detail', () => {
     const st = steps({ status: 'done' }, { status: 'done' }, { status: 'running', progress: { done: 0, total: 3 } });
-    const it = first(entry({ job: job({ currentStep: 'extract', steps: st, label: '평가정보 추출 중 (1/3), b.pdf' }) }))!;
+    const it = first(entry({ job: job({ currentStep: 'extract', steps: st, label: '평가정보 수집 중 (1/3), b.pdf' }) }))!;
     expect(it.stepLabel).toBe(`${COLLECT_STEP_LABEL.extract} (0/3)`);
     expect(it.detail).toBe('b.pdf');
   });

@@ -14,7 +14,7 @@ export function seedStore(seeds: Seed[]): MemoryStore {
     noticeId: s.id, noticeNo: s.id.slice(0, 13), round: s.id.slice(14), title: `제목 ${s.id}`, orderingOrg: '', folder: `notices/${s.id}`,
     collectedAt: '', collectStatus: 'ok', attachments: { total: 0, saved: 0, failed: 0 }, extractionStatus: 'not_run', mailStatus: 'none', isCorrection: false,
   }) as unknown as IndexEntry);
-  store.files.set('index.json', JSON.stringify({ schemaVersion: 1, indexVersion: 2, generatedAt: '', notices }));
+  store.files.set('index.json', JSON.stringify({ schemaVersion: 1, indexVersion: 3, generatedAt: '', notices }));
   for (const s of seeds) {
     if (s.noNotice) continue;
     const f = (v: string | null | undefined) => ({ value: v ?? null });

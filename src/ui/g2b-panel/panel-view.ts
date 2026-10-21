@@ -64,7 +64,7 @@ export function runningStepSpan(steps: StepState[]): number | undefined {
 
 export const COLLECT_STEP_LABEL: Record<string, string> = {
   fetch_basic: '공고정보 조회 중', download_attachments: '첨부파일 다운로드 중', fetch_html: '상세화면 읽는 중',
-  extract: '평가정보 추출 중',
+  extract: '평가정보 수집 중',
 };
 
 /** 추출 결과 한 줄. 추출이 실행되지 않았거나 지원 대상이 없으면 표시하지 않는다. */
@@ -146,7 +146,7 @@ export function panelView(job: Job | null, lookup: NoticeLookup, opts: PanelView
         kind: 'partial', headline: extractOnly ? `평가정보 추출 실패, 첨부 ${saved}/${att.length}` : `일부 첨부 실패, ${saved}/${att.length}`,
         extractionLine: extractFailed ? '평가정보 추출 실패' : extractionLineOf(result),
         reviewNoticeId: !extractFailed && extractionLineOf(result) ? result?.noticeId : undefined,
-        retryLabel: extractOnly ? '평가정보 다시 추출' : extractFailed ? '실패 항목 재시도' : '실패 파일 재시도',
+        retryLabel: extractOnly ? '평가정보 다시 수집' : extractFailed ? '실패 항목 재시도' : '실패 파일 재시도',
         failures: failed.slice(0, 5).map((a) => ({ name: a.name, reason: a.error ?? a.status })),
         moreCount: Math.max(0, failed.length - 5), folder: result?.folder, title: jobTitle, foreign, canRetry: !foreign, ...ho, ...noticeIdPart,
       };

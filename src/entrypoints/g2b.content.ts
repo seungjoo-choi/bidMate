@@ -8,6 +8,7 @@ import type { ResponseOf } from '../messaging/protocol';
 import { PanelController } from '../ui/g2b-panel/controller';
 import { mountPanel } from '../ui/g2b-panel/mount';
 import '../ui/g2b-panel/style.css';
+import { applyTheme } from '../ui/theme/mode';
 
 // 숨김 탭 진단용: 직전 요청 이후 rAF/타이머가 실제로 도달했는지
 let rafFlag = false;
@@ -75,6 +76,7 @@ export default defineContentScript({
       onMount: (container) => mountPanel(container, controller),
       onRemove: (root) => { root?.unmount(); controller.stop(); },
     });
+    applyTheme(ui.shadowHost);
     ui.mount();
     controller.start();
 

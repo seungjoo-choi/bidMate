@@ -11,6 +11,7 @@ import { bonusTable } from './strategies/bonus-table';
 import { prepare, type Prepared, type RawHit } from './strategies/common';
 import { inlineScore } from './strategies/inline-score';
 import { keywordEnum } from './strategies/keyword-enum';
+import { qualTable } from './strategies/qual-table';
 import { quantTable } from './strategies/quant-table';
 import { tableScore } from './strategies/table-score';
 import { windowRegex } from './strategies/window-regex';
@@ -26,6 +27,7 @@ function runStrategy(doc: Prepared, rule: Rule, syn: RuleSet['synonyms']): RawHi
     case 'block-capture': return blockCapture(doc, rule, syn);
     case 'bonus-table': return bonusTable(doc, rule, syn);
     case 'quant-table': return quantTable(doc, rule, syn);
+    case 'qual-table': return qualTable(doc, rule, syn);
   }
 }
 
@@ -62,7 +64,7 @@ export function runRules(inputs: RuleDocInput[], rules: RuleSet): RunResult {
         if (h.sheet !== undefined) evidence.sheet = h.sheet;
         if (h.line !== undefined) evidence.line = h.line;
         if (h.context !== undefined) evidence.context = h.context.slice(0, 400);
-        out.push({ target: rule.target, value: h.value, raw: h.raw, evidence, priority: inp.priority, weight: rule.weight ?? 1, docKind: inp.docKind });
+        out.push({ target: rule.target, value: h.value, raw: h.raw, evidence, priority: inp.priority, weight: rule.weight ?? 1, docKind: inp.docKind, ...(h.inForm ? { inForm: true } : {}) });
       }
     }
   }

@@ -167,7 +167,7 @@ describe('finishRun / 반자동 제출', () => {
     x.jobId = 'job-new';
     store.files.set(k, JSON.stringify(x));
     const f = await finishRun(store, { noticeId, runId: p.run.id, responseText: resp(p.run.id, goodItems) }, deps);
-    expect(f.runs[0]!.warnings.some((w) => w.includes('다시 추출'))).toBe(true);
+    expect(f.runs[0]!.warnings.some((w) => w.includes('다시 수집'))).toBe(true);
   });
 });
 

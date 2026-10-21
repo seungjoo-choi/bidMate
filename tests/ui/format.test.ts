@@ -30,8 +30,8 @@ describe('날짜', () => {
   const now = new Date(2026, 9, 17, 12, 0);
   it('포맷', () => {
     const d = new Date(2026, 9, 20, 9, 5).toISOString();
-    expect(formatDateTime(d)).toBe('10/20 09:05');
-    expect(formatDate(d)).toBe('10/20');
+    expect(formatDateTime(d)).toBe('2026/10/20 09:05');
+    expect(formatDate(d)).toBe('2026/10/20');
     expect(formatDate(undefined)).toBe('—');
   });
   it('마감 임박/경과', () => {

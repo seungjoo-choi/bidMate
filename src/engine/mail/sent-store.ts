@@ -1,5 +1,7 @@
 import { attributeCompose, deriveMailStatus, legacyRecord, sentIndexEntryOf, summaryOf } from '../../core/mail/sent-derive';
-import type { ComposeRecord, SendRecord, SentIndexEntry, SentIndexFile, SentMailView } from '../../core/types/compose';
+import type { ComposeRecord, SendRecord, SentArchiveFile, SentIndexEntry, SentIndexFile, SentMailView } from '../../core/types/compose';
+import { sanitizeSegment } from '../../core/model/sanitize';
+import type { IndexEntry } from '../../core/types/index-file';
 import type { Notice } from '../../core/types/notice';
 import type { MailProvider } from '../../core/types/settings';
 import { readJson, writeJson } from '../file-store/json-store';
@@ -10,11 +12,15 @@ import { readDraft } from './prepare';
 
 export const SENT_INDEX_PATH = 'mail-sent-index.json';
 export const sentPath = (folder: string): string => `${folder}/mail-sent.json`;
+export const SENT_ARCHIVE_DIR = 'mail-sent-archive';
+export const sentArchivePath = (noticeId: string): string => `${SENT_ARCHIVE_DIR}/${sanitizeSegment(noticeId, 80)}.json`;
 
 const INDEX_WARN_BYTES = 2 * 1024 * 1024;
 const NOTE_MAX = 200;
 const isPermission = (e: unknown): boolean => (e as { code?: string })?.code === 'NEEDS_FS_PERMISSION' || (e as { code?: string })?.code === 'DISK_FULL';
 const err = (code: string, message: string) => Object.assign(new Error(message), { code });
+const isArchive = (a: SentArchiveFile | null | undefined): a is SentArchiveFile =>
+  !!a && a.schemaVersion === 1 && typeof a.noticeId === 'string' && Array.isArray(a.records);
 
 type Confirmation = 'ui_gone' | 'toast' | 'unload';
 interface MutateOpts { checkBusy?: boolean }
@@ -179,6 +185,40 @@ export class SentStore {
     });
   }
 
+  /**
+   * 공고 삭제용. 발송 이력을 공고 폴더 밖(mail-sent-archive)에 보관하고 mail-sent-index.json을 보관본 기준으로 바꾼다.
+   * 호출 측이 editLockKey 안에서 부른다(락 순서: editLockKey -> SENT_INDEX_PATH). index.json은 읽지 않는다. 보관한 기록 수를 돌려준다.
+   */
+  async archiveForDelete(entry: IndexEntry, notice: Notice | null, now: Date): Promise<number> {
+    const noticeId = entry.noticeId;
+    // 재시도면 앞선 시도가 mail-sent.json을 이미 지웠을 수 있다. legacy로 보관본을 덮어쓰지 않도록 보관본을 먼저 본다.
+    const records = (await this.readRecords(entry.folder))
+      ?? (await this.readArchive(noticeId))?.records
+      ?? (notice ? this.legacyOf(notice) : []);
+    if (records.length > 0) {
+      const file: SentArchiveFile = {
+        schemaVersion: 1, noticeId, deletedAt: now.toISOString(),
+        entry: { ...(entry.kind ? { kind: entry.kind } : {}), noticeNo: entry.noticeNo, round: entry.round, title: entry.title, orderingOrg: entry.orderingOrg },
+        records,
+      };
+      await writeJson(this.store, sentArchivePath(noticeId), file);
+    }
+    await this.store.withLock(SENT_INDEX_PATH, async () => {
+      try {
+        const idx = await this.loadIndexRaw();
+        const rest = idx.entries.filter((e) => e.noticeId !== noticeId);
+        const mine = records.map((r): SentIndexEntry => ({ ...sentIndexEntryOf(r, entry), noticeDeleted: true, folder: '' }));
+        await writeJson(this.store, SENT_INDEX_PATH, { ...idx, entries: [...rest, ...mine], generatedAt: new Date().toISOString() });
+      } catch (e) {
+        if ((e as { code?: string } | null)?.code === 'NEEDS_FS_PERMISSION') throw e;
+        // 보관본은 저장됐다. index는 지워 다음 loadIndex에서 재생성되게 하고, 지우기까지 실패하면 오류를 던진다.
+        await this.store.remove(SENT_INDEX_PATH).catch(() => { throw e; });
+        console.warn(`[bidmate] ${SENT_INDEX_PATH} 쓰기에 실패해 삭제했습니다(다음 조회 때 재생성)`);
+      }
+    });
+    return records.length;
+  }
+
   private legacyOf(notice: Notice): SendRecord[] {
     const l = legacyRecord(notice);
     return l ? [l] : [];
@@ -196,6 +236,17 @@ export class SentStore {
       const x = e as { code?: string; name?: string };
       if (isPermission(e) || x.code === 'CONFIG_CORRUPT') throw e;
       if (strict && x.name !== 'NotFoundError' && x.code !== 'NOT_FOUND') throw corrupt();
+      return null;
+    }
+  }
+
+  /** 삭제된 공고의 발송 이력 보관본. 없거나 손상이면 null. 권한 오류만 던진다. */
+  private async readArchive(noticeId: string): Promise<SentArchiveFile | null> {
+    try {
+      const a = await readJson<SentArchiveFile>(this.store, sentArchivePath(noticeId));
+      return isArchive(a) ? a : null;
+    } catch (e) {
+      if (isPermission(e)) throw e;
       return null;
     }
   }
@@ -230,15 +281,29 @@ export class SentStore {
   /** index.json의 공고를 돌며 mail-sent.json(없으면 legacy)에서 재생성한다. */
   private async scan(): Promise<SentIndexFile> {
     const entries: SentIndexEntry[] = [];
-    for (const e of (await this.ns.loadIndex()).notices) {
+    const notices = (await this.ns.loadIndex()).notices;
+    for (const e of notices) {
       try {
-        let records = await this.readRecords(e.folder);
+        // 삭제 도중 실패해 mail-sent.json만 없어진 공고는 보관본이 권위다.
+        let records = (await this.readRecords(e.folder)) ?? (await this.readArchive(e.noticeId))?.records ?? null;
         if (!records && e.mailStatus === 'delivered') {
           const n = await this.ns.loadNotice(e.noticeId);
           records = n ? this.legacyOf(n) : [];
         }
         for (const r of records ?? []) entries.push(sentIndexEntryOf(r, e));
       } catch (err2) { if (isPermission(err2)) throw err2; /* 손상된 항목은 건너뜀 */ }
+    }
+    // 삭제된 공고의 보관본. index.json에 아직 있는 공고(삭제 중 실패 등)는 위 루프가 다뤘으므로 건너뛴다.
+    const live = new Set(notices.map((e) => e.noticeId));
+    const files = await this.store.list(SENT_ARCHIVE_DIR).catch((err2) => { if (isPermission(err2)) throw err2; return []; });
+    for (const f of files) {
+      if (f.kind !== 'file' || !f.name.endsWith('.json')) continue;
+      try {
+        const a = await readJson<SentArchiveFile>(this.store, `${SENT_ARCHIVE_DIR}/${f.name}`);
+        if (!isArchive(a) || live.has(a.noticeId)) continue;
+        const e = { ...a.entry, noticeId: a.noticeId, folder: '' } as IndexEntry;
+        for (const r of a.records) entries.push({ ...sentIndexEntryOf(r, e), noticeDeleted: true });
+      } catch (err2) { if (isPermission(err2)) throw err2; /* 손상된 보관본은 건너뜀 */ }
     }
     return { schemaVersion: 1, generatedAt: new Date().toISOString(), entries };
   }

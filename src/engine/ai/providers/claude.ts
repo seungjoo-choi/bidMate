@@ -1,5 +1,4 @@
 import type { AiErrorCode } from '../../../core/types/ai';
-import { outputSchema } from './schema';
 import type { AiBuildRequestInput, AiError, AiParsedResponse, AiProviderAdapter } from './types';
 
 // S0 실측 전: 엔드포인트·헤더·요청/응답 형태는 명세 §4 표 그대로이며 실측 후 이 파일 안에서만 고친다.
@@ -31,7 +30,7 @@ export const claudeAdapter: AiProviderAdapter = {
         model: r.model, max_tokens: r.maxTokens,
         system: r.system,
         messages: [{ role: 'user', content: r.user }],
-        output_config: { format: { type: 'json_schema', schema: outputSchema(r.spec) } },
+        output_config: { format: { type: 'json_schema', schema: r.schema } },
       },
     };
   },

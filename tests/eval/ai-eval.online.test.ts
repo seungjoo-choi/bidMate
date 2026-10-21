@@ -8,6 +8,7 @@ import { verifySuggestions } from '../../src/core/ai/verify';
 import { EXTRACTION_KEYS, type ExtractionKey } from '../../src/core/types/extraction';
 import { AI_MAX_TOKENS, callProvider } from '../../src/engine/ai/ai-client';
 import { geminiAdapter } from '../../src/engine/ai/providers/gemini';
+import { outputSchema } from '../../src/engine/ai/providers/schema';
 import {
   EVAL_RUN_ID, RESPONSES_DIR, RESULTS_DIR, SYNONYMS, judge, loadAnswerKeys, loadEvalFiles, toExcerptInputs, toVerifyFiles, type Verdict,
 } from '../helpers/ai-eval';
@@ -45,7 +46,7 @@ describe.runIf(!!apiKey && answers.length > 0)('AI 온라인 평가(Gemini)', ()
       for (let n = 1; n <= N; n++) {
         if (runs.length > 0 && DELAY_MS > 0) await sleep(DELAY_MS);
         const t0 = Date.now();
-        const r = await callProvider(geminiAdapter, { apiKey: apiKey!, model, system: built.system, user: built.user, spec: built.spec, maxTokens: AI_MAX_TOKENS }, { fetch: globalThis.fetch });
+        const r = await callProvider(geminiAdapter, { apiKey: apiKey!, model, system: built.system, user: built.user, schema: outputSchema(built.spec), schemaName: 'bidmate_ai_review', maxTokens: AI_MAX_TOKENS }, { fetch: globalThis.fetch });
         const ms = Date.now() - t0;
         const responseFile = `${RESPONSES_DIR}/${ans.noticeId}/${PROMPT_VERSION}-${n}.txt`;
         const run: RunResult = { noticeId: ans.noticeId, n, responseFile, inputTokens: null, outputTokens: null, ms, items: {} };

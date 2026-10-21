@@ -1,4 +1,4 @@
-import { ChevronRight, FileSearch, Pencil, RotateCcw } from 'lucide-react';
+import { ChevronRight, ExternalLink, FileSearch, Pencil, RotateCcw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { NOT_RUN_TEXT, type ReviewLeafKey, type ReviewRowKey } from '../../../core/extraction/review-rows';
 import { inputKindOf, parseFieldInput } from '../../../core/model/field-edit';
@@ -173,6 +173,8 @@ export interface LeafActions {
   onAiFind: (key: AiKey) => void;
   onEdit: LeafEdit;
   onOpenText: (e: EvidenceRef) => void;
+  /** 나라장터 공고 원문 페이지를 연다. 원문 주소가 없으면 생략 */
+  onOpenSource?: () => void;
   onAiApply: (key: AiKey) => (runId: string, note?: string, variantIndex?: number) => Promise<AiBlockError | null>;
   onAiDismiss: (key: AiKey) => (runId: string) => Promise<AiBlockError | null>;
 }
@@ -213,10 +215,10 @@ function LeafPanel({ leaf, titled, a }: { leaf: ReviewLeaf; titled: boolean; a: 
     right = leaf.reason === NOT_RUN_TEXT ? null : editBtn('직접 입력');
   } else if (pending && leaf.candidates.length >= 2) {
     left = <>{aiFindBtn(false)}{editBtn()}</>;
-    right = <Button className={SMALL} disabled={a.busy} loading={working} onClick={() => void act(leaf.candidates[picked]?.value ?? null)}>이 값으로 확정</Button>;
+    right = <Button variant="secondary" className={SMALL} disabled={a.busy} loading={working} onClick={() => void act(leaf.candidates[picked]?.value ?? null)}>이 값으로 확정</Button>;
   } else if (pending && leaf.confirmable) {
     left = <>{aiFindBtn(false)}{editBtn()}</>;
-    right = <Button className={SMALL} disabled={a.busy} loading={working} onClick={() => void act(leaf.value, leaf.raw)}>이 값이 맞음</Button>;
+    right = <Button variant="secondary" className={SMALL} disabled={a.busy} loading={working} onClick={() => void act(leaf.value, leaf.raw)}>이 값이 맞음</Button>;
   } else if (pending) {
     left = editBtn('직접 입력');
     right = aiFindBtn(true) || null;
@@ -227,6 +229,13 @@ function LeafPanel({ leaf, titled, a }: { leaf: ReviewLeaf; titled: boolean; a: 
   }
 
   const ev = leaf.evidence;
+  // 나라장터 공고정보·상세화면에서 온 값은 문서 근거가 없으니 나라장터 원문 페이지로 확인하게 한다
+  const fromG2b = !!a.onOpenSource && (leaf.sourceKind === 'api' || leaf.sourceKind === 'html' || leaf.sourceKind === 'derived');
+  const sourceLink = (
+    <button type="button" className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline" onClick={() => a.onOpenSource?.()}>
+      <ExternalLink className="size-3.5" aria-hidden />나라장터 원문 보기
+    </button>
+  );
   // 결정할 것이 없는 상태(확인 완료 등)는 버튼을 내용 옆에 붙여 줄을 따로 쓰지 않는다
   const inline = !editing && !left;
   const body = (
@@ -255,6 +264,7 @@ function LeafPanel({ leaf, titled, a }: { leaf: ReviewLeaf; titled: boolean; a: 
         <div className="space-y-1 text-sm">
           <div className="text-xs text-muted">{leaf.sourceText}</div>
           <blockquote className="border-l-2 border-line-strong pl-3"><Marked text={leaf.evidenceText} value={leaf.valueText} /></blockquote>
+          {fromG2b && <div>{sourceLink}</div>}
         </div>
       )}
       {empty && leaf.raw && <p className="text-sm"><span className="text-muted">원문 표기: </span>{leaf.raw}</p>}
@@ -290,7 +300,10 @@ function LeafPanel({ leaf, titled, a }: { leaf: ReviewLeaf; titled: boolean; a: 
         <div className="min-w-0 flex-1 space-y-3">
           {body}
           {!titled && !(leaf.kind === 'text' && leaf.valueText.length > LONG_TEXT) && !(empty && leaf.raw) && !leaf.reason && !ev && !leaf.evidenceText && !leaf.note && !leaf.autoValueText && !hasAi && (
-            <p className="pt-1.5 text-sm text-muted">{leaf.sourceText ? `${leaf.sourceText}에서 가져온 값입니다` : '자동으로 채운 값입니다'}</p>
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1.5 text-sm text-muted">
+              <span>{leaf.sourceText ? `${leaf.sourceText}에서 가져온 값입니다` : '자동으로 채운 값입니다'}</span>
+              {fromG2b && sourceLink}
+            </p>
           )}
         </div>
         {right && <div className="flex shrink-0 flex-wrap items-center gap-2">{right}</div>}

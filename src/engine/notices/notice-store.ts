@@ -28,6 +28,7 @@ export function entryOf(n: Notice, prev?: IndexEntry, extractionStatus?: Extract
   const str = (v: unknown): string => (typeof v === 'string' ? v : '');
   const isPrespec = kindOf(n.ref) === 'prespec';
   const schedule = scheduleOf(n);
+  const demandOrg = str(n.basic.demandOrg.value);
   return {
     ...(kindOf(n.ref) !== 'bid' ? { kind: kindOf(n.ref) } : {}),
     noticeId: n.id,
@@ -35,6 +36,7 @@ export function entryOf(n: Notice, prev?: IndexEntry, extractionStatus?: Extract
     round: str(n.basic.round.value) || n.ref.round || '',
     title: str(n.basic.title.value),
     orderingOrg: str(n.basic.orderingOrg.value),
+    ...(demandOrg ? { demandOrg } : {}),
     folder: n.folder,
     collectedAt: n.collect.collectedAt,
     // 사전규격은 의견등록마감일시를 bidCloseAt 자리에 의도적으로 재사용한다(목록의 '마감' 열).
@@ -78,17 +80,28 @@ export class NoticeStore {
     return this.rebuildIndex();
   }
 
-  /** 옛 index에 schedule을 보충한다. 항목은 지우지 않고, notice.json을 못 읽은 항목은 그대로 둔다. */
+  /** 옛 index에 schedule(입찰공고)·demandOrg를 보충한다. 보충이 필요한 항목만 notice.json을 한 번 읽는다. 항목은 지우지 않고, 못 읽은 항목은 그대로 둔다. */
   private migrateIndex(): Promise<IndexFile> {
     return this.store.withLock(INDEX_PATH, async () => {
       const idx = await this.loadIndexRaw();
       if (idx.indexVersion === INDEX_VERSION) return idx;
       for (let i = 0; i < idx.notices.length; i++) {
         const e = idx.notices[i]!;
-        if (e.kind === 'prespec' || e.schedule) continue;
+        const needSchedule = e.kind !== 'prespec' && !e.schedule;
+        const needDemandOrg = !('demandOrg' in e);
+        if (!needSchedule && !needDemandOrg) continue;
         try {
-          const schedule = scheduleOf(fillMissingFields(await readJson<Notice>(this.store, `${e.folder}/notice.json`)));
-          if (schedule) idx.notices[i] = { ...e, schedule };
+          const n = fillMissingFields(await readJson<Notice>(this.store, `${e.folder}/notice.json`));
+          const next: IndexEntry = { ...e };
+          if (needSchedule) {
+            const schedule = scheduleOf(n);
+            if (schedule) next.schedule = schedule;
+          }
+          if (needDemandOrg) {
+            const v = n.basic.demandOrg.value;
+            if (typeof v === 'string' && v) next.demandOrg = v;
+          }
+          idx.notices[i] = next;
         } catch (err) {
           if ((err as { code?: string }).code === 'NEEDS_FS_PERMISSION') throw err;
         }
@@ -112,6 +125,30 @@ export class NoticeStore {
     if (found) return found.folder;
     const year = /^\d{4}/.test(postedAt ?? '') ? (postedAt as string).slice(0, 4) : nowIso.slice(0, 4);
     return `${NOTICES_DIR}/${year}/${noticeId}_${sanitizeSegment(title, 40)}`;
+  }
+
+  async findEntry(noticeId: string): Promise<IndexEntry | undefined> {
+    return (await this.loadIndex()).notices.find((e) => e.noticeId === noticeId);
+  }
+
+  /** index에서 항목을 빼고, 다른 항목의 supersededBy가 이 공고면 그 필드도 지운다. 변화가 없으면 쓰지 않고 false. */
+  removeFromIndex(noticeId: string): Promise<boolean> {
+    return this.store.withLock(INDEX_PATH, async () => {
+      const idx = await this.loadIndexRaw();
+      let changed = false;
+      const notices: IndexEntry[] = [];
+      for (const e of idx.notices) {
+        if (e.noticeId === noticeId) { changed = true; continue; }
+        if (e.supersededBy === noticeId) {
+          const { supersededBy: _drop, ...rest } = e;
+          notices.push(rest);
+          changed = true;
+        } else notices.push(e);
+      }
+      if (!changed) return false;
+      await writeJson(this.store, INDEX_PATH, { ...idx, notices, generatedAt: new Date().toISOString() });
+      return true;
+    });
   }
 
   async loadNotice(noticeId: string): Promise<Notice | null> {

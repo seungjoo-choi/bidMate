@@ -11,7 +11,7 @@ import type { EvidenceRef, Extraction } from '../../core/types/extraction';
 import type { Notice } from '../../core/types/notice';
 import type { AiCardInfo } from './ai-view';
 import { formatAmountFull, formatDateTime, formatDifferential, formatPeriod, formatScore } from './format';
-import { buildCard, evidenceMeta, type CandidateModel, type CardBadge } from './view';
+import { buildCard, evidenceMeta, fileDisplayName, type CandidateModel, type CardBadge } from './view';
 
 export interface ReviewLeaf {
   key: ReviewLeafKey; label: string; kind: ReviewValueKind; origin: 'document' | 'notice';
@@ -47,13 +47,36 @@ export function formatLeafValue(kind: ReviewValueKind, value: unknown, raw?: str
   }
 }
 
-function noticeSourceText(src: FieldSource | undefined, state: LeafState, editedOrigin: 'ai' | 'confirm' | undefined): string {
+/**
+ * 문서에서 온 공고 필드 출처(ref = `첨부ID#위치`)를 추출 근거 모양으로 바꾼다.
+ * 파일 이름과 읽을 수 있는 위치를 보여 주고 [원문에서 확인]으로 열 수 있게 한다
+ */
+function documentEvidence(src: FieldSource, notice: Notice, x: Extraction | null): EvidenceRef | null {
+  const hash = src.ref.lastIndexOf('#');
+  if (hash <= 0) return null;
+  const attachmentId = src.ref.slice(0, hash);
+  const location = src.ref.slice(hash + 1);
+  const file = x?.files.find((f) => f.attachmentId === attachmentId);
+  const att = notice.attachments.find((a) => a.id === attachmentId || attachmentId.endsWith(`:${a.id}`));
+  return {
+    attachmentId, location, evidence: src.evidence ?? '', ruleId: 'notice-field',
+    sourceFile: file ? fileDisplayName(file) : (att?.originalName ?? '첨부 문서'),
+    docKind: file?.docKind ?? att?.docKind ?? 'other',
+    ...(src.page !== undefined ? { page: src.page } : {}),
+  };
+}
+
+function noticeSourceText(src: FieldSource | undefined, state: LeafState, editedOrigin: 'ai' | 'confirm' | undefined, notice?: Notice, x?: Extraction | null): string {
   if (state === 'user_edited') return editedOrigin === 'confirm' ? '확인함' : editedOrigin === 'ai' ? 'AI 적용' : '직접 수정';
   if (!src) return '—';
   switch (src.kind) {
     case 'api': case 'derived': return '나라장터 공고정보';
     case 'html': return '나라장터 상세화면';
-    case 'document': return src.ref ? `문서, ${src.ref}` : '문서';
+    case 'document': {
+      const ev = notice ? documentEvidence(src, notice, x ?? null) : null;
+      if (ev) return evidenceMeta(ev);
+      return src.ref ? `문서, ${src.ref}` : '문서'; // `첨부ID#위치` 모양이 아닌 옛 출처
+    }
     default: return '—';
   }
 }
@@ -97,7 +120,7 @@ function buildLeaf(
     const before = f?.userEdit?.before;
     const autoOk = j.state === 'user_edited' && j.editedOrigin !== 'confirm' && before && !isNil(before.value);
     const cands = (f?.candidates ?? []).map((c) => ({
-      value: c.value, valueText: formatLeafValue(kind, c.value), sourceText: noticeSourceText(c.source, 'needs_review', undefined),
+      value: c.value, valueText: formatLeafValue(kind, c.value), sourceText: noticeSourceText(c.source, 'needs_review', undefined, notice, x),
     }));
     leaf = {
       ...base, valueText: formatLeafValue(kind, j.value, f?.raw),
@@ -105,8 +128,13 @@ function buildLeaf(
       ...(f?.userEdit?.note ? { note: f.userEdit.note } : {}),
       ...(autoOk ? { autoValueText: formatLeafValue(kind, before!.value) } : {}),
       sourceKind: j.state === 'user_edited' ? 'user' : (f?.source?.kind ?? 'none'),
-      sourceText: noticeSourceText(f?.source, j.state, j.editedOrigin),
+      sourceText: noticeSourceText(f?.source, j.state, j.editedOrigin, notice, x),
       ...(f?.source?.evidence ? { evidenceText: f.source.evidence } : {}),
+      // 문서에서 온 값은 근거로 붙여 [원문에서 확인]을 쓸 수 있게 한다(사용자가 고친 값은 제외)
+      ...(f?.source?.kind === 'document' && f.source.evidence && j.state !== 'user_edited' ? (() => {
+        const ev = documentEvidence(f.source, notice, x);
+        return ev ? { evidence: ev } : {};
+      })() : {}),
       candidates: cands.length >= 2 ? cands : [],
       confirmable: false, aiFindable: false, badge: 'needs_review', userEdited: false,
     };

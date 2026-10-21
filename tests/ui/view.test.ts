@@ -13,10 +13,10 @@ const make = (over: Partial<Record<ExtractionKey, ExtractedItem<unknown>>>): Ext
 
 describe('evidenceMeta', () => {
   it('prespec이면 사전규격 첨부 접두, 아니면 그대로', () => {
-    expect(evidenceMeta(ev())).toBe('공고.hwp, 표1 r1c1');
-    expect(evidenceMeta({ ...ev(), origin: 'prespec' })).toBe('사전규격 첨부: 공고.hwp, 표1 r1c1');
+    expect(evidenceMeta(ev())).toBe('공고.hwp, 표 2, 2행 2열');
+    expect(evidenceMeta({ ...ev(), origin: 'prespec' })).toBe('사전규격 첨부: 공고.hwp, 표 2, 2행 2열');
     const c = buildCard('deadline' as ExtractionKey, item({ value: 1, candidates: [{ value: 1, evidence: ev() }, { value: 2, evidence: { ...ev(), origin: 'prespec' } }] }));
-    expect(c.candidates[1]!.sourceText).toBe('사전규격 첨부: 공고.hwp, 표1 r1c1');
+    expect(c.candidates[1]!.sourceText).toBe('사전규격 첨부: 공고.hwp, 표 2, 2행 2열');
   });
 });
 

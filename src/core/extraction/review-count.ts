@@ -1,5 +1,5 @@
 import type { FieldValue } from '../types/common';
-import { EXTRACTION_KEYS, type Extraction, type ExtractedItem, type ExtractionKey } from '../types/extraction';
+import { EXTRACTION_KEYS, type Extraction, type ExtractedItem, type ExtractionKey, type NaKind } from '../types/extraction';
 
 type Items = Record<ExtractionKey, ExtractedItem<unknown>>;
 
@@ -9,10 +9,20 @@ export const REVIEW_GROUPS: ExtractionKey[][] = [['credibilityScore', 'managemen
 const NO_VALUE_REASONS = new Set(['not_found', 'no_total', 'no_documents']);
 
 /** 정량평가 표에 해당 항목이 없어 "해당 없음"으로 판정된 항목(값은 항상 null). */
-export const NA_NOTE = '정량평가 표에 해당 항목 없음';
+export const NA_NOTES: Record<NaKind, string> = {
+  quant_table: '정량평가 표에 해당 항목 없음',
+  quant_none: '정량평가 없음',
+  perf_aggregate: '건당 하한 없음, 실적 금액 합산 비율로 평가',
+};
+// 기존 값은 저장된 notice.json 판별에 쓰이므로 변경 금지
+export const NA_NOTE = NA_NOTES.quant_table;
+export const naKindOf = (it: ExtractedItem<unknown>): NaKind => it.naKind ?? 'quant_table';
+export const naNoteOf = (it: ExtractedItem<unknown>): string => NA_NOTES[naKindOf(it)];
+const NA_NOTE_SET = new Set<string>(Object.values(NA_NOTES));
+export const isNaNote = (s?: string): boolean => !!s && NA_NOTE_SET.has(s);
 export const NA_VALUE_TEXT = '해당 없음';
 export const isNotApplicable = (it?: ExtractedItem<unknown>): boolean => !!it && it.status === 'verified' && it.reason === 'not_applicable';
-export const isNotApplicableField = (f?: FieldValue<unknown>): boolean => !!f && f.status === 'verified' && f.value === null && f.note === NA_NOTE;
+export const isNotApplicableField = (f?: FieldValue<unknown>): boolean => !!f && f.status === 'verified' && f.value === null && isNaNote(f.note);
 
 // 해당 없음은 같은 그룹의 다른 항목을 충족시키는 근거가 아니다.
 const satisfiedItem = (it: ExtractedItem<unknown> | undefined): boolean => !!it && ((it.status === 'verified' && !isNotApplicable(it)) || it.userEdited !== undefined);

@@ -174,7 +174,7 @@ export function FollowMenu({ variant, following, rankDone, notify, busy, disable
                   {it.key !== 'off' && (it.checked ? <Check className="size-3.5" aria-hidden /> : <span className="size-3.5" aria-hidden />)}
                   {it.label}
                 </span>
-                {it.description && <span className={`text-xs ${it.warn ? 'text-warn' : 'text-muted'}`}>{it.description}</span>}
+                {it.description && <span className={`mt-0.5 text-xs ${it.key !== 'off' ? 'pl-5' : ''} ${it.warn ? 'text-warn' : 'text-muted'}`}>{it.description}</span>}
               </button>
             </div>
           ))}

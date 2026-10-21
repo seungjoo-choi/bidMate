@@ -41,7 +41,7 @@ export function ReviewTab({ noticeId, notice, extraction, busy, onExtract, onEdi
   onEdit: (key: ReviewLeafKey, value: unknown | null, note?: string, raw?: string) => Promise<EditError | null>;
   /** AI 제안 적용 결과(notice·extraction)를 상위 상태에 반영한다 */
   onApplied: (r: { notice: Notice; extraction: Extraction }) => void;
-  toast: { show: (t: string) => void };
+  toast: { show: (t: string) => void; saved: (t?: string) => void };
 }) {
   const [drawer, setDrawer] = useState<DrawerTarget | null>(null);
   const [dialog, setDialog] = useState<AiDialogPreset | null>(null);
@@ -114,7 +114,7 @@ export function ReviewTab({ noticeId, notice, extraction, busy, onExtract, onEdi
       ai.setReview(r.aiReview);
       onApplied({ notice: r.notice, extraction: r.extraction });
       clearOverride(key);
-      toast.show('저장됨');
+      toast.saved('저장했습니다');
       return null;
     } catch (e) { if ((e as { code?: string }).code === 'AI_STALE') void ai.reload(); return errOf(e); }
   };
@@ -138,12 +138,15 @@ export function ReviewTab({ noticeId, notice, extraction, busy, onExtract, onEdi
     if (!err) clearOverride(key);
     return err;
   };
+  const rawUrl = notice.sourceUrl.value;
+  const sourceUrl = rawUrl && /^https?:\/\//i.test(rawUrl) ? rawUrl : null;
   const leafActions: LeafActions = {
     busy, aiDisabled, aiProvider: runProvider,
     isFinding: (k) => isFindingKey(lastRun, k) || (starting?.includes(k) ?? false),
     onAiFind: (k) => void runAi('keys', [k]),
     onEdit: editLeaf,
     onOpenText: openText,
+    ...(sourceUrl ? { onOpenSource: () => window.open(sourceUrl, '_blank', 'noopener') } : {}),
     onAiApply: aiApply,
     onAiDismiss: aiDismiss,
   };

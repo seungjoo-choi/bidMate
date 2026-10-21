@@ -109,7 +109,7 @@ describe('평가방식 원문 재추출', () => {
     });
     const second = await runCollect({ files, parsers, store: first.store, job });
     expect(readJsonFile<Notice>(second.store, '/notice.json').evaluation.evalMethodDoc)
-      .toMatchObject({ value: '서면평가', status: 'needs_review', note: '최근 추출에서 값이 확인되지 않음' });
+      .toMatchObject({ value: '서면평가', status: 'needs_review', note: '최근 수집에서 값이 확인되지 않음' });
   });
 });
 

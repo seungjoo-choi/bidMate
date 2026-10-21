@@ -1,4 +1,4 @@
-import { Bell, Building2, ClipboardList, FolderOpen, Landmark, Mail, Send, Sparkles, Stethoscope, Tag, type LucideIcon } from 'lucide-react';
+import { Bell, Building2, ClipboardList, FolderOpen, Landmark, Mail, Send, Sparkles, Stethoscope, SunMoon, Tag, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { SettingsSection } from '../../messaging/protocol';
 import { statusTone } from '../../ui/theme';
@@ -10,6 +10,7 @@ import { CompanyCard } from './CompanyCard';
 import { PerformancesCard } from './PerformancesCard';
 import { NotifyCard } from './NotifyCard';
 import { FileNameCard } from './FileNameCard';
+import { ThemeCard } from './ThemeCard';
 import { AutoComposeCard } from './AutoComposeCard';
 import { DiagnosticsPanel } from './diagnostics/DiagnosticsPanel';
 import { PageTitle } from './menu';
@@ -58,6 +59,14 @@ const GROUPS: Group[] = [
       { id: 'company', label: '우리 회사', Icon: Building2, card: () => <CompanyCard /> },
       { id: 'performances', label: '실적 목록', Icon: ClipboardList, card: () => <PerformancesCard /> },
       { id: 'notify', label: '알림', Icon: Bell, card: () => <NotifyCard /> },
+    ],
+  },
+  {
+    id: 'display',
+    label: '화면',
+    hint: '확장 화면의 보기 방식을 정합니다.',
+    items: [
+      { id: 'appearance', label: '화면 테마', Icon: SunMoon, card: () => <ThemeCard /> },
     ],
   },
 ];

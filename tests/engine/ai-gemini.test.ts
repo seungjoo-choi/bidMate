@@ -1,5 +1,6 @@
 import { NOTICE_KINDS } from '../helpers/ai-notice-kinds';
 import { describe, expect, it } from 'vitest';
+import { outputSchema } from '../../src/engine/ai/providers/schema';
 import type { OutputSpec } from '../../src/core/types/ai';
 import { geminiAdapter } from '../../src/engine/ai/providers/gemini';
 
@@ -16,7 +17,7 @@ const err = (code: number, status: string, message: string) => ({ error: { code,
 
 describe('Gemini 어댑터', () => {
   it('buildRequest: 키는 헤더에만, 바디는 실측 형태(responseJsonSchema·thinkingLevel low)', () => {
-    const r = geminiAdapter.buildRequest({ apiKey: KEY, model: 'gemini-3.5-flash', system: 'SYS', user: 'USR', spec, maxTokens: 8192 });
+    const r = geminiAdapter.buildRequest({ apiKey: KEY, model: 'gemini-3.5-flash', system: 'SYS', user: 'USR', schema: outputSchema(spec), schemaName: 'bidmate_ai_review', maxTokens: 8192 });
     expect(r.url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent');
     expect(r.url).not.toContain('key=');
     expect(r.url).not.toContain(KEY);

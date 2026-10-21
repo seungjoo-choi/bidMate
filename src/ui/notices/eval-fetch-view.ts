@@ -25,6 +25,24 @@ export function selectableForEval(n: IndexEntry, now: Date, have: ReadonlySet<st
   return { ok: true };
 }
 
+/** 자동 수집 실패 기록. 성공하면 지운다 */
+export type EvalAutoAttempts = Record<string, { at: number; code?: string }>;
+/** 평가 결과가 없는 공고(협상계약 아님 등)만 7일 쉬고, 그 밖의 실패는 다음 진입 때 다시 묻는다 */
+const NO_RESULT_WAIT_MS = 7 * 86_400_000;
+
+const PARTICIPATED = new Set(['ranked', 'won', 'lost']);
+
+/** 평가분석 진입 시 자동으로 가져올 공고: 개찰 결과에 우리 회사가 있고(순위·낙찰·유찰) 아직 평가 기록이 없으며 최근 실패 대기 중이 아닌 것 */
+export function autoEvalTargets(notices: IndexEntry[], have: ReadonlySet<string>, attempts: EvalAutoAttempts, now: Date): EvalBatchItem[] {
+  return notices.flatMap((n) => {
+    if (!n.result || !PARTICIPATED.has(n.result.status)) return [];
+    if (!selectableForEval(n, now, have).ok) return [];
+    const a = attempts[n.noticeId];
+    if (a?.code === 'EVAL_NO_RESULT' && now.getTime() - a.at < NO_RESULT_WAIT_MS) return [];
+    return [{ noticeId: n.noticeId, noticeNo: n.noticeNo, round: n.round || '000' }];
+  });
+}
+
 export interface EvalBatchItem { noticeId: string; noticeNo: string; round: string }
 export interface EvalBatchState {
   running: boolean; total: number; done: number; ok: number;

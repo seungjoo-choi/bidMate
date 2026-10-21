@@ -1,3 +1,4 @@
+import { outputSchema } from './providers/schema';
 import { buildExcerpt, buildFullText, type ExcerptFileInput } from '../../core/ai/excerpt';
 import { EXCERPT_MAX_CHARS } from '../../core/ai/constants';
 import { parseAiResponse } from '../../core/ai/parse';
@@ -200,7 +201,7 @@ export async function finishRun(store: IFileStore, p: FinishInput, deps: AiApiDe
   const v = verifySuggestions(parsed.items, { files, baseline, candidates, requested: run.keys, provider: run.provider, promptVersion: run.promptVersion });
 
   const warnings = [...run.warnings, ...(p.warnings ?? []), ...v.warnings];
-  if (extraction.jobId !== run.extractionJobId) warnings.push('AI가 실행되는 동안 다시 추출되어 이 제안은 현재 추출 결과와 맞지 않을 수 있습니다.');
+  if (extraction.jobId !== run.extractionJobId) warnings.push('AI가 실행되는 동안 다시 수집되어 이 제안은 현재 수집 결과와 맞지 않을 수 있습니다.');
   const responsePath = aiResponsePath(notice.folder, run.id);
   return ai.mutate(notice, async (f) => {
     const cur = f.runs.find((r) => r.id === run.id);
@@ -258,7 +259,7 @@ export async function execApiRun(store: IFileStore, x: ExecInput, deps: AiApiDep
   x.onStatus?.('requesting');
   const r = await callProvider(
     prepared.adapter,
-    { apiKey: x.apiKey, model: x.model, system: prepared.built.system, user: prepared.built.user, spec: prepared.built.spec, maxTokens: AI_MAX_TOKENS },
+    { apiKey: x.apiKey, model: x.model, system: prepared.built.system, user: prepared.built.user, schema: outputSchema(prepared.built.spec), schemaName: 'bidmate_ai_review', maxTokens: AI_MAX_TOKENS },
     { fetch: x.fetch, signal, retryDelayMs: x.retryDelayMs },
   );
   if (signal?.aborted || (!r.ok && r.error.code === 'AI_RUN_CLOSED')) { await cancelRunState(store, base, deps); return null; }

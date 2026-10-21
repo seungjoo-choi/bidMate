@@ -57,7 +57,8 @@ export function MailsPage({ tab }: { tab: MailsTab }) {
         <p className="text-sm text-muted">작성 중인 메일을 마저 쓰고, 보낸 메일은 발송 완료로 기록합니다. 기록한 메일은 발송 이력 탭에 모입니다.</p>
       </div>
 
-      <div role="tablist" aria-label="메일 관리" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-ctl border border-line bg-sunken p-1">
+      {/* 밑줄 탭(공고 상세 TabBar와 같은 모양) */}
+      <div role="tablist" aria-label="메일 관리" className="flex max-w-full gap-7 overflow-x-auto shadow-[inset_0_-1px_0_var(--color-line)]">
         {tabs.map(({ id, label, Icon, count }) => {
           const on = tab === id;
           return (
@@ -66,14 +67,14 @@ export function MailsPage({ tab }: { tab: MailsTab }) {
               role="tab"
               href={mailsHash(id)}
               aria-selected={on}
-              className={`inline-flex shrink-0 items-center gap-2 rounded-btn px-4 py-2 text-sm whitespace-nowrap transition-colors motion-reduce:transition-none ${
-                on ? 'bg-ink font-bold text-surface shadow-sm' : 'font-medium text-muted hover:bg-surface hover:text-ink'
+              className={`inline-flex shrink-0 items-center gap-1.5 border-b-2 pt-1 pb-2.5 text-sm whitespace-nowrap transition-colors motion-reduce:transition-none ${
+                on ? 'border-ink font-bold text-ink' : 'border-transparent font-medium text-muted hover:text-ink'
               }`}
             >
               <Icon className="size-4" aria-hidden />
               {label}
               {count !== undefined && (
-                <span className={`min-w-5 rounded-full px-1.5 text-center font-mono text-xs tabular-nums ${on ? 'bg-surface/20 text-surface' : 'bg-surface text-faint'}`}>{count}</span>
+                <span className="text-xs text-faint tabular-nums">{count}</span>
               )}
             </a>
           );

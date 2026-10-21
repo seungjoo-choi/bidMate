@@ -20,9 +20,12 @@ export interface EvidenceRef {
   ruleId: string; docKind: DocKind;
   origin?: AttachmentOrigin;
 }
+export type NaKind = 'quant_table' | 'quant_none' | 'perf_aggregate';
 export interface ExtractedItem<T> {
   value: T | null; raw?: string; status: ExtractionStatus;
   reason?: 'not_found' | 'conflict' | 'multi' | 'low_confidence' | 'no_documents' | 'no_total' | 'not_applicable';
+  /** reason==='not_applicable'일 때 판정 근거 종류. 없으면 quant_table */
+  naKind?: NaKind;
   evidence?: EvidenceRef;
   candidates?: Array<{ value: T; raw?: string; evidence: EvidenceRef }>;
   userEdited?: {

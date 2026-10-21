@@ -3,7 +3,7 @@ import { formatWon } from '../../../ui/notices/result-view';
 
 /** 낙찰 확정 카드. 낙찰일과 낙찰금액은 있을 때만. */
 export function WonCard({ result }: { result: NonNullable<IndexEntry['result']> }) {
-  const at = result.awardedAt ? result.awardedAt.slice(0, 10).replace(/-/g, '.') : null;
+  const at = result.awardedAt ? result.awardedAt.slice(0, 10).replace(/-/g, '/') : null;
   return (
     <section className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-card border border-line bg-surface px-5 py-4">
       <div className="min-w-0">

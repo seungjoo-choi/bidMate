@@ -20,6 +20,7 @@ import type { EvalIndexEntry, EvalRecord } from '../core/types/evaluation';
 import type { ISODate } from '../core/types/common';
 import type { NotifyEvent, ResultProbeResult, ResultRunSummary } from '../core/types/result';
 import type { AiBatchState, AiProvider, AiReviewFile, AiRunState, AiScope } from '../core/types/ai';
+import type { RequirementSet, RfpCompareEntry, RfpCompareSession, RfpDocCandidate, RfpDocRef, RfpUploadEntry } from '../core/types/rfp';
 
 /** 'content'는 SW/팝업이 content script로 보내는 메시지의 대상. */
 export type Target = 'sw' | 'offscreen' | 'content';
@@ -46,7 +47,7 @@ export type AttachStatus =
   | { done: true; result: AttachResult };
 export interface FileMeta { fileId: string; name: string; size: number; mime?: string; }
 /** 설정 화면에서 바로 보여 줄 카드 */
-export const SETTINGS_SECTIONS = ['storage', 'mail-service', 'auto-compose', 'g2b', 'company', 'performances', 'ai', 'notify', 'file-name'] as const;
+export const SETTINGS_SECTIONS = ['storage', 'mail-service', 'auto-compose', 'g2b', 'company', 'performances', 'ai', 'notify', 'file-name', 'appearance'] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 export const isSettingsSection = (s: unknown): s is SettingsSection => (SETTINGS_SECTIONS as readonly unknown[]).includes(s);
 /** 오류를 고칠 수 있는 화면. ui/open 페이로드로 그대로 보낸다 */
@@ -68,6 +69,9 @@ export interface ProbeReport { [key: string]: unknown; }
 export type FsPermission = 'granted' | 'prompt' | 'denied';
 export interface FsStatus { hasRoot: boolean; rootName?: string; permission: FsPermission; }
 export interface SmokeTestResult { ok: boolean; steps: { write: boolean; read: boolean; delete: boolean }; error?: string; }
+
+export interface NoticeDeleteResult { deleted: string[]; failed: Array<{ noticeId: string; code: string; message: string }> }
+export const NOTICE_DELETE_MAX = 200;
 
 export type Msg =
   | { type: 'cs/ping'; payload: void; response: { ready: boolean; composeDetected: boolean } }
@@ -111,9 +115,21 @@ export type Msg =
   | { type: 'ui/open'; payload: { page: 'settings' | 'grant' | 'review' | 'mail' | 'notice' | 'recipients' | 'sidepanel' | 'evaluation'; noticeId?: string; section?: SettingsSection }; response: void }  // CS→SW: 확장 페이지 열기
   | { type: 'notice/list'; payload: void; response: IndexEntry[] }  // 확장 페이지→SW→offscreen
   | { type: 'notice/get'; payload: { noticeId: string }; response: { notice: Notice; extraction: Extraction | null } | null }
+  | { type: 'notice/delete'; payload: { noticeIds: string[] }; response: NoticeDeleteResult }  // 대시보드→SW→offscreen. 건별 결과
   | { type: 'extraction/edit'; payload: { noticeId: string; key: ExtractionKey; value: unknown | null; note?: string }; response: { notice: Notice; extraction: Extraction } }
   | { type: 'notice/field-edit'; payload: { noticeId: string; key: NoticeFieldKey | `custom.${string}`; value: unknown | null; raw?: string; note?: string }; response: { notice: Notice; extraction: Extraction | null } }
   | { type: 'extraction/text'; payload: { noticeId: string; textPath: string }; response: { text: string } }
+  | { type: 'rfp/docs'; payload: { noticeId: string }; response: RfpDocCandidate[] }  // 대시보드→SW→offscreen: 비교할 수 있는 첨부 후보
+  | { type: 'rfp/extract'; payload: { ref: RfpDocRef; force?: boolean }; response: RequirementSet }
+  | { type: 'rfp/upload'; payload: { name: string; size: number; b64: string }; response: { uploadId: string; set: RequirementSet } }
+  | { type: 'rfp/uploads'; payload: void; response: RfpUploadEntry[] }
+  | { type: 'rfp/upload-rename'; payload: { uploadId: string; label: string }; response: RfpUploadEntry }
+  | { type: 'rfp/upload-delete'; payload: { uploadId: string }; response: void }
+  | { type: 'rfp/text'; payload: { ref: RfpDocRef }; response: { text: string } }
+  | { type: 'rfp/compare-save'; payload: { session: RfpCompareSession }; response: RfpCompareSession }  // id가 ''이면 새로 만든다
+  | { type: 'rfp/compare-list'; payload: void; response: RfpCompareEntry[] }
+  | { type: 'rfp/compare-get'; payload: { compareId: string }; response: RfpCompareSession | null }
+  | { type: 'rfp/compare-delete'; payload: { compareId: string }; response: void }
   | { type: 'recipients/list'; payload: void; response: RecipientsSnapshot }
   | { type: 'performances/list'; payload: void; response: PerformancesSnapshot }
   | { type: 'performances/save'; payload: { performance: PerformanceInput }; response: PerformancesSnapshot }

@@ -76,7 +76,7 @@ describe('문서 잎', () => {
   it('extraction 있으면 itemReviewState와 같은 상태', () => {
     const x = make({ managementScore: ok(4), credibilityScore: nf('no_total'), performanceScore: nf(), performancePeriod: { value: null, status: 'not_run' } as ExtractedItem<unknown> });
     for (const k of EXTRACTION_KEYS) expect(leafReviewState(notice(), x, k).state).toBe(itemReviewState(x.items, k));
-    expect(leafReviewState(notice(), x, 'performancePeriod')).toMatchObject({ state: 'not_run', reason: '이전 버전 결과, 다시 추출 필요' });
+    expect(leafReviewState(notice(), x, 'performancePeriod')).toMatchObject({ state: 'not_run', reason: '이전 버전 결과, 다시 수집 필요' });
   });
   it('userEdited.origin ai -> ai', () => {
     const x = make({ performanceScore: { value: 5, status: 'needs_review', userEdited: { value: 7, editedAt: 't', origin: aiOrigin } } });

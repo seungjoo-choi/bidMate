@@ -2,7 +2,7 @@ import type { DocModel } from '../../core/doc/model';
 import { renderText } from '../../core/doc/render-text';
 import { classifyName, extOf, planFiles, twinKey, type DocKind } from '../../core/extraction/classify';
 import { computeStatus, decide } from '../../core/extraction/decide';
-import { conflictCountOf, isNotApplicable, NA_NOTE, reviewCountOf } from '../../core/extraction/review-count';
+import { conflictCountOf, isNotApplicable, naNoteOf, reviewCountOf } from '../../core/extraction/review-count';
 import { runRules, type RuleDocInput } from '../../core/extraction/run-rules';
 import type { RuleSet } from '../../core/extraction/rules/schema';
 import { docDateToIso } from '../../core/model/dates';
@@ -74,7 +74,7 @@ function fieldOfItem(it: ExtractedItem<unknown>, fetchedAt: string, conflictValu
   const ev = it.evidence;
   const source = ev ? docSourceOf(ev, fetchedAt) : undefined;
   if (isNotApplicable(it) && source) {
-    return { value: null, status: 'verified', note: NA_NOTE, raw: it.raw, source } as FieldValue<unknown>;
+    return { value: null, status: 'verified', note: naNoteOf(it), raw: it.raw, source } as FieldValue<unknown>;
   }
   if (it.status === 'verified' && it.value !== null && source) {
     return { value: it.value, raw: it.raw, status: 'verified', source } as FieldValue<unknown>;
@@ -155,7 +155,7 @@ export function fillDocOnlyFields(notice: Notice, fields: FieldMap): void {
     const next = fields[key];
     if (next) setFields(notice, { [key]: next });
     else if (prev && prev.source?.kind === 'document' && prev.value != null) {
-      setFields(notice, { [key]: { ...prev, status: 'needs_review', note: '최근 추출에서 값이 확인되지 않음' } as FieldValue<unknown> });
+      setFields(notice, { [key]: { ...prev, status: 'needs_review', note: '최근 수집에서 값이 확인되지 않음' } as FieldValue<unknown> });
     }
   }
 }
@@ -309,7 +309,7 @@ export async function runExtractStep(job: Job, notice: Notice, prior: Extraction
     done++;
     const att = p.attachment;
     if (overBudget()) { slots[i] = [{ ...baseRow(att, p.classified.kind, p.classified.priority), skipReason: 'budget' }]; continue; }
-    const runLabel = `평가정보 추출 중 (${done}/${total}), ${att.originalName}`;
+    const runLabel = `평가정보 수집 중 (${done}/${total}), ${att.originalName}`;
     step('running', runLabel, { done: done - 1, total }, { kind: 'file', step: 'extract', phase: 'start', file: fileInfo(att) });
     attempted++;
     await yieldToLoop();

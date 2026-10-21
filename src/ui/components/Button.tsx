@@ -4,14 +4,14 @@ import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'ai';
 type Size = 'md' | 'icon';
 
-// 모든 변형이 [AI로 다시 찾기]·[AI로 찾기]와 같은 모양이다: 옅은 면+얇은 테두리+본문색 굵은 글자, 색은 아이콘에만.
-// 용도는 면·테두리·아이콘 색으로만 구분한다(ghost는 secondary와 같은 모양, 남은 호출부 호환용).
+// primary만 파란 채움(화면의 주 동작 하나). 나머지는 그림자 없는 옅은 면+얇은 테두리+본문색 굵은 글자, 색은 아이콘에만.
+// 보조 버튼 면(btn-face)은 카드 면보다 한 톤 낮아 흰 판처럼 떠 보이지 않는다(ghost는 secondary와 같은 모양, 남은 호출부 호환용).
 const variants: Record<Variant, string> = {
-  primary: 'border-btn-pri-line bg-btn-pri-wash text-ink shadow-btn hover:bg-btn-pri-line/50 [&_svg]:text-btn-pri-ink',
-  secondary: 'border-line-strong bg-surface text-ink shadow-btn hover:bg-sunken [&_svg]:text-muted',
-  ghost: 'border-line-strong bg-surface text-ink shadow-btn hover:bg-sunken [&_svg]:text-muted',
-  danger: 'border-btn-danger-line bg-danger-wash text-danger shadow-btn hover:bg-btn-danger-line/50',
-  ai: 'border-ai-line bg-ai-wash text-ink shadow-btn hover:bg-ai-line/40 [&_svg]:text-ai-ink',
+  primary: 'border-primary bg-primary text-primary-ink hover:border-primary-hover hover:bg-primary-hover',
+  secondary: 'border-line-strong bg-btn-face text-ink hover:bg-sunken [&_svg]:text-muted',
+  ghost: 'border-line-strong bg-btn-face text-ink hover:bg-sunken [&_svg]:text-muted',
+  danger: 'border-btn-danger-line bg-danger-wash text-danger hover:bg-btn-danger-line/50',
+  ai: 'border-ai-line bg-ai-wash text-ink hover:bg-ai-line/40 [&_svg]:text-ai-ink',
 };
 
 // 높이는 하나(40px, 입력창과 같음)로 고정한다. icon은 같은 높이의 정사각형.

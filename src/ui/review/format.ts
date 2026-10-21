@@ -10,16 +10,21 @@ function parse(iso: string | undefined | null): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/** MM/DD HH:mm (로컬 시간). */
+/** YYYY/MM/DD HH:mm (로컬 시간). 화면 날짜 표기는 모두 이 형식(연도 포함)으로 통일한다. */
 export function formatDateTime(iso: string | undefined | null): string {
   const d = parse(iso);
-  return d ? `${p2(d.getMonth() + 1)}/${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}` : '—';
+  return d ? `${formatYmd(d)} ${p2(d.getHours())}:${p2(d.getMinutes())}` : '—';
 }
 
-/** MM/DD (로컬 시간). */
+/** YYYY/MM/DD (로컬 시간). */
 export function formatDate(iso: string | undefined | null): string {
   const d = parse(iso);
-  return d ? `${p2(d.getMonth() + 1)}/${p2(d.getDate())}` : '—';
+  return d ? formatYmd(d) : '—';
+}
+
+/** Date → YYYY/MM/DD. 날짜를 직접 조립하는 곳도 이걸 쓴다 */
+export function formatYmd(d: Date): string {
+  return `${d.getFullYear()}/${p2(d.getMonth() + 1)}/${p2(d.getDate())}`;
 }
 
 export function isPast(iso: string | undefined | null, now: Date = new Date()): boolean {

@@ -1,5 +1,6 @@
 import { NOTICE_KINDS } from '../helpers/ai-notice-kinds';
 import { describe, expect, it } from 'vitest';
+import { outputSchema } from '../../src/engine/ai/providers/schema';
 import type { OutputSpec } from '../../src/core/types/ai';
 import { openaiAdapter } from '../../src/engine/ai/providers/openai';
 
@@ -15,7 +16,7 @@ const err = (code: string | null, message: string) => ({ error: { code, message,
 
 describe('OpenAI 어댑터', () => {
   it('buildRequest: Bearer 헤더, messages[system,user], json_schema strict, 키는 URL·바디에 없음', () => {
-    const r = openaiAdapter.buildRequest({ apiKey: KEY, model: 'gpt-x', system: 'SYS', user: 'USR', spec, maxTokens: 8192 });
+    const r = openaiAdapter.buildRequest({ apiKey: KEY, model: 'gpt-x', system: 'SYS', user: 'USR', schema: outputSchema(spec), schemaName: 'bidmate_ai_review', maxTokens: 8192 });
     expect(r.url).toBe('https://api.openai.com/v1/chat/completions');
     expect(r.url).not.toContain(KEY);
     expect(r.headers).toMatchObject({ authorization: `Bearer ${KEY}` });

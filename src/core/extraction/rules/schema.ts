@@ -14,6 +14,7 @@ export type Rule = Base & (
   | { strategy: 'window-regex'; anchor: string; pattern: string; blocksAfter: number; valueType: 'amount' | 'years' | 'number' | 'string' | 'text' }
   | { strategy: 'bonus-table'; scoreHeader: string; rowLabel: string }
   | { strategy: 'quant-table'; scoreHeader: string; title: string; perfLabel: string; credLabel: string; mgmtLabel: string }
+  | { strategy: 'qual-table'; scoreHeader: string; itemHeader: string; quantLabel: string }
   | { strategy: 'block-capture'; anchor: string; stopAt: string; maxBlocks: number; maxChars: number }
 );
 export interface RuleSet { version: string; synonyms: Record<string, string[]>; rules: Rule[] }
@@ -100,6 +101,9 @@ export function validateRule(r: unknown, syn: Record<string, string[]>, user = t
       break;
     case 'quant-table':
       terms('scoreHeader', 'title', 'perfLabel', 'credLabel', 'mgmtLabel');
+      break;
+    case 'qual-table':
+      terms('scoreHeader', 'itemHeader', 'quantLabel');
       break;
     case 'block-capture':
       terms('anchor', 'stopAt');

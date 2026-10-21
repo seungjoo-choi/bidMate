@@ -61,9 +61,9 @@ export function MenuButton({ icon, label, hint, items, header, onOpenChange, onM
   const ai = tone === 'ai';
   const face = ai
     ? 'border-ai-line bg-ai-wash hover:bg-ai-line/40'
-    : 'border-line-strong bg-surface hover:bg-sunken';
+    : 'border-line-strong bg-btn-face hover:bg-sunken';
   return (
-    <div ref={rootRef} className="relative inline-flex rounded-btn shadow-card">
+    <div ref={rootRef} className="relative inline-flex rounded-btn">
       <button
         type="button" title={title} disabled={disabled} onClick={onMain}
         className={`inline-flex h-9 items-center gap-2 rounded-l-btn border border-r-0 pr-3.5 pl-3 text-sm leading-none font-semibold whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-40 motion-reduce:transition-none text-ink ${face}`}

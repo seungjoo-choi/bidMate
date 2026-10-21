@@ -11,7 +11,8 @@ const STEP = 600;
 /** query가 있으면 그 말로 검색한 상태로 연다. quote가 있으면 기준 줄 근처에서 그 원문이 걸친 줄 전체를 강조한다. */
 export interface DrawerTarget { textPath: string; line?: number; title: string; query?: string; quote?: string }
 
-export function TextDrawer({ noticeId, target, onClose }: { noticeId: string; target: DrawerTarget; onClose: () => void }) {
+/** load를 주면 extraction/text 대신 그 함수로 텍스트를 가져온다(RFP 비교 등 공고 밖 문서). 스크롤 줄은 target.line. */
+export function TextDrawer({ noticeId, target, onClose, load }: { noticeId: string; target: DrawerTarget; onClose: () => void; load?: () => Promise<{ text: string }> }) {
   const [shown, setShown] = useState(false);
   const [lines, setLines] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +38,7 @@ export function TextDrawer({ noticeId, target, onClose }: { noticeId: string; ta
 
   useEffect(() => {
     let alive = true;
-    send('extraction/text', { noticeId, textPath: target.textPath }, { timeoutMs: 30_000 }).then(
+    (load ? load() : send('extraction/text', { noticeId, textPath: target.textPath }, { timeoutMs: 30_000 })).then(
       ({ text }) => {
         if (!alive) return;
         const ls = text.split('\n');
@@ -122,7 +123,7 @@ export function TextDrawer({ noticeId, target, onClose }: { noticeId: string; ta
         className={`fixed right-0 top-0 z-50 flex h-full w-[min(820px,65vw)] flex-col border-l border-line bg-surface shadow-overlay transition-transform duration-200 motion-reduce:transition-none ${shown ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <header className="flex items-center gap-3 border-b border-line px-5 py-3">
-          <div className="min-w-0 flex-1 truncate text-base font-semibold">{target.title}</div>
+          <div className="min-w-0 flex-1 text-base leading-snug font-semibold wrap-anywhere">{target.title}</div>
           <Button variant="ghost" size="icon" aria-label="닫기" icon={<X />} onClick={close} />
         </header>
         <div className="flex items-center gap-1.5 border-b border-line px-5 py-3">
@@ -143,7 +144,7 @@ export function TextDrawer({ noticeId, target, onClose }: { noticeId: string; ta
           <Button variant="ghost" size="icon" aria-label="다음 일치" icon={<ChevronDown />} onClick={() => step(1)} />
           <Button variant="ghost" title={raw ? '표를 원문처럼 정리해 보기' : '추출된 텍스트를 줄 번호와 함께 그대로 보기'} onClick={() => { setRaw((v) => !v); if (span) setScrollTo(span[0]); }}>{raw ? '정리된 보기' : '원본 텍스트'}</Button>
         </div>
-        <div ref={listRef} className={`min-h-0 flex-1 overflow-auto py-3 text-sm leading-6 ${raw ? 'font-mono' : ''}`}>
+        <div ref={listRef} className={`min-h-0 flex-1 overflow-auto py-3 text-sm leading-6 ${raw ? 'font-code' : ''}`}>
           {error && <div className="p-4"><InlineAlert tone="error">{error}</InlineAlert></div>}
           {!lines && !error && <div className="flex justify-center p-8 text-muted"><Loader2 className="size-5 animate-spin" /></div>}
           {lines && (

@@ -2,7 +2,7 @@ import { Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { DEFAULT_NAME_PREFIX } from '../../core/model/default-settings';
 import { withNamePrefix } from '../../core/model/names';
-import { Button, Card, Field, FormActions, InlineAlert } from '../../ui/components';
+import { Button, Card, Field, FormActions, InlineAlert, useToast } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useSettings } from '../../ui/hooks/useSettings';
 
@@ -14,7 +14,7 @@ export function FileNameCard() {
   const [enabled, setEnabled] = useState(true);
   const [text, setText] = useState(DEFAULT_NAME_PREFIX);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
 
   const savedEnabled = settings?.download.namePrefix.enabled;
@@ -26,14 +26,13 @@ export function FileNameCard() {
   const submit = async () => {
     if (!settings) return;
     setError(null);
-    setDone(false);
     if (enabled && trimmed === '') { setError('붙일 문구를 입력하세요.'); return; }
     if (ILLEGAL.test(trimmed) || trimmed.includes('..')) { setError('파일 이름에 쓸 수 없는 문자(\\ / : * ? " < > |)와 마침표 두 개(..)는 넣을 수 없습니다.'); return; }
     setBusy(true);
     try {
       await save({ ...settings, download: { ...settings.download, namePrefix: { enabled, text: trimmed } } });
       setText(trimmed);
-      setDone(true);
+      toast.saved();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -57,7 +56,7 @@ export function FileNameCard() {
         <Button icon={<Save />} loading={busy} disabled={!settings} onClick={() => void submit()}>저장</Button>
       </FormActions>
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
-      {done && <InlineAlert tone="ok">저장했습니다.</InlineAlert>}
+      {toast.node}
     </Card>
   );
 }

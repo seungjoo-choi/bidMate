@@ -10,7 +10,7 @@ export interface ToastOptions {
 
 interface ToastState { text: string; opts?: ToastOptions; key: number }
 
-/** 기본은 오른쪽 아래 2.5초 토스트. 마스코트 옵션이면 오른쪽 위 카드로 3.5초. `show(text, opts)`로 띄우고 반환된 `node`를 렌더한다. */
+/** 기본은 오른쪽 아래 2.5초 토스트. 마스코트 옵션이면 오른쪽 위 카드로 3.5초. `show(text, opts)`나 `saved(text)`로 띄우고 반환된 `node`를 렌더한다. */
 export function useToast() {
   const [state, setState] = useState<ToastState | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -19,11 +19,13 @@ export function useToast() {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setState(null), opts?.mascot ? 3500 : 2500);
   }, []);
+  /** 저장·삭제처럼 끝났음만 알리면 되는 완료 알림. 화면 안 문구 대신 마스코트 토스트로 띄운다 */
+  const saved = useCallback((text = '저장했습니다', title?: string) => show(text, { mascot: 'happy', title }), [show]);
   useEffect(() => () => clearTimeout(timer.current), []);
   const node = !state ? null
     : state.opts?.mascot ? <MascotToast key={state.key} mood={state.opts.mascot} title={state.opts.title} text={state.text} />
     : <Toast text={state.text} />;
-  return { show, node };
+  return { show, saved, node };
 }
 
 export function Toast({ text }: { text: string }) {

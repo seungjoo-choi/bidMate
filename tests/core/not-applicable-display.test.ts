@@ -101,7 +101,7 @@ describe('해당 없음 적격 판정 (7)', () => {
     const j = judge(criteriaOf(n, x), [rec]);
     expect(j.verdict).toBe('review');
     const reasons = j.lines.flatMap((l) => l.reasons);
-    expect(reasons).toContain('인정기간: 해당 없음(정량평가에 실적 항목 없음)');
-    expect(reasons).toContain('인정금액: 해당 없음(정량평가에 실적 항목 없음)');
+    expect(reasons).toContain(`인정기간: 해당 없음(${NA_NOTE})`);
+    expect(reasons).toContain(`인정금액: 해당 없음(${NA_NOTE})`);
   });
 });

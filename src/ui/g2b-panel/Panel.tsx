@@ -34,24 +34,26 @@ function EvalButton({ ctl, busy, onError }: { ctl: PanelController; busy: boolea
     if (!r.ok) onError(r.message);
   };
   return (
-    <IconBtn label={busy ? '평가점수 가져오는 중' : '평가점수 가져오기'} disabled={busy} onClick={() => void run()}>
+    <IconBtn label={busy ? '평가점수 가져오는 중' : '평가점수 가져오기'} align="end" disabled={busy} onClick={() => void run()}>
       {busy ? <Loader2 className="size-4 animate-spin" /> : <BarChart3 className="size-4" />}
     </IconBtn>
   );
 }
 
-/** 대기 알약의 보조 버튼. 알약이 길어지지 않게 아이콘만 두고, 마우스를 올리면 위에 이름을 바로 띄운다 */
-function IconBtn({ label, children, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+/** 알약 버튼의 설명 말풍선. 부모 버튼에 group·relative가 있어야 하고, 마우스를 올리면 위에 뜬다(모양은 style.css .tm-tip) */
+function Tip({ text, align = 'center' }: { text: string; align?: 'start' | 'center' | 'end' }) {
+  return <span role="tooltip" className="tm-tip" data-align={align}>{text}</span>;
+}
+
+/** 대기 알약의 보조 버튼. 알약이 길어지지 않게 아이콘만 두고, 마우스를 올리면 위에 이름을 띄운다 */
+function IconBtn({ label, align, children, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string; align?: 'start' | 'center' | 'end' }) {
   return (
     <button
       type="button" aria-label={label} {...rest}
       className="group relative grid size-9 shrink-0 cursor-pointer place-items-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-default disabled:opacity-60"
     >
       {children}
-      <span
-        className="pointer-events-none absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-medium opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-        style={{ background: '#0f172a', color: '#fff' }}
-      >{label}</span>
+      <Tip text={label} align={align} />
     </button>
   );
 }
@@ -349,7 +351,6 @@ export function PanelApp({ controller: ctl }: { controller: PanelController }) {
         {bubble !== 'hidden' && <button
           type="button"
           onClick={() => { if (c) ctl.openSidePanel(); else setFolded(false); }}
-          title={c ? '요약 보기 (다시 누르면 닫기)' : '펼치기'}
           className={`relative inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-surface px-3 py-1.5 text-[12px] font-medium text-slate-700 transition-[opacity,background-color] hover:bg-slate-50 ${bubble === 'fading' ? 'pointer-events-none opacity-0' : ''}`}
           style={{ boxShadow: CARD_SHADOW, transitionDuration: `${BUBBLE_FADE_MS}ms` }}
         >
@@ -363,11 +364,12 @@ export function PanelApp({ controller: ctl }: { controller: PanelController }) {
           <span className="absolute -right-1 top-1/2 size-2 -translate-y-1/2 rotate-45 border-r border-t border-slate-200 bg-surface" />
         </button>}
         <button
-          type="button" onClick={() => setFolded(false)} title="펼치기" aria-label="펼치기"
+          type="button" onClick={() => setFolded(false)} aria-label="펼치기"
           className="group cursor-pointer relative grid size-12 place-items-center rounded-full border border-slate-200 bg-surface transition-transform hover:scale-105"
           style={{ boxShadow: CARD_SHADOW }}
         >
           <Mascot size={38} />
+          <Tip text="펼치기" align="end" />
           {/* 마우스를 올리면 펼침 방향 화살표를 보여 누르면 펼쳐진다는 것을 알린다 */}
           <span className="tm-hint absolute -bottom-1 -left-1 grid size-4 place-items-center rounded-full border border-slate-200 bg-surface text-slate-600">
             <ChevronLeft className="size-3" strokeWidth={3} />
@@ -392,20 +394,21 @@ export function PanelApp({ controller: ctl }: { controller: PanelController }) {
         onAnimationEnd={(e) => { if (closing && e.target === e.currentTarget) { setClosing(false); setFolded(true); } }}
       >
         <button
-          type="button" onClick={fold} disabled={closing} title="접기" aria-label="접기"
+          type="button" onClick={fold} disabled={closing} aria-label="접기"
           className="group cursor-pointer relative grid size-9 place-items-center rounded-full transition-transform hover:scale-110"
         >
           <Mascot size={36} />
+          <Tip text="접기" align="start" />
           <span className="tm-hint absolute -bottom-0.5 -right-1 grid size-4 place-items-center rounded-full border border-slate-200 bg-surface text-slate-600">
             <ChevronRight className="size-3" strokeWidth={3} />
           </span>
         </button>
         {c ? (
           <>
-            {/* 누르면 사이드 패널 요약이 열리고, 다시 누르면 닫힌다. 채운 버튼 모양으로 눌러야 하는 것임을 보인다 */}
+            {/* 누르면 사이드 패널 요약이 열리고 알약은 접힌다. 채운 버튼 모양으로 눌러야 하는 것임을 보인다 */}
             <button
-              type="button" onClick={() => ctl.openSidePanel()} title="요약 보기 (다시 누르면 닫기)"
-              className="group inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border pl-3 pr-2 text-[13px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,.08)] transition-[background-color,box-shadow,transform] hover:shadow-[0_2px_6px_rgba(15,23,42,.14)] hover:brightness-[.97] dark:hover:brightness-[1.15] active:scale-[.97]"
+              type="button" onClick={() => { ctl.openSidePanel(); fold(); }}
+              className="group relative inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border pl-3 pr-2 text-[13px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,.08)] transition-[background-color,box-shadow,transform] hover:shadow-[0_2px_6px_rgba(15,23,42,.14)] hover:brightness-[.97] dark:hover:brightness-[1.15] active:scale-[.97]"
               style={{ color, background: c.tone === 'ok' ? 'var(--bm-ok-wash)' : 'var(--bm-warn-wash)', borderColor: c.tone === 'ok' ? 'var(--bm-ok-line)' : 'var(--bm-warn-line)' }}
             >
               <Icon className="size-4" />
@@ -415,17 +418,19 @@ export function PanelApp({ controller: ctl }: { controller: PanelController }) {
               <span className="ml-0.5 grid size-6 place-items-center rounded-full border-l pl-1.5 opacity-80 transition-opacity group-hover:opacity-100" style={{ borderColor: 'currentColor' }}>
                 <PanelRightOpen className="size-4" />
               </span>
+              <Tip text="사이드 패널에서 요약 보기" />
             </button>
             {st.lookup.noticeId && (
               <>
                 <span className="h-5 w-px bg-slate-200" />
                 {/* 수집한 공고는 여기서 대시보드 메일 준비 화면이나 공고 상세로 간다 */}
                 <button
-                  type="button" onClick={() => ctl.openUi('mail', st.lookup.noticeId)} title="대시보드에서 이 공고의 메일을 작성해 발송합니다"
-                  className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                  type="button" onClick={() => ctl.openUi('mail', st.lookup.noticeId)}
+                  className="group relative inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-100"
                 >
                   <Mail className="size-3.5" />
                   메일 작성
+                  <Tip text="대시보드에서 메일 작성·발송" />
                 </button>
               </>
             )}

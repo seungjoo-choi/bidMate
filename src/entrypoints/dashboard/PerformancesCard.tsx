@@ -5,7 +5,7 @@ import { parseSheetAmount, type SheetParse } from '../../core/performances/sheet
 import { compareAmountOf, type PerformanceImportResult, type PerformanceInput, type PerformanceRecord, type PerformancesSnapshot } from '../../core/types/performance';
 import { buildTemplateXlsx, parsePerformanceXlsx } from '../../engine/performances/xlsx-io';
 import { send } from '../../messaging/bus';
-import { Button, Card, ConfirmDialog, EmptyState, Field, FormActions, InlineAlert, StatusBadge } from '../../ui/components';
+import { Button, Card, ConfirmDialog, EmptyState, Field, FormActions, InlineAlert, StatusBadge, useToast } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 
 type LoadError = { code?: string; message: string; path?: string };
@@ -36,7 +36,7 @@ export function PerformancesCard() {
   const [formError, setFormError] = useState<string | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const toast = useToast();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -56,7 +56,7 @@ export function PerformancesCard() {
     try {
       await send('config/repair', { file: 'performances' });
       await reload();
-      setNotice('백업 후 초기화했습니다.');
+      toast.saved('백업 후 초기화했습니다');
     } catch (e) {
       setLoadError(errOf(e));
     } finally {
@@ -97,7 +97,6 @@ export function PerformancesCard() {
 
   const onFile = async (file: File | undefined) => {
     if (!file) return;
-    setNotice(null);
     setFileError(null);
     try {
       const parse = await parsePerformanceXlsx(new Uint8Array(await file.arrayBuffer()));
@@ -116,7 +115,7 @@ export function PerformancesCard() {
       const res: PerformanceImportResult = await send('performances/import', { plan: { mode: p.mode, add } });
       setData({ items: res.items, warnings: res.warnings });
       setPreview(null);
-      setNotice(`실적 ${res.summary.added}건을 가져왔습니다. 건너뛴 행 ${res.summary.skipped.length + parse.invalid}.`);
+      toast.saved(`실적 ${res.summary.added}건을 가져왔습니다. 건너뛴 행 ${res.summary.skipped.length + parse.invalid}`);
     } catch (e) {
       setFileError(errOf(e).message);
     } finally {
@@ -140,7 +139,7 @@ export function PerformancesCard() {
     try {
       setData(await send('performances/save', { performance: input }));
       setForm(null);
-      setNotice('저장했습니다.');
+      toast.saved('저장했습니다');
     } catch (e) {
       setFormError(errOf(e).message);
     } finally {
@@ -155,7 +154,7 @@ export function PerformancesCard() {
     setBusy(true);
     try {
       setData(await send('performances/delete', { id }));
-      setNotice('삭제했습니다.');
+      toast.saved('삭제했습니다');
     } catch (e) {
       setLoadError(errOf(e));
     } finally {
@@ -172,7 +171,7 @@ export function PerformancesCard() {
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="secondary" icon={<Download />} onClick={downloadTemplate}>빈 양식 내려받기</Button>
         <Button variant="secondary" icon={<Upload />} disabled={busy} onClick={() => fileRef.current?.click()}>엑셀 가져오기</Button>
-        <Button icon={<Plus />} disabled={busy || !!preview} onClick={() => { setForm({ ...EMPTY_FORM }); setFormError(null); setNotice(null); }}>실적 추가</Button>
+        <Button icon={<Plus />} disabled={busy || !!preview} onClick={() => { setForm({ ...EMPTY_FORM }); setFormError(null); }}>실적 추가</Button>
         <span className="ml-auto text-sm text-muted">총 {items.length}건, 진행 중 {inProgress}건</span>
       </div>
       {data && data.warnings.length > 0 && data.warnings.map((w) => <InlineAlert key={w} tone="warn">{w}</InlineAlert>)}
@@ -182,7 +181,7 @@ export function PerformancesCard() {
           <p className="mt-1">빈 양식을 내려받아 같은 머리글로 저장하세요.</p>
         </InlineAlert>
       )}
-      {notice && <InlineAlert tone="ok">{notice}</InlineAlert>}
+      {toast.node}
 
       {preview && preview.parse.ok ? (
         <PreviewView
@@ -225,7 +224,7 @@ export function PerformancesCard() {
                   <td className="px-3 py-2">{p.source === 'excel' ? '엑셀' : '직접'}</td>
                   <td className="px-3 py-2">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" icon={<Pencil />} disabled={busy} onClick={() => { setForm(formOf(p)); setFormError(null); setNotice(null); }}>수정</Button>
+                      <Button variant="ghost" icon={<Pencil />} disabled={busy} onClick={() => { setForm(formOf(p)); setFormError(null); }}>수정</Button>
                       <Button variant="ghost" icon={<Trash2 />} disabled={busy} className="text-danger" onClick={() => setDeleteId(p.id)}>삭제</Button>
                     </div>
                   </td>

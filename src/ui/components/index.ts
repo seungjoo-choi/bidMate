@@ -10,5 +10,6 @@ export * from './Logo';
 export * from './EmptyState';
 export * from './ProviderIcon';
 export * from './MenuButton';
+export * from './MoreMenu';
 export * from './FormActions';
 export * from './ErrorBoundary';

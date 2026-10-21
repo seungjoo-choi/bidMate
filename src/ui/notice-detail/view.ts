@@ -8,7 +8,7 @@ import { normalizePath } from '../../core/model/path';
 import { withoutNamePrefix } from '../../core/model/names';
 import type { FieldValue } from '../../core/types/common';
 import type { Extraction, ExtractionKey } from '../../core/types/extraction';
-import { NA_VALUE_TEXT, coveringKey, fieldReviewState } from '../../core/extraction/review-count';
+import { NA_VALUE_TEXT, isNotApplicable, coveringKey, fieldReviewState, naNoteOf } from '../../core/extraction/review-count';
 import type { IndexEntry } from '../../core/types/index-file';
 import { RESULT_TERMINAL } from '../../core/types/result';
 import { formatCheckAt, resultCell } from '../notices/result-view';
@@ -57,7 +57,11 @@ function withReviewLink(id: string, rows: DetailRow[]): DetailRow[] {
 /** 추출 대상 평가 항목 행. 상태는 fieldReviewState(검토 탭과 같은 기준)로 판정하고, 그룹 충족이면 확인 필요를 떼고 충족 사유를 붙인다. */
 function evalRow<T>(label: string, f: FieldValue<T>, fmt: (v: T) => string, key: ExtractionKey, x: Extraction | null): DetailRow {
   const r = row(label, f, fmt);
-  if (fieldReviewState(f, x, key) === 'not_applicable') return { label, value: NA_VALUE_TEXT, ...(f.note ? { hint: f.note } : {}) };
+  if (fieldReviewState(f, x, key) === 'not_applicable') {
+    const xi = x?.items[key];
+    const hint = f.note ?? (xi && isNotApplicable(xi) ? naNoteOf(xi) : undefined);
+    return { label, value: NA_VALUE_TEXT, ...(hint ? { hint } : {}) };
+  }
   if (!x || fieldReviewState(f, x, key) !== 'covered') return r;
   const by = coveringKey(x.items, key);
   const { mark: _mark, ...rest } = r;

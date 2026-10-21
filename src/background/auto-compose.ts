@@ -192,6 +192,19 @@ export function dequeue(collectJobId: string): Promise<boolean> {
   });
 }
 
+/** 공고 삭제용. 큐에서 이 공고들의 대기 항목을 빼고 handoff를 none('dequeued')로 기록한다. */
+export function dequeueByNotice(noticeIds: string[]): Promise<number> {
+  const ids = new Set(noticeIds);
+  return q(async () => {
+    const queue = await readQueue();
+    const removed = queue.filter((e) => ids.has(e.noticeId));
+    if (removed.length === 0) return 0;
+    await writeQueue(queue.filter((e) => !ids.has(e.noticeId)));
+    for (const e of removed) await deps().setHandoff(e.collectJobId, none('dequeued')).catch(() => undefined);
+    return removed.length;
+  });
+}
+
 export function registerAutoCompose(): void {
   addFinalListener((job) => { void onFinal(job).catch(() => undefined); });
   listen('auto-compose/dequeue', async ({ collectJobId }, sender) => {

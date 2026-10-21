@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IndexEntry } from '../../src/core/types/index-file';
-import { evalFetchable, openingOf, runEvalBatch, selectableForEval, type EvalBatchState } from '../../src/ui/notices/eval-fetch-view';
+import { autoEvalTargets, evalFetchable, openingOf, runEvalBatch, selectableForEval, type EvalBatchState } from '../../src/ui/notices/eval-fetch-view';
 
 const NOW = new Date(2026, 9, 20, 12, 0);
 const at = (d: number, h: number) => new Date(2026, 9, d, h).toISOString();
@@ -74,5 +74,32 @@ describe('runEvalBatch', () => {
     });
     expect(seen).toEqual(['A']);
     expect(r).toMatchObject({ done: 1, ok: 1, stopped: '중단됨', running: false });
+  });
+});
+
+describe('autoEvalTargets', () => {
+  const opened = { schedule: { openingAt: at(19, 10) } };
+  const DAY = 86_400_000;
+  it('개찰 결과에 우리 회사가 있는(순위·낙찰·유찰) 공고만, 개찰 전·이미 가져온 공고는 뺀다', () => {
+    const list = [
+      entry({ ...opened, noticeId: 'R', result: { status: 'ranked' } }),
+      entry({ ...opened, noticeId: 'W', result: { status: 'won' } }),
+      entry({ ...opened, noticeId: 'L', result: { status: 'lost' } }),
+      entry({ ...opened, noticeId: 'N', result: { status: 'not_participated' } }),
+      entry({ ...opened, noticeId: 'Q', result: { status: 'waiting' } }),
+      entry({ ...opened, noticeId: 'X' }),
+      entry({ noticeId: 'F', schedule: { openingAt: at(21, 10) }, result: { status: 'won' } }),
+      entry({ ...opened, noticeId: 'H', result: { status: 'won' } }),
+    ];
+    expect(autoEvalTargets(list, new Set(['H']), {}, NOW).map((i) => i.noticeId)).toEqual(['R', 'W', 'L']);
+  });
+  it('평가 결과 없음 실패만 7일 쉬고, 다른 실패는 바로 다시 고른다', () => {
+    const list = [entry({ ...opened, noticeId: 'A', result: { status: 'won' } }), entry({ ...opened, noticeId: 'B', result: { status: 'won' } })];
+    const t = NOW.getTime();
+    expect(autoEvalTargets(list, new Set(), { A: { at: t, code: 'INTERNAL' }, B: { at: t - 7 * DAY + 1, code: 'EVAL_NO_RESULT' } }, NOW).map((i) => i.noticeId)).toEqual(['A']);
+    expect(autoEvalTargets(list, new Set(), { B: { at: t - 7 * DAY, code: 'EVAL_NO_RESULT' } }, NOW).map((i) => i.noticeId)).toEqual(['A', 'B']);
+  });
+  it('차수가 비면 000', () => {
+    expect(autoEvalTargets([entry({ ...opened, round: '', result: { status: 'won' } })], new Set(), {}, NOW)[0]!.round).toBe('000');
   });
 });

@@ -1,7 +1,7 @@
 import { Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { normalizeBizNo } from '../../core/evaluation/company';
-import { Button, Card, Field, FormActions, InlineAlert } from '../../ui/components';
+import { Button, Card, Field, FormActions, InlineAlert, useToast } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useSettings } from '../../ui/hooks/useSettings';
 
@@ -10,7 +10,7 @@ export function CompanyCard() {
   const [bizNo, setBizNo] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
 
   const savedBiz = settings?.company.bizNo;
@@ -21,7 +21,6 @@ export function CompanyCard() {
   const submit = async () => {
     if (!settings) return;
     setError(null);
-    setDone(false);
     const digits = normalizeBizNo(bizNo);
     if (digits !== '' && digits.length !== 10) { setError('사업자등록번호는 숫자 10자리여야 합니다. 예: 123-45-67890'); return; }
     setBusy(true);
@@ -29,7 +28,7 @@ export function CompanyCard() {
       const n = name.trim();
       await save({ ...settings, company: { bizNo: digits, ...(n ? { name: n } : {}) } });
       setBizNo(digits);
-      setDone(true);
+      toast.saved();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -49,7 +48,7 @@ export function CompanyCard() {
         <Button icon={<Save />} loading={busy} disabled={!settings} onClick={() => void submit()}>저장</Button>
       </FormActions>
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
-      {done && <InlineAlert tone="ok">저장했습니다.</InlineAlert>}
+      {toast.node}
     </Card>
   );
 }

@@ -1,4 +1,4 @@
-import { BellRing, Download, Search } from 'lucide-react';
+import { BellRing, Download, Search, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CollectStatus } from '../../core/types/notice';
 import type { ExtractionStatus } from '../../core/types/extraction';
@@ -10,7 +10,9 @@ import { FsErrorAlert } from './FsErrorAlert';
 import { noticeHash } from './route';
 import { kindOf, noticeLabel } from '../../core/model/ids';
 import { PROVIDERS } from '../../engine/ai/providers';
-import { Button, EmptyState, InlineAlert, ProviderIcon, StatusBadge, useToast } from '../../ui/components';
+import { Button, ConfirmDialog, EmptyState, InlineAlert, ProviderIcon, Select, StatusBadge, useToast } from '../../ui/components';
+import { orgOptions } from './org-filter';
+import { Mascot } from '../../ui/mascot';
 import type { BadgeStatus } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useAiBatch } from '../../ui/hooks/useAiBatch';
@@ -41,12 +43,13 @@ const EXTRACT_BADGE: Record<ExtractionStatus, { tone: BadgeStatus; text: string 
 };
 
 // 체크박스 열은 [AI로 보완할 공고 고르기]·[평가점수 가져올 공고 고르기]를 눌렀을 때만 둔다(평소 목록이 AI 분석처럼 보이지 않게).
-const GRID = 'grid grid-cols-[40px_minmax(0,1fr)_180px_110px_110px_130px_80px_32px] items-center gap-6 px-5';
-const GRID_PICK = 'grid grid-cols-[18px_40px_minmax(0,1fr)_180px_110px_110px_130px_80px_32px] items-center gap-6 px-5';
+const GRID = 'grid grid-cols-[40px_minmax(0,1fr)_150px_210px_110px_110px_170px_100px_32px] items-center gap-6 px-5';
+const GRID_PICK = 'grid grid-cols-[18px_40px_minmax(0,1fr)_150px_210px_110px_110px_170px_100px_32px] items-center gap-6 px-5';
 
-type SortKey = 'title' | 'close' | 'collect' | 'extract' | 'collectedAt';
+type SortKey = 'title' | 'org' | 'close' | 'collect' | 'extract' | 'collectedAt';
 const SORT_BY: Record<SortKey, (n: IndexEntry) => SortValue> = {
   title: (n) => n.title,
+  org: (n) => n.orderingOrg || undefined,
   close: (n) => n.bidCloseAt,
   collect: (n) => COLLECT_BADGE[n.collectStatus]?.text,
   extract: (n) => (kindOf(n) === 'prespec' ? undefined : (EXTRACT_BADGE[n.extractionStatus ?? 'not_run'] ?? EXTRACT_BADGE.not_run).text),
@@ -58,15 +61,20 @@ export function NoticesPage() {
   const [error, setError] = useState<{ code?: string; message: string } | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
+  const [org, setOrg] = useState('');
+  const [year, setYear] = useState('');
   // 선택은 이 컴포넌트 state에만 둔다(필터·검색·정렬을 바꿔도 유지, 페이지를 떠나면 사라진다).
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   // 선택 모드: AI 일괄 보완 또는 평가점수 일괄 가져오기. 모드마다 고를 수 있는 공고가 다르다.
-  const [picking, setPicking] = useState<null | 'ai' | 'eval'>(null);
+  const [picking, setPicking] = useState<null | 'ai' | 'eval' | 'delete'>(null);
   const stopPicking = () => { setPicking(null); setSelected(new Set()); };
   const [evalHave, setEvalHave] = useState<Set<string>>(() => new Set());
   const [evalBatch, setEvalBatch] = useState<EvalBatchState | null>(null);
   const evalCancel = useRef(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteFailed, setDeleteFailed] = useState<Array<{ noticeId: string; message: string }> | null>(null);
   const [starting, setStarting] = useState(false);
   const batch = useAiBatch();
   const { settings } = useSettings();
@@ -146,14 +154,18 @@ export function NoticesPage() {
           : filter === 'due' ? isDueSoon(n.bidCloseAt, now)
           : filter === 'follow' ? isFollowing(n)
           : isWon(n)))
+      .filter((n) => !org || (n.orderingOrg ?? '').trim() === org)
+      .filter((n) => !year || yearOf(n) === year)
       .filter((n) => !q || `${n.title} ${n.noticeNo} ${n.orderingOrg}`.toLowerCase().includes(q));
-  }, [list, filter, query]);
+  }, [list, filter, query, org, year]);
+  const orgs = useMemo(() => orgOptions(list ?? [], (n) => n.orderingOrg), [list]);
+  const years = useMemo(() => yearOptions(list ?? []), [list]);
   const { sorted: rows, sort, toggle } = useSort<IndexEntry, SortKey>(filtered, SORT_BY, { key: 'collectedAt', dir: 'desc' }, { close: 'asc', collectedAt: 'desc' });
 
   const open = (id: string) => { location.hash = noticeHash(id); };
 
   const byId = useMemo(() => new Map((list ?? []).map((n) => [n.noticeId, n])), [list]);
-  const selOf = useCallback((n: IndexEntry) => (picking === 'eval' ? selectableForEval(n, new Date(), evalHave) : selectableForAi(n)), [picking, evalHave]);
+  const selOf = useCallback((n: IndexEntry) => (picking === 'delete' ? { ok: true as const } : picking === 'eval' ? selectableForEval(n, new Date(), evalHave) : selectableForAi(n)),[picking, evalHave]);
   const selectableIds = useMemo(() => new Set((list ?? []).filter((n) => selOf(n).ok).map((n) => n.noticeId)), [list, selOf]);
   const picked = useMemo(() => [...selected].filter((id) => selectableIds.has(id)), [selected, selectableIds]);
   const visibleSelectable = rows.filter((n) => selectableIds.has(n.noticeId)).map((n) => n.noticeId);
@@ -185,6 +197,28 @@ export function NoticesPage() {
         : `${code ?? ''} ${e instanceof Error ? e.message : String(e)}`.trim());
     } finally {
       setStarting(false);
+    }
+  };
+  const runDelete = async (ids: string[]) => {
+    if (ids.length === 0 || deleting) return;
+    setDeleting(true);
+    setDeleteFailed(null);
+    try {
+      const r = await send('notice/delete', { noticeIds: ids }, { timeoutMs: 35_000 + 5_000 * ids.length });
+      stopPicking();
+      await load();
+      void loadEvalHave();
+      toast.show(r.failed.length > 0 ? `${r.deleted.length}건 삭제, ${r.failed.length}건 실패` : `${r.deleted.length}건 삭제했습니다`);
+      if (r.failed.length > 0) {
+        setDeleteFailed(r.failed.map((f) => ({
+          noticeId: f.noticeId,
+          message: f.code === 'JOB_ALREADY_RUNNING' ? '작업이 진행 중입니다. 끝난 뒤 다시 시도하세요' : f.message,
+        })));
+      }
+    } catch (e) {
+      setDeleteFailed([{ noticeId: '', message: e instanceof Error ? e.message : String(e) }]);
+    } finally {
+      setDeleting(false);
     }
   };
   const runEval = async (ids: string[]) => {
@@ -224,8 +258,24 @@ export function NoticesPage() {
         />
       )}
       {aiError && <InlineAlert tone="error">{aiError}</InlineAlert>}
+      {deleteFailed && (
+        <InlineAlert tone="error">
+          {deleteFailed.map((f, i) => <div key={`${f.noticeId}:${i}`}>{f.noticeId ? `${titleOf(f.noticeId)}: ${f.message}` : f.message}</div>)}
+        </InlineAlert>
+      )}
+      <ConfirmDialog
+        open={confirmDelete} title={`선택한 공고 ${picked.length}건을 삭제할까요?`}
+        description="공고 파일과 첨부, 추출 결과, AI 제안, 평가점수, 낙찰 결과 추적, RFP 비교가 함께 지워집니다. 메일 발송 이력은 발송 이력 화면에 남습니다. 되돌릴 수 없습니다."
+        onCancel={() => setConfirmDelete(false)} onConfirm={() => { setConfirmDelete(false); void runDelete(picked); }}
+      />
       {evalBatch && (
-        <div className="flex flex-wrap items-start gap-2.5 rounded-card border border-line bg-surface px-3.5 py-2.5 text-ink shadow-card tabular-nums">
+        <div className="flex flex-wrap items-center gap-3.5 rounded-card border border-line bg-surface px-4 py-3 text-ink shadow-card tabular-nums">
+          <div className={`grid size-11 shrink-0 place-items-center rounded-full ${evalBatch.running ? 'bg-primary/10 ring-2 ring-primary/30' : 'bg-sunken'}`}>
+            <Mascot
+              key={evalBatch.running ? 'run' : 'end'} variant="face" size={36}
+              mood={evalBatch.running ? 'run' : evalBatch.stopped || (evalBatch.ok === 0 && evalBatch.failed.length > 0) ? 'huh' : 'happy'}
+            />
+          </div>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold">
               {evalBatch.running
@@ -266,7 +316,29 @@ export function NoticesPage() {
       {list && list.length > 0 && (
         <>
           <ResultSummaryStrip list={list} />
-          <div className="flex items-end justify-between gap-4 border-b border-line">
+          {/* 1줄: 왼쪽 조건(연도·기관·검색), 오른쪽 동작 버튼. 모두 h-10으로 높이를 맞춘다 */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Select className="w-36" aria-label="연도" placeholder="전체 연도" value={year} options={years} onChange={setYear} clearable />
+            <Select className="w-52" aria-label="기관" placeholder="전체 기관" value={org} options={orgs} onChange={setOrg} clearable />
+            <div className="relative w-72">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" />
+              <input className={`${inputClass} pl-9`} placeholder="공고명, 번호, 기관 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </div>
+            <span className="flex-1" />
+          {!picking && (
+            <>
+              <Button variant="secondary" icon={<Download />} disabled={!!evalBatch?.running} title={evalBatch?.running ? '평가점수를 가져오는 중입니다' : undefined} onClick={() => setPicking('eval')}>
+                평가점수 가져올 공고 고르기
+              </Button>
+              <Button variant="ai" icon={<ProviderIcon provider={provider} size={14} />} onClick={() => setPicking('ai')}>
+                AI로 보완할 공고 고르기
+              </Button>
+              <Button variant="secondary" icon={<Trash2 />} onClick={() => setPicking('delete')}>삭제할 공고 고르기</Button>
+            </>
+          )}
+          </div>
+          {/* 2줄: 상태 탭 */}
+          <div className="border-b border-line">
           <div role="tablist" className="flex gap-7">
             {FILTERS.map((f) => (
               <button
@@ -282,22 +354,6 @@ export function NoticesPage() {
               </button>
             ))}
           </div>
-          <div className="mb-2 flex items-center gap-2.5">
-          {!picking && (
-            <>
-              <Button variant="secondary" className="!h-9" icon={<Download />} disabled={!!evalBatch?.running} title={evalBatch?.running ? '평가점수를 가져오는 중입니다' : undefined} onClick={() => setPicking('eval')}>
-                평가점수 가져올 공고 고르기
-              </Button>
-              <Button variant="ai" className="!h-9" icon={<ProviderIcon provider={provider} size={14} />} onClick={() => setPicking('ai')}>
-                AI로 보완할 공고 고르기
-              </Button>
-            </>
-          )}
-          <div className="relative w-80">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" />
-            <input className={`${inputClass} pl-9`} placeholder="공고명, 번호, 기관 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
-          </div>
-          </div>
           </div>
           {picking === 'eval' && (
             <div className="flex flex-wrap items-center gap-2.5 rounded-card border border-line bg-surface px-3.5 py-2.5 text-ink shadow-card tabular-nums">
@@ -308,6 +364,17 @@ export function NoticesPage() {
               <span className="flex-1" />
               <Button variant="ghost" className="!h-9 !px-3" onClick={stopPicking}>취소</Button>
               <Button className="!h-9" icon={<Download />} disabled={picked.length === 0} onClick={() => void runEval(picked)}>선택한 공고 평가점수 가져오기</Button>
+            </div>
+          )}
+          {picking === 'delete' && (
+            <div className="flex flex-wrap items-center gap-2.5 rounded-card border border-line bg-surface px-3.5 py-2.5 text-ink shadow-card tabular-nums">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold">{picked.length > 0 ? `${picked.length}건 선택` : '삭제할 공고를 고르세요'}</div>
+                <div className="text-xs text-muted">공고 파일과 첨부, 추출 결과, AI 제안, 평가점수, 낙찰 추적, RFP 비교가 함께 지워집니다. 메일 발송 이력은 남습니다.</div>
+              </div>
+              <span className="flex-1" />
+              <Button variant="ghost" className="!h-9 !px-3" onClick={stopPicking}>취소</Button>
+              <Button variant="danger" className="!h-9" icon={<Trash2 />} disabled={picked.length === 0 || deleting} loading={deleting} onClick={() => setConfirmDelete(true)}>선택한 공고 삭제</Button>
             </div>
           )}
           {picking === 'ai' && (
@@ -342,13 +409,14 @@ export function NoticesPage() {
             <div className={`${picking ? GRID_PICK : GRID} sticky top-0 z-10 bg-sunken py-3 text-sm text-muted`}>
               {picking && (
                 <input
-                  ref={headerRef} type="checkbox" className="size-4 accent-primary" aria-label="보이는 공고 모두 선택" title={picking === 'eval' ? '평가점수를 가져올 수 있는 공고 모두 선택' : 'AI 제안을 받을 수 있는 공고 모두 선택'}
+                  ref={headerRef} type="checkbox" className="size-4 accent-primary" aria-label="보이는 공고 모두 선택" title={picking === 'delete' ? '보이는 공고 모두 선택' : picking === 'eval' ? '평가점수를 가져올 수 있는 공고 모두 선택' : 'AI 제안을 받을 수 있는 공고 모두 선택'}
                   disabled={visibleSelectable.length === 0} checked={head.checked}
                   onChange={() => setSelected(head.next)}
                 />
               )}
               <div className="text-right">순번</div>
               <SortHeader label="공고명" k="title" sort={sort} onSort={toggle} />
+              <SortHeader label="기관" k="org" sort={sort} onSort={toggle} />
               <SortHeader label="마감" k="close" sort={sort} onSort={toggle} />
               <SortHeader label="수집" k="collect" sort={sort} onSort={toggle} />
               <SortHeader label="평가정보" k="extract" sort={sort} onSort={toggle} />
@@ -361,7 +429,7 @@ export function NoticesPage() {
               const past = isPast(n.bidCloseAt, now);
               const dday = formatDDay(n.bidCloseAt, now);
               const level = dDayLevel(dday);
-              const ddayTone = past ? 'font-medium' : level === 'urgent' ? 'text-danger' : level === 'soon' ? 'text-warn' : 'font-medium text-muted';
+              const ddayTone = past ? 'font-medium text-muted' : level === 'urgent' ? 'text-danger' : level === 'soon' ? 'text-warn' : 'font-medium text-muted';
               const cb = COLLECT_BADGE[n.collectStatus];
               const eb = EXTRACT_BADGE[n.extractionStatus ?? 'not_run'] ?? EXTRACT_BADGE.not_run;
               const sel = selOf(n);
@@ -376,8 +444,8 @@ export function NoticesPage() {
                   tabIndex={0}
                   onClick={() => open(n.noticeId)}
                   onKeyDown={(e) => { if (e.key === 'Enter') open(n.noticeId); }}
-                  className={`${picking ? GRID_PICK : GRID} relative cursor-pointer border-t border-line py-4 transition-colors hover:bg-sunken motion-reduce:transition-none ${past ? 'text-faint' : ''} ${
-                    picking && selected.has(n.noticeId) && sel.ok ? (picking === 'ai' ? 'bg-ai-wash/60' : 'bg-select') : ''
+                  className={`${picking ? GRID_PICK : GRID} relative cursor-pointer border-t border-line py-4 transition-colors hover:bg-sunken motion-reduce:transition-none ${
+                    picking && selected.has(n.noticeId) && sel.ok ? (picking === 'ai' ? 'bg-ai-wash/60' : picking === 'delete' ? 'bg-danger-wash/60' : 'bg-select') : ''
                   }`}
                 >
                   {picking && <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
@@ -387,13 +455,13 @@ export function NoticesPage() {
                       onChange={() => setSelected((s) => { const nx = new Set(s); if (nx.has(n.noticeId)) nx.delete(n.noticeId); else nx.add(n.noticeId); return nx; })}
                     />
                   </div>}
-                  <div className={`text-right font-mono text-sm tabular-nums ${past ? '' : 'text-muted'}`}>{i + 1}</div>
+                  <div className={`text-right font-mono text-sm tabular-nums text-muted`}>{i + 1}</div>
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-2.5">
                       <span className={`truncate text-base font-semibold ${won ? 'text-ink' : ''}`}>{n.title}</span>
                     </div>
-                    <div className={`mt-0.5 flex min-w-0 items-center gap-2.5 text-sm ${past ? '' : 'text-muted'}`}>
-                      <span className="truncate"><span className="font-mono">{noticeLabel(n)}</span>, {n.orderingOrg}</span>
+                    <div className={`mt-0.5 flex min-w-0 items-center gap-2.5 text-sm text-muted`}>
+                      <span className="truncate font-mono">{noticeLabel(n)}</span>
                       {kindOf(n) === 'prespec' && <span className="shrink-0"><StatusBadge status="idle">사전규격</StatusBadge></span>}
                       {hint && (
                         <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-star">
@@ -402,16 +470,17 @@ export function NoticesPage() {
                       )}
                     </div>
                   </div>
+                  <div className={`truncate text-sm text-muted`} title={n.orderingOrg ?? undefined}>{n.orderingOrg || '—'}</div>
                   <div className="flex items-baseline gap-2.5 font-mono text-sm tabular-nums">
                     {dday && (
                       <span className={`min-w-11 font-bold ${ddayTone}`}>{dday}</span>
                     )}
-                    <span className={past ? '' : 'text-muted'}>{formatDateTime(n.bidCloseAt)}</span>
+                    <span className="text-muted">{formatDateTime(n.bidCloseAt)}</span>
                   </div>
                   <div><StatusBadge status={cb.tone}>{cb.text}</StatusBadge></div>
                   <div>{kindOf(n) === 'prespec' ? <span className="text-sm text-muted">해당 없음</span> : <StatusBadge status={eb.tone}>{eb.text}</StatusBadge>}</div>
                   <div>{rc ? <StatusBadge status={rc.tone}>{rc.text}</StatusBadge> : <span className="text-sm text-faint">—</span>}</div>
-                  <div className={`font-mono text-sm tabular-nums ${past ? '' : 'text-muted'}`}>{formatDate(n.collectedAt)}</div>
+                  <div className={`font-mono text-sm tabular-nums text-muted`}>{formatDate(n.collectedAt)}</div>
                   {fb.visible
                     ? <FollowMenu variant="star" following={n.following ?? null} rankDone={n.result?.status === 'ranked'} notify={notify} busy={follow.isBusy(n.noticeId)} disabled={fb.disabled} reason={fb.reason} title={n.title} onSelect={(a) => void applyFollow(n, a)} />
                     : <div />}
@@ -424,4 +493,20 @@ export function NoticesPage() {
       {toast.node}
     </div>
   );
+}
+
+/** 공고 연도: 입찰마감 연도, 없으면 수집일 연도 */
+function yearOf(n: IndexEntry): string {
+  const y = (n.bidCloseAt ?? n.collectedAt ?? '').slice(0, 4);
+  return /^\d{4}$/.test(y) ? y : '';
+}
+
+/** 연도 필터 옵션. 최근 연도부터, 옆에 건수 */
+function yearOptions(list: readonly IndexEntry[]): Array<{ value: string; label: string; hint: string }> {
+  const counts = new Map<string, number>();
+  for (const n of list) {
+    const y = yearOf(n);
+    if (y) counts.set(y, (counts.get(y) ?? 0) + 1);
+  }
+  return [...counts].sort((a, b) => b[0].localeCompare(a[0])).map(([y, c]) => ({ value: y, label: `${y}년`, hint: `${c}건` }));
 }

@@ -6,6 +6,9 @@ import { useSettings } from '../../ui/hooks/useSettings';
 
 type NotifyKey = keyof Settings['notify'];
 
+const isMac = /Mac/i.test(navigator.userAgent);
+const KBD = 'rounded border border-line-strong bg-surface px-1 font-sans text-xs text-ink';
+
 const OPTIONS: Array<{ key: NotifyKey; title: string; desc: string; preview: { title: string; lines: string[] } }> = [
   {
     key: 'rank',
@@ -86,10 +89,18 @@ export function NotifyCard() {
       </ul>
       <div className="flex gap-2.5 rounded-ctl bg-sunken px-3.5 py-3 text-sm text-muted">
         <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
-        <p>
-          알림이 안 보이면 맥의 <b className="font-semibold text-ink">시스템 설정 &gt; 알림 &gt; Google Chrome</b>에서 알림 허용을 켜 주세요.
-          집중 모드 중에는 알림 센터에만 쌓입니다. Chrome을 <kbd className="rounded border border-line-strong bg-surface px-1 font-sans text-xs text-ink">⌘Q</kbd>로 완전히 끄면 확인이 멈추고, 다시 켤 때 밀린 확인을 한 번 합니다.
-        </p>
+        {/* OS별로 설정 경로·집중 모드 이름·종료 단축키가 다르다(Windows Chrome 종료는 Ctrl+Shift+Q). */}
+        {isMac ? (
+          <p>
+            알림이 안 보이면 맥의 <b className="font-semibold text-ink">시스템 설정 &gt; 알림 &gt; Google Chrome</b>에서 알림 허용을 켜 주세요.
+            집중 모드 중에는 알림 센터에만 쌓입니다. Chrome을 <kbd className={KBD}>⌘Q</kbd>로 완전히 끄면 확인이 멈추고, 다시 켤 때 밀린 확인을 한 번 합니다.
+          </p>
+        ) : (
+          <p>
+            알림이 안 보이면 Windows의 <b className="font-semibold text-ink">설정 &gt; 시스템 &gt; 알림 &gt; Google Chrome</b>에서 알림을 켜 주세요.
+            방해 금지 중에는 알림 센터에만 쌓입니다. Chrome을 <kbd className={KBD}>Ctrl+Shift+Q</kbd>로 완전히 끄면 확인이 멈추고, 다시 켤 때 밀린 확인을 한 번 합니다.
+          </p>
+        )}
       </div>
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
     </Card>

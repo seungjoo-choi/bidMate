@@ -1,6 +1,6 @@
 import { isSettingsSection, type SettingsSection } from '../../messaging/protocol';
 
-export type Page = 'home' | 'notices' | 'mails' | 'evaluations' | 'stats' | 'recipients' | 'templates' | 'settings';
+export type Page = 'home' | 'notices' | 'mails' | 'evaluations' | 'rfp' | 'stats' | 'recipients' | 'templates' | 'settings';
 /** 설정 화면에서 열 수 있는 항목. 개발자 진단은 메시지로 여는 일이 없어 SettingsSection에 넣지 않는다. */
 export type SettingsView = SettingsSection | 'diagnostics';
 export const NOTICE_TABS = ['overview', 'files', 'history', 'review'] as const;
@@ -13,7 +13,9 @@ export type Route =
   | { page: 'template'; id: string }
   | { page: 'evaluation'; noticeId: string }
   | { page: 'mails'; tab: MailsTab }
-  | { page: Exclude<Page, 'mails'> };
+  | { page: 'rfp'; query: { next?: string; prev?: string } }
+  | { page: 'rfp-compare'; compareId: string }
+  | { page: Exclude<Page, 'mails' | 'rfp'> };
 
 /** `?` 뒤를 query로 분리한다. */
 function splitQuery(rest: string): { path: string; query: Record<string, string> } {
@@ -37,6 +39,18 @@ export const mailsHash = (tab: MailsTab = 'drafts'): string => (tab === 'sent' ?
 
 /** 평가분석 상세 해시 */
 export const evaluationHash = (noticeId: string): string => `#/evaluations/${encodeURIComponent(noticeId)}`;
+
+/** RFP 비교 진입 해시. next/prev는 미리 채울 공고 id */
+export function rfpHash(q?: { next?: string; prev?: string }): string {
+  const p = new URLSearchParams();
+  if (q?.next) p.set('next', q.next);
+  if (q?.prev) p.set('prev', q.prev);
+  const qs = p.toString();
+  return qs ? `#/rfp?${qs}` : '#/rfp';
+}
+
+/** RFP 비교 결과 해시 */
+export const rfpCompareHash = (compareId: string): string => `#/rfp/compare/${encodeURIComponent(compareId)}`;
 
 /** `#/settings?section=...`에서 바로 보여 줄 카드를 꺼낸다. */
 export function settingsSectionOf(hash: string): SettingsView | undefined {
@@ -77,6 +91,17 @@ export function parseRoute(hash: string): Route {
     return { page: 'evaluations' };
   }
   if (hash === '#/evaluations') return { page: 'evaluations' };
+  if (hash.startsWith('#/rfp/compare/')) {
+    try {
+      const compareId = decodeURIComponent(hash.slice('#/rfp/compare/'.length));
+      if (compareId) return { page: 'rfp-compare', compareId };
+    } catch { /* 잘못된 인코딩은 진입 화면으로 */ }
+    return { page: 'rfp', query: {} };
+  }
+  if (hash === '#/rfp' || hash.startsWith('#/rfp?')) {
+    const { query } = splitQuery(hash.slice('#/rfp'.length));
+    return { page: 'rfp', query: { ...(query.next ? { next: query.next } : {}), ...(query.prev ? { prev: query.prev } : {}) } };
+  }
   if (hash === '#/home' || hash === '' || hash === '#' || hash === '#/') return { page: 'home' };
   if (hash === '#/notices') return { page: 'notices' };
   if (hash === '#/mails') return { page: 'mails', tab: 'drafts' };

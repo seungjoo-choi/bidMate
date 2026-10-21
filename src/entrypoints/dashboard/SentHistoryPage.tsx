@@ -108,15 +108,20 @@ export function SentHistoryPage() {
                     return (
                       <tr
                         key={r.id}
-                        onClick={() => open(r.noticeId)}
-                        className="cursor-pointer border-t border-line align-middle transition-colors hover:bg-sunken motion-reduce:transition-none"
+                        onClick={r.noticeDeleted ? undefined : () => open(r.noticeId)}
+                        className={`${r.noticeDeleted ? '' : 'cursor-pointer '}border-t border-line align-middle transition-colors hover:bg-sunken motion-reduce:transition-none`}
                       >
                         <td className="px-4 py-3 text-right font-mono text-faint tabular-nums">{rows.length - i}</td>
                         <td className={`px-4 py-3 font-mono whitespace-nowrap tabular-nums ${strike}`}>
-                          <a href={noticeHash(r.noticeId, 'history')} onClick={(e) => e.stopPropagation()} className="text-accent hover:underline">{formatDateTime(r.sentAt)}</a>
+                          {r.noticeDeleted
+                            ? <span>{formatDateTime(r.sentAt)}</span>
+                            : <a href={noticeHash(r.noticeId, 'history')} onClick={(e) => e.stopPropagation()} className="text-accent hover:underline">{formatDateTime(r.sentAt)}</a>}
                         </td>
                         <td className={`px-4 py-3 ${strike}`}>
-                          <div className="truncate font-semibold text-ink" title={r.title}>{r.title}</div>
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <div className="truncate font-semibold text-ink" title={r.title}>{r.title}</div>
+                            {r.noticeDeleted && <StatusBadge status="idle">삭제된 공고</StatusBadge>}
+                          </div>
                           <div className="mt-0.5 truncate text-xs text-muted">
                             <span className="font-mono">{r.noticeNo}-{r.round}</span>
                             {r.orderingOrg && <span>, {r.orderingOrg}</span>}

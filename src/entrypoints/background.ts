@@ -9,6 +9,7 @@ import { registerDetailReader } from '../background/detail-reader';
 import { registerCoordinator } from '../background/job-coordinator';
 import { registerRouter } from '../background/router';
 import { registerSiteRegistry } from '../background/site-registry';
+import { registerNoticeDelete } from '../background/notice-delete';
 import { registerSendSignal } from '../background/send-signal';
 import { registerSendTrigger } from '../background/send-trigger';
 import { registerSidePanelPorts } from '../background/sidepanel-ports';
@@ -29,5 +30,6 @@ export default defineBackground({
     registerResultScheduler();
     registerDeadlineScheduler();
     registerSiteRegistry();
+    registerNoticeDelete();
   },
 });

@@ -80,7 +80,7 @@ export function AiSuggestionBlock({ leaf: card, busy, onApply, onDismiss, onOpen
     setWorking(null);
     setWorkingVariant(null);
     if (!err) return;
-    setError(err.code === 'AI_STALE' ? '다시 추출되어 이 제안은 적용할 수 없습니다'
+    setError(err.code === 'AI_STALE' ? '다시 수집되어 이 제안은 적용할 수 없습니다'
       : err.code === 'JOB_ALREADY_RUNNING' ? '이 공고는 다른 작업이 진행 중입니다' : `${err.code ?? ''} ${err.message}`.trim());
   };
 

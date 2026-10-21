@@ -1,8 +1,8 @@
-import type { AiErrorCode, AiProvider, OutputSpec } from '../../../core/types/ai';
+import type { AiErrorCode, AiProvider } from '../../../core/types/ai';
 
 export interface AiError { code: AiErrorCode; message: string; retryable: boolean; provider: AiProvider; status?: number }
 
-export interface AiBuildRequestInput { apiKey: string; model: string; system: string; user: string; spec: OutputSpec; maxTokens: number }
+export interface AiBuildRequestInput { apiKey: string; model: string; system: string; user: string; schema: unknown; schemaName: string; maxTokens: number }
 export interface AiBuiltRequest { url: string; headers: Record<string, string>; body: unknown }
 export type AiParsedResponse =
   | { ok: true; text: string; usage?: { inputTokens: number; outputTokens: number }; finish: 'stop' | 'length' | 'refusal' | 'other' }

@@ -2,12 +2,13 @@ import type { FieldSource, FieldValue, SourceKind } from '../types/common';
 import type { Notice } from '../types/notice';
 import { isNotApplicableField } from '../extraction/review-count';
 import { ALL_FIELD_KEYS, EVALUATION_KEYS, getField, type FieldMap } from './notice-fields';
+import { periodKey } from './period';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 
-/** 충돌 비교용 정규화: 문자열은 공백 제거, 날짜는 분 단위, 그 외는 그대로. */
+/** 충돌 비교용 정규화: 문자열은 공백 제거, 날짜는 분 단위, 기간은 시작~종료일, 그 외는 그대로. */
 function normalize(v: unknown): unknown {
-  if (typeof v === 'string') return DATE_RE.test(v) ? v.slice(0, 16) : v.replace(/\s+/g, '');
+  if (typeof v === 'string') return DATE_RE.test(v) ? v.slice(0, 16) : periodKey(v) ?? v.replace(/\s+/g, '');
   return v;
 }
 

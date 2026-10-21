@@ -3,11 +3,14 @@ import { send } from '../../messaging/bus';
 import type { FsStatus } from '../../messaging/protocol';
 import { parseHandoffReasons } from '../../core/model/handoff';
 import { ErrorBoundary, Logo, StatusBadge } from '../../ui/components';
+import { EvalAutoDock } from './evaluations/EvalAutoDock';
 import { EvaluationDetailPage } from './evaluations/EvaluationDetailPage';
 import { EvaluationsPage } from './evaluations/EvaluationsPage';
 import { GrantPage } from './GrantPage';
 import { HomePage } from './HomePage';
 import { MailPreparePage } from './MailPreparePage';
+import { CompareResultPage } from './rfp/CompareResultPage';
+import { RfpPage } from './rfp/RfpPage';
 import { NoticeDetailPage } from './notice/NoticeDetailPage';
 import { NoticesPage } from './NoticesPage';
 import { RecipientsPage } from './RecipientsPage';
@@ -54,7 +57,7 @@ export function App() {
   }, []);
   const route = parseRoute(hash);
   if (route.page === 'grant') return <GrantPage />;
-  const active: Page = route.page === 'mail' && route.query.from === 'mails' ? 'mails' : route.page === 'notice' || route.page === 'mail' ? 'notices' : route.page === 'template' ? 'templates' : route.page === 'evaluation' ? 'evaluations' : route.page;
+  const active: Page = route.page === 'mail' && route.query.from === 'mails' ? 'mails' : route.page === 'notice' || route.page === 'mail' ? 'notices' : route.page === 'template' ? 'templates' : route.page === 'evaluation' ? 'evaluations' : route.page === 'rfp-compare' ? 'rfp' : route.page;
 
   return (
     <div className="flex min-h-screen bg-canvas">
@@ -84,12 +87,14 @@ export function App() {
         <FolderStatus refreshKey={hash} />
       </aside>
       <main className="min-w-0 flex-1 px-12 pt-10 pb-16">
-        <div className={`mx-auto space-y-6 ${route.page === 'template' || route.page === 'recipients' || route.page === 'notices' ? 'max-w-[90rem]' : route.page === 'evaluation' ? 'max-w-[105rem]' : 'max-w-[70rem]'}`}>
+        <div className={`mx-auto space-y-6 ${route.page === 'template' || route.page === 'recipients' || route.page === 'notices' ? 'max-w-[90rem]' : route.page === 'evaluation' ? 'max-w-[105rem]' : route.page === 'rfp-compare' ? 'max-w-[92rem]' : 'max-w-[70rem]'}`}>
           <ErrorBoundary resetKey={hash}>
           {route.page === 'home' && <HomePage />}
           {route.page === 'notices' && <NoticesPage />}
           {route.page === 'mails' && <MailsPage tab={route.tab} />}
           {route.page === 'evaluations' && <EvaluationsPage />}
+          {route.page === 'rfp' && <RfpPage key={`${route.query.next ?? ''}|${route.query.prev ?? ''}`} query={route.query} />}
+          {route.page === 'rfp-compare' && <CompareResultPage key={route.compareId} compareId={route.compareId} />}
           {route.page === 'stats' && <StatsPage />}
           {route.page === 'evaluation' && <EvaluationDetailPage key={route.noticeId} noticeId={route.noticeId} />}
           {route.page === 'recipients' && <RecipientsPage />}
@@ -101,6 +106,7 @@ export function App() {
           </ErrorBoundary>
         </div>
       </main>
+      <EvalAutoDock onEvaluations={route.page === 'evaluations'} />
     </div>
   );
 }

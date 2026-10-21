@@ -61,9 +61,9 @@ describe('NoticeStore', () => {
     delete raw.notices[0].schedule;
     await mem.writeText('index.json', JSON.stringify(raw));
     const idx = await ns.loadIndex();
-    expect(idx.indexVersion).toBe(2);
+    expect(idx.indexVersion).toBe(3);
     expect(idx.notices[0]?.schedule?.openingAt).toBe('2026-10-25T10:00:00+09:00');
-    expect(JSON.parse(await mem.readText('index.json')).indexVersion).toBe(2);
+    expect(JSON.parse(await mem.readText('index.json')).indexVersion).toBe(3);
   });
   it('옛 index 보충은 notice.json을 못 읽은 항목도 지우지 않는다', async () => {
     const mem = new MemoryStore();
@@ -75,7 +75,7 @@ describe('NoticeStore', () => {
     await mem.writeText('index.json', JSON.stringify(raw));
     const idx = await ns.loadIndex();
     expect(idx.notices.map((e) => e.noticeId)).toEqual(['R1-000', 'R2-000']);
-    expect(idx.indexVersion).toBe(2);
+    expect(idx.indexVersion).toBe(3);
   });
   it('옛 버전 index에 saveNotice해도 버전을 올리지 않는다', async () => {
     const mem = new MemoryStore();
@@ -87,9 +87,35 @@ describe('NoticeStore', () => {
     await ns.saveNotice(mk('R2-000', '나', 'notices/2026/R2-000_나'));
     expect(JSON.parse(await mem.readText('index.json')).indexVersion).toBeUndefined();
   });
-  it('saveNotice 결과 index에 indexVersion 2', async () => {
+  it('saveNotice 결과 index에 indexVersion 3', async () => {
     const mem = new MemoryStore();
     await new NoticeStore(mem).saveNotice(mk('R1-000', '가', 'notices/2026/R1-000_가'));
-    expect(JSON.parse(await mem.readText('index.json')).indexVersion).toBe(2);
+    expect(JSON.parse(await mem.readText('index.json')).indexVersion).toBe(3);
+  });
+  it('v2 index는 로드 시 notice.json의 demandOrg로 보충하고 버전 3이 된다', async () => {
+    const mem = new MemoryStore();
+    const ns = new NoticeStore(mem);
+    const n = mk('R1-000', '가', 'notices/2026/R1-000_가');
+    n.basic.demandOrg = { value: '서울시', status: 'verified' };
+    n.schedule.openingAt = { value: '2026-10-25T10:00:00+09:00', status: 'verified' };
+    await ns.saveNotice(n);
+    const raw = JSON.parse(await mem.readText('index.json'));
+    raw.indexVersion = 2;
+    delete raw.notices[0].demandOrg;
+    await mem.writeText('index.json', JSON.stringify(raw));
+    const idx = await ns.loadIndex();
+    expect(idx.indexVersion).toBe(3);
+    expect(idx.notices[0]?.demandOrg).toBe('서울시');
+    expect(idx.notices[0]?.schedule?.openingAt).toBe('2026-10-25T10:00:00+09:00');
+  });
+  it('새로 저장한 공고의 index 항목에 demandOrg가 포함된다', async () => {
+    const mem = new MemoryStore();
+    const n = mk('R1-000', '가', 'notices/2026/R1-000_가');
+    n.basic.demandOrg = { value: '서울시', status: 'verified' };
+    await new NoticeStore(mem).saveNotice(n);
+    expect(JSON.parse(await mem.readText('index.json')).notices[0].demandOrg).toBe('서울시');
+  });
+  it('demandOrg가 빈 공고는 항목에 키가 없다', () => {
+    expect('demandOrg' in entryOf(mk('R1-000', '가', 'f'))).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 import { NOTICE_KINDS } from '../helpers/ai-notice-kinds';
 import { describe, expect, it } from 'vitest';
+import { outputSchema } from '../../src/engine/ai/providers/schema';
 import type { OutputSpec } from '../../src/core/types/ai';
 import { claudeAdapter } from '../../src/engine/ai/providers/claude';
 import { getAdapter, PROVIDERS } from '../../src/engine/ai/providers';
@@ -11,7 +12,7 @@ const spec: OutputSpec = {
 
 describe('Claude 어댑터', () => {
   it('buildRequest: 엔드포인트·헤더·system/messages·temperature 미전송·스키마', () => {
-    const r = claudeAdapter.buildRequest({ apiKey: 'K', model: 'claude-x', system: 'SYS', user: 'USR', spec, maxTokens: 8192 });
+    const r = claudeAdapter.buildRequest({ apiKey: 'K', model: 'claude-x', system: 'SYS', user: 'USR', schema: outputSchema(spec), schemaName: 'bidmate_ai_review', maxTokens: 8192 });
     expect(r.url).toBe('https://api.anthropic.com/v1/messages');
     expect(r.headers).toMatchObject({ 'x-api-key': 'K', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' });
     const b = r.body as { model: string; max_tokens: number; temperature?: number; system: string; messages: unknown[]; output_config: { format: { type: string; schema: { properties: { items: { items: { anyOf: Array<{ properties: { key: { enum: string[] } } }> } } } } } } };

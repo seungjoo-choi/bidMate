@@ -48,7 +48,7 @@ export function RecipientsPage() {
     setBusy(false);
     if (res.ok) {
       setOpError(null);
-      if (okText) toast.show(okText);
+      if (okText) toast.saved(okText);
       return true;
     }
     setOpError({ ...res.error, area, path: (res.error as { path?: string }).path });
@@ -67,7 +67,7 @@ export function RecipientsPage() {
   };
   const onApplied = (s: RecipientImportSummary) => {
     void reload();
-    toast.show(`${s.added}명 추가, ${s.updated}명 수정, ${s.disabled}명 발송 끔${s.skipped.length > 0 ? ` / ${s.skipped.length}건 건너뜀` : ''}`);
+    toast.saved(`${s.added}명 추가, ${s.updated}명 수정, ${s.disabled}명 발송 끔${s.skipped.length > 0 ? ` / ${s.skipped.length}건 건너뜀` : ''}`);
   };
 
   const retry = async () => { await reload(); setOpError(null); };
@@ -82,7 +82,7 @@ export function RecipientsPage() {
       await send('config/repair', { file });
       setOpError(null);
       await reload();
-      toast.show('백업 후 초기화했습니다.');
+      toast.saved('백업 후 초기화했습니다');
     } catch (e) {
       setOpError({ code: (e as { code?: string }).code ?? 'INTERNAL', message: e instanceof Error ? e.message : String(e), area: 'other' });
     } finally {

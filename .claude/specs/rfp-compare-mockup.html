@@ -835,7 +835,7 @@ function hints(d) {
   const h = [], t = d.tags||[];
   if (t.includes('renumbered')) h.push(`<span class="h ren">번호 바뀜</span>`);
   if (t.includes('numeric')) h.push(`<span class="h num">${ic('hash','width:10px;height:10px')}수치</span>`);
-  if (t.includes('minor')) h.push(`<span class="h">띄어쓰기·오탈자</span>`);
+  if (t.includes('minor')) h.push(`<span class="h">몇 글자 바뀜</span>`);
   if (t.includes('weak')) h.push(`<span class="h col">다른 항목일 수도</span>`);
   else if (t.includes('major')) h.push(`<span class="h num">대폭 변경</span>`);
   if (t.includes('id_collision')) h.push(`<span class="h col">같은 번호, 다른 내용</span>`);
@@ -946,7 +946,8 @@ function renderDetail() {
   const chgSum = st ? `<div class="chg-sum">바뀐 칸 <b>${changedF.join(' · ')}</b>${st.mod?` · 고친 줄 <b>${st.mod}</b>`:''}${st.add?` · 새 줄 <b class="p">${st.add}</b>`:''}${st.del?` · 빠진 줄 <b class="m">${st.del}</b>`:''}</div>` : '';
   const extra = d.group==='split' ? `<div class="grp-link">${ic('split')}이전 <b class="mono">DAR-001 데이터 이관 및 정제</b>가 이번에 두 항목으로 나뉘었어요 → <a data-jump="11">DAR-001</a> · <a data-jump="12">DAR-002</a></div>` :
     (d.tags||[]).includes('id_collision') ? `<div class="warnbox">${ic('alert')}<div>양쪽에 <b class="mono">${(d.n||d.p).id}</b>가 있지만 내용이 전혀 달라 짝짓지 않았어요. 같은 요구사항이 맞다면 [짝 맺기]로 이어 주세요.</div></div>` :
-    (d.tags||[]).includes('weak') ? `<div class="warnbox">${ic('alert')}<div>번호(<b class="mono">${d.n.id}</b>)는 같지만 명칭과 내용이 많이 달라요. 서로 다른 요구사항이면 아래 [짝 풀기]를 눌러 신규·삭제로 나누세요.</div></div>` : '';
+    (d.tags||[]).includes('weak') ? `<div class="warnbox">${ic('alert')}<div>번호(<b class="mono">${d.n.id}</b>)는 같지만 명칭과 내용이 많이 달라요. 서로 다른 요구사항이면 아래 [짝 풀기]를 눌러 신규·삭제로 나누세요.</div></div>` :
+    (d.tags||[]).includes('format') ? `<div class="grp-link">${ic('check')}띄어쓰기·문장부호만 달라서 같은 항목으로 봤어요.</div>` : '';
   const pairBtn = d.p && d.n ? `<button class="btn sm ghost" id="unpair">${ic('unlink')}짝 풀기</button>` : `<button class="btn sm" id="pairBtn">${ic('link')}짝 맺기…</button>`;
   el.innerHTML = `<div class="d-head">
       <div class="d-badges"><span class="sbadge ${d.s}">${ST[d.s]}</span>${by?`<span class="match">${by}</span>`:''}</div>

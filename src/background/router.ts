@@ -4,6 +4,7 @@ import type { AiBatchState, AiProvider, AiRunState } from '../core/types/ai';
 import { withDefaults } from '../core/model/default-settings';
 import type { Settings } from '../core/types/settings';
 import { PROVIDERS } from '../engine/ai/providers';
+import { RFP_UPLOAD_MAX_MB } from '../core/rfp/constants';
 import { redactKey } from '../adapters/g2b/openapi';
 import { SIDEPANEL_FOCUS_KEY, isSettingsSection, type Envelope, type MsgType, type PayloadOf, type ResponseOf } from '../messaging/protocol';
 import { openDashboard } from './dashboard-tabs';
@@ -80,11 +81,16 @@ export const EXTENSION_ONLY_TYPES = [
   'templates/list', 'templates/save', 'templates/delete', 'templates/set-default',
   'mail/prepare', 'mail/draft-get', 'mail/edits-get', 'mail/sent-list', 'mail/sent-get', 'mail/sent-add', 'mail/sent-void', 'mail/sent-view', 'config/repair',
   'ai/get', 'ai/prepare', 'ai/prompt-get', 'ai/submit', 'ai/apply', 'ai/dismiss', 'ai/cancel', 'ai/batch-cancel',
+  'rfp/docs', 'rfp/extract', 'rfp/upload', 'rfp/uploads', 'rfp/upload-rename', 'rfp/upload-delete', 'rfp/text',
+  'rfp/compare-save', 'rfp/compare-list', 'rfp/compare-get', 'rfp/compare-delete',
 ] as const;
 type ExtensionOnlyType = (typeof EXTENSION_ONLY_TYPES)[number];
 
 /** 확장 페이지가 보낸 notice, extraction, 수신자/템플릿/메일 요청만 offscreen으로 중계한다. */
-const SLOW_TYPES = new Set<string>(['ai/prepare', 'ai/submit']);
+const TIMEOUT_MS = new Map<string, number>([
+  ['ai/prepare', 30_000], ['ai/submit', 30_000],
+  ['rfp/extract', 90_000], ['rfp/upload', 120_000], ['rfp/docs', 30_000], ['rfp/text', 30_000],
+]);
 /** 별도 릴레이를 두는 타입(EXTENSION_ONLY_TYPES에는 포함) */
 const CUSTOM_RELAY = new Set<string>(['ai/prepare']);
 /** 반자동 답변 붙여넣기 상한 */
@@ -102,8 +108,16 @@ function relayExtensionOnly<T extends ExtensionOnlyType>(type: T): void {
         const t = (payload as PayloadOf<'ai/submit'>)?.text;
         if (typeof t !== 'string' || t.length > AI_SUBMIT_MAX_CHARS) throw err('PAYLOAD_TOO_LARGE', 'AI 답변이 너무 깁니다(200KB 이하).');
       }
+      if (type === 'rfp/upload') {
+        const b64 = (payload as PayloadOf<'rfp/upload'>)?.b64;
+        if (typeof b64 !== 'string' || b64.length > RFP_UPLOAD_MAX_MB * 1024 * 1024 * 1.37) throw err('PAYLOAD_TOO_LARGE', `파일이 너무 큽니다(${RFP_UPLOAD_MAX_MB}MB 이하).`);
+      }
+      if (type === 'rfp/compare-save') {
+        const s = (payload as PayloadOf<'rfp/compare-save'>)?.session;
+        if (!s || JSON.stringify(s).length > 1_000_000) throw err('PAYLOAD_TOO_LARGE', '비교 세션이 너무 큽니다.');
+      }
       await ensureOffscreen();
-      return send(type, payload, { target: 'offscreen', timeoutMs: SLOW_TYPES.has(type) ? 30_000 : 25_000 });
+      return send(type, payload, { target: 'offscreen', timeoutMs: TIMEOUT_MS.get(type) ?? 25_000 });
     },
     'sw',
   );

@@ -1,5 +1,6 @@
 import { createMascotImg, ensureMascotStyle, setMascotMood } from '../mascot/dom';
 import { STEP_ICON, STEP_ICON_CSS } from '../mascot/step-icons';
+import { applyTheme } from '../theme/mode';
 import type { ProgressActionId, ProgressItem, ProgressPanelView } from './types';
 
 export interface ProgressCardHandle { host: HTMLElement; render(view: ProgressPanelView): void; flash(key: string): void; dispose(): void }
@@ -141,8 +142,8 @@ svg { display: block; }
 @keyframes bm-pulse { 0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.5); } 100% { box-shadow: 0 0 0 7px rgba(37, 99, 235, 0); } }
 [hidden] { display: none !important; }
 /* 다크모드: 토큰만 바꾼다. 색 계열은 사이드패널 테마(theme.css)와 맞춘다 */
-@media (prefers-color-scheme: dark) {
-  .root {
+/* 테마 설정(ui/theme/mode.ts)이 host에 data-theme="dark"를 달면 적용된다 */
+:host([data-theme='dark']) .root {
     --blue: #7fa6ec; --blue-soft: #1b222d; --violet: #b49cf0; --violet-soft: #241e33;
     --ok: #6cc08e; --ok-soft: #18241c; --warn: #e0a44a; --warn-soft: #2a2216; --err: #ec7a6d; --err-soft: #2c1a18;
     --ink: #e9e9e5; --ink-2: #b4b4ae; --ink-3: #7c7c76; --line: #2e2e2b;
@@ -152,9 +153,8 @@ svg { display: block; }
     --bubble: #2c2c2a; --bubble-line: #45453f; --go-fill: #7fa6ec; --go-fill-hover: #9bbaf1; --go-ink: #121417;
     color-scheme: dark;
   }
-  .item.active .gauge > i::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .25), transparent); }
-  .item.ok .badge, .item.warn .badge, .item.error .badge { color: #151514; }
-}
+:host([data-theme='dark']) .item.active .gauge > i::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .25), transparent); }
+:host([data-theme='dark']) .item.ok .badge, :host([data-theme='dark']) .item.warn .badge, :host([data-theme='dark']) .item.error .badge { color: #151514; }
 @media (prefers-reduced-motion: reduce) { *, *::after { animation: none !important; transition: none !important; } }
 `;
 
@@ -189,6 +189,7 @@ export function createProgressCard(doc: Document, on: ProgressCardCallbacks, opt
   const host = doc.createElement('div');
   host.setAttribute('data-bidmate', 'progress');
   const shadow = host.attachShadow({ mode: 'open' });
+  const offTheme = applyTheme(host);
   const style = doc.createElement('style');
   style.textContent = STYLE + STEP_ICON_CSS + FLASH_CSS;
   const root = doc.createElement('div');
@@ -519,6 +520,7 @@ export function createProgressCard(doc: Document, on: ProgressCardCallbacks, opt
   };
 
   const dispose = (): void => {
+    offTheme();
     stopTicker();
     for (const n of nodes.values()) clearTimeout(n.transitTimer);
     lastView = undefined;
