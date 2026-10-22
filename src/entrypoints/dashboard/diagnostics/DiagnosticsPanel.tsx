@@ -3,12 +3,14 @@ import { Card } from '../../../ui/components';
 import { CollectTool } from './CollectTool';
 import { EvalProbeTool } from './EvalProbeTool';
 import { G2bFailuresTool } from './G2bFailuresTool';
+import { OrgProbeTool } from './OrgProbeTool';
 import { ResultProbeTool } from './ResultProbeTool';
 
 const TOOLS = [
   { id: 'collect', label: '공고 수집', Tool: CollectTool },
   { id: 'eval', label: '평가 점수 API', Tool: EvalProbeTool },
   { id: 'result', label: '낙찰 결과 API', Tool: ResultProbeTool },
+  { id: 'org', label: '기관 이력 API', Tool: OrgProbeTool },
   { id: 'failures', label: '실패 기록', Tool: G2bFailuresTool },
 ] as const;
 

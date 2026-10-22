@@ -10,6 +10,7 @@ import { runComposeJob } from '../../engine/jobs/compose-job';
 import { runExtractJob } from '../../engine/jobs/extract-job';
 import { createParserRegistry } from '../../engine/parsers/registry';
 import { createRfpService } from '../../engine/rfp/rfp-service';
+import { getEstimate, saveEstimate } from '../../engine/estimate/estimate-store';
 import { editExtraction, editNoticeField, getNotice, listNotices, readExtractionText } from '../../engine/notices/notice-api';
 import { repairConfig } from '../../engine/config/config-store';
 import { deletePerformance, importPerformances, listPerformances, savePerformance } from '../../engine/config/performances-api';
@@ -25,6 +26,7 @@ import { fileStore } from '../../engine/file-store/file-store';
 import { setFollow } from '../../engine/results/follow-api';
 import { runResultRefresh } from '../../engine/results/result-tracker';
 import type { ResultRunSummary } from '../../core/types/result';
+import { probeOrg } from '../../adapters/g2b/org-api';
 import { probeResult } from '../../engine/results/result-probe';
 import { saveEval } from '../../engine/evaluation/eval-api';
 import { EvalStore } from '../../engine/evaluation/eval-store';
@@ -231,6 +233,7 @@ listen('follow/set', async (p) => {
   return r;
 }, 'offscreen');
 listen('result/probe', ({ noticeNo, serviceKey }) => probeResult(noticeNo, serviceKey ?? '', undefined, reportG2bFailure), 'offscreen');
+listen('org/probe-run', ({ serviceKey, ...p }) => probeOrg(p, { serviceKey, fetch: (...a) => fetch(...a) }), 'offscreen');
 listen('notice/list', () => listNotices(fileStore), 'offscreen');
 listen('deadline/plan', async () => buildPlan(await listNotices(fileStore), Date.now()), 'offscreen');
 listen('notice/get', ({ noticeId }) => getNotice(fileStore, noticeId), 'offscreen');
@@ -239,6 +242,8 @@ const isNoticeBusy = (noticeId: string) => deletingNotices.has(noticeId) || regi
 listen('extraction/edit', (p) => editExtraction(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
 listen('notice/field-edit', (p) => editNoticeField(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
 listen('extraction/text', (p) => readExtractionText(fileStore, p), 'offscreen');
+listen('estimate/get', (p) => getEstimate(fileStore, p.noticeId), 'offscreen');
+listen('estimate/save', (p) => saveEstimate(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
 
 // RFP 요구사항 비교. 파일 쓰기는 이 서비스만 한다(단일 작성자).
 const rfp = createRfpService({ store: fileStore, parsers });

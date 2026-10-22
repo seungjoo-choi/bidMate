@@ -142,6 +142,14 @@ describe('ui/open', () => {
 });
 
 describe('performances 메시지', () => {
+  it('estimate/* 2종을 SW에 등록하고 EXTENSION_ONLY로 처리한다', () => {
+    registerRouter();
+    const registered = vi.mocked(listen).mock.calls.filter((c) => c[2] === 'sw').map((c) => c[0] as string);
+    for (const t of ['estimate/get', 'estimate/save']) {
+      expect(registered).toContain(t);
+      expect(EXTENSION_ONLY_TYPES as readonly string[]).toContain(t);
+    }
+  });
   it('performances/* 4종을 SW에 등록하고 EXTENSION_ONLY로 처리한다', () => {
     registerRouter();
     const registered = vi.mocked(listen).mock.calls.filter((c) => c[2] === 'sw').map((c) => c[0] as string);

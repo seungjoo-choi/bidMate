@@ -25,6 +25,10 @@ describe('mapApiItem', () => {
     expect(f.priceMethod?.value).toBe('비예가');
     expect(f.projectPeriod?.status).toBe('missing');
   });
+  it('bidPrceEvlRt를 priceEvalRate(숫자)로 매핑', () => {
+    expect(f.priceEvalRate?.value).toBe(10);
+    expect(f.priceEvalRate?.status).toBe('verified');
+  });
   it('bfSpecRgstNo를 specRegNo로 매핑하고 다른 필드는 덮어쓰지 않는다', () => {
     const g = mapApiItem({ ...item, bfSpecRgstNo: 'R26BD00246532' }, at);
     expect(g.specRegNo?.value).toBe('R26BD00246532');
@@ -100,6 +104,14 @@ describe('오류 detail', () => {
     const body = JSON.stringify({ OpenAPI_ServiceResponse: { cmmMsgHeader: { errMsg: 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR', returnAuthMsg: 'x' } } });
     const r = await run(resp(body));
     expect(!r.ok && r.error.detail).toEqual({ httpStatus: 200, operation: 'opX', g2bMsg: 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR' });
+  });
+  it('호출 한도 초과(errMsg 또는 returnReasonCode 22) → G2B_RATE_LIMIT', async () => {
+    const a = await run(resp(JSON.stringify({ OpenAPI_ServiceResponse: { cmmMsgHeader: { errMsg: 'SERVICE ERROR', returnReasonCode: '22' } } })));
+    expect(!a.ok && a.error.code).toBe('G2B_RATE_LIMIT');
+    const b = await run(resp(JSON.stringify({ OpenAPI_ServiceResponse: { cmmMsgHeader: { errMsg: 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR' } } })));
+    expect(!b.ok && b.error.code).toBe('G2B_RATE_LIMIT');
+    const c = await run(resp(JSON.stringify({ OpenAPI_ServiceResponse: { cmmMsgHeader: { errMsg: 'OTHER' } } })));
+    expect(!c.ok && c.error.code).toBe('G2B_API_ERROR');
   });
   it('resultCode≠00 → g2bMsg=resultMsg', async () => {
     const body = JSON.stringify({ response: { header: { resultCode: '07', resultMsg: '입력범위값 초과 에러' } } });

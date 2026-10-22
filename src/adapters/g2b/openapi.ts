@@ -81,6 +81,9 @@ export function parseResponse(text: string): Parsed {
     if (/SERVICE_KEY_IS_NOT_REGISTERED_ERROR|SERVICE_KEY_IS_NULL/.test(msg)) {
       return { kind: 'error', code: 'G2B_KEY_INVALID', message: `서비스키 오류: ${msg}`, g2bMsg: msg };
     }
+    if (/LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR/.test(msg) || String(svc.returnReasonCode ?? '') === '22') {
+      return { kind: 'error', code: 'G2B_RATE_LIMIT', message: `호출 한도 초과: ${msg}`.trim(), g2bMsg: msg };
+    }
     return { kind: 'error', code: 'G2B_API_ERROR', message: `API 오류: ${msg} ${svc.returnAuthMsg ?? ''}`.trim(), g2bMsg: msg };
   }
   const errBody = json['nkoneps.com.response.ResponseError'];
@@ -237,6 +240,7 @@ export function mapApiItem(item: ApiItem, fetchedAt: string): FieldMap {
       set('evalMethod', text('sucsfbidMthdNm'));
     }
   }
+  set('priceEvalRate', num('bidPrceEvlRt'));
   return out;
 }
 

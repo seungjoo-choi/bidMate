@@ -81,6 +81,7 @@ function relayNoticeLookupBatch(): void {
 
 export const EXTENSION_ONLY_TYPES = [
   'notice/list', 'notice/get', 'extraction/edit', 'notice/field-edit', 'extraction/text',
+  'estimate/get', 'estimate/save',
   'performances/list', 'performances/save', 'performances/delete', 'performances/import',
   'recipients/list', 'recipients/save', 'recipients/import', 'recipients/delete', 'groups/save', 'groups/delete', 'groups/set-default',
   'templates/list', 'templates/save', 'templates/delete', 'templates/set-default',

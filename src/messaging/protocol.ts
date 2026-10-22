@@ -16,8 +16,10 @@ import type { CollectStatus } from '../core/types/notice';
 import type { DetectedDetail } from '../adapters/g2b/detail-page';
 import type { ComposeSelectorSet, ComposeState, SendWatchConfig } from '../adapters/naverworks/types';
 import type { EvalRaw } from '../adapters/g2b/eval-api';
+import type { OrgProbeParams, OrgProbeResult } from '../adapters/g2b/org-api';
 import type { EvalIndexEntry, EvalRecord } from '../core/types/evaluation';
 import type { ISODate } from '../core/types/common';
+import type { EstimateFile, EstimateKey } from '../core/types/estimate';
 import type { G2bFailureInput } from '../core/diagnostics/g2b-failure';
 import type { NotifyEvent, ResultProbeResult, ResultRunSummary } from '../core/types/result';
 import type { AiBatchState, AiProvider, AiReviewFile, AiRunState, AiScope } from '../core/types/ai';
@@ -119,6 +121,8 @@ export type Msg =
   | { type: 'notice/delete'; payload: { noticeIds: string[] }; response: NoticeDeleteResult }  // 대시보드→SW→offscreen. 건별 결과
   | { type: 'extraction/edit'; payload: { noticeId: string; key: ExtractionKey; value: unknown | null; note?: string }; response: { notice: Notice; extraction: Extraction } }
   | { type: 'notice/field-edit'; payload: { noticeId: string; key: NoticeFieldKey | `custom.${string}`; value: unknown | null; raw?: string; note?: string }; response: { notice: Notice; extraction: Extraction | null } }
+  | { type: 'estimate/get'; payload: { noticeId: string }; response: EstimateFile | null }
+  | { type: 'estimate/save'; payload: { noticeId: string; key: EstimateKey; score: number | null; note?: string; max: number | null }; response: EstimateFile }
   | { type: 'extraction/text'; payload: { noticeId: string; textPath: string }; response: { text: string } }
   | { type: 'rfp/docs'; payload: { noticeId: string }; response: RfpDocCandidate[] }  // 대시보드→SW→offscreen: 비교할 수 있는 첨부 후보
   | { type: 'rfp/extract'; payload: { ref: RfpDocRef; force?: boolean }; response: RequirementSet }
@@ -183,6 +187,8 @@ export type Msg =
   | { type: 'deadline/plan'; payload: void; response: DeadlinePlan }  // SW→offscreen 전용. index에서 계획 계산
   | { type: 'deadline/refresh'; payload: { reason: 'list' | 'manual' }; response: DeadlineRefreshSummary }  // 확장 페이지→SW. throw하지 않는다
   | { type: 'result/probe'; payload: { noticeNo: string; serviceKey?: string }; response: ResultProbeResult }  // 대시보드→SW→offscreen(키는 SW가 주입)
+  | { type: 'org/probe'; payload: OrgProbeParams; response: OrgProbeResult }  // 대시보드→SW. 키는 SW가 주입한다
+  | { type: 'org/probe-run'; payload: OrgProbeParams & { serviceKey: string }; response: OrgProbeResult }  // SW→offscreen 전용
   | { type: 'ai/get'; payload: { noticeId: string }; response: AiReviewFile | null }
   | { type: 'ai/run'; payload: { noticeId: string; scope: AiScope; keys?: AiKey[]; provider?: AiProvider; files?: string[] }; response: { runId: string } }  // 대시보드→SW. 키는 SW가 주입한다
   | { type: 'ai/compare-run'; payload: { noticeId: string; scope: AiScope; keys?: AiKey[]; providers: AiProvider[]; files?: string[] }; response: { compareId: string; runId: string } }  // 대시보드→SW. 키는 SW가 주입
