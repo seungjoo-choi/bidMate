@@ -3,6 +3,8 @@ import { NA_NOTE, NA_VALUE_TEXT, coveringKey, itemReviewState, naNoteOf } from '
 import { NOT_RUN_TEXT, REVIEW_LABEL } from '../../core/extraction/review-rows';
 import type { EvidenceRef, Extraction, ExtractionFile, ExtractionKey, ExtractedItem } from '../../core/types/extraction';
 import { EXTRACTION_KEYS } from '../../core/types/extraction';
+import { isDetailEvidence } from '../../core/model/detail-text';
+import type { Notice } from '../../core/types/notice';
 import type { AiCardInfo } from './ai-view';
 import { formatAmountFull, formatDifferential, formatPeriod, formatScore } from './format';
 
@@ -150,4 +152,9 @@ export function findTextPath(files: ExtractionFile[], e: EvidenceRef): string | 
   const same = files.filter((f) => f.attachmentId === e.attachmentId && f.textPath);
   const exact = same.find((f) => f.innerPath === e.sourceFile || f.name === e.sourceFile || fileDisplayName(f).endsWith(e.sourceFile));
   return (exact ?? same[0])?.textPath;
+}
+
+/** 근거의 원문 텍스트 경로. 상세화면 전문 근거는 공고의 detailText, 그 외는 첨부 추출 텍스트. */
+export function evidenceTextPath(e: EvidenceRef, files: ExtractionFile[], detail?: Notice['detailText']): string | undefined {
+  return isDetailEvidence(e) ? detail?.textPath : findTextPath(files, e);
 }

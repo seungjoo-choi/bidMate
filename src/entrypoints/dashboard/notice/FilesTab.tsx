@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { Extraction, ExtractionFile } from '../../../core/types/extraction';
 import type { Notice } from '../../../core/types/notice';
 import { Button, EmptyState, StatusBadge } from '../../../ui/components';
-import { ATTACHMENT_STATUS, attachmentRows, attachmentSummary, folderRelPath } from '../../../ui/notice-detail/view';
+import { ATTACHMENT_STATUS, attachmentRows, attachmentSummary, detailTextRow, folderRelPath } from '../../../ui/notice-detail/view';
 import { TextDrawer, type DrawerTarget } from '../review/TextDrawer';
 import { StatStrip } from './parts';
 
@@ -12,7 +12,8 @@ const linkClass = 'text-left hover:text-accent hover:underline';
 export function FilesTab({ notice, extraction, toast }: { notice: Notice; extraction: Extraction | null; toast: { show: (t: string) => void } }) {
   const [drawer, setDrawer] = useState<DrawerTarget | null>(null);
   const rows = attachmentRows(notice);
-  if (rows.length === 0) return <EmptyState title="첨부파일이 없습니다" />;
+  const detail = detailTextRow(notice);
+  if (rows.length === 0 && !detail) return <EmptyState title="첨부파일이 없습니다" />;
   const sum = attachmentSummary(notice);
   const dir = `${folderRelPath(notice.folder)}/attachments`;
   const copy = async () => {
@@ -39,6 +40,20 @@ export function FilesTab({ notice, extraction, toast }: { notice: Notice; extrac
             <tr>{['번호', '파일명', '종류', '크기', '상태', '시도', '비고', '동작'].map((h) => <th key={h} className="px-5 py-3 font-medium">{h}</th>)}</tr>
           </thead>
           <tbody>
+            {detail && (
+              <tr className="border-t border-line">
+                <td className="px-5 py-3 font-mono tabular-nums">—</td>
+                <td className="max-w-xs px-5 py-3 wrap-anywhere">
+                  <button type="button" className={linkClass} title="저장한 상세화면 텍스트 보기" onClick={() => setDrawer({ textPath: detail.textPath, title: detail.name })}>{detail.name}</button>
+                </td>
+                <td className="px-5 py-3">{detail.kind}</td>
+                <td className="px-5 py-3 whitespace-nowrap tabular-nums">{detail.size}</td>
+                <td className="px-5 py-3"><StatusBadge status="ok">{detail.statusLabel}</StatusBadge></td>
+                <td className="px-5 py-3 tabular-nums">—</td>
+                <td className="max-w-xs px-5 py-3 break-words text-muted">{detail.remark}</td>
+                <td className="px-5 py-3" />
+              </tr>
+            )}
             {rows.map((r) => {
               const st = ATTACHMENT_STATUS[r.status];
               // 추출 텍스트가 있는 파일만 클릭해 오른쪽 패널로 본다. zip은 안쪽 파일별로 링크를 단다.

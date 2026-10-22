@@ -180,7 +180,7 @@ describe('readDetail', () => {
     const logFn = vi.fn();
     const s = setup({ logFn });
     await readDetail('j1');
-    const ticks = s.sendToTab.mock.calls.length;
+    const ticks = s.sendToTab.mock.calls.length - 1; // 마지막 1회는 전문 읽기(trace 제외)
     const tickLogs = logFn.mock.calls.filter((c) => c[0] === '[detail-reader]');
     const traceLogs = logFn.mock.calls.filter((c) => c[0] === '[detail-reader] trace');
     expect(tickLogs).toHaveLength(ticks);
@@ -197,6 +197,52 @@ describe('readDetail', () => {
     const trace = JSON.parse(traceLog[2] as string) as Array<{ t: number }>;
     expect(trace).toHaveLength(120);
     expect(trace[0]!.t).toBeGreaterThan(0);
+  });
+
+  it('(17) 폴링 tick에는 withText 없음, 안정 후 마지막 1회만 withText true이고 pageText를 붙인다', async () => {
+    const s = setup({ reply: (_t, _c) => ({ detected: { noticeNo: REF.noticeNo }, match: true, html: html('A'), readyState: 'complete' }) });
+    s.sendToTab.mockImplementation((async (_id: number, _t: string, p: { withText?: boolean }) => ({
+      detected: { noticeNo: REF.noticeNo }, match: true, readyState: 'complete', diag: null,
+      html: p.withText ? { ...html('A'), pageText: '본문', pageTextTruncated: true } : html('A'),
+    })) as never);
+    const r = await readDetail('j1');
+    const payloads = s.sendToTab.mock.calls.map((c) => (c as unknown as [number, string, { withText?: boolean }])[2]);
+    expect(payloads.slice(0, -1).every((p) => p.withText === undefined)).toBe(true);
+    expect(payloads.filter((p) => p.withText === true)).toHaveLength(1);
+    expect(payloads[payloads.length - 1]!.withText).toBe(true);
+    expect(r.html).toMatchObject({ pageText: '본문', pageTextTruncated: true });
+  });
+
+  it('(18) 마지막 전문 읽기가 실패해도 성공하고 pageText는 없다', async () => {
+    const s = setup();
+    s.sendToTab.mockImplementation((async (_id: number, _t: string, p: { withText?: boolean }) => {
+      if (p.withText) throw new BusError('TIMEOUT', 'x');
+      return { detected: { noticeNo: REF.noticeNo }, match: true, html: html('A'), readyState: 'complete', diag: null };
+    }) as never);
+    const r = await readDetail('j1');
+    expect(r.html).toEqual(html('A'));
+    expect(recordG2bFailure).not.toHaveBeenCalled();
+  });
+
+  it('(19) 마지막 전문 읽기가 match:false(다른 공고)면 pageText를 붙이지 않는다', async () => {
+    const s = setup();
+    s.sendToTab.mockImplementation((async (_id: number, _t: string, p: { withText?: boolean }) => (p.withText
+      ? { detected: null, match: false, html: { ...html('A'), pageText: '다른 공고' }, readyState: 'complete', diag: null }
+      : { detected: { noticeNo: REF.noticeNo }, match: true, html: html('A'), readyState: 'complete', diag: null })) as never);
+    const r = await readDetail('j1');
+    expect(r.html).toEqual(html('A'));
+  });
+
+  it('(20) 타임아웃 경로에서는 withText 호출도 pageText도 없다', async () => {
+    const s = setup();
+    s.sendToTab.mockImplementation((async (_id: number, _t: string, p: { withText?: boolean }) => ({
+      detected: { noticeNo: REF.noticeNo }, match: true, readyState: 'complete', diag: null,
+      html: p.withText ? { ...html('x'), pageText: '본문' } : html(`v${Math.random()}`),
+    })) as never);
+    const r = await readDetail('j1');
+    expect(r.elapsedMs.stable).toBeGreaterThanOrEqual(45_000);
+    expect(s.sendToTab.mock.calls.some((c) => (c as unknown as [number, string, { withText?: boolean }])[2].withText)).toBe(false);
+    expect(r.html.pageText).toBeUndefined();
   });
 
   it('(16) NO_RECEIVER/TIMEOUT 틱도 기록', async () => {

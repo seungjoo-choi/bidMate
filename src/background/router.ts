@@ -5,6 +5,7 @@ import { withDefaults } from '../core/model/default-settings';
 import type { Settings } from '../core/types/settings';
 import { PROVIDERS } from '../engine/ai/providers';
 import { RFP_UPLOAD_MAX_MB } from '../core/rfp/constants';
+import { ASK_QUESTION_MAX_CHARS, ASK_TIMEOUT_MS } from '../core/search/constants';
 import { redactKey } from '../adapters/g2b/openapi';
 import { SIDEPANEL_FOCUS_KEY, isSettingsSection, type Envelope, type MsgType, type PayloadOf, type ResponseOf } from '../messaging/protocol';
 import { openDashboard } from './dashboard-tabs';
@@ -80,7 +81,7 @@ function relayNoticeLookupBatch(): void {
 }
 
 export const EXTENSION_ONLY_TYPES = [
-  'notice/list', 'notice/get', 'extraction/edit', 'notice/field-edit', 'extraction/text',
+  'notice/list', 'notice/get', 'extraction/edit', 'notice/field-edit', 'extraction/text', 'notice/texts',
   'estimate/get', 'estimate/save',
   'performances/list', 'performances/save', 'performances/delete', 'performances/import',
   'recipients/list', 'recipients/save', 'recipients/import', 'recipients/delete', 'groups/save', 'groups/delete', 'groups/set-default',
@@ -89,6 +90,7 @@ export const EXTENSION_ONLY_TYPES = [
   'ai/get', 'ai/prepare', 'ai/prompt-get', 'ai/submit', 'ai/apply', 'ai/dismiss', 'ai/cancel', 'ai/batch-cancel',
   'rfp/docs', 'rfp/extract', 'rfp/upload', 'rfp/uploads', 'rfp/upload-rename', 'rfp/upload-delete', 'rfp/text',
   'rfp/compare-save', 'rfp/compare-list', 'rfp/compare-get', 'rfp/compare-delete',
+  'search/ask-cancel', 'search/asks-get',
 ] as const;
 type ExtensionOnlyType = (typeof EXTENSION_ONLY_TYPES)[number];
 
@@ -96,9 +98,13 @@ type ExtensionOnlyType = (typeof EXTENSION_ONLY_TYPES)[number];
 const TIMEOUT_MS = new Map<string, number>([
   ['ai/prepare', 30_000], ['ai/submit', 30_000],
   ['rfp/extract', 90_000], ['rfp/upload', 120_000], ['rfp/docs', 30_000], ['rfp/text', 30_000],
+  ['notice/texts', 60_000],
 ]);
 /** 별도 릴레이를 두는 타입(EXTENSION_ONLY_TYPES에는 포함) */
 const CUSTOM_RELAY = new Set<string>(['ai/prepare']);
+/** 질문 payload의 항목값 문서 텍스트 상한(자) */
+export const ASK_FIELD_DOC_MAX_CHARS = 20_000;
+const ASK_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** 반자동 답변 붙여넣기 상한 */
 export const AI_SUBMIT_MAX_CHARS = 200_000;
 const err = (code: string, message: string) => Object.assign(new Error(message), { code });
@@ -254,6 +260,36 @@ function relayAiBatch(): void {
       if (!cur || cur.batchId !== batchId) return;
       if (batchActive(cur)) throw err('AI_BATCH_BUSY', '실행 중인 일괄 실행은 지울 수 없습니다. 먼저 취소하세요.');
       await chrome.storage.session.remove(AI_BATCH_SESSION_KEY);
+    },
+    'sw',
+  );
+}
+
+/** 공고 AI 질문 릴레이. 키는 SW가 storage에서 읽어 offscreen에 주입한다(대시보드 payload에는 키가 없다). 설정 mode가 manual이어도 "이번만 API"로 실행한다. */
+function relaySearchAsk(): void {
+  listen(
+    'search/ask',
+    async (payload, sender) => {
+      assertExtensionSender(sender);
+      // askId는 offscreen에서 파일 경로(`search/<askId>-prompt.txt`)가 되므로 과금 전에 형식을 검사한다.
+      if (typeof payload?.noticeId !== 'string' || !payload.noticeId) throw err('SEARCH_BAD_REF', '공고 ID가 올바르지 않습니다.');
+      if (typeof payload.askId !== 'string' || !ASK_ID_RE.test(payload.askId)) throw err('SEARCH_BAD_REF', '질문 ID 형식이 올바르지 않습니다.');
+      if (payload.contextMode !== undefined && payload.contextMode !== 'context' && payload.contextMode !== 'full') throw err('SEARCH_BAD_REF', 'contextMode가 올바르지 않습니다.');
+      if (payload.provider !== undefined && !AI_PROVIDERS.includes(payload.provider)) throw err('SEARCH_BAD_REF', '공급자가 올바르지 않습니다.');
+      const q = payload.question;
+      if (typeof q !== 'string' || q.length > ASK_QUESTION_MAX_CHARS) throw err('PAYLOAD_TOO_LARGE', `질문은 ${ASK_QUESTION_MAX_CHARS}자 이하로 입력하세요.`);
+      const doc = payload.fieldDocText ?? '';
+      if (typeof doc !== 'string' || doc.length > ASK_FIELD_DOC_MAX_CHARS) throw err('PAYLOAD_TOO_LARGE', '항목값 문서가 너무 깁니다.');
+      const { provider, key, model, raw } = await resolveAiRun(payload.provider);
+      await ensureOffscreen();
+      try {
+        return await send('search/ask-exec', {
+          noticeId: payload.noticeId, askId: payload.askId, question: q, fieldDocText: doc, provider,
+          ...(payload.contextMode ? { contextMode: payload.contextMode } : {}), api: { key, model },
+        }, { target: 'offscreen', timeoutMs: ASK_TIMEOUT_MS });
+      } catch (e) {
+        throw Object.assign(new Error(maskKey(e instanceof Error ? e.message : String(e), raw)), { code: (e as { code?: string }).code });
+      }
     },
     'sw',
   );
@@ -421,6 +457,7 @@ export function registerRouter(): void {
   registerUiMessages();
   relayG2bTest();
   relayAi();
+  relaySearchAsk();
   relayAiBatch();
   for (const t of EXTENSION_ONLY_TYPES) if (!CUSTOM_RELAY.has(t)) relayExtensionOnly(t);
   relayToOffscreen('fs/status');

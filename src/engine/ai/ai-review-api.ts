@@ -8,6 +8,7 @@ import { verifySuggestions, type VerifyFile } from '../../core/ai/verify';
 import { pendingLeafKeys } from '../../core/extraction/review-rows';
 import { getField } from '../../core/model/notice-fields';
 import { normalizePath } from '../../core/model/path';
+import { DETAIL_ATTACHMENT_ID, DETAIL_EXCERPT_MAX_CHARS, DETAIL_KIND_LABEL, DETAIL_TEXT_NAME } from '../../core/model/detail-text';
 import type { AiErrorCode, AiMode, AiProvider, AiReviewFile, AiRun, AiScope } from '../../core/types/ai';
 import { type Extraction, type ExtractionFile } from '../../core/types/extraction';
 import type { Notice } from '../../core/types/notice';
@@ -117,6 +118,16 @@ export async function prepareRun(store: IFileStore, p: PrepareInput, deps: AiApi
     const reason = SKIP_BY_STATUS[f.status];
     if (reason) skipped.push({ name: displayName(f), reason });
   }
+  // 상세화면 전문: 가상 첨부(priority 0, 맨 앞). 해제는 files 파라미터로(textPath가 없으면 unselected).
+  if (notice.detailText) {
+    const { textPath } = notice.detailText;
+    if (p.files && !p.files.includes(textPath)) skipped.push({ name: DETAIL_TEXT_NAME, reason: 'unselected' });
+    else {
+      const text = await readFileText(store, notice, textPath);
+      if (text === null) skipped.push({ name: DETAIL_TEXT_NAME, reason: 'failed' });
+      else inputs.unshift({ attachmentId: DETAIL_ATTACHMENT_ID, sourceFile: DETAIL_TEXT_NAME, name: DETAIL_TEXT_NAME, kindLabel: DETAIL_KIND_LABEL, priority: 0, maxChars: DETAIL_EXCERPT_MAX_CHARS, text });
+    }
+  }
   if (inputs.length === 0) throw err('NO_DOCUMENTS', '읽을 수 있는 문서가 없습니다.');
 
   const excerptInput = {
@@ -179,6 +190,12 @@ export async function finishRun(store: IFileStore, p: FinishInput, deps: AiApiDe
 
   const files: VerifyFile[] = [];
   for (const rf of run.files) {
+    if (rf.attachmentId === DETAIL_ATTACHMENT_ID) {
+      const tp = notice.detailText?.textPath;
+      const text = tp ? await readFileText(store, notice, tp) : null;
+      if (text !== null) files.push({ attachmentId: DETAIL_ATTACHMENT_ID, sourceFile: rf.sourceFile, name: rf.name, docKind: 'notice', text });
+      continue;
+    }
     const ef = extraction.files.find((f) => f.attachmentId === rf.attachmentId && sourceFileOf(f) === rf.sourceFile && f.textPath);
     if (!ef?.textPath) continue;
     const text = await readFileText(store, notice, ef.textPath);

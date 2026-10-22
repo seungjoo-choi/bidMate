@@ -1,6 +1,7 @@
 import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { defaultIsVisible, detectDetail, MAIN_FRAME_SELECTOR, readHtmlFields } from '../adapters/g2b/detail-page';
+import { readPageText } from '../adapters/g2b/detail-text';
 import { fetchEvalRaw } from '../adapters/g2b/eval-fetch';
 import { sameRound } from '../adapters/g2b/link';
 import { BusError, listen } from '../messaging/bus';
@@ -26,10 +27,17 @@ export default defineContentScript({
     listen('job/update', ({ job }) => { controller.onJobUpdate(job); }, 'content');
     listen('fs/permission-granted', () => { controller.onPermissionGranted(); }, 'content');
     listen('g2b/detect', () => controller.detected(), 'content');
-    listen('g2b/read-html', ({ noticeNo, round }) => {
+    listen('g2b/read-html', ({ noticeNo, round, withText }) => {
       const detected = detectDetail(document, { url: location.href });
       const match = !!detected && detected.noticeNo === noticeNo && (!round || !detected.round || sameRound(detected.round, round));
-      const html = match ? readHtmlFields(document, { isVisible: defaultIsVisible }) : null;
+      let html = match ? readHtmlFields(document, { isVisible: defaultIsVisible }) : null;
+      if (html && withText === true) {
+        // 폴링 tick에는 전문을 싣지 않고 withText 요청에서만 읽는다. 읽기 실패가 값 읽기 응답을 막지 않도록 감싼다.
+        try {
+          const pt = readPageText(document, { isVisible: defaultIsVisible });
+          if (pt) html = { ...html, pageText: pt.text, ...(pt.truncated ? { pageTextTruncated: true } : {}) };
+        } catch { /* 전문 생략 */ }
+      }
       // 진단 실패가 읽기 응답을 막지 않도록 따로 감싼다.
       let diag: ResponseOf<'g2b/read-html'>['diag'] = null;
       try {

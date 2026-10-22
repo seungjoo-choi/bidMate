@@ -57,6 +57,8 @@ export interface Notice {
   basic: NoticeBasic; schedule: NoticeSchedule; evaluation: NoticeEvaluation; prespec: NoticePrespec;
   customFields: Record<string, FieldValue<string>>; sourceUrl: FieldValue<string>;
   isCorrection: boolean; previousNoticeId?: string; attachments: Attachment[]; linkedPrespec?: LinkedPrespec;
+  /** 나라장터 상세화면 전문 txt(source/text). 없으면 전문 없이 수집된 공고. */
+  detailText?: { textPath: string; capturedAt: ISODate; chars: number; truncated?: boolean };
   collect: { status: CollectStatus; collectedAt: ISODate; lastJobId: string; errors: JobError[] };
   mail: { status: MailStatus; groupId?: string; templateId?: string; lastComposedAt?: ISODate; deliveredAt?: ISODate; sentCount?: number };
   updatedAt: ISODate;

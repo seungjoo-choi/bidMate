@@ -23,6 +23,8 @@ import { OverviewTab } from './OverviewTab';
 import { ReviewTab } from './ReviewTab';
 import { TabBar } from './TabBar';
 import { FollowMenu, useFollowToggle } from '../FollowToggle';
+import { useSearchContext } from '../search/NoticeSearchProvider';
+import { SearchButton } from '../search/SearchButton';
 import { useFavorites } from '../../../ui/hooks/useFavorites';
 import { WonCard } from './ResultStrip';
 import { followButton, isWon, type FollowAction } from '../../../ui/notices/result-view';
@@ -53,6 +55,7 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
   const faved = fav.has(noticeId);
   const { settings } = useSettings();
   const notify = settings?.notify ?? { rank: true, final: true };
+  useSearchContext(noticeId, data?.notice.basic.title.value ?? undefined);
 
   const load = async () => {
     try {
@@ -205,6 +208,7 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
           {evalBusy && <Button variant="secondary" icon={<Download />} loading>평가점수 가져오기</Button>}
           {!isPrespec && <Button variant="secondary" loading={busy} icon={<RefreshCw />} onClick={() => void extract()}>{busy ? '수집 중' : '다시 수집'}</Button>}
           {safeUrl && <Button variant="secondary" icon={<ExternalLink />} onClick={() => window.open(safeUrl, '_blank', 'noopener')}>원문 보기</Button>}
+          <SearchButton noticeId={noticeId} title={title} />
           <MoreMenu items={[
             ...(hasRfpFile ? [{ key: 'rfp-compare', label: '변경점 비교', icon: <GitCompareArrows />, onSelect: () => { window.location.hash = rfpHash({ next: noticeId }); } }] : []),
             ...(evalHave ? [{ key: 'eval-view', label: '평가점수 보기', icon: <BarChart3 />, onSelect: () => { window.location.hash = evaluationHash(noticeId); } }] : []),

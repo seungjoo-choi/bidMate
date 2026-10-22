@@ -8,6 +8,8 @@ import { REVIEW_LABEL } from '../../core/extraction/review-rows';
 import { AI_PROVIDERS } from '../../core/types/ai';
 import { runSummary, type AiRunSummary } from '../../core/ai/summary';
 import type { AiRunState } from '../../core/types/ai';
+import { DETAIL_KIND_LABEL, DETAIL_TEXT_NAME } from '../../core/model/detail-text';
+import type { Notice } from '../../core/types/notice';
 import { DOC_KIND_LABEL, FILE_STATUS_LABEL, fileDisplayName, type CardBadge } from './view';
 
 export { runSummary, type AiRunSummary };
@@ -174,8 +176,9 @@ export interface ChecklistRow { textPath?: string; name: string; kindLabel: stri
 const EXCLUDED_STATUS = new Set(['scanned', 'encrypted', 'drm', 'unsupported', 'failed', 'corrupt', 'timeout']);
 
 /** 파일 체크리스트: 분석 완료(+텍스트)는 선택 가능, 스캔·암호 등은 회색 고정(AI 재검토 제외). 의도적으로 건너뛴 파일(양식·중복 등)은 보이지 않는다. */
-export function fileChecklist(files: ExtractionFile[]): ChecklistRow[] {
+export function fileChecklist(files: ExtractionFile[], detail?: Notice['detailText']): ChecklistRow[] {
   const rows: ChecklistRow[] = [];
+  if (detail) rows.push({ textPath: detail.textPath, name: DETAIL_TEXT_NAME, kindLabel: DETAIL_KIND_LABEL, selectable: true });
   for (const f of files) {
     const base = { name: fileDisplayName(f), kindLabel: DOC_KIND_LABEL[f.docKind] ?? f.docKind };
     if (f.status === 'parsed' && f.textPath) rows.push({ ...base, textPath: f.textPath, selectable: true });
@@ -185,8 +188,9 @@ export function fileChecklist(files: ExtractionFile[]): ChecklistRow[] {
 }
 
 /** 선택한 파일의 글자 수 합(분석 때 센 값). 반자동 상한 경고에 쓴다. */
-export function selectedChars(files: ExtractionFile[], selected: ReadonlySet<string>): number {
-  return files.reduce((n, f) => n + (f.textPath && selected.has(f.textPath) ? f.chars ?? 0 : 0), 0);
+export function selectedChars(files: ExtractionFile[], selected: ReadonlySet<string>, detail?: Notice['detailText']): number {
+  const detailChars = detail && selected.has(detail.textPath) ? detail.chars : 0;
+  return detailChars + files.reduce((n, f) => n + (f.textPath && selected.has(f.textPath) ? f.chars ?? 0 : 0), 0);
 }
 
 /** 전부 선택했으면 undefined(서버 기본), 일부면 textPath 배열. */

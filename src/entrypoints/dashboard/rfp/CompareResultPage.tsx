@@ -15,6 +15,8 @@ import { buildCompareXlsx, exportFileName, XLSX_MIME, type ExportScope } from '.
 import { PairDetail, type DetailView } from './PairDetail';
 import { PairPicker } from './PairPicker';
 import { SideChip } from './SideChip';
+import { useSearchContext } from '../search/NoticeSearchProvider';
+import { SearchButton } from '../search/SearchButton';
 import { SummaryStrip } from './SummaryStrip';
 import { useCompareSession } from './useCompareSession';
 
@@ -26,6 +28,8 @@ interface Source { side: 'prev' | 'next'; line?: number }
 export function CompareResultPage({ compareId }: { compareId: string }) {
   const { load, session, prevSet, nextSet, result, update, swapDirection, saveError, retrySave } = useCompareSession(compareId);
   const toast = useToast();
+  const nextNoticeId = session?.next.ref.kind === 'notice' ? session.next.ref.noticeId : null;
+  useSearchContext(nextNoticeId, session?.next.title);
   const [filter, setFilter] = useState<CompareFilter>(DEFAULT_FILTER);
   const [selKey, setSelKey] = useState<string | null>(null);
   const [view, setView] = useState<DetailView>('side');
@@ -167,6 +171,7 @@ export function CompareResultPage({ compareId }: { compareId: string }) {
               { key: 'all', label: `전체 요구사항 (${result.pairs.length}개)`, description: '동일 항목은 회색으로 함께', onSelect: () => exportXlsx('all') },
             ]}
           />
+          {nextNoticeId && <SearchButton variant="text" noticeId={nextNoticeId} title={session.next.title} />}
           <Button variant="secondary" icon={<FileText />} onClick={goRfp}>문서 바꾸기</Button>
           <Button variant="secondary" icon={<ArrowLeftRight />} onClick={swap}>방향 바꾸기</Button>
         </div>

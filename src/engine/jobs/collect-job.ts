@@ -1,6 +1,7 @@
 import { parseHtmlField } from '../../adapters/g2b/html-parse';
 import { redactKey } from '../../adapters/g2b/openapi';
 import { prespecSource, sourceFor } from '../../adapters/g2b/source';
+import { detailTextPath } from '../../core/model/detail-text';
 import { kindOf } from '../../core/model/ids';
 import { mergeFields, type MergeLayer } from '../../core/model/merge';
 import { emptyNotice, setFields, type FieldMap } from '../../core/model/notice-fields';
@@ -48,6 +49,7 @@ export interface CollectJobDeps {
 
 export interface CollectOutcome { status: JobStatus; result?: CollectResult; error?: JobError }
 
+const TEXT_MAX_BYTES = 2 * 1024 * 1024;
 const fmtMB = (n: number): string => `${(n / 1048576).toFixed(1)}MB`;
 
 const prespecFailedError = (message: string): JobError =>
@@ -79,6 +81,36 @@ const toError = (e: unknown, step: StepId, key?: string): JobError => {
   const c = typeof code === 'string' ? code : 'COLLECT_ERROR';
   return { code: c, message: redactKey(e instanceof Error ? e.message : String(e), key), step, retryable: c !== 'DISK_FULL' && c !== 'KIND_UNSUPPORTED' };
 };
+
+/** 2MB(UTF-8)를 넘으면 잘라서 돌려준다. */
+function capText(text: string): string {
+  const enc = new TextEncoder();
+  let t = text;
+  while (enc.encode(t).length > TEXT_MAX_BYTES) t = t.slice(0, Math.floor(t.length * 0.9));
+  return t;
+}
+
+/**
+ * 상세화면 전문을 source/text에 저장하고 notice.detailText를 설정한다. 이름은 고정이고 덮어쓴다.
+ * 실패해도 던지지 않는다(잡 상태 불변). 실패 사유만 돌려준다.
+ */
+async function persistPageText(ns: NoticeStore, store: IFileStore, notice: Notice, html: HtmlFields | undefined): Promise<string | null> {
+  if (!html?.pageText) return null;
+  try {
+    const textPath = detailTextPath(notice.folder);
+    const text = capText(html.pageText);
+    const truncated = !!html.pageTextTruncated || text.length < html.pageText.length;
+    await store.writeText(textPath, text);
+    notice.detailText = {
+      textPath, capturedAt: html.capturedAt, chars: text.length,
+      ...(truncated ? { truncated: true } : {}),
+    };
+    await ns.saveNotice(notice);
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
+  }
+}
 
 /** 디바운스 저장. flush는 대기 중 저장과 진행 중 저장을 모두 끝낸다. */
 export function createDebouncedSaver(save: () => Promise<void>, ms: number) {
@@ -159,6 +191,9 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
       return false;
     };
 
+    // 전문 저장 실패는 잡 상태를 바꾸지 않고 step 안내로만 남긴다.
+    const noteTextFailure = (msg: string | null) => { if (msg) step('fetch_html', 'done', `상세화면 전문 저장 실패: ${redactKey(msg, key)}`); };
+
     // ---- fetch_basic ----
     if (isDone('fetch_basic') && job.noticeId) {
       notice = await ns.loadNotice(job.noticeId);
@@ -169,6 +204,7 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
       if (notice && html && src.acceptsHtml) {
         setFields(notice, mergeFields(notice, [{ kinds: ['html'], fields: htmlLayer(html) }]));
         await ns.saveNotice(notice);
+        noteTextFailure(await persistPageText(ns, deps.store, notice, html));
       }
     }
     if (!notice) {
@@ -222,6 +258,7 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
       notice.collect = { status: 'partial', collectedAt: now().toISOString(), lastJobId: job.id, errors: [] };
       notice.updatedAt = now().toISOString();
       await ns.saveNotice(notice, [{ operation, item }, ...prespecRaw]);
+      if (src.acceptsHtml) noteTextFailure(await persistPageText(ns, deps.store, notice, html));
       basicMs = Math.max(0, Date.now() - basicStart - detailMs);
     }
     step('fetch_basic', 'done', notice.linkedPrespec?.status === 'linked' ? `공고정보 조회 완료, 사전규격 첨부 ${notice.linkedPrespec.attachmentCount}건` : '공고정보 조회 완료', {

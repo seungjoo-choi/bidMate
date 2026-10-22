@@ -1,6 +1,7 @@
 import { refsConflict } from '../../core/model/job-conflict';
 import { defaultIsVisible, detectDetail, peekNoticeValue, readHtmlFields, readPageTitle, type DetectedDetail } from '../../adapters/g2b/detail-page';
-import type { Job } from '../../core/types/job';
+import { readPageText } from '../../adapters/g2b/detail-text';
+import type { HtmlFields, Job } from '../../core/types/job';
 import { EVAL_COLLECT_UI_TIMEOUT_MS } from '../../core/evaluation/limits';
 import { evalErrorText } from '../../core/evaluation/error-text';
 import { send } from '../../messaging/bus';
@@ -292,6 +293,16 @@ export class PanelController {
     return !!job?.ref && !!n && !refsConflict(job.ref, n);
   }
 
+  /** 화면값과 상세화면 전문. 전문 읽기 실패는 수집을 막지 않는다. */
+  private readHtml(): HtmlFields {
+    const html = readHtmlFields(this.doc, { isVisible: defaultIsVisible });
+    try {
+      const pt = readPageText(this.doc, { isVisible: defaultIsVisible });
+      if (pt) return { ...html, pageText: pt.text, ...(pt.truncated ? { pageTextTruncated: true } : {}) };
+    } catch { /* 전문 생략 */ }
+    return html;
+  }
+
   /** 클릭/popup 공통 수집 시작. retryOf가 있으면 해당 잡을 재개한다. */
   async collect(retryOf?: string): Promise<{ started: boolean; jobId?: string; code?: string }> {
     const n = this.state.notice;
@@ -303,7 +314,7 @@ export class PanelController {
       const r = await send('job/start', {
         type: 'collect',
         ref: { noticeNo: n.noticeNo, round: n.round, origin: 'g2b', detailUrl: location.href },
-        html: readHtmlFields(this.doc, { isVisible: defaultIsVisible }),
+        html: this.readHtml(),
         ...(retryOf ? { retryOf } : {}),
       });
       if (r.code) {

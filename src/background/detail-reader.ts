@@ -106,15 +106,26 @@ async function readOne(jobId: string, requestedAt: number, meta: { noticeNo?: st
     let firstMatchAt: number | undefined;
     let prev: string | undefined;
     let last: HtmlFields | undefined;
-    const done = (): ResponseOf<'g2b/read-detail'> => ({
+    const done = (stableAt: number = now()): ResponseOf<'g2b/read-detail'> => ({
       html: last as HtmlFields,
-      elapsedMs: { detect: (firstMatchAt ?? start) - start, stable: now() - start },
+      elapsedMs: { detect: (firstMatchAt ?? start) - start, stable: stableAt - start },
     });
+
+    // 안정 판정이 끝난 뒤 전문만 1회 더 읽어 붙인다. 실패·TIMEOUT·불일치면 전문 없이 진행한다(trace에는 넣지 않는다).
+    const finish = async (): Promise<ResponseOf<'g2b/read-detail'>> => {
+      const stableAt = now(); // 전문 읽기 시간은 stable에 섞지 않는다
+      try {
+        const r = await d.sendToTab(id, 'g2b/read-html', { noticeNo, ...(round ? { round } : {}), withText: true }, { timeoutMs: 2000 });
+        const { pageText, pageTextTruncated } = r.html ?? {};
+        if (r.match && pageText && last) last = { ...last, pageText, ...(pageTextTruncated ? { pageTextTruncated: true } : {}) };
+      } catch { /* 전문 없이 진행 */ }
+      return done(stableAt);
+    };
 
     for (;;) {
       if (closed) throw err('DETAIL_TAB_CLOSED', '상세화면 탭이 닫혔습니다.');
       if (now() - start >= timeoutMs) {
-        if (last) return done();
+        if (last) return done(); // 타임아웃 경로는 전문 읽기로 시간을 더 쓰지 않는다(240s 송신 한도 보호)
         throw err('DETAIL_TIMEOUT', '상세화면에서 공고를 찾지 못했습니다.');
       }
 
@@ -139,7 +150,7 @@ async function readOne(jobId: string, requestedAt: number, meta: { noticeNo?: st
           const snap = JSON.stringify(r.html.fields);
           firstMatchAt ??= now();
           last = r.html;
-          if (prev === snap && now() - firstMatchAt >= settleMs) return done();
+          if (prev === snap && now() - firstMatchAt >= settleMs) return finish();
           prev = snap;
         } else {
           prev = undefined;

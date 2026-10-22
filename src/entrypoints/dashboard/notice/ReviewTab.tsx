@@ -12,7 +12,7 @@ import { useAiKeyPresence, useAiRun } from '../../../ui/hooks/useAiRun';
 import { useSettings } from '../../../ui/hooks/useSettings';
 import { aiErrorText, aiSetupBlock, aiOthers, buildAiCards, buildAiCardsByProvider, isFindingKey, isSetupError, latestRun, quickView, scopeKeys } from '../../../ui/review/ai-view';
 import { autoOpen, buildReviewRows, nextPendingRowKey, summarizeRows } from '../../../ui/review/rows';
-import { DOC_KIND_LABEL, FILE_STATUS_LABEL, fileDisplayName, filePagesTables, fileRemark, findTextPath } from '../../../ui/review/view';
+import { DOC_KIND_LABEL, FILE_STATUS_LABEL, fileDisplayName, filePagesTables, fileRemark, evidenceTextPath } from '../../../ui/review/view';
 import type { EditError } from '../review/ReviewRows';
 import { ReviewRowItem, ReviewSummary, type LeafActions, type OpenOverride } from '../review/ReviewRows';
 import { AiRunDialog, type AiDialogPreset } from '../review/AiRunDialog';
@@ -63,7 +63,7 @@ export function ReviewTab({ noticeId, notice, extraction, busy, onExtract, onEdi
   };
 
   const openText = (e: EvidenceRef) => {
-    const textPath = extraction ? findTextPath(extraction.files, e) : null;
+    const textPath = extraction ? evidenceTextPath(e, extraction.files, notice.detailText) : null;
     if (!textPath) { toast.show('이 파일의 추출 텍스트가 없습니다'); return; }
     setDrawer({ textPath, line: e.line, title: e.sourceFile, quote: e.evidence });
   };
@@ -236,7 +236,7 @@ export function ReviewTab({ noticeId, notice, extraction, busy, onExtract, onEdi
       )}
 
       {dialog && extraction && (
-        <AiRunDialog noticeId={noticeId} extraction={extraction} pendingCount={pending.length} preset={dialog} onClose={() => setDialog(null)} onStarted={() => void ai.reload()} />
+        <AiRunDialog noticeId={noticeId} extraction={extraction} pendingCount={pending.length} preset={dialog} detailText={notice.detailText} onClose={() => setDialog(null)} onStarted={() => void ai.reload()} />
       )}
       {drawer && <TextDrawer noticeId={noticeId} target={drawer} onClose={() => setDrawer(null)} />}
     </div>

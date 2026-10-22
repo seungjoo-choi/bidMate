@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AI_KEYS, isDocAiKey } from '../../src/core/ai/keys';
-import { buildPrompt, ITEM_DEFS, PROMPT_VERSION, REQUEST_MARKER } from '../../src/core/ai/prompt';
+import { buildPrompt, ITEM_DEFS, PROMPT_VERSION, REQUEST_MARKER, SYSTEM_PROMPT } from '../../src/core/ai/prompt';
 
 describe('buildPrompt', () => {
   const base = { runId: 'run-1', excerpt: '=== 파일: a.hwp (제안요청서) ===\n신용평가 10점', skippedFiles: [] as string[] };
@@ -43,7 +43,8 @@ describe('buildPrompt', () => {
   });
 
   it('실적 인정금액은 string 형식으로 스키마에 전달된다', () => {
-    expect(PROMPT_VERSION).toBe('2.2.0');
+    expect(PROMPT_VERSION).toBe('2.3.0');
+    expect(SYSTEM_PROMPT).toContain('종류가 "상세화면"인 문서는');
     const p = buildPrompt({ ...base, keys: ['performanceMinAmount', 'credibilityScore'] });
     expect(p.spec.kindOf.performanceMinAmount).toBe('string');
     expect(p.spec.kindOf.credibilityScore).toBe('number');

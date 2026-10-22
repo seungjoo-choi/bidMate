@@ -26,6 +26,7 @@ import { FollowMenu, useFollowToggle } from './FollowToggle';
 import { followButton, followHint, type FollowAction, isFollowing, isWon, resultCell } from '../../ui/notices/result-view';
 import { type EvalBatchState, runEvalBatch, selectableForEval } from '../../ui/notices/eval-fetch-view';
 import { PageTitle } from './menu';
+import { SearchButton } from './search/SearchButton';
 import { ResultSummaryStrip } from './stats/ResultSummaryStrip';
 import { SortHeader, useSort, type SortValue } from './table-sort';
 
@@ -423,7 +424,7 @@ export function NoticesPage() {
                   tabIndex={0}
                   onClick={() => open(n.noticeId)}
                   onKeyDown={(e) => { if (e.key === 'Enter') open(n.noticeId); }}
-                  className={`${GRID_PICK} relative cursor-pointer border-t border-line py-4 transition-colors hover:bg-sunken motion-reduce:transition-none ${selected.has(n.noticeId) ? 'bg-select' : ''}`}
+                  className={`${GRID_PICK} group relative cursor-pointer border-t border-line py-4 transition-colors hover:bg-sunken motion-reduce:transition-none ${selected.has(n.noticeId) ? 'bg-select' : ''}`}
                 >
                   <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                     <input
@@ -436,6 +437,7 @@ export function NoticesPage() {
                     <div className="flex min-w-0 items-center gap-1.5">
                       <FavoriteButton on={fav.has(n.noticeId)} onToggle={() => void toggleFav(n.noticeId)} />
                       <TruncatedText text={n.title} className={`text-base font-semibold ${won ? 'text-ink' : ''}`} />
+                      <SearchButton variant="row" noticeId={n.noticeId} title={n.title} />
                     </div>
                     {/* 북마크 폭(24px - 겹침 4px + 간격 6px)만큼 들여 공고명과 줄을 맞춘다 */}
                     <div className={`mt-0.5 flex min-w-0 items-center gap-2.5 pl-[26px] text-sm text-muted`}>

@@ -139,6 +139,35 @@ describe('buildExcerpt', () => {
   });
 });
 
+describe('buildExcerpt: 파일별 maxChars', () => {
+  const big = (tag: string) => Array.from({ length: 120 }, (_, i) => `신용평가 ${tag}${i} 항목 설명 문장입니다`).join('\n');
+  const blockOf = (text: string, name: string) => { const a = text.indexOf(`=== 파일: ${name}`); const n = text.indexOf('=== 파일:', a + 1); return text.slice(a, n < 0 ? undefined : n).trimEnd(); };
+
+  it('maxChars를 준 파일만 그 상한을 적용하고 다른 파일은 기존 기준을 따른다', () => {
+    const r = buildExcerpt({ files: [file(big('가'), { name: 'A.txt', priority: 0, maxChars: 2000 }), file(big('나'), { name: 'B.txt', attachmentId: 'a2', priority: 1 })], synonyms: syn });
+    expect(blockOf(r.text, 'A.txt').length).toBeLessThanOrEqual(2000);
+    expect(blockOf(r.text, 'B.txt')).toContain('나119');
+    expect(r.files.find((f) => f.name === 'A.txt')!.truncated).toBe(true);
+    expect(r.files.find((f) => f.name === 'B.txt')!.truncated).toBe(false);
+  });
+
+  it('경고 문구에 그 파일의 상한 숫자를 쓴다', () => {
+    const r = buildExcerpt({ files: [file(big('가'), { name: 'A.txt', maxChars: 2000 })], synonyms: syn });
+    expect(r.warnings.some((w) => w.startsWith('A.txt: 파일 발췌 상한(2,000자)'))).toBe(true);
+    expect(r.warnings.join('\n')).not.toContain(EXCERPT_FILE_MAX_CHARS.toLocaleString('en-US'));
+  });
+
+  it('maxChars가 없으면 기존 결과와 같다', () => {
+    const input = { files: [file(big('가'), { name: 'A.txt' })], synonyms: syn };
+    const base = buildExcerpt(input);
+    const withUndef = buildExcerpt({ ...input, files: [file(big('가'), { name: 'A.txt', maxChars: undefined })] });
+    expect(withUndef).toEqual(base);
+    const huge = file(Array.from({ length: 2000 }, (_, i) => `신용평가 ${i} 항목 설명 문장입니다 반복`).join('\n'), { name: 'H.txt' });
+    const r = buildExcerpt({ files: [huge], synonyms: syn });
+    expect(r.warnings.some((w) => w.includes(`(${EXCERPT_FILE_MAX_CHARS.toLocaleString('en-US')}자)`))).toBe(true);
+  });
+});
+
 describe('buildFullText', () => {
   it('priority순 전문을 머리글과 함께 잇고 셀 줄은 한 줄로 렌더링한다', () => {
     const a = file('[표 1]\n[셀 0 0] 신용평가\n[셀 0 1] 10점\n본문', { attachmentId: 'a', name: '뒤.hwp', priority: 2 });

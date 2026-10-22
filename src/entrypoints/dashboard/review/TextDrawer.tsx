@@ -4,6 +4,7 @@ import { send } from '../../../messaging/bus';
 import { Button, InlineAlert } from '../../../ui/components';
 import { inputClass } from '../../../ui/components/Field';
 import { buildTextBlocks, displayLine, evidenceSpan, type TextBlock } from '../../../ui/review/text-view';
+import { useNoticeSearch } from '../search/NoticeSearchProvider';
 
 const WINDOW = 600;
 const STEP = 600;
@@ -23,6 +24,9 @@ export function TextDrawer({ noticeId, target, onClose, load }: { noticeId: stri
   const [raw, setRaw] = useState(false);
   const [span, setSpan] = useState<[number, number] | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const search = useNoticeSearch();
+  // 줄과 검색어를 같이 받아 열면 처음에는 그 줄을 보여 준다(첫 일치 줄로 건너뛰지 않는다).
+  const keepLine = useRef(!!target.line && !!target.query);
 
   const close = () => { setShown(false); setTimeout(onClose, 200); };
 
@@ -31,7 +35,7 @@ export function TextDrawer({ noticeId, target, onClose, load }: { noticeId: stri
     return () => cancelAnimationFrame(id);
   }, []);
   useEffect(() => {
-    const on = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    const on = (e: KeyboardEvent) => { if (e.key === 'Escape' && shown) close(); };
     document.addEventListener('keydown', on);
     return () => document.removeEventListener('keydown', on);
   });
@@ -63,7 +67,16 @@ export function TextDrawer({ noticeId, target, onClose, load }: { noticeId: stri
   }, [query, lines]);
   const matchSet = useMemo(() => new Set(matches), [matches]);
 
-  useEffect(() => { setCur(0); if (matches[0] !== undefined) goto(matches[0]); }, [matches]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (keepLine.current && lines) {
+      keepLine.current = false;
+      const k = matches.findIndex((m) => m >= (target.line ?? 1) - 1);
+      setCur(k < 0 ? 0 : k);
+      return;
+    }
+    setCur(0);
+    if (matches[0] !== undefined) goto(matches[0]);
+  }, [matches]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const goto = (i: number) => {
     setRange(([s, e]) => (i >= s && i < e ? [s, e] : [Math.max(0, i - WINDOW), Math.min(lines?.length ?? 0, i + WINDOW + 1)]));
@@ -142,6 +155,7 @@ export function TextDrawer({ noticeId, target, onClose, load }: { noticeId: stri
           <span className="w-16 text-center text-xs text-muted">{query.trim() ? (matches.length ? `${cur + 1}/${matches.length}` : '없음') : ''}</span>
           <Button variant="ghost" size="icon" aria-label="이전 일치" icon={<ChevronUp />} onClick={() => step(-1)} />
           <Button variant="ghost" size="icon" aria-label="다음 일치" icon={<ChevronDown />} onClick={() => step(1)} />
+          {!load && !search.openNoticeId && <Button variant="ghost" title="이 공고의 모든 문서(항목값·상세화면·첨부)에서 검색" onClick={() => { close(); search.open(noticeId, { query: query.trim() }); }}>모든 문서에서 검색</Button>}
           <Button variant="ghost" title={raw ? '표를 원문처럼 정리해 보기' : '추출된 텍스트를 줄 번호와 함께 그대로 보기'} onClick={() => { setRaw((v) => !v); if (span) setScrollTo(span[0]); }}>{raw ? '정리된 보기' : '원본 텍스트'}</Button>
         </div>
         <div ref={listRef} className={`min-h-0 flex-1 overflow-auto py-3 text-sm leading-6 ${raw ? 'font-code' : ''}`}>

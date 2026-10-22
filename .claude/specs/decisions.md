@@ -842,7 +842,7 @@ S0 실측 2차(2026-10-20): 2단계는 inqryDiv=4 + bidNtceNo로 성공. 용역 
 | UI는 전역 Provider와 오른쪽 패널, 결과는 TextDrawer 재사용(겹침). 단축키 `Ctrl+Shift+F`·`/` | 공고 id만으로 어디서든 열리고 보던 화면을 유지 | 상세 탭 추가 / 라우트 `#/search/<id>` / 패널 안 자체 뷰어 |
 | 2단계는 로컬 후보 40k자 + 인용 위치 검증 + "전문 재질문" 탈출구, API 전용, 별도 `AskRunner`·`search/asks.json` | 대화형 비용 통제. 발췌 누락 교훈은 탈출구로 흡수. 재검토 파이프라인은 키 색인에 묶여 있음 | 매번 전문 전송 / AiRunner·ai-review.json 재사용 / 반자동 붙여넣기 / 임베딩 검색(의존성·인덱스) |
 | 답의 값은 검증하지 않고 인용 위치만 검증, 검증 실패 인용도 회색으로 표시 | 자유 질문에는 값 의미가 없음. 숨기면 답의 근거가 사라짐 | 미검증 인용 삭제 / 값까지 검증 |
-| 상세 전문은 AI 재검토 입력에 아직 넣지 않음 | run.files 의미와 비교 기준이 바뀌므로 별도 결정 | 바로 포함 |
+| (2026-10-22 교체) 상세 전문을 AI 재검토 입력에 기본 포함(체크리스트 첫 행, 해제 가능). 가상 attachmentId `__detail__`·priority 0·발췌 상한 10k(`ExcerptFileInput.maxChars`), `run.files`·`DocKind`·`AiRun` 스키마 불변, `finishRun`과 근거 열기만 분기, 프롬프트에 상세화면 우선 규칙 1줄(2.3.0). 상세: notice-search.md 1.5절 | 사용자 결정. 공고 잎의 1차 출처가 상세화면. 기존 파이프라인이 textPath 기반이라 식별자만 더하면 됨. 상세는 발췌 키워드를 거의 다 포함해 파일별 상한 없이는 수동 30k를 잠식 | 미포함 유지 / DocKind 확장 / Extraction.files 삽입 / 전문 상한 상향 / 상세 출처 match 별도 배지 |
 
 ## 2026-10-22 · 입찰 전 기능 2·3·7 구현 설계 (Fable)
 선행: `.claude/specs/prebid-features.md`. 구현 순서 2 → 7 → 3(S0 실측 후) → 7 분포 연결.
@@ -858,3 +858,8 @@ S0 실측 2차(2026-10-20): 2단계는 inqryDiv=4 + bidNtceNo로 성공. 용역 
 | 3: S0 probe 실측 필요(기관 기간 검색 오퍼레이션·기간 상한·낙찰률 필드가 저장소 자료에 없음). probe 진단 도구를 먼저 구현 | 추정으로 본 구현하면 연쇄 수정 | 추정값으로 본 구현 |
 | 3: 기관·분류 코드는 `Notice.codes?`(FieldValue 아님). prebid 원안 "NoticeBasic 선택 필드"에서 변경 | NoticeBasic은 검토 행·필드 편집·템플릿 변수에 자동 노출됨. 옛 공고는 source/api-*.json으로 보정 | NoticeBasic 키 추가 |
 | 3: 2단계 수집(A 기관 공고·낙찰 목록, B 공고별 개찰 참여업체는 선택), 호출 예산 상수 `ORG_CALL_BUDGET`, 한도 초과 시 모은 만큼 truncated 저장 | 트래픽 한도 미확정, 한도를 두 번 쓰지 않음 | A만 / B 전부 / 실패 시 폐기 |
+
+## 2026-10-22 · 통합검색 상세 전문 읽기 시점 (메인, 리뷰 후속)
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| `g2b/read-html` payload에 선택 필드 `withText?`. detail-reader는 안정 판정 뒤 마지막 1회만 `withText: true`로 전문을 읽고, 그 1회가 실패하면 전문 없이 진행. 패널 수집(1회 읽기)은 항상 포함 | notice-search 1.1은 read-html 핸들러에서 매번 전문을 만들게 했으나 폴링마다 전체 DOM 순회와 30만 자 전송이 2초 tick 시간 초과·45초 DETAIL_TIMEOUT을 부를 수 있음. 5절 8번(전문은 안정 판정에서 제외)과 같은 취지 | 매 tick 전문 생성(원안) / 별도 메시지 `g2b/read-text` 신설 |
