@@ -2,6 +2,7 @@ import { detailUrlOf } from '../adapters/g2b/link';
 import type { HtmlFields, Job } from '../core/types/job';
 import { BusError, listen, sendToTab } from '../messaging/bus';
 import type { ResponseOf } from '../messaging/protocol';
+import { recordG2bFailure } from './g2b-failures';
 import { ACTIVE, getJob, isOffscreenSender } from './job-coordinator';
 
 const G2B_HOST = 'www.g2b.go.kr';
@@ -46,7 +47,7 @@ const hostOf = (url: string | undefined): string => { try { return new URL(url ?
 /** offscreen의 g2b/read-detail 송신 타임아웃(offscreen/main.ts runCollect와 같은 값). 큐 대기를 포함한다. */
 const REQUEST_WAIT_MS = 240_000;
 
-async function readOne(jobId: string, requestedAt: number): Promise<ResponseOf<'g2b/read-detail'>> {
+async function readOne(jobId: string, requestedAt: number, meta: { noticeNo?: string; round?: string }): Promise<ResponseOf<'g2b/read-detail'>> {
   const d = deps();
   const now = d.now ?? Date.now;
   const sleep = d.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
@@ -68,6 +69,8 @@ async function readOne(jobId: string, requestedAt: number): Promise<ResponseOf<'
   const url = job.ref ? detailUrlOf(job.ref) : null;
   if (!url || !job.ref) throw err('DETAIL_NO_URL', '상세화면 주소를 만들 수 없습니다.');
   const { noticeNo, round } = job.ref;
+  meta.noticeNo = noticeNo;
+  if (round) meta.round = round;
 
   let windowId: number | undefined;
   let openerTabId: number | undefined;
@@ -161,8 +164,19 @@ async function readOne(jobId: string, requestedAt: number): Promise<ResponseOf<'
 let chain: Promise<unknown> = Promise.resolve();
 
 export function readDetail(jobId: string): Promise<ResponseOf<'g2b/read-detail'>> {
-  const requestedAt = (injected.now ?? Date.now)();
-  const p = chain.then(() => readOne(jobId, requestedAt));
+  const now = injected.now ?? Date.now;
+  const requestedAt = now();
+  const meta: { noticeNo?: string; round?: string } = {};
+  const p = chain.then(() => readOne(jobId, requestedAt, meta)).catch((e) => {
+    const code = (e as { code?: unknown })?.code;
+    if (code !== 'DETAIL_CANCELLED') {
+      void recordG2bFailure({
+        flow: 'detail', stage: 'read', code: typeof code === 'string' ? code : 'DETAIL_READ_FAILED',
+        message: e instanceof Error ? e.message : String(e), jobId, ...meta, ms: now() - requestedAt,
+      });
+    }
+    throw e;
+  });
   chain = p.catch(() => undefined);
   return p;
 }

@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+vi.mock('../../src/background/g2b-failures', () => ({ recordG2bFailure: vi.fn() }));
+
+import { recordG2bFailure } from '../../src/background/g2b-failures';
 import { applyDone, armFollowAlarm, notificationOf, refreshResults, registerResultScheduler, type ResultSchedulerDeps } from '../../src/background/result-scheduler';
 import { RESULT_RUN_TIMEOUT_MS } from '../../src/core/results/limits';
 import type { ResultRunSummary } from '../../src/core/types/result';
@@ -90,6 +93,29 @@ describe('refreshResults', () => {
     const b = make({ run: () => summary({ ran: false, error: 'x' }) });
     await refreshResults('alarm', b.d);
     expect(b.alarms.create).toHaveBeenCalledWith('follow-check', { when: NOW + 600_000 });
+  });
+
+  it('응답 error와 throw는 result/run 실패로 기록하고 skipped만이면 기록하지 않는다', async () => {
+    vi.mocked(recordG2bFailure).mockClear();
+    await refreshResults('manual', make({ run: () => summary({ ran: false, error: '개찰 조회 실패' }) }).d);
+    expect(recordG2bFailure).toHaveBeenLastCalledWith({ flow: 'result', stage: 'run', code: 'RESULT_RUN_FAILED', message: '개찰 조회 실패', trigger: 'manual' });
+    await refreshResults('alarm', make({ run: () => { throw Object.assign(new Error('timeout SECRETKEY'), { code: 'TIMEOUT' }); } }).d);
+    const last = vi.mocked(recordG2bFailure).mock.calls.at(-1)![0] as { code: string; message: string; trigger: string };
+    expect(last).toMatchObject({ flow: 'result', stage: 'run', code: 'TIMEOUT', trigger: 'alarm' });
+    expect(last.message).not.toContain('SECRETKEY');
+    vi.mocked(recordG2bFailure).mockClear();
+    await refreshResults('follow', make({ run: () => summary({ ran: false, skipped: 'BUSY' }) }).d);
+    await refreshResults('list', make({ key: null }).d);
+    expect(recordG2bFailure).not.toHaveBeenCalled();
+  });
+
+  it('알람 실패 같은 result/run 밖의 예외는 기록하지 않는다', async () => {
+    vi.mocked(recordG2bFailure).mockClear();
+    const f = make({ run: () => summary({ ran: false, skipped: 'BUSY' }) });
+    f.alarms.get.mockRejectedValue(new Error('alarm fail'));
+    const r = await refreshResults('follow', f.d);
+    expect(r.error).toBe('alarm fail');
+    expect(recordG2bFailure).not.toHaveBeenCalled();
   });
 
   it('정상 응답은 알림을 직접 보내지 않고(result/done 담당) 알람만 병합 규칙으로 한 번 더 건다', async () => {

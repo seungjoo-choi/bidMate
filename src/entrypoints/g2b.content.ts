@@ -55,7 +55,10 @@ export default defineContentScript({
     }, 'content');
     listen('g2b/eval-fetch', async ({ noticeNo, round, withoutIdHeaders }) => {
       const r = await fetchEvalRaw({ noticeNo, ...(round ? { round } : {}) }, { fetch: window.fetch.bind(window), ...(withoutIdHeaders ? { withoutIdHeaders } : {}) });
-      if (!r.ok) throw new BusError(r.error.code, `[단계 ${r.error.step}] ${r.error.message}`);
+      if (!r.ok) {
+        const { code, message, step, endpoint, httpStatus, g2bMsg } = r.error;
+        throw new BusError(code, `[단계 ${step}] ${message}`, undefined, { step, ...(endpoint ? { endpoint } : {}), ...(httpStatus !== undefined ? { httpStatus } : {}), ...(g2bMsg ? { g2bMsg } : {}) });
+      }
       return { raw: r.raw, warnings: r.warnings };
     }, 'content');
     listen('g2b/collect', () => controller.collect(), 'content');

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import servcFx from '../fixtures/g2b-servc-R26BK01722175.json';
 import nokeyFx from '../fixtures/g2b-error-nokey.json';
 import emptyFx from '../fixtures/g2b-thng-empty.json';
-import { fetchNotice, listAttachments, mapApiItem, redactKey, resolveRef, type ApiItem } from '../../src/adapters/g2b/openapi';
+import { fetchJsonOp, fetchNotice, g2bDetailOf, listAttachments, mapApiItem, redactKey, resolveRef, type ApiItem } from '../../src/adapters/g2b/openapi';
 
 const servc = JSON.stringify(servcFx);
 const item = servcFx.response.body.items[0] as unknown as ApiItem;
@@ -87,6 +87,31 @@ describe('fetchNotice', () => {
     expect(a.ok && a.item.bidNtceOrd).toBe('002');
     const b = await fetchNotice('X', '001', { serviceKey: 'K', fetch: f });
     expect(b.ok && b.item.bidNtceOrd).toBe('001');
+  });
+});
+
+describe('오류 detail', () => {
+  const run = (r: Response) => fetchJsonOp('https://x/op?serviceKey=K', 'opX', { serviceKey: 'K', fetch: (async () => r) as never });
+  it('비JSON 503 → detail { httpStatus, operation }', async () => {
+    const r = await run(resp('Service Unavailable', 503));
+    expect(!r.ok && r.error.detail).toEqual({ httpStatus: 503, operation: 'opX' });
+  });
+  it('cmmMsgHeader 오류 → g2bMsg=errMsg', async () => {
+    const body = JSON.stringify({ OpenAPI_ServiceResponse: { cmmMsgHeader: { errMsg: 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR', returnAuthMsg: 'x' } } });
+    const r = await run(resp(body));
+    expect(!r.ok && r.error.detail).toEqual({ httpStatus: 200, operation: 'opX', g2bMsg: 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR' });
+  });
+  it('resultCode≠00 → g2bMsg=resultMsg', async () => {
+    const body = JSON.stringify({ response: { header: { resultCode: '07', resultMsg: '입력범위값 초과 에러' } } });
+    const r = await run(resp(body));
+    expect(!r.ok && r.error.detail).toMatchObject({ g2bMsg: '입력범위값 초과 에러', operation: 'opX' });
+  });
+  it('g2bDetailOf 비객체 → {}', () => {
+    const base = { code: 'C', message: 'm', retryable: false };
+    expect(g2bDetailOf({ ...base, detail: 'str' })).toEqual({});
+    expect(g2bDetailOf({ ...base, detail: [1] })).toEqual({});
+    expect(g2bDetailOf(base)).toEqual({});
+    expect(g2bDetailOf({ ...base, detail: { httpStatus: 500, operation: 'o', g2bMsg: 'g', extra: 1 } })).toEqual({ httpStatus: 500, operation: 'o', g2bMsg: 'g' });
   });
 });
 

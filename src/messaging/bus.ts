@@ -1,7 +1,7 @@
 import type { Envelope, MsgType, PayloadOf, Reply, ResponseOf, Target } from './protocol';
 
 export class BusError extends Error {
-  constructor(public code: string, message: string, public path?: string) {
+  constructor(public code: string, message: string, public path?: string, public detail?: Record<string, unknown>) {
     super(message);
     this.name = 'BusError';
   }
@@ -12,10 +12,21 @@ export function toErrorReply(e: unknown): Reply<never> {
   const code = (e as { code?: unknown })?.code;
   // CONFIG_CORRUPT 등은 어느 파일인지(path)를 화면까지 넘겨야 복구 대상을 고를 수 있다.
   const path = (e as { path?: unknown })?.path;
+  const detail = safeDetail((e as { detail?: unknown })?.detail);
   return {
     ok: false,
-    error: { code: typeof code === 'string' ? code : 'INTERNAL', message: e instanceof Error ? e.message : String(e), ...(typeof path === 'string' && path ? { path } : {}) },
+    error: { code: typeof code === 'string' ? code : 'INTERNAL', message: e instanceof Error ? e.message : String(e), ...(typeof path === 'string' && path ? { path } : {}), ...(detail ? { detail } : {}) },
   };
+}
+
+/** 평범한 객체이고 직렬화 2000자 이하일 때만 detail을 싣는다. */
+function safeDetail(d: unknown): Record<string, unknown> | undefined {
+  if (typeof d !== 'object' || d === null || Array.isArray(d)) return undefined;
+  try {
+    return JSON.stringify(d).length <= 2000 ? (d as Record<string, unknown>) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** 요청/응답 전송. 기본 대상은 SW, 타임아웃 기본 15s. */
@@ -35,7 +46,7 @@ export async function send<T extends MsgType>(
   try {
     const reply = (await Promise.race([chrome.runtime.sendMessage(env), timeout])) as Reply<ResponseOf<T>> | undefined;
     if (!reply) throw new BusError('NO_RECEIVER', `${type} 수신자 없음`);
-    if (!reply.ok) throw new BusError(reply.error.code, reply.error.message, reply.error.path);
+    if (!reply.ok) throw new BusError(reply.error.code, reply.error.message, reply.error.path, reply.error.detail);
     return reply.data;
   } finally {
     clearTimeout(timer);
@@ -61,7 +72,7 @@ export async function sendToTab<T extends MsgType>(
       new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new BusError('TIMEOUT', `${type} 응답 시간 초과`)), opts.timeoutMs); }),
     ]).finally(() => clearTimeout(timer));
   if (!reply) throw new BusError('NO_RECEIVER', `${type} 수신자 없음`);
-  if (!reply.ok) throw new BusError(reply.error.code, reply.error.message, reply.error.path);
+  if (!reply.ok) throw new BusError(reply.error.code, reply.error.message, reply.error.path, reply.error.detail);
   return reply.data;
 }
 

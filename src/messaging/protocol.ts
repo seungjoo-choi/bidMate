@@ -18,6 +18,7 @@ import type { ComposeSelectorSet, ComposeState, SendWatchConfig } from '../adapt
 import type { EvalRaw } from '../adapters/g2b/eval-api';
 import type { EvalIndexEntry, EvalRecord } from '../core/types/evaluation';
 import type { ISODate } from '../core/types/common';
+import type { G2bFailureInput } from '../core/diagnostics/g2b-failure';
 import type { NotifyEvent, ResultProbeResult, ResultRunSummary } from '../core/types/result';
 import type { AiBatchState, AiProvider, AiReviewFile, AiRunState, AiScope } from '../core/types/ai';
 import type { RequirementSet, RfpCompareEntry, RfpCompareSession, RfpDocCandidate, RfpDocRef, RfpUploadEntry } from '../core/types/rfp';
@@ -202,6 +203,8 @@ export type Msg =
   | { type: 'ai/batch-get'; payload: Record<string, never>; response: AiBatchState | null }  // 대시보드→SW(고아 판정 포함), SW→offscreen(현재 배치)
   | { type: 'ai/batch-cancel'; payload: { batchId: string }; response: { cancelled: boolean } }
   | { type: 'ai/batch-clear'; payload: { batchId: string }; response: void }  // SW 단독. 실행 중이면 AI_BATCH_BUSY
+  | { type: 'diag/g2b-failure'; payload: { failures: G2bFailureInput[] }; response: void }  // offscreen→SW 전용, 1회 50건 상한
+  | { type: 'diag/g2b-failures-clear'; payload: void; response: void }  // 대시보드→SW
   | { type: 'g2b/collect'; payload: void; response: { started: boolean; jobId?: string; code?: string } }  // popup→CS
   | { type: 'g2b/retry'; payload: { jobId: string }; response: { started: boolean; jobId?: string; code?: string } };  // sidepanel→CS: 이 탭 공고의 잡 재시도(SW가 공고/탭 일치 검사)
 
@@ -214,4 +217,4 @@ export type Envelope<T extends Msg = Msg> = {
   target: Target;
 };
 
-export type Reply<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string; path?: string } };
+export type Reply<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string; path?: string; detail?: Record<string, unknown> } };

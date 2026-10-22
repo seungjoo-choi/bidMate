@@ -1,5 +1,7 @@
 import { AWARD_OPS, fetchAward, fetchOpening } from '../../adapters/g2b/award-api';
-import { redactKey, type G2bContext } from '../../adapters/g2b/openapi';
+import { g2bDetailOf, redactKey, type G2bContext } from '../../adapters/g2b/openapi';
+import type { G2bFailureInput } from '../../core/diagnostics/g2b-failure';
+import type { JobError } from '../../core/types/job';
 import { normalizeBizNo } from '../../core/evaluation/company';
 import { applyOurAmount, judge, shouldFetchAward } from '../../core/results/judge';
 import { backfillTargets, latestBids, newEntry, planTargets, resetForBiz } from '../../core/results/plan';
@@ -20,6 +22,8 @@ export interface ResultTrackerDeps {
   now?: () => Date;
   /** 저장 폴더 권한이 살아 있는지. false면 NO_FS로 건너뛴다. */
   checkPermission: () => Promise<boolean>;
+  /** 조회 최종 실패 보고(진단용). throw해도 run은 계속된다. */
+  onFailure?: (f: G2bFailureInput) => void;
 }
 
 const isKeyError = (code: string): boolean => code === 'G2B_KEY_INVALID' || code === 'G2B_KEY_MISSING';
@@ -133,16 +137,30 @@ async function run(deps: ResultTrackerDeps, mode: 'list' | 'follow', ours: strin
     }
 
     const ctx: G2bContext = { serviceKey: deps.serviceKey, fetch: deps.fetch, now };
+    const fail = (stage: 'opening' | 'award', e: IndexEntry, err: JobError): void => {
+      const d = g2bDetailOf(err);
+      try {
+        deps.onFailure?.({
+          flow: 'result', stage, code: err.code, message: err.message, noticeNo: e.noticeNo, round: e.round, noticeId: e.noticeId,
+          ...(d.operation ? { endpoint: d.operation } : {}),
+          ...(d.httpStatus !== undefined ? { httpStatus: d.httpStatus } : {}),
+          ...(d.g2bMsg ? { g2bMsg: d.g2bMsg } : {}),
+          trigger: mode,
+        });
+      } catch { /* 진단 보고 실패는 run을 깨지 않는다 */ }
+    };
     for (const id of planTargets({ index, results, follows, now: t0, mode }).targets) {
       const e = byId.get(id);
       const prev = results.entries[id];
       if (!e || !prev) continue;
       const nt = now();
       const opening = await fetchOpening(e.noticeNo, ctx);
+      if (!opening.ok) fail('opening', e, opening.error);
       if (!opening.ok && isKeyError(opening.error.code)) { out.skipped = 'KEY_INVALID'; out.ran = false; break; }
       let j = judge({ ourBizNo: ours, now: nt, prev, opening, award: null });
       if (shouldFetchAward(prev, opening, j.entry, ours)) {
         const award = await fetchAward(e.noticeNo, prev.listOp ? [prev.listOp] : AWARD_OPS, ctx);
+        if (!award.ok) fail('award', e, award.error);
         if (!award.ok && isKeyError(award.error.code)) { out.skipped = 'KEY_INVALID'; out.ran = false; break; }
         j = judge({ ourBizNo: ours, now: nt, prev, opening, award });
       }
@@ -192,6 +210,7 @@ async function run(deps: ResultTrackerDeps, mode: 'list' | 'follow', ours: strin
         if (!e || !prev) continue;
         const opening = await fetchOpening(e.noticeNo, ctx);
         if (!opening.ok) {
+          fail('opening', e, opening.error);
           if (isKeyError(opening.error.code)) { out.skipped = 'KEY_INVALID'; out.ran = false; break; }
           continue;
         }

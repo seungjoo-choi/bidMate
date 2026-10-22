@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+vi.mock('../../src/background/g2b-failures', () => ({ recordG2bFailure: vi.fn() }));
+
 import { BusError } from '../../src/messaging/bus';
+import { recordG2bFailure } from '../../src/background/g2b-failures';
 import { readDetail, setDetailReaderDeps } from '../../src/background/detail-reader';
 import type { Job } from '../../src/core/types/job';
 
@@ -50,7 +53,25 @@ function setup(o: {
 
 const code = async (p: Promise<unknown>) => p.then(() => 'ok', (e: BusError) => e.code);
 
-beforeEach(() => setDetailReaderDeps({}));
+beforeEach(() => { setDetailReaderDeps({}); vi.mocked(recordG2bFailure).mockClear(); });
+
+describe('실패 기록', () => {
+  it('DETAIL_TIMEOUT은 detail/read로 기록한다', async () => {
+    setup({ reply: () => ({ detected: null, match: false, html: null, readyState: 'loading' }) });
+    expect(await code(readDetail('j1'))).toBe('DETAIL_TIMEOUT');
+    expect(recordG2bFailure).toHaveBeenCalledTimes(1);
+    expect(recordG2bFailure).toHaveBeenCalledWith(expect.objectContaining({
+      flow: 'detail', stage: 'read', code: 'DETAIL_TIMEOUT', jobId: 'j1', noticeNo: REF.noticeNo, round: '000', ms: expect.any(Number),
+    }));
+  });
+
+  it('DETAIL_CANCELLED는 기록하지 않는다', async () => {
+    let cancelled = false;
+    setup({ job: () => mkJob({ status: cancelled ? 'cancelled' : 'running' }), onTick: (t) => { if (t === 1) cancelled = true; }, reply: () => ({ detected: null, match: false, html: null, readyState: 'loading' }) });
+    expect(await code(readDetail('j1'))).toBe('DETAIL_CANCELLED');
+    expect(recordG2bFailure).not.toHaveBeenCalled();
+  });
+});
 
 describe('readDetail', () => {
   it('(1) 2회 동일 스냅샷 + 1.5s 경과 후 성공, remove 1회', async () => {

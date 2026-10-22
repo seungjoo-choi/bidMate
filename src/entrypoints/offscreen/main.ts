@@ -5,6 +5,7 @@ import { loadRules } from '../../core/extraction/rules/load';
 import { SELECTOR_SETS } from '../../adapters/naverworks/selectors';
 import { runCollectJob } from '../../engine/jobs/collect-job';
 import type { JobError, JobStatus } from '../../core/types/job';
+import type { G2bFailureInput } from '../../core/diagnostics/g2b-failure';
 import { runComposeJob } from '../../engine/jobs/compose-job';
 import { runExtractJob } from '../../engine/jobs/extract-job';
 import { createParserRegistry } from '../../engine/parsers/registry';
@@ -202,7 +203,9 @@ listen('job/run', (p) => {
   return { accepted: true as const, active: registry.active() };
 }, 'offscreen');
 // 확장 페이지 발신 정책 검증은 SW 릴레이(router.ts)에서 한다. SW를 거치지 않은 직접 발신은 bus.listen이 'offscreen' target에서 거부한다.
-listen('eval/save', (p) => saveEval(fileStore, p), 'offscreen');
+// 나라장터 연동 실패 보고: 기록은 SW가 한다. 응답을 기다리지 않고 실패는 삼킨다.
+const reportG2bFailure = (f: G2bFailureInput): void => { void send('diag/g2b-failure', { failures: [f] }, { target: 'sw', timeoutMs: 5_000 }).catch(() => undefined); };
+listen('eval/save', (p) => saveEval(fileStore, p, { onFailure: reportG2bFailure }), 'offscreen');
 listen('eval/list', async () => (await new EvalStore(fileStore).loadIndex()).entries, 'offscreen');
 listen('eval/get', ({ noticeId }) => new EvalStore(fileStore).get(noticeId), 'offscreen');
 listen('eval/get-many', ({ noticeIds }) => new EvalStore(fileStore).getMany(noticeIds), 'offscreen');
@@ -214,6 +217,7 @@ listen('result/run', ({ mode, serviceKey, bizNo }) => {
   resultRun = runResultRefresh({
     store: fileStore, fetch: (...a) => fetch(...a), serviceKey, bizNo,
     checkPermission: async () => { const st = await fileStore.status(); return st.hasRoot && st.permission === 'granted'; },
+    onFailure: reportG2bFailure,
   }, { mode }).then((r) => {
     // 응답이 타임아웃으로 SW에 못 가도 알림과 알람은 이 메시지로 전달된다.
     void send('result/done', { events: r.events, nextFollowCheckAt: r.nextFollowCheckAt, ...(r.skipped ? { skipped: r.skipped } : {}) }, { target: 'sw' }).catch(() => undefined);
@@ -226,7 +230,7 @@ listen('follow/set', async (p) => {
   void send('result/done', { events: [], nextFollowCheckAt: r.nextFollowCheckAt }, { target: 'sw' }).catch(() => undefined);
   return r;
 }, 'offscreen');
-listen('result/probe', ({ noticeNo, serviceKey }) => probeResult(noticeNo, serviceKey ?? ''), 'offscreen');
+listen('result/probe', ({ noticeNo, serviceKey }) => probeResult(noticeNo, serviceKey ?? '', undefined, reportG2bFailure), 'offscreen');
 listen('notice/list', () => listNotices(fileStore), 'offscreen');
 listen('deadline/plan', async () => buildPlan(await listNotices(fileStore), Date.now()), 'offscreen');
 listen('notice/get', ({ noticeId }) => getNotice(fileStore, noticeId), 'offscreen');

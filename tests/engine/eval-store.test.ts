@@ -129,6 +129,16 @@ describe('saveEval', () => {
     expect(failed.warnings.some((w) => w.includes('공식 결과'))).toBe(true);
   });
 
+  it('공식 조회 실패 시 onFailure(official)를 보고하고 경고는 유지한다', async () => {
+    const mem = new MemoryStore();
+    const bad = (async () => ({ status: 500, text: async () => 'x' }) as Response) as unknown as typeof fetch;
+    const calls: unknown[] = [];
+    const r = await saveEval(mem, { ref: REF, raw: raw as EvalRaw, serviceKey: 'KEY' }, { fetch: bad, onFailure: (f) => calls.push(f) });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ flow: 'eval', stage: 'official', noticeNo: REF.noticeNo, trigger: 'eval-save', httpStatus: 500 });
+    expect(r.warnings.some((w) => w.includes('공식 결과'))).toBe(true);
+  });
+
   it('가져오기 경고를 record.warnings 앞쪽에 합친다', async () => {
     const mem = new MemoryStore();
     const r = await saveEval(mem, { ref: REF, raw: raw as EvalRaw, fetchWarnings: ['CS 경고'] }, { fetch: officialFetch });

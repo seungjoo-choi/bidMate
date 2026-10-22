@@ -9,6 +9,7 @@ import { redactKey } from '../adapters/g2b/openapi';
 import { SIDEPANEL_FOCUS_KEY, isSettingsSection, type Envelope, type MsgType, type PayloadOf, type ResponseOf } from '../messaging/protocol';
 import { openDashboard } from './dashboard-tabs';
 import { assertExtensionSender, isOffscreenSender } from './job-coordinator';
+import { recordG2bFailure } from './g2b-failures';
 import { getInboxHost } from './site-registry';
 import { ensureOffscreen, hasOffscreen } from './offscreen-manager';
 import { closeSidePanel, isSidePanelOpen, setShownNotice, shownNoticeOf } from './sidepanel-ports';
@@ -35,7 +36,11 @@ function relayG2bTest(): void {
       assertExtensionSender(sender);
       const { secrets } = await chrome.storage.local.get('secrets');
       await ensureOffscreen();
-      return send('g2b/test', { serviceKey: (secrets as { g2bServiceKey?: string } | undefined)?.g2bServiceKey, ...(payload?.kind ? { kind: payload.kind } : {}) },{ target: 'offscreen', timeoutMs: 25_000 });
+      const r = await send('g2b/test', { serviceKey: (secrets as { g2bServiceKey?: string } | undefined)?.g2bServiceKey, ...(payload?.kind ? { kind: payload.kind } : {}) },{ target: 'offscreen', timeoutMs: 25_000 });
+      if (!r.ok && r.error) {
+        void recordG2bFailure({ flow: 'key-test', stage: payload?.kind === 'prespec' ? 'prespec' : 'bid', code: r.error.code, message: r.error.message, trigger: 'manual' });
+      }
+      return r;
     },
     'sw',
   );

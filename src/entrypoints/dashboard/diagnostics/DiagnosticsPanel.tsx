@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Card } from '../../../ui/components';
 import { CollectTool } from './CollectTool';
 import { EvalProbeTool } from './EvalProbeTool';
+import { G2bFailuresTool } from './G2bFailuresTool';
 import { ResultProbeTool } from './ResultProbeTool';
 
 const TOOLS = [
   { id: 'collect', label: '공고 수집', Tool: CollectTool },
   { id: 'eval', label: '평가 점수 API', Tool: EvalProbeTool },
   { id: 'result', label: '낙찰 결과 API', Tool: ResultProbeTool },
+  { id: 'failures', label: '실패 기록', Tool: G2bFailuresTool },
 ] as const;
 
 const tabCls = (on: boolean) =>
@@ -28,7 +30,7 @@ export function DiagnosticsPanel() {
           </button>
         ))}
       </div>
-      {/* 탭을 옮겨도 진행 중인 결과가 사라지지 않게 셋 다 그려 두고 숨긴다. */}
+      {/* 탭을 옮겨도 진행 중인 결과가 사라지지 않게 모두 그려 두고 숨긴다. */}
       {TOOLS.map(({ id, Tool }) => (
         <div key={id} role="tabpanel" hidden={tab !== id}>
           <Tool />
