@@ -16,6 +16,19 @@ function sameFileName(shown: string, name: string): boolean {
   const n = flatName(name);
   return d === n || d === n.replace(/\.(?=[^.]*$)/, '');
 }
+/** 항목 설명에 파일 이름이 들어 있는지. 앞뒤가 이름 글자로 이어지면 다른 파일로 본다("aa.pdf" 안의 "a.pdf"). */
+function labelHasName(label: string, name: string): boolean {
+  const l = flatName(label);
+  const n = flatName(name);
+  if (!n) return false;
+  const nameChar = /[\p{L}\p{N}_-]/u;
+  for (let i = l.indexOf(n); i !== -1; i = l.indexOf(n, i + 1)) {
+    const before = i > 0 ? l[i - 1] : '';
+    const after = l[i + n.length] ?? '';
+    if (!(before && (nameChar.test(before) || before === '.')) && !(after && nameChar.test(after))) return true;
+  }
+  return false;
+}
 /** keep 요소(서명 등)를 뺀 본문 복제본. */
 function withoutKeep(el: HTMLElement, keep: string | undefined): HTMLElement {
   if (!keep) return el;
@@ -255,6 +268,11 @@ export class GenericComposeAdapter implements ComposeAdapter {
     const a = this.selectorSet.attach;
     for (const item of this.attachItems()) {
       if (existing?.has(item)) continue;
+      const label = a.itemLabelAttr ? item.getAttribute(a.itemLabelAttr) : null;
+      if (label !== null) {
+        if (labelHasName(label, name)) return item;
+        continue;
+      }
       const nameEl = a.itemName ? (item.matches(a.itemName) ? item : item.querySelector<HTMLElement>(a.itemName)) : item;
       if (sameFileName(nameEl?.textContent ?? '', name)) return item;
     }
@@ -262,6 +280,7 @@ export class GenericComposeAdapter implements ComposeAdapter {
   }
   private itemUploading(item: HTMLElement): boolean {
     const a = this.selectorSet.attach;
+    if (a.itemDone && !item.querySelector(a.itemDone)) return true;
     if (a.itemProgress && item.querySelector(a.itemProgress)) return true;
     if (a.uploadingClass && item.classList.contains(a.uploadingClass)) return true;
     if (a.pendingSelector) {
@@ -296,6 +315,10 @@ export class GenericComposeAdapter implements ComposeAdapter {
 
     // 주입 전부터 있던 항목(같은 이름 재첨부, 이전 실행분)을 새 첨부로 오인하지 않게 기억한다
     const existing = new Set(this.attachItems());
+    // 한도를 넘겨 Drive 링크 등으로 바뀐 경우를 잡으려고 주입 전 표식 개수를 기억한다
+    const converted0 = a.convertedMarker ? this.qa(a.convertedMarker).length : 0;
+    const converted = (): boolean => !!a.convertedMarker && this.qa(a.convertedMarker).length > converted0;
+    const blocked = (): string | null => (converted() ? 'DRIVE_CONVERTED' : this.dialogShown() ? 'DIALOG_SHOWN' : null);
     opts.onPhase('injecting');
     let used: AttachResult['method'] | null = null;
     for (const m of a.methods) {
@@ -317,9 +340,11 @@ export class GenericComposeAdapter implements ComposeAdapter {
       } catch { continue; }
       used = m;
       await settle(this.settleMs);
-      if (this.dialogShown()) return res('failed', used, { error: 'DIALOG_SHOWN' });
-      if (await waitFor(() => opts.signal.aborted || this.dialogShown() || this.findItem(file.name, existing), this.itemAppearMs, this.pollMs)) {
-        if (this.dialogShown()) return res('failed', used, { error: 'DIALOG_SHOWN' });
+      const b0 = blocked();
+      if (b0) return res('failed', used, { error: b0 });
+      if (await waitFor(() => opts.signal.aborted || blocked() !== null || this.findItem(file.name, existing), this.itemAppearMs, this.pollMs)) {
+        const b1 = blocked();
+        if (b1) return res('failed', used, { error: b1 });
         break;
       }
     }
@@ -332,7 +357,8 @@ export class GenericComposeAdapter implements ComposeAdapter {
     let last: HTMLElement | null = null;
     while (Date.now() < end) {
       if (opts.signal.aborted) return res('failed', used, { error: 'ABORTED' });
-      if (this.dialogShown()) return res('failed', used, { error: 'DIALOG_SHOWN' });
+      const b2 = blocked();
+      if (b2) return res('failed', used, { error: b2 });
       if (!this.resolveScope().el) return res('failed', used, { error: this.scopeError() });
       const item = this.findItem(file.name, existing);
       last = item;

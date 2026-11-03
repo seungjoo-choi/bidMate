@@ -863,3 +863,15 @@ S0 실측 2차(2026-10-20): 2단계는 inqryDiv=4 + bidNtceNo로 성공. 용역 
 | 결정 | 이유 | 기각 대안 |
 |---|---|---|
 | `g2b/read-html` payload에 선택 필드 `withText?`. detail-reader는 안정 판정 뒤 마지막 1회만 `withText: true`로 전문을 읽고, 그 1회가 실패하면 전문 없이 진행. 패널 수집(1회 읽기)은 항상 포함 | notice-search 1.1은 read-html 핸들러에서 매번 전문을 만들게 했으나 폴링마다 전체 DOM 순회와 30만 자 전송이 2초 tick 시간 초과·45초 DETAIL_TIMEOUT을 부를 수 있음. 5절 8번(전문은 안정 판정에서 제외)과 같은 취지 | 매 tick 전문 생성(원안) / 별도 메시지 `g2b/read-text` 신설 |
+
+## 2026-11-03, Gmail 2차 실측 반영 S4 (Fable, 사용자 승인, 근거 .claude/specs/gmail-attach-handoff.md 6~8절)
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| attach.itemLabelAttr 신설, Gmail은 aria-label에 파일 이름 포함 대조 | 업로드 중 .dL에 .vI가 없어 10초 뒤 재주입 위험, 항목 글자에 크기가 붙어 완전 일치 실패 | .vI 단독, sameFileName에 크기 접미사 제거 |
+| attach.itemDone 신설, Gmail은 input[type=hidden][name=attach] | 실패 표시 미관측이라 진행 표시 부재만으로 완료 판정은 약함 | progressbar 부재만 |
+| limits 파일별/합계 25,000,000 | 합계 기준 실측 확인, 단위 미확정이라 작은 쪽. 넘기면 Drive 업로드라는 비대칭 비용 | 26,214,400, 인코딩 마진, .vJ 크기 파싱 |
+| attach.convertedMarker 신설, Drive 칩 증가 시 DRIVE_CONVERTED(DIALOG_SHOWN보다 우선) | 기존 첨부가 있는 창은 사전 차단 불가, 경고창이 3.7초 뒤 스스로 닫힘 | 경고창만으로 감지, 비워 두고 타임아웃 |
+| blockingDialog = dialog 중 region 미포함, aria-hidden 아님 | 받은편지함 작성 창 자체가 dialog, 변환 뒤 숨은 공유 dialog 잔존 | [role="dialog"] 그대로 |
+| scope = div[role="region"]:has(input[name="subjectbox"]), anchor는 subjectbox 값(엔진 현행) | 창마다 region 하나, 빈 제목 region aria-label은 "새 메일" | div.aoI, region aria-label anchor |
+| to/cc 칩 보류(partial), methods ['input'] | 칩 안 주소 표기 미실측, 끌어다 놓기 미실측 | 추정 셀렉터 |
+| 엔진 변경은 새 선택 필드가 있을 때만 작동 | 네이버웍스 동작 불변(사용자 요청) | 엔진 분기 복제 |

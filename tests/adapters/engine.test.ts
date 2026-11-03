@@ -544,3 +544,122 @@ describe('naverworks-v1 첨부 이름 대조(정확 일치, 기존 항목 제외
     expect(r.status).toBe('uploaded');
   });
 });
+
+// ---------- Gmail 형태: itemLabelAttr/itemDone/convertedMarker ----------
+describe('GenericComposeAdapter Gmail 형태 첨부(itemLabelAttr, itemDone, convertedMarker)', () => {
+  const GM: ComposeSelectorSet = {
+    ...SCOPED,
+    compose: { readySelector: '', scope: 'div[role="region"]' },
+    subject: { input: 'input[name="subjectbox"]' },
+    attach: {
+      fileInput: 'input[type=file]', item: '.dL', itemName: '.vI',
+      itemLabelAttr: 'aria-label', itemDone: 'input[type=hidden][name=attach]',
+      convertedMarker: 'div.gmail_chip.gmail_drive_chip', methods: ['input'],
+    },
+  };
+  const GM_HTML = '<div role="region"><input name="subjectbox" value="s"><input type="file"></div>';
+  const scope = (): Element => document.querySelector('div[role="region"]')!;
+  const label = (n: string): string => `첨부파일 업로드 중: ${n}. 취소하려면 Enter 키를 누르세요`;
+  const onChange = (fn: (name: string) => void): void => {
+    scope().querySelector('input[type=file]')!.addEventListener('change', (e) => {
+      fn((e.target as unknown as { files: File[] }).files[0]!.name);
+    });
+  };
+  const mk = (set: ComposeSelectorSet = GM, timing = {}): GenericComposeAdapter =>
+    new GenericComposeAdapter(set, document, { ...TIMING, ...timing });
+  const addItem = (html: string, aria?: string): HTMLElement => {
+    const d = document.createElement('div');
+    d.className = 'dL';
+    if (aria !== undefined) d.setAttribute('aria-label', aria);
+    d.innerHTML = html;
+    scope().appendChild(d);
+    return d;
+  };
+  beforeEach(() => {
+    document.body.innerHTML = GM_HTML;
+    (globalThis as Record<string, unknown>).DataTransfer = class {
+      files: File[] = [];
+      items = { add: (f: File) => { this.files.push(f); } };
+    };
+  });
+
+  it('itemLabelAttr: aria-label에 파일 이름이 들어 있으면 항목을 찾아 uploaded', async () => {
+    onChange((n) => { addItem(`<span class="vI">${n} (2,791K)</span><input type="hidden" name="attach">`, label(n)); });
+    const r = await mk().attachFile(new File(['x'], '보고서.pdf'), sig());
+    expect(r.status).toBe('uploaded');
+  });
+
+  it('itemLabelAttr 폴백: aria-label이 없으면 itemName 텍스트 완전 일치로 찾는다', async () => {
+    onChange((n) => { addItem(`<span class="vI">${n}</span><input type="hidden" name="attach">`); });
+    const r = await mk().attachFile(new File(['x'], 'a.pdf'), sig());
+    expect(r.status).toBe('uploaded');
+  });
+
+  it('업로드 중(.vI 없음, aria-label에 이름만)이 itemAppearMs보다 길어도 재주입하지 않는다', async () => {
+    let injects = 0;
+    onChange((n) => {
+      injects++;
+      const it = addItem('', label(n));
+      setTimeout(() => it.insertAdjacentHTML('beforeend', '<input type="hidden" name="attach">'), 300);
+    });
+    const set = { ...GM, attach: { ...GM.attach, methods: ['input', 'input'] as Array<'input'> } };
+    const r = await mk(set, { itemAppearMs: 100 }).attachFile(new File(['x'], 'b.pdf'), sig());
+    expect(injects).toBe(1);
+    expect(r.error).not.toBe('NO_INJECTION_PATH');
+    expect(r.status).toBe('uploaded');
+  });
+
+  it('itemDone: 완료 요소가 없으면 uploaded가 아니고, 생긴 뒤 stableMs가 지나면 uploaded', async () => {
+    let it: HTMLElement | null = null;
+    let doneAt = 0;
+    onChange((n) => {
+      it = addItem(`<span class="vI">${n}</span>`, label(n));
+      setTimeout(() => { it!.insertAdjacentHTML('beforeend', '<input type="hidden" name="attach">'); doneAt = Date.now(); }, 200);
+    });
+    const r = await mk().attachFile(new File(['x'], 'c.pdf'), sig());
+    expect(doneAt).toBeGreaterThan(0);
+    expect(r.status).toBe('uploaded');
+    expect(Date.now() - doneAt).toBeGreaterThanOrEqual(0);
+    expect(r.elapsedMs).toBeGreaterThanOrEqual(200 + TIMING.stableMs - 5);
+  });
+
+  it('convertedMarker: 주입 뒤 marker가 새로 생기면 failed DRIVE_CONVERTED', async () => {
+    onChange(() => { scope().insertAdjacentHTML('beforeend', '<div class="gmail_chip gmail_drive_chip"></div>'); });
+    const r = await mk().attachFile(new File(['x'], 'd.pdf'), sig());
+    expect(r.status).toBe('failed');
+    expect(r.error).toBe('DRIVE_CONVERTED');
+  });
+
+  it('convertedMarker: 주입 전부터 있던 marker가 늘지 않으면 DRIVE_CONVERTED가 아니다', async () => {
+    scope().insertAdjacentHTML('beforeend', '<div class="gmail_chip gmail_drive_chip"></div>');
+    onChange((n) => { addItem(`<span class="vI">${n}</span><input type="hidden" name="attach">`, label(n)); });
+    const r = await mk().attachFile(new File(['x'], 'e.pdf'), sig());
+    expect(r.error).not.toBe('DRIVE_CONVERTED');
+    expect(r.status).toBe('uploaded');
+  });
+
+  it('convertedMarker와 blockingDialog가 동시에 성립하면 DRIVE_CONVERTED가 우선', async () => {
+    onChange(() => {
+      scope().insertAdjacentHTML('beforeend', '<div class="gmail_chip gmail_drive_chip"></div>');
+      document.body.insertAdjacentHTML('beforeend', '<div id="dlg"></div>');
+    });
+    const set = { ...GM, attach: { ...GM.attach, blockingDialog: '#dlg' } };
+    const r = await mk(set).attachFile(new File(['x'], 'f.pdf'), sig());
+    expect(r.status).toBe('failed');
+    expect(r.error).toBe('DRIVE_CONVERTED');
+  });
+
+  it('앞뒤 경계: aria-label이 aa.pdf인 항목은 a.pdf로 잡지 않는다', async () => {
+    onChange(() => { addItem('<input type="hidden" name="attach">', '첨부파일: aa.pdf. 파일을 보려면 Enter 키를 누르세요'); });
+    const ac = new AbortController();
+    setTimeout(() => ac.abort(), 300);
+    const r = await mk().attachFile(new File(['x'], 'a.pdf'), { signal: ac.signal, onPhase: () => {} });
+    expect(r.status).not.toBe('uploaded');
+  });
+
+  it('앞뒤 경계: 첨부파일(보고서.pdf)을 저장 중입니다 형태도 보고서.pdf로 찾는다', async () => {
+    onChange(() => { addItem('<input type="hidden" name="attach">', '첨부파일(보고서.pdf)을 저장 중입니다.'); });
+    const r = await mk().attachFile(new File(['x'], '보고서.pdf'), sig());
+    expect(r.status).toBe('uploaded');
+  });
+});

@@ -11,7 +11,7 @@ export interface ComposeSelectorSet {
     /** 본문 칸 안에서 지우지 않을 요소(예: 서명). 있으면 그 앞부분만 바꾼다 */
     keep?: string;
   };
-  attach: { /** 첨부 목록이 본문 iframe 문서 안에 있다(파일 칸은 바깥 문서) */ inBodyFrame?: boolean; fileInput?: string; dropZone?: string; item: string; itemName: string; itemSize?: string; itemProgress?: string; itemError?: string; uploadingClass?: string; pendingSelector?: string; blockingDialog?: string; limits?: { perFileBytes?: number; totalBytes?: number }; methods: Array<'input' | 'drop' | 'paste'> };
+  attach: { /** 첨부 목록이 본문 iframe 문서 안에 있다(파일 칸은 바깥 문서) */ inBodyFrame?: boolean; fileInput?: string; dropZone?: string; item: string; itemName: string; itemSize?: string; itemProgress?: string; itemError?: string; uploadingClass?: string; pendingSelector?: string; /** 항목 요소의 이 속성 값에 파일 이름이 들어 있으면 그 속성으로 포함 대조한다. 없으면 itemName 글자 완전 일치 */ itemLabelAttr?: string; /** 업로드 완료 상태에만 항목 안에 생기는 요소. 있으면 이 요소가 보여야 완료로 본다 */ itemDone?: string; /** 첨부가 한도를 넘어 다른 형태(예: Drive 링크)로 바뀌면 작성 창 안에 생기는 요소. 개수가 늘면 실패 */ convertedMarker?: string; blockingDialog?: string; limits?: { perFileBytes?: number; totalBytes?: number }; methods: Array<'input' | 'drop' | 'paste'> };
   draft?: { button: string; savedIndicator?: string };
   forbidden: { send: string[]; textPatterns: string[] /* 기본 ["보내기","전송","Send"] */ };
   /** 사용자가 직접 보냈는지 관찰하는 값(forbidden과 별개). send-watch.ts가 읽기만 한다. */
