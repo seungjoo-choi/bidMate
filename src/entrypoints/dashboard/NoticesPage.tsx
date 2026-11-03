@@ -45,7 +45,9 @@ const EXTRACT_BADGE: Record<ExtractionStatus, { tone: BadgeStatus; text: string 
 };
 // 수집 상태는 별도 열 없이 수집일 아래에, 완료가 아닐 때만 보인다(공고명 폭 확보, 2026-10-21).
 // 첫 열은 늘 보이는 선택 체크박스. 고른 뒤 상단의 평가점수·AI 보완·삭제 버튼으로 처리한다(사용자 요청, 2026-10-21).
-const GRID_PICK = 'grid grid-cols-[18px_40px_minmax(0,1fr)_150px_210px_110px_170px_100px_32px] items-center gap-6 px-5';
+// 공고명 칸은 최소 260px을 지킨다. 화면이 더 좁으면 칸이 겹치지 않게 표 전체가 가로로 스크롤된다.
+// min-w는 고정 칸 합(1010) + 간격(8 x 20) + 좌우 여백(40) = 1210보다 커야 헤더 배경, 행 구분선이 끝까지 이어진다.
+const GRID_PICK = 'grid min-w-[1220px] grid-cols-[18px_40px_minmax(260px,1fr)_130px_190px_110px_130px_100px_32px] items-center gap-5 px-5';
 
 type SortKey = 'title' | 'org' | 'close' | 'extract' | 'collectedAt';
 const SORT_BY: Record<SortKey, (n: IndexEntry) => SortValue> = {
@@ -389,7 +391,7 @@ export function NoticesPage() {
               <Button variant="ai" className="!h-9" disabled={!!block || starting} icon={<ProviderIcon provider={provider} size={14} />} onClick={() => { setConfirming(false); void runBatch(aiIds); }}>실행</Button>
             </div>
           )}
-          <div className="max-h-[max(16rem,calc(100vh-20rem))] overflow-y-auto rounded-card border border-line bg-surface shadow-card">
+          <div className="max-h-[max(16rem,calc(100vh-20rem))] overflow-auto rounded-card border border-line bg-surface shadow-card">
             <div className={`${GRID_PICK} sticky top-0 z-10 bg-sunken py-3 text-sm text-muted`}>
               <input
                 ref={headerRef} type="checkbox" className="size-4 accent-primary" aria-label="보이는 공고 모두 선택" title="보이는 공고 모두 선택"
@@ -440,8 +442,8 @@ export function NoticesPage() {
                       <SearchButton variant="row" noticeId={n.noticeId} title={n.title} />
                     </div>
                     {/* 북마크 폭(24px - 겹침 4px + 간격 6px)만큼 들여 공고명과 줄을 맞춘다 */}
-                    <div className={`mt-0.5 flex min-w-0 items-center gap-2.5 pl-[26px] text-sm text-muted`}>
-                      <span className="truncate font-mono">{noticeLabel(n)}</span>
+                    <div className={`mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 pl-[26px] text-sm text-muted`}>
+                      <span className="min-w-0 truncate font-mono">{noticeLabel(n)}</span>
                       {kindOf(n) === 'prespec' && <span className="shrink-0"><StatusBadge status="idle">사전규격</StatusBadge></span>}
                       {hint && (
                         <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-star">

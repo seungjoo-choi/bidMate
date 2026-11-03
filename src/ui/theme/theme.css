@@ -180,6 +180,13 @@
   --color-primary-ink: var(--color-ai-surface);
 }
 
+/* 안내 상자(InlineAlert) 안에서는 보조 버튼, 테두리를 상자 색조(--alert-c)로 맞춘다(회색 면이 따로 떠 보이지 않게). */
+.alert-tint {
+  --color-btn-face: color-mix(in srgb, var(--alert-c) 6%, transparent);
+  --color-sunken: color-mix(in srgb, var(--alert-c) 16%, transparent);
+  --color-line-strong: color-mix(in srgb, var(--alert-c) 35%, transparent);
+}
+
 /* 대시보드는 넓은 화면에서 보므로 약 110%로 키운다(사이드패널·팝업은 폭이 좁아 기본 크기 유지). */
 html.ui-scale { font-size: 110%; }
 
