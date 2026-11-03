@@ -117,6 +117,7 @@ describe('문구', () => {
     expect(gradeShare([0, 0, 0, 0]).full).toBe('0%');
     expect(evalErrorText('EVAL_NOT_LOGGED_IN', 'x')).toContain('로그인');
     expect(evalErrorText('EVAL_NO_RESULT', 'x')).toContain('평가 결과가 없는');
+    expect(evalErrorText('EVAL_NO_SYSTEM', 'x')).toContain('평가시스템');
     expect(evalErrorText('ETC', '원문')).toBe('원문');
   });
 });

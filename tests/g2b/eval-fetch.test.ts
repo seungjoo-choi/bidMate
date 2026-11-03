@@ -84,6 +84,29 @@ describe('fetchEvalRaw', () => {
     }
   });
 
+  it('1번이 HTTP 422면 bidClsfNo 0으로 한 번 더 부른다', async () => {
+    const no422 = { status: 422, body: { ErrorCode: 1, ErrorMsg: '개찰결과 데이터가 존재하지 않습니다.' } };
+    const f = fakeFetch({ ...happy(), [P.open]: (n) => (n === 1 ? no422 : { body: OPEN }) });
+    const r = await fetchEvalRaw(REF, { fetch: f.fn });
+    expect(r.ok).toBe(true);
+    expect(f.calls.slice(0, 2).map((c) => c.body.dlSrchOnbsRsltBidInM?.bidClsfNo)).toEqual(['1', '0']);
+    const g = fakeFetch({ ...happy(), [P.open]: () => no422 });
+    expect(await fetchEvalRaw(REF, { fetch: g.fn })).toMatchObject({ ok: false, error: { code: 'EVAL_API_ERROR', step: 1, httpStatus: 422 } });
+    expect(g.calls).toHaveLength(2);
+  });
+
+  it('422가 아닌 1번 오류는 다시 부르지 않는다', async () => {
+    const f = fakeFetch({ ...happy(), [P.open]: () => ({ status: 500, body: { ErrorCode: 1, ErrorMsg: 'x' } }) });
+    await fetchEvalRaw(REF, { fetch: f.fn });
+    expect(f.calls).toHaveLength(1);
+  });
+
+  it('evlNo가 없고 평가시스템 미사용(evlSysUtztnYn N)이면 EVAL_NO_SYSTEM', async () => {
+    const f = fakeFetch({ ...happy(), [P.open]: () => ({ body: ok({ result: { etcData: { evlNo: null }, bidInfo: { evlSysUtztnYn: 'N' } } }) }) });
+    expect(await fetchEvalRaw(REF, { fetch: f.fn })).toMatchObject({ ok: false, error: { code: 'EVAL_NO_SYSTEM', step: 1 } });
+    expect(f.calls).toHaveLength(1);
+  });
+
   it('HTML 응답이면 EVAL_NOT_LOGGED_IN', async () => {
     const f = fakeFetch({ ...happy(), [P.open]: () => ({ body: '<!DOCTYPE html><html><body>x</body></html>' }) });
     expect(await fetchEvalRaw(REF, { fetch: f.fn })).toMatchObject({ ok: false, error: { code: 'EVAL_NOT_LOGGED_IN', step: 1 } });

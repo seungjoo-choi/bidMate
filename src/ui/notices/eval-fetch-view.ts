@@ -38,6 +38,7 @@ export function autoEvalTargets(notices: IndexEntry[], have: ReadonlySet<string>
     if (!n.result || !PARTICIPATED.has(n.result.status)) return [];
     if (!selectableForEval(n, now, have).ok) return [];
     const a = attempts[n.noticeId];
+    if (a?.code === 'EVAL_NO_SYSTEM') return []; // 앞으로도 생기지 않는다
     if (a?.code === 'EVAL_NO_RESULT' && now.getTime() - a.at < NO_RESULT_WAIT_MS) return [];
     return [{ noticeId: n.noticeId, noticeNo: n.noticeNo, round: n.round || '000' }];
   });
@@ -47,7 +48,7 @@ export interface EvalBatchItem { noticeId: string; noticeNo: string; round: stri
 export interface EvalBatchState {
   running: boolean; total: number; done: number; ok: number;
   current?: string;
-  failed: Array<{ noticeId: string; message: string }>;
+  failed: Array<{ noticeId: string; message: string; code?: string }>;
   /** 나머지를 진행해도 같은 이유로 실패하는 오류로 멈췄을 때 그 문구, 사용자가 멈췄으면 '중단됨' */
   stopped?: string;
 }
@@ -74,7 +75,7 @@ export async function runEvalBatch(items: EvalBatchItem[], deps: {
     } catch (e) {
       const code = (e as { code?: string }).code;
       const message = deps.errorText(code, e instanceof Error ? e.message : String(e));
-      emit({ ...s, done: s.done + 1, failed: [...s.failed, { noticeId: it.noticeId, message }] });
+      emit({ ...s, done: s.done + 1, failed: [...s.failed, { noticeId: it.noticeId, message, ...(code ? { code } : {}) }] });
       if (code && STOP_CODES.has(code)) { emit({ ...s, stopped: message }); break; }
     }
   }

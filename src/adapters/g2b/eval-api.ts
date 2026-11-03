@@ -38,9 +38,10 @@ const common = (evlNo: string, evstNo = '') => ({ evlNo, evstNo, evlExclYn: 'N',
 
 /** 단계별 요청 본문 빌더 */
 export const EVAL_BODIES = {
-  open: (noticeNo: string, round: string) => ({
+  /** bidClsfNo는 공고마다 '1' 또는 '0'(실측). 공고 정보로는 알 수 없어 '1' 먼저, 422면 '0'으로 다시 부른다. */
+  open: (noticeNo: string, round: string, clsfNo: '1' | '0' = '1') => ({
     dlSrchOnbsRsltBidInM: {
-      bidPbancNo: noticeNo, bidPbancOrd: round, bidClsfNo: '1', bidPrgrsOrd: '000', prcmBsneSeCd: '03',
+      bidPbancNo: noticeNo, bidPbancOrd: round, bidClsfNo: clsfNo, bidPrgrsOrd: '000', prcmBsneSeCd: '03',
       bidPgstCd: '개찰완료', bzmnRegNo: '', reOpenPbancYN: 'Y', currentPage: 1, recordCountPerPage: '10',
     },
   }),

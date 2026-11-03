@@ -26,7 +26,7 @@ export interface G2bFailureFile { v: 1; items: G2bFailure[] }   // 최신 먼저
 
 /** 기록하지 않는 코드: 사용자 취소·잘못된 참조·권한 등 연동 실패가 아닌 것. */
 export const SKIP_CODES: ReadonlySet<string> = new Set([
-  'EVAL_NO_RESULT', 'EVAL_CANCELLED', 'JOB_CANCELLED', 'DETAIL_CANCELLED',
+  'EVAL_NO_RESULT', 'EVAL_NO_SYSTEM', 'EVAL_CANCELLED', 'JOB_CANCELLED', 'DETAIL_CANCELLED',
   'EVAL_BAD_REF', 'RESULT_BAD_REF', 'SENDER_FORBIDDEN', 'NEEDS_FS_PERMISSION',
 ]);
 

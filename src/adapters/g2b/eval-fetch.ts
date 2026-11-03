@@ -74,10 +74,22 @@ export async function fetchEvalRaw(ref: { noticeNo: string; round?: string }, ct
 
   const warnings: string[] = [];
   try {
-    const open = await call('open', EVAL_BODIES.open(ref.noticeNo, ref.round ?? '000'));
+    const round = ref.round ?? '000';
+    let open: Record<string, unknown>;
+    try {
+      open = await call('open', EVAL_BODIES.open(ref.noticeNo, round, '1'));
+    } catch (e) {
+      // 분류번호가 맞지 않으면 "개찰결과 데이터가 존재하지 않습니다"(HTTP 422)로 답한다.
+      if (!(e instanceof StepError && e.extra.httpStatus === 422)) throw e;
+      open = await call('open', EVAL_BODIES.open(ref.noticeNo, round, '0'));
+    }
     const preview = pickEvalRaw({ open, base: null, targets: {}, members: {}, items: {}, scores: [] }, '');
     const evlNo = preview.open.evlNo;
-    if (!evlNo) return { ok: false, error: { code: 'EVAL_NO_RESULT', message: '평가 결과가 없는 공고입니다.', step: 1 } };
+    if (!evlNo) {
+      const bidInfo = (open.result as { bidInfo?: { evlSysUtztnYn?: unknown } } | null | undefined)?.bidInfo;
+      if (bidInfo?.evlSysUtztnYn === 'N') return { ok: false, error: { code: 'EVAL_NO_SYSTEM', message: '나라장터 평가시스템을 쓰지 않은 공고입니다.', step: 1 } };
+      return { ok: false, error: { code: 'EVAL_NO_RESULT', message: '평가 결과가 없는 공고입니다.', step: 1 } };
+    }
 
     let base: unknown | null = null;
     try { base = await call('base', EVAL_BODIES.base(evlNo)); }

@@ -99,6 +99,10 @@ describe('autoEvalTargets', () => {
     expect(autoEvalTargets(list, new Set(), { A: { at: t, code: 'INTERNAL' }, B: { at: t - 7 * DAY + 1, code: 'EVAL_NO_RESULT' } }, NOW).map((i) => i.noticeId)).toEqual(['A']);
     expect(autoEvalTargets(list, new Set(), { B: { at: t - 7 * DAY, code: 'EVAL_NO_RESULT' } }, NOW).map((i) => i.noticeId)).toEqual(['A', 'B']);
   });
+  it('평가시스템 미사용 실패는 기간과 무관하게 다시 고르지 않는다', () => {
+    const list = [entry({ ...opened, noticeId: 'A', result: { status: 'won' } })];
+    expect(autoEvalTargets(list, new Set(), { A: { at: NOW.getTime() - 365 * DAY, code: 'EVAL_NO_SYSTEM' } }, NOW)).toEqual([]);
+  });
   it('차수가 비면 000', () => {
     expect(autoEvalTargets([entry({ ...opened, round: '', result: { status: 'won' } })], new Set(), {}, NOW)[0]!.round).toBe('000');
   });

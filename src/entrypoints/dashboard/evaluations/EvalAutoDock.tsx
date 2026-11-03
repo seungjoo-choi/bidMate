@@ -1,5 +1,6 @@
 import { Download } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
+import { SKIP_CODES } from '../../../core/diagnostics/g2b-failure';
 import { evalErrorText } from '../../../core/evaluation/error-text';
 import { EVAL_COLLECT_UI_TIMEOUT_MS } from '../../../core/evaluation/limits';
 import { send } from '../../../messaging/bus';
@@ -161,7 +162,7 @@ function RunBody({ s, titleOf, onEvaluations }: { s: EvalBatchState; titleOf: (i
           {s.failed.map((f) => <li key={f.noticeId} className="break-words"><span className="text-ink">{titleOf(f.noticeId)}</span>: {f.message}</li>)}
         </ul>
       )}
-      {!s.running && s.failed.length > 0 && <div className="mt-1.5 text-xs text-muted">자세한 원인은 설정 &gt; 개발자 진단 &gt; 실패 기록에서 볼 수 있습니다.</div>}
+      {!s.running && s.failed.some((f) => !SKIP_CODES.has(f.code ?? '')) && <div className="mt-1.5 text-xs text-muted">자세한 원인은 설정 &gt; 개발자 진단 &gt; 실패 기록에서 볼 수 있습니다.</div>}
       {/* 끝난 뒤 동작은 오른쪽 아래에 모은다 */}
       {!s.running && (
         <div className="mt-3 flex justify-end gap-2">
