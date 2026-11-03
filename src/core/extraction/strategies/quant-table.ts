@@ -8,7 +8,8 @@ import { expandTerm, type Prepared, type RawHit, type Synonyms } from './common'
 type R = Extract<Rule, { strategy: 'quant-table' }>;
 
 const NOT_QUANT_CAPTION = /자가진단|서식|별지|증빙|제출|기준표|등급/;
-const COMBINED = /정성평가|기술평가|가격평가/;
+// "정량/정성 배점"처럼 정성이 단독으로 붙은 제목도 결합 표다.
+const COMBINED = /정성|기술평가|가격평가/;
 const TOTAL_ROW = /^(합계|계|소계|총계)$/;
 const SCORE = /^(\d+(?:\.\d+)?)점?(?:\(.{0,10}\)|만점)?$/;
 
@@ -36,7 +37,8 @@ export function quantTable(p: Prepared, rule: R, syn: Synonyms): RawHit[] {
     let titleText = '';
     let labelCell: DocCell | undefined;
     for (let r = header.r + 1; r < g.rows && !labelCell; r++) {
-      labelCell = g.ownCells(r).find((c) => c.c === 0 && labelStartRe.test(compact(c.text)));
+      // 첫 칸이 더 긴 묶음 칸("기술능력평가" 세로 병합)이면 둘째 칸의 정량 라벨도 인정한다.
+      labelCell = g.ownCells(r).find((c) => (c.c === 0 || (c.c === 1 && (g.at(r, 0)?.rowSpan ?? 1) > c.rowSpan)) && labelStartRe.test(compact(c.text)));
     }
     if (labelCell) {
       start = labelCell.r;
@@ -63,7 +65,8 @@ export function quantTable(p: Prepared, rule: R, syn: Synonyms): RawHit[] {
 
     // 합계 N
     let total: number | undefined;
-    const tm = /정량(?:적)?평가[^\d]{0,12}(\d+(?:\.\d+)?)점/.exec(titleText);
+    // "정량평가 20점" 또는 라벨 칸의 "정량평가 (10)", "정량 (10)"
+    const tm = /정량(?:적)?(?:평가)?[^\d]{0,12}(\d+(?:\.\d+)?)점/.exec(titleText) ?? /^정량(?:적)?(?:평가)?\((\d+(?:\.\d+)?)점?\)$/.exec(titleText);
     if (tm) total = Number(tm[1]);
     else {
       const tr = rowsIn.find(isTotalRow);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DocCell, DocModel, DocTable } from '../../src/core/doc/model';
+import { decide } from '../../src/core/extraction/decide';
 import { loadRules } from '../../src/core/extraction/rules/load';
 import { runRules } from '../../src/core/extraction/run-rules';
 
@@ -144,5 +145,109 @@ describe('quant-table 전략', () => {
       ['수행능력', '4', '유사사업 수행실적 건수'],
     ], { caption: '정량평가(10점)' }));
     expect(hits.map((h) => h.value as string)[0]).toContain('perf');
+  });
+});
+
+describe('quant-table 전략: 괄호 합계 라벨과 병합 묶음 칸', () => {
+  const head = ['구분', '평가항목', '배점'];
+  const naKeys = (doc: DocModel) => {
+    const cands = runRules([{ doc, attachmentId: 'a', sourceFile: 'a.hwp', docKind: 'rfp', priority: 3 }], rules).candidates;
+    const d = decide(cands, rules);
+    return { perf: d.items.performanceScore, cred: d.items.credibilityScore };
+  };
+  const qualRows = (label: string): C[][] => [
+    head,
+    [label, '경영상태', '10'],
+    [{ t: '정성\n(90)', rs: 2 }, '사업 이해도', '50'],
+    ['추진 전략', '40'],
+  ];
+
+  it.each([['정량평가\n(10)'], ['정량\n(10)']])('1/2. 라벨 칸 "%s" -> 10:mgmt, 수행실적과 신뢰도 해당 없음', (label) => {
+    const doc = table(qualRows(label));
+    expect(run(doc).map((h) => h.value)).toEqual(['10:mgmt']);
+    const { perf, cred } = naKeys(doc);
+    expect(perf).toMatchObject({ status: 'verified', reason: 'not_applicable' });
+    expect(cred).toMatchObject({ status: 'verified', reason: 'not_applicable' });
+  });
+
+  it('3. 라벨 칸이 "정량제안서"면 없음', () => {
+    expect(run(table(qualRows('정량제안서')))).toHaveLength(0);
+  });
+
+  const grouped = (outerRs: number): DocModel => table([
+    ['구분', '평가부문', '평가항목', '배점'],
+    [{ t: '기술능력평가', rs: outerRs }, { t: '정량평가\n(7)', rs: 2 }, '경영상태', '5'],
+    ['우선구매대상', '2'],
+    ...(outerRs === 4
+      ? [[{ t: '정성평가', rs: 2 }, '사업 이해도', '50'] as C[], ['추진 전략', '43'] as C[]]
+      : [['기타', { t: '정성평가', rs: 2 }, '사업 이해도', '50'] as C[], ['추진 전략', '43'] as C[]]),
+  ]);
+
+  it('4. 첫 칸이 더 긴 세로 병합이면 둘째 칸 정량평가(7) 인정', () => {
+    const hits = run(grouped(4));
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.value as string).toMatch(/^7:/);
+    expect(hits[0]!.value as string).toContain('mgmt');
+    expect(hits[0]!.value as string).not.toContain('perf');
+  });
+
+  it('5. 첫 칸 rowSpan이 라벨 칸과 같으면 둘째 칸 라벨은 인정하지 않음', () => {
+    expect(run(grouped(2))).toHaveLength(0);
+  });
+
+  it('6. 라벨 "정량평가 (10)"인데 행 배점 합이 8이면 없음', () => {
+    expect(run(table([head, ['정량평가 (10)', '경영상태', '8']]))).toHaveLength(0);
+  });
+});
+
+describe('정량표 해당 없음과 실적 하위 항목(작성 안내 문장)', () => {
+  const GUIDE = '- 용역실적은 공고일 기준 최근 3년간 본 사업과 유관한 사업수행을 완료한 실적 2천만원(부가세 포함)이상 건에 대하여 기재하고 실적증명서를 첨부해야 함';
+  const quantRows: C[][] = [
+    ['구분', '평가항목', '배점'],
+    ['정량평가 (10)', '경영상태', '10'],
+    [{ t: '정성\n(90)', rs: 2 }, '사업 이해도', '50'],
+    ['추진 전략', '40'],
+  ];
+  const P = (text: string, i: number) => ({ kind: 'p' as const, text, loc: { block: 10 + i, line: i + 1 } });
+  const go = (withTable: boolean, srcs: Array<['rfp' | 'notice', string]>) => {
+    const inputs = srcs.map(([docKind, line], i) => ({
+      doc: { format: 'hwp5' as const, blocks: [...(withTable && i === 0 ? table(quantRows).blocks : []), P(line, i)], warnings: [], stats: { chars: 10, tables: 1, ms: 1 } },
+      attachmentId: `a${i}`, sourceFile: `a${i}.hwp`, docKind, priority: docKind === 'notice' ? 2 : 3,
+    }));
+    return decide(runRules(inputs, rules).candidates, rules).items;
+  };
+  const isNA = (it: { status: string; reason?: string }) => it.status === 'verified' && it.reason === 'not_applicable';
+
+  it('A. 작성 안내 문장뿐이면 실적 기간/최소금액도 해당 없음, 원래 값은 candidates에 남음', () => {
+    const items = go(true, [['rfp', GUIDE]]);
+    expect(items.performanceScore).toMatchObject({ status: 'verified', reason: 'not_applicable' });
+    for (const k of ['performancePeriod', 'performanceMinAmount'] as const) {
+      expect(items[k]).toMatchObject({ status: 'verified', reason: 'not_applicable', naKind: 'quant_table' });
+      expect(items[k].candidates?.length).toBeGreaterThan(0);
+    }
+    expect(JSON.stringify(items.performancePeriod.candidates)).toContain('3년');
+    expect(JSON.stringify(items.performanceMinAmount.candidates)).toContain('20000000');
+  });
+
+  it('B. 참가자격 실적 제한(notice)이 있으면 실적 기간은 해당 없음이 아님', () => {
+    const items = go(true, [['rfp', GUIDE], ['notice', '입찰참가자격: 최근 3년간 유사 용역 실적이 있는 업체']]);
+    expect(isNA(items.performancePeriod)).toBe(false);
+    expect(items.performancePeriod.value).not.toBeNull();
+  });
+
+  it('C. 작성 안내가 아닌 인정 기준 문장이면 값 유지', () => {
+    const items = go(true, [['rfp', '- 용역실적은 최근 3년 이내 완료된 단일 계약 2천만원 이상 실적만 인정']]);
+    expect(isNA(items.performancePeriod)).toBe(false);
+    expect(isNA(items.performanceMinAmount)).toBe(false);
+    expect(items.performancePeriod.value).not.toBeNull();
+    expect(items.performanceMinAmount.value).not.toBeNull();
+  });
+
+  it('D. 정량표가 없으면 값 유지', () => {
+    const items = go(false, [['rfp', GUIDE]]);
+    expect(isNA(items.performancePeriod)).toBe(false);
+    expect(isNA(items.performanceMinAmount)).toBe(false);
+    expect(items.performancePeriod.value).not.toBeNull();
+    expect(items.performanceMinAmount.value).not.toBeNull();
   });
 });

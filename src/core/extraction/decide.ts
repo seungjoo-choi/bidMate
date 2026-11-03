@@ -90,6 +90,8 @@ function applyBonusTable(items: Record<ExtractionKey, ExtractedItem<unknown>>, e
 }
 
 /** 정량평가 표를 완결된 형태로 찾았는데 실적/신인도/경영상태 행이 없으면 해당 항목을 not_found 대신 "해당 없음"(verified, value null)으로 판정한다. */
+/** 제안서나 실적증명서 서식의 작성 안내 문장(compact). */
+const WRITING_GUIDE = /기재(?:하고|하여|하시|해야|할것|바람|요망)|만기재|제시(?:한다|하시오|할것|하여야)|작성(?:하여|하시|해야|할것)/;
 function applyQuantTable(items: Record<ExtractionKey, ExtractedItem<unknown>>, extras: Record<string, ExtractedItem<unknown>>): void {
   const qt = extras[QUANT_TABLE_EXTRA];
   if (!qt || qt.status !== 'verified' || !qt.evidence) return;
@@ -102,7 +104,25 @@ function applyQuantTable(items: Record<ExtractionKey, ExtractedItem<unknown>>, e
   const na = (k: ExtractionKey) => { items[k] = { value: null, status: 'verified', reason: 'not_applicable', naKind: 'quant_table', raw: qt.raw, evidence }; };
   if (!parsed.cats.has('perf') && !/실적/.test(doc) && isNF('performanceScore')) {
     na('performanceScore');
-    for (const k of ['performancePeriod', 'performanceMinAmount', 'performanceCondition'] as const) if (isNF(k)) na(k);
+    // 참가자격 실적 제한이 없고, 찾은 값의 근거가 모두 제안서/서식 작성 안내("… 건에 대하여 기재하고", "… 명료하게 제시한다")뿐이면
+    // 실적 평가가 없는 공고의 작성 안내 숫자이므로 해당 없음으로 본다(찾은 후보는 candidates로 남긴다).
+    const guideOnly = (k: ExtractionKey) => {
+      const it = items[k];
+      const evs = [...(it.evidence ? [it.evidence] : []), ...(it.candidates ?? []).map((c) => c.evidence)];
+      return evs.length > 0 && evs.every((e) => WRITING_GUIDE.test(compact(e.evidence)));
+    };
+    const restricted = found(extras[PERF_RESTRICTION_EXTRA]);
+    for (const k of ['performancePeriod', 'performanceMinAmount', 'performanceCondition'] as const) {
+      if (isNF(k)) na(k);
+      // 인정조건은 여러 줄 묶음이라 한 줄의 작성 안내로 전체를 판단하지 않는다(기간과 금액만)
+      else if (k !== 'performanceCondition' && !restricted && guideOnly(k)) {
+        const it = items[k];
+        // 충돌이면 candidates에 대표값이 이미 들어 있으므로 그것만 쓴다
+        const kept = it.candidates?.length ? it.candidates : (it.value !== null && it.evidence ? [{ value: it.value, raw: it.raw, evidence: it.evidence }] : []);
+        na(k);
+        if (kept.length) items[k].candidates = kept;
+      }
+    }
   }
   if (!parsed.cats.has('cred') && !/신인도/.test(doc) && isNF('credibilityScore') && (extras[BONUS_TABLE_EXTRA]?.value ?? null) === null) na('credibilityScore');
   if (!parsed.cats.has('mgmt') && !/경영|신용/.test(doc) && isNF('managementScore')) na('managementScore');

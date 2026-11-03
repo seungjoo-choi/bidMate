@@ -1,5 +1,5 @@
 {
-  "version": "1.14.0",
+  "version": "1.16.0",
   "synonyms": {
     "credibility": [
       "대외신인도",
@@ -216,7 +216,7 @@
       "target": "extras.quantTable",
       "strategy": "quant-table",
       "scoreHeader": "scoreHeader",
-      "title": "정량(?:적)?평가",
+      "title": "(?:정량(?:적)?평가|정량적?(?![가-힣]))",
       "perfLabel": "quantPerf",
       "credLabel": "quantCred",
       "mgmtLabel": "quantMgmt",

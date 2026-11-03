@@ -39,9 +39,12 @@ it('harness', async () => {
     for (const k of REVIEW_LEAF_KEYS) {
       const j = leafReviewState(notice, x, k);
       const it2 = (x?.items as any)?.[k];
-      leaves[k] = { state: j.state, value: j.value, reason: j.reason ?? it2?.reason, ev: it2?.evidence?.slice?.(0, 2)?.map((e: any) => e.snippet ?? e.text ?? e) };
+      leaves[k] = { state: j.state, value: j.value, reason: j.reason ?? it2?.reason, ev: it2?.evidence ? `${it2.evidence.sourceFile} | ${it2.evidence.evidence}`.slice(0, 300) : undefined, cands: it2?.candidates?.map((c: any) => [c.value, String(c.evidence?.evidence ?? '').slice(0, 120)]) };
     }
-    out[no] = { status: r.status, ms: Date.now() - t0, files: x?.files.map((f) => ({ n: f.name, inner: f.innerPath, kind: f.docKind, st: f.status, skip: f.skipReason, err: f.error, text: f.textPath?.split('/').pop() })), leaves };
+    const ex = (x?.extras ?? {}) as Record<string, any>;
+    const extras = Object.fromEntries(['quantTable', 'qualOnlyTable', 'quantEvalNone', 'quantEvalDoc', 'quantMention', 'perfRestriction', 'perfConditionLine', 'awardMethodDoc']
+      .map((k) => [k, ex[k] ? { st: ex[k].status, r: ex[k].reason, v: ex[k].value, ev: ex[k].evidence?.evidence?.slice(0, 120), n: ex[k].candidates?.length } : null]));
+    out[no] = { extras, status: r.status, ms: Date.now() - t0, files: x?.files.map((f) => ({ n: f.name, inner: f.innerPath, kind: f.docKind, st: f.status, skip: f.skipReason, err: f.error, text: f.textPath?.split('/').pop() })), leaves };
     console.log(no, r.status, Date.now() - t0, 'ms');
   }
   fs.mkdirSync(G + '/out', { recursive: true });
