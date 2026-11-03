@@ -39,3 +39,6 @@ CLAUDE.local.md
 
 # 네트워크 캡처 (업체 담당자 개인정보 포함)
 *.har
+
+# 메일 화면 캡처 (이름·메일주소·받은편지함 포함, 커밋 금지)
+docs/probe/bidmate-probe-mail.*.json
