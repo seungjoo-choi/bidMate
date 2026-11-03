@@ -7,6 +7,8 @@ import { deadlineNoticeView, overviewGroups, overviewStats, resultMilestones, sc
 import { FOLLOW_TARGET_LABEL, formatCheckAt } from '../../../ui/notices/result-view';
 import { useSettings } from '../../../ui/hooks/useSettings';
 import { DetailList, StatStrip, Timeline } from './parts';
+import { EstimateCard } from './EstimateCard';
+import { PriceSimulatorCard } from './PriceSimulatorCard';
 import { QualificationCard } from './QualificationCard';
 import { kindOf } from '../../../core/model/ids';
 
@@ -67,6 +69,10 @@ export function OverviewTab({ notice, index, extraction }: { notice: Notice; ind
       )}
 
       {kindOf(notice.ref) !== 'prespec' && <QualificationCard notice={notice} extraction={extraction} />}
+
+      {kindOf(notice.ref) !== 'prespec' && <EstimateCard notice={notice} extraction={extraction} />}
+
+      {kindOf(notice.ref) !== 'prespec' && <PriceSimulatorCard notice={notice} />}
 
       {paired.length > 0 && (
         <div className="grid gap-6 lg:grid-cols-2">

@@ -9,6 +9,9 @@ import type { Notice, NoticeFieldKey } from '../../core/types/notice';
 import { missing, type FieldValue } from '../../core/types/common';
 import { docFieldsOf } from '../extraction/extract-step';
 import { PROVIDERS } from '../ai/providers';
+import { NOTICE_TEXTS_MAX_CHARS } from '../../core/search/constants';
+import { DETAIL_TEXT_NAME } from '../../core/model/detail-text';
+import type { NoticeTextFile, NoticeTexts } from '../../core/types/search';
 import type { FollowFile, FollowTarget, ResultEntry, ResultFile } from '../../core/types/result';
 import { readJson } from '../file-store/json-store';
 import type { IFileStore } from '../file-store/types';
@@ -180,4 +183,55 @@ export async function readExtractionText(store: IFileStore, p: { noticeId: strin
   if (!path.startsWith(`${normalizePath(notice.folder)}/source/text/`)) throw err('PATH_FORBIDDEN', '허용되지 않은 경로입니다.');
   const bytes = await store.readBytes(path);
   return { text: new TextDecoder().decode(bytes.length > TEXT_MAX_BYTES ? bytes.subarray(0, TEXT_MAX_BYTES) : bytes) };
+}
+
+/** 검색용 코퍼스. 상세화면 전문(priority 0)과 parsed 첨부 txt를 한 번에 읽는다. 파일당 2MB, 총 NOTICE_TEXTS_MAX_CHARS 초과분은 skipped budget. NEEDS_FS_PERMISSION은 그대로 던진다. */
+export async function readNoticeTexts(store: IFileStore, p: { noticeId: string }): Promise<NoticeTexts> {
+  const ns = new NoticeStore(store);
+  const notice = await ns.loadNotice(p.noticeId);
+  if (!notice) throw err('NOT_FOUND', '공고를 찾을 수 없습니다.');
+  const extraction = await ns.loadExtraction(p.noticeId);
+  const prefix = `${normalizePath(notice.folder)}/source/text/`;
+  const out: NoticeTexts = { noticeId: p.noticeId, extractionJobId: extraction?.jobId ?? null, files: [], skipped: [], totalChars: 0 };
+
+  const load = async (base: Omit<NoticeTextFile, 'text' | 'truncated'>) => {
+    if (out.totalChars >= NOTICE_TEXTS_MAX_CHARS) {
+      out.files.push({ ...base, text: '', truncated: false });
+      out.skipped.push({ name: base.name, reason: 'budget' });
+      return;
+    }
+    let bytes: Uint8Array;
+    try {
+      const path = normalizePath(base.textPath);
+      if (!path.startsWith(prefix)) throw new Error('forbidden');
+      bytes = await store.readBytes(path);
+    } catch (e) {
+      if ((e as { code?: string }).code === 'NEEDS_FS_PERMISSION') throw e;
+      out.skipped.push({ name: base.name, reason: 'failed' });
+      return;
+    }
+    const cut = bytes.length > TEXT_MAX_BYTES;
+    const text = new TextDecoder().decode(cut ? bytes.subarray(0, TEXT_MAX_BYTES) : bytes);
+    if (out.totalChars + text.length > NOTICE_TEXTS_MAX_CHARS) {
+      out.files.push({ ...base, text: '', truncated: false });
+      out.skipped.push({ name: base.name, reason: 'budget' });
+      return;
+    }
+    out.files.push({ ...base, text, truncated: cut });
+    out.totalChars += text.length;
+  };
+
+  if (notice.detailText?.textPath) {
+    await load({ id: 'detail', kind: 'detail', textPath: notice.detailText.textPath, name: DETAIL_TEXT_NAME, priority: 0 });
+  }
+  const parsed = (extraction?.files ?? []).map((f, i) => ({ f, i })).filter(({ f }) => f.status === 'parsed' && f.textPath)
+    .sort((a, b) => a.f.priority - b.f.priority || a.i - b.i);
+  for (const { f, i } of parsed) {
+    await load({
+      id: `att:${i}`, kind: 'attachment', textPath: f.textPath!, name: f.innerPath ? `${f.name} › ${f.innerPath}` : f.name,
+      docKind: f.docKind, ...(f.origin ? { origin: f.origin } : {}), attachmentId: f.attachmentId,
+      ...(f.innerPath ? { innerPath: f.innerPath } : {}), priority: f.priority,
+    });
+  }
+  return out;
 }

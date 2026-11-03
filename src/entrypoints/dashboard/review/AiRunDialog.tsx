@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AI_PROVIDERS, type AiMode, type AiProvider, type AiScope } from '../../../core/types/ai';
 import type { AiKey } from '../../../core/ai/keys';
+import type { Notice } from '../../../core/types/notice';
 import type { Extraction } from '../../../core/types/extraction';
 import { PROVIDERS } from '../../../engine/ai/providers';
 import { send } from '../../../messaging/bus';
@@ -26,8 +27,9 @@ export interface AiDialogPreset {
 }
 
 /** [AI로 다시 찾기] 실행 설정: 범위, 공급자·방식(이번만 바꾸기), 파일 체크리스트. */
-export function AiRunDialog({ noticeId, extraction, pendingCount, preset, onClose, onStarted }: {
+export function AiRunDialog({ noticeId, extraction, pendingCount, preset, detailText, onClose, onStarted }: {
   noticeId: string;
+  detailText?: Notice['detailText'];
   extraction: Extraction;
   pendingCount: number;
   preset?: AiDialogPreset;
@@ -45,7 +47,7 @@ export function AiRunDialog({ noticeId, extraction, pendingCount, preset, onClos
   const presetKeys = preset?.keys && preset.keys.length > 0 ? preset.keys : null;
   const [override, setOverride] = useState<{ provider: AiProvider; mode: AiMode } | null>(null);
   const [switchOpen, setSwitchOpen] = useState(!!preset?.expandSwitch);
-  const rows = useMemo(() => fileChecklist(extraction.files), [extraction.files]);
+  const rows = useMemo(() => fileChecklist(extraction.files, detailText), [extraction.files, detailText]);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(rows.filter((r) => r.selectable).map((r) => r.textPath!)));
   const [compare, setCompare] = useState(!!preset?.compare);
   // undefined = 아직 손대지 않음(사용 가능한 공급자 전부가 기본). 키 정보가 늦게 와도 기본값이 따라간다
@@ -73,7 +75,7 @@ export function AiRunDialog({ noticeId, extraction, pendingCount, preset, onClos
   const chosen = AI_PROVIDERS.filter((p) => compareProviders.has(p) && !apiBlock(p));
   const togglePick = (p: AiProvider) => setPicked(() => { const n = new Set(compareProviders); if (n.has(p)) n.delete(p); else n.add(p); return n; });
 
-  const chars = selectedChars(extraction.files, selected);
+  const chars = selectedChars(extraction.files, selected, detailText);
   const overLimit = !compare && cur.mode === 'manual' && chars > adapter.manualMaxChars;
   const noneSelected = selected.size === 0;
   const files = filesParam(rows, selected);

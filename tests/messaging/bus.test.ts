@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { isOffscreenAllowedSender, listen } from '../../src/messaging/bus';
+import { BusError, isOffscreenAllowedSender, listen, send, toErrorReply } from '../../src/messaging/bus';
 
 const RID = 'abcdefghijklmnop';
 const SW_SENDER = { id: RID, url: `chrome-extension://${RID}/background.js` };
@@ -89,5 +89,25 @@ describe('listen offscreen target', () => {
     getFn()(env('config/repair', 'offscreen'), SW_SENDER, sendResponse);
     await tick();
     expect(sendResponse).toHaveBeenCalledWith({ ok: false, error: { code: 'CONFIG_CORRUPT', message: 'x', path: 'config/recipients.json' } });
+  });
+});
+
+describe('toErrorReply detail', () => {
+  it('평범한 객체 detail은 포함한다', () => {
+    expect(toErrorReply(new BusError('C', 'm', undefined, { step: 1 }))).toEqual({ ok: false, error: { code: 'C', message: 'm', detail: { step: 1 } } });
+  });
+  it.each([
+    ['배열', [1]],
+    ['문자열', 'x'],
+    ['2KB 초과', { a: 'x'.repeat(2001) }],
+  ])('%s detail은 키 자체가 없다', (_n, detail) => {
+    const r = toErrorReply(new BusError('C', 'm', undefined, detail as never));
+    expect(r).toEqual({ ok: false, error: { code: 'C', message: 'm' } });
+    expect('detail' in (r as { error: object }).error).toBe(false);
+  });
+  it('send가 detail을 BusError.detail로 복원한다', async () => {
+    vi.stubGlobal('crypto', { randomUUID: () => 'u' });
+    vi.stubGlobal('chrome', { runtime: { id: RID, sendMessage: vi.fn().mockResolvedValue({ ok: false, error: { code: 'C', message: 'm', detail: { step: 2 } } }) } });
+    await expect(send('diag/g2b-failures-clear', undefined)).rejects.toMatchObject({ code: 'C', detail: { step: 2 } });
   });
 });

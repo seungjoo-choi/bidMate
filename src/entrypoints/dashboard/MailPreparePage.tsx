@@ -14,6 +14,8 @@ import type { UnresolvedVar } from '../../core/types/mail';
 import { isTemplateFieldKey, VARIABLE_BY_NAME } from '../../core/templates/variables';
 import { ResolveDialog, type NoticeEdit } from './mail/ResolveDialog';
 import { send } from '../../messaging/bus';
+import { SearchButton } from './search/SearchButton';
+import { useSearchContext } from './search/NoticeSearchProvider';
 import { BackLink, Button, Card, ConfirmDialog, Field, InlineAlert, StatusBadge, Select, useToast, type BadgeStatus } from '../../ui/components';
 import { inputClass } from '../../ui/components/Field';
 import { useRecipients, useTemplates } from '../../ui/hooks/useConfig';
@@ -97,6 +99,7 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
   const [sendPreview, setSendPreview] = useState<SendPreview | null>(null);
   const [preparingSend, setPreparingSend] = useState(false);
   const [progress, setProgress] = useState<{ mode: 'send' | 'compose'; since: number } | null>(null);  // 진행 팝업: 누른 버튼과 시각
+  useSearchContext(noticeId, notice?.basic.title.value ?? undefined);
   const [addEmail, setAddEmail] = useState('');
   const [addRole, setAddRole] = useState<Role>('to');
   const [addError, setAddError] = useState<string | null>(null);
@@ -374,7 +377,10 @@ export function MailPreparePage({ noticeId, from }: { noticeId: string; from?: s
             )}
           </div>
         </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+        <SearchButton noticeId={noticeId} title={title} />
         <Button variant="ghost" className="shrink-0" loading={statusBusy} disabled={saving} icon={<Check />} onClick={() => void recordSent()}>{mailStatus === 'delivered' ? '발송 1회 더 기록' : '발송 완료로 기록'}</Button>
+        </div>
       </header>
 
       {from === 'collect' && (

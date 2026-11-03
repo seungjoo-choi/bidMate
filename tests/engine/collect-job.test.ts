@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import type { Extraction } from '../../src/core/types/extraction';
 import { conflictCountOf } from '../../src/engine/extraction/extract-step';
 import { createParserRegistry } from '../../src/engine/parsers/registry';
-import { docOf, fakeParsers, readJsonFile, runCollect } from '../helpers/extract-harness';
+import { docOf, fakeParsers, mkCollectJob, readJsonFile, runCollect } from '../helpers/extract-harness';
 import { PRESPEC_MAP } from '../../src/adapters/g2b/prespec-api';
 import { loadRules } from '../../src/core/extraction/rules/load';
 import type { Notice } from '../../src/core/types/notice';
@@ -453,5 +453,85 @@ describe('runCollectJob 연계 사전규격 첨부', () => {
     const n = savedNotice(store);
     expect(n.collect.status).toBe('partial');
     expect(n.collect.errors.map((e) => e.code)).toContain('PRESPEC_FETCH_FAILED');
+  });
+});
+
+describe('runCollectJob 상세화면 전문(pageText)', () => {
+  const PATH = 'notices';
+  const pageHtml = { capturedAt: '2026-10-22T00:00:00Z', fields: {}, pageText: '공고명 테스트\n[표 1]\n[셀 0 0] 제안서 제출', pageTextTruncated: true };
+  const apiFetch = () => vi.fn(async (url: string) => (url.includes('apis.data.go.kr') ? new Response(apiBody(baseItem)) : new Response('x', { headers: { 'content-length': '1' } })));
+  const textKey = (store: MemoryStore) => [...store.files.keys()].find((k) => k.endsWith('/source/text/[상세] 나라장터 상세화면.txt'));
+  const noticeOf = (store: MemoryStore): Notice => JSON.parse(store.files.get([...store.files.keys()].find((k) => k.endsWith('/notice.json'))!) as string);
+
+  it('신규 경로: html.pageText가 있으면 파일 저장과 notice.detailText 설정', async () => {
+    const store = new MemoryStore();
+    const { d } = deps(store, apiFetch());
+    const out = await runCollectJob({ ...input(), html: pageHtml }, d);
+    expect(out.status).toBe('completed');
+    const key = textKey(store);
+    expect(key).toBeDefined();
+    expect(store.files.get(key!)).toBe(pageHtml.pageText);
+    const n = noticeOf(store);
+    expect(n.detailText).toEqual({
+      textPath: `${n.folder}/source/text/[상세] 나라장터 상세화면.txt`, capturedAt: pageHtml.capturedAt, chars: pageHtml.pageText.length, truncated: true,
+    });
+    expect(key!.startsWith(PATH)).toBe(true);
+  });
+
+  it('2MB 상한으로 잘리면 truncated를 OR로 합친다', async () => {
+    const store = new MemoryStore();
+    const { d } = deps(store, apiFetch());
+    await runCollectJob({ ...input(), html: { capturedAt: '2026-10-22T00:00:00Z', fields: {}, pageText: 'a'.repeat(2 * 1024 * 1024 + 100) } }, d);
+    const n = noticeOf(store);
+    expect(n.detailText?.truncated).toBe(true);
+    expect(n.detailText!.chars).toBeLessThanOrEqual(2 * 1024 * 1024);
+  });
+
+  it('pageText가 없으면 파일도 detailText도 없다', async () => {
+    const store = new MemoryStore();
+    const { d } = deps(store, apiFetch());
+    await runCollectJob({ ...input(), html: { capturedAt: '2026-10-22T00:00:00Z', fields: {} } }, d);
+    expect(textKey(store)).toBeUndefined();
+    expect(noticeOf(store).detailText).toBeUndefined();
+  });
+
+  it('재시도 경로(fetch_basic done)에서도 저장한다', async () => {
+    const store = new MemoryStore();
+    const ns = new NoticeStore(store);
+    const n = emptyNotice('R1-000', { noticeNo: 'R1', round: '000', origin: 'g2b' }, 'notices/2026/R1-000_t', '2026-10-17T00:00:00Z');
+    await ns.saveNotice(n);
+    const job = mkJob();
+    job.noticeId = 'R1-000';
+    job.attempt = 2;
+    job.steps = job.steps.map((s) => (s.id === 'fetch_html' ? s : { ...s, status: 'done' as const }));
+    const { d } = deps(store, vi.fn());
+    const out = await runCollectJob({ job, secrets: {}, settings: defaultSettings(), html: { ...pageHtml, pageTextTruncated: undefined } }, d);
+    expect(out.status).toBe('completed');
+    expect(store.files.get('notices/2026/R1-000_t/source/text/[상세] 나라장터 상세화면.txt')).toBe(pageHtml.pageText);
+    expect(noticeOf(store).detailText).toMatchObject({ textPath: 'notices/2026/R1-000_t/source/text/[상세] 나라장터 상세화면.txt', chars: pageHtml.pageText.length });
+    expect(noticeOf(store).detailText?.truncated).toBeUndefined();
+  });
+
+  it('writeText 실패는 잡 상태를 바꾸지 않는다', async () => {
+    const store = new MemoryStore();
+    const orig = store.writeText.bind(store);
+    store.writeText = async (p: string, t: string) => { if (p.includes('나라장터 상세화면')) throw new Error('disk'); return orig(p, t); };
+    const { d } = deps(store, apiFetch());
+    const out = await runCollectJob({ ...input(), html: pageHtml }, d);
+    expect(out.status).toBe('completed');
+    expect(out.error).toBeUndefined();
+    expect(textKey(store)).toBeUndefined();
+    expect(noticeOf(store).detailText).toBeUndefined();
+    expect(noticeOf(store).collect.status).toBe('collected');
+  });
+
+  it('재추출(재수집, html 없음) 뒤에도 파일과 필드가 남는다', async () => {
+    const parsers = fakeParsers(async () => docOf('본문'));
+    const files = { '1. 공고문.txt': 'x' };
+    const first = await runCollect({ files, parsers, html: pageHtml });
+    const second = await runCollect({ files, parsers, store: first.store, job: mkCollectJob({ id: 'j2' }) });
+    expect(second.out.status).not.toBe('failed');
+    expect(textKey(second.store)).toBeDefined();
+    expect(noticeOf(second.store).detailText?.chars).toBe(pageHtml.pageText.length);
   });
 });

@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../src/messaging/bus', async (orig) => ({ ...(await orig<typeof import('../../src/messaging/bus')>()), listen: vi.fn() }));
 
+vi.mock('../../src/background/g2b-failures', () => ({ recordG2bFailure: vi.fn() }));
+
 import { fetchEvalViaTab, registerEvalCollector, setEvalCollectorDeps } from '../../src/background/eval-collector';
+import { recordG2bFailure } from '../../src/background/g2b-failures';
 import { BusError, listen } from '../../src/messaging/bus';
 
 const RUNTIME = 'ext-id';
@@ -223,6 +226,73 @@ describe('eval-collector', () => {
       setup({ send: () => new BusError('EVAL_API_ERROR', '[단계 3] ErrorCode 9') });
       const r = await handler('eval/probe')({ ref: REF }, EXT);
       expect(r).toMatchObject({ ok: false, code: 'EVAL_API_ERROR', step: 3, message: 'ErrorCode 9' });
+    });
+  });
+
+  describe('실패 기록', () => {
+    const apiErr = () => new BusError('EVAL_API_ERROR', '[단계 1] HTTP 422: x', undefined, { step: 1, httpStatus: 422, endpoint: '/ep', g2bMsg: 'x' });
+    beforeEach(() => { setup(); registerEvalCollector({}); vi.mocked(recordG2bFailure).mockClear(); });
+
+    it('CS 오류 detail을 담아 기록한다(collect 경유, 열린 탭 재사용)', async () => {
+      setup({ existing: [{ id: 3 }], send: apiErr });
+      await handler('eval/collect')({ ref: REF }, EXT).catch(() => undefined);
+      expect(recordG2bFailure).toHaveBeenCalledTimes(1);
+      expect(recordG2bFailure).toHaveBeenCalledWith(expect.objectContaining({
+        flow: 'eval', stage: 'fetch', code: 'EVAL_API_ERROR', message: 'HTTP 422: x', step: 1, httpStatus: 422, endpoint: '/ep', g2bMsg: 'x',
+        tab: 'reused', trigger: 'dashboard', noticeNo: REF.noticeNo, round: '000',
+      }));
+    });
+
+    it('새로고침 뒤 성공이면 기록하지 않는다', async () => {
+      let reloaded = false;
+      const m = setup({ existing: [{ id: 3 }], send: () => (reloaded ? { raw: RAW, warnings: [] } : new BusError('NO_RECEIVER', 'x')) });
+      m.tabs.reload.mockImplementation(async () => { reloaded = true; });
+      await fetchEvalViaTab(EXT, REF);
+      expect(recordG2bFailure).not.toHaveBeenCalled();
+    });
+
+    it('새로고침 뒤 실패면 tab은 reused-reloaded', async () => {
+      let reloaded = false;
+      const m = setup({ existing: [{ id: 3 }], send: () => (reloaded ? apiErr() : new BusError('NO_RECEIVER', 'x')) });
+      m.tabs.reload.mockImplementation(async () => { reloaded = true; });
+      await codeOf(fetchEvalViaTab(EXT, REF));
+      expect(recordG2bFailure).toHaveBeenCalledWith(expect.objectContaining({ tab: 'reused-reloaded', code: 'EVAL_API_ERROR' }));
+    });
+
+    it('새 탭 폴백 뒤 실패면 tab은 created-fallback', async () => {
+      const m = setup({ existing: [{ id: 3 }] });
+      m.tabs.reload.mockRejectedValue(new Error('No tab with id: 3'));
+      m.sendToTab.mockImplementation(async (tabId: unknown) => { throw tabId === 9 ? apiErr() : new BusError('NO_RECEIVER', 'x'); });
+      await codeOf(fetchEvalViaTab(EXT, REF));
+      expect(recordG2bFailure).toHaveBeenCalledWith(expect.objectContaining({ tab: 'created-fallback', code: 'EVAL_API_ERROR' }));
+    });
+
+    it('EVAL_CS_UNREACHABLE은 stage tab', async () => {
+      setup({ send: () => new BusError('NO_RECEIVER', 'x') });
+      await codeOf(fetchEvalViaTab(G2B, REF));
+      expect(recordG2bFailure).toHaveBeenCalledWith(expect.objectContaining({ stage: 'tab', code: 'EVAL_CS_UNREACHABLE' }));
+    });
+
+    it('probe는 trigger probe(withoutIdHeaders면 probe-noid)', async () => {
+      setup({ send: apiErr });
+      await handler('eval/probe')({ ref: REF }, EXT);
+      expect(recordG2bFailure).toHaveBeenLastCalledWith(expect.objectContaining({ trigger: 'probe' }));
+      await handler('eval/probe')({ ref: REF, withoutIdHeaders: true }, EXT);
+      expect(recordG2bFailure).toHaveBeenLastCalledWith(expect.objectContaining({ trigger: 'probe-noid' }));
+    });
+
+    it('eval/save가 throw하면 stage save로 기록하고 다시 던진다', async () => {
+      const m = setup();
+      m.toOffscreen.mockRejectedValue(new BusError('OFFSCREEN_ERROR', '저장 실패'));
+      await expect(handler('eval/collect')({ ref: REF }, EXT)).rejects.toMatchObject({ code: 'OFFSCREEN_ERROR' });
+      expect(recordG2bFailure).toHaveBeenCalledTimes(1);
+      expect(recordG2bFailure).toHaveBeenCalledWith({ flow: 'eval', stage: 'save', code: 'OFFSCREEN_ERROR', message: '저장 실패', noticeNo: REF.noticeNo, round: '000', trigger: 'dashboard' });
+    });
+
+    it('g2b 발신 collect는 trigger panel, tab own', async () => {
+      setup({ send: apiErr });
+      await handler('eval/collect')({ ref: REF }, G2B).catch(() => undefined);
+      expect(recordG2bFailure).toHaveBeenCalledWith(expect.objectContaining({ trigger: 'panel', tab: 'own' }));
     });
   });
 });

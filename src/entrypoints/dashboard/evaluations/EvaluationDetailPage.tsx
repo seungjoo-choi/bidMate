@@ -9,6 +9,8 @@ import { send } from '../../../messaging/bus';
 import { BackLink, Button, EmptyState, InlineAlert } from '../../../ui/components';
 import { useSettings } from '../../../ui/hooks/useSettings';
 import { FsErrorAlert } from '../FsErrorAlert';
+import { useSearchContext } from '../search/NoticeSearchProvider';
+import { SearchButton } from '../search/SearchButton';
 import type { EvalCtx } from './ctx';
 import { DuelSection } from './DuelSection';
 import { dateOnly, parseView, shortName, VIEW_KEY } from './eval-view';
@@ -32,6 +34,7 @@ export function EvaluationDetailPage({ noticeId }: { noticeId: string }) {
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
   const [refetchError, setRefetchError] = useState<string | null>(null);
+  useSearchContext(noticeId, rec?.title);
 
   const load = useCallback(async () => {
     try {
@@ -119,6 +122,7 @@ export function EvaluationDetailPage({ noticeId }: { noticeId: string }) {
             label="보기 기준" value={ctx.isOurs ? 'ours' : 'all'} onChange={setView}
             options={[{ id: 'ours', label: '우리 회사 기준', disabled: !participates }, { id: 'all', label: '전체 업체' }]}
           />
+          <SearchButton noticeId={noticeId} title={rec.title} />
           <Button variant="secondary" loading={busy} icon={<RotateCw />} onClick={() => void refetch()}>다시 가져오기</Button>
         </div>
       </div>

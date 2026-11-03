@@ -1,7 +1,7 @@
 import { AI_KEYS, type AiKey } from './keys';
 import { AI_SCHEMA_TAG, type OutputSpec } from '../types/ai';
 
-export const PROMPT_VERSION = '2.2.0';
+export const PROMPT_VERSION = '2.3.0';
 export const REQUEST_MARKER = (runId: string): string => `<<BIDMATE-AI-REQUEST runId=${runId} v=${PROMPT_VERSION}>>`;
 
 /** 프롬프트 본문에 허용하는 숫자 토큰(예시 숫자 + 형식 안내용 상수). 린트 테스트가 이 목록 밖의 숫자를 막는다. */
@@ -176,6 +176,7 @@ export const SYSTEM_PROMPT = [
   '[여러 값]',
   '- 조건(사업 유형, 참가 형태, 공동수급 등)에 따라 값이 다르면 variants에 조건별로 모두 적고, value에는 조건 없이 공통으로 적용되는 값이 있을 때만 그 값을, 없으면 null을 둡니다. 조건이 없으면 variants는 빈 배열입니다.',
   '- 문서 간에 같은 개념의 값이 다르면 우선순위: 질의답변·정정공고 > 평가기준(별표·서식) > 입찰공고문 > 제안요청서 본문 > 참고자료. 채택하지 않은 값과 출처는 note에 적습니다.',
+  '- 종류가 "상세화면"인 문서는 나라장터에 등록된 현재 공고 정보입니다. 일정, 금액, 계약 조건이 첨부 문서와 다르면 상세화면 값을 쓰고 다른 값은 note에 적습니다. 정량평가 기준(배점, 실적 조건)은 첨부 문서를 우선합니다.',
   '- 질의답변에서 찾은 값은 note에 "질의답변"이라고 적습니다.',
   '- 문서에 없으면 value null, quote "". "없다"도 답입니다. 비슷한 항목으로 대신 채우지 않습니다.',
   '[인용]',

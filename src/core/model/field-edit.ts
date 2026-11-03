@@ -9,7 +9,7 @@ import { toIsoKst } from './dates';
 import { ALL_FIELD_KEYS } from './notice-fields';
 
 export type EditableKey = NoticeFieldKey | `custom.${string}`;
-export const NON_EDITABLE_NOTICE_KEYS: ReadonlySet<NoticeFieldKey> = new Set<NoticeFieldKey>(['noticeNo', 'round']);
+export const NON_EDITABLE_NOTICE_KEYS: ReadonlySet<NoticeFieldKey> = new Set<NoticeFieldKey>(['noticeNo', 'round', 'priceEvalRate']);
 export const CUSTOM_KEY_RE = /^custom\.[\w가-힣-]{1,40}$/;
 
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;

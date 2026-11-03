@@ -157,6 +157,37 @@ describe('fetchEvalRaw 시간과 취소', () => {
   });
 });
 
+describe('fetchEvalRaw 실패 정보(endpoint·httpStatus·g2bMsg)', () => {
+  it('HTTP 422 + ErrorMsg → EVAL_API_ERROR와 httpStatus·endpoint·g2bMsg', async () => {
+    const f = fakeFetch({ ...happy(), [P.open]: () => ({ status: 422, body: { ErrorCode: 5, ErrorMsg: '검증 오류' } }) });
+    const r = await fetchEvalRaw(REF, { fetch: f.fn });
+    expect(r).toEqual({ ok: false, error: expect.objectContaining({ code: 'EVAL_API_ERROR', step: 1, httpStatus: 422, endpoint: EVAL_ENDPOINTS.open.path, g2bMsg: '검증 오류' }) });
+  });
+
+  it('HTTP 403 → EVAL_NOT_LOGGED_IN + httpStatus 403 + endpoint', async () => {
+    const f = fakeFetch({ ...happy(), [P.open]: () => ({ status: 403, body: 'denied' }) });
+    const r = await fetchEvalRaw(REF, { fetch: f.fn });
+    expect(r).toMatchObject({ ok: false, error: { code: 'EVAL_NOT_LOGGED_IN', httpStatus: 403, endpoint: EVAL_ENDPOINTS.open.path } });
+    if (!r.ok) expect(r.error.g2bMsg).toBeUndefined();
+  });
+
+  it('네트워크 throw → endpoint만(httpStatus 없음)', async () => {
+    const boom = (async () => { throw new Error('net down'); }) as unknown as typeof fetch;
+    const r = await fetchEvalRaw(REF, { fetch: boom });
+    expect(r).toMatchObject({ ok: false, error: { code: 'EVAL_API_ERROR', endpoint: EVAL_ENDPOINTS.open.path } });
+    if (!r.ok) { expect('httpStatus' in r.error).toBe(false); expect('g2bMsg' in r.error).toBe(false); }
+  });
+
+  it('타임아웃 → endpoint만', async () => {
+    const hang = ((_u: string, init: RequestInit) => new Promise<Response>((_res, rej) => {
+      (init.signal as AbortSignal).addEventListener('abort', () => rej(new Error('aborted')));
+    })) as unknown as typeof fetch;
+    const r = await fetchEvalRaw(REF, { fetch: hang, timeoutMs: 20 });
+    expect(r).toMatchObject({ ok: false, error: { code: 'EVAL_TIMEOUT', endpoint: EVAL_ENDPOINTS.open.path } });
+    if (!r.ok) expect('httpStatus' in r.error).toBe(false);
+  });
+});
+
 describe('pickEvalRaw', () => {
   it('금지 키는 결과에 남지 않는다', () => {
     const raw = pickEvalRaw({ open: OPEN, base: BASE, targets: TARGETS, members: MEMBERS, items: itemsOf(['S1']), scores: [SCORES] }, '2026-01-01T00:00:00.000Z');

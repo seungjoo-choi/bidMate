@@ -9,7 +9,7 @@ export const SCHEDULE_KEYS: Array<keyof NoticeSchedule> = [
   'registrationDeadline', 'bidStartAt', 'bidCloseAt', 'proposalPeriod', 'proposalEvalAt', 'openingAt',
 ];
 export const EVALUATION_KEYS: Array<keyof NoticeEvaluation> = [
-  'evalMethod', 'differentialScoring', 'credibilityScore', 'managementScore', 'performanceScore', 'performancePeriod', 'performanceMinAmount', 'performanceCondition', 'evalMethodDoc', 'quantEvalDoc',
+  'evalMethod', 'differentialScoring', 'credibilityScore', 'managementScore', 'performanceScore', 'performancePeriod', 'performanceMinAmount', 'performanceCondition', 'evalMethodDoc', 'quantEvalDoc', 'priceEvalRate',
 ];
 export const PRESPEC_KEYS: Array<keyof NoticePrespec> = [
   'specRegNo', 'specName', 'bizDivision', 'assignedBudget', 'registeredAt', 'opinionCloseAt', 'officerName', 'officerTel', 'relatedBidNo',

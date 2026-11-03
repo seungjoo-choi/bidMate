@@ -1,4 +1,5 @@
 /** 공고 상세 화면 표시 모델(순수 함수). React/chrome/entrypoints를 import하지 않는다. */
+import { DETAIL_KIND_LABEL } from '../../core/model/detail-text';
 import { kindOf } from '../../core/model/ids';
 import { fireTimeOf } from '../../core/deadline/plan';
 import { KST_OFFSET_MS, kstParts } from '../../core/results/schedule';
@@ -198,6 +199,18 @@ export function attachmentRows(n: Notice): AttachmentRow[] {
       openable: (a.status === 'saved' || a.status === 'size_mismatch') && !!a.savedName && VIEWABLE_EXT.has(extOf(a.savedName)),
     };
   });
+}
+
+export interface DetailTextRow { name: string; kind: string; size: string; statusLabel: string; textPath: string; remark: string }
+
+/** FilesTab 첫 행에 보이는 "나라장터 상세화면" 가상 행. 전문이 저장된 공고에만 있다. */
+export function detailTextRow(n: Notice): DetailTextRow | null {
+  const d = n.detailText;
+  if (!d) return null;
+  return {
+    name: '나라장터 상세화면', kind: DETAIL_KIND_LABEL, size: `${d.chars.toLocaleString('ko-KR')}자`, statusLabel: '저장됨', textPath: d.textPath,
+    remark: d.truncated ? '길이 상한으로 뒤쪽이 잘렸습니다' : '',
+  };
 }
 
 export function attachmentSummary(n: Notice): { total: number; saved: number; failed: number; skipped: number } {

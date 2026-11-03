@@ -8,6 +8,8 @@ import {
 /** 발췌 대상 파일 1개. name·kindLabel은 호출자가 만든다(core는 ui를 import하지 않는다). */
 export interface ExcerptFileInput {
   attachmentId: string; sourceFile: string; name: string; kindLabel: string; priority: number; text: string;
+  /** 이 파일의 발췌 상한(기본 EXCERPT_FILE_MAX_CHARS). */
+  maxChars?: number;
 }
 export interface ExcerptInput {
   files: ExcerptFileInput[];
@@ -69,7 +71,7 @@ function tableEnds(lines: string[]): number[] {
 }
 
 /** `[셀 r c …] 텍스트` 줄을 같은 r끼리 ` | `로 이어 한 줄로 만든다. 나머지 줄은 그대로. */
-function renderLines(lines: string[]): string[] {
+export function renderLines(lines: string[]): string[] {
   const out: string[] = [];
   let curR: string | null = null;
   let cells: string[] = [];
@@ -85,7 +87,7 @@ function renderLines(lines: string[]): string[] {
   return out;
 }
 
-function pageAt(lines: string[], idx: number): string {
+export function pageAt(lines: string[], idx: number): string {
   for (let i = idx; i >= 0; i--) {
     const m = /^\[p (\d+)\]/.exec(lines[i]!);
     if (m) return m[1]!;
@@ -240,7 +242,8 @@ export function buildExcerpt(input: ExcerptInput): ExcerptResult {
 
   const blocks: FileBlock[] = sorted.map((file) => {
     const lines = file.text.split('\n');
-    const segs = buildSegments(lines, keywords, input.synonyms, focus, Math.min(EXCERPT_FILE_MAX_CHARS, maxTotal)).map(({ from, to, prot }) => {
+    const cap = Math.min(file.maxChars ?? EXCERPT_FILE_MAX_CHARS, maxTotal);
+    const segs = buildSegments(lines, keywords, input.synonyms, focus, cap).map(({ from, to, prot }) => {
       const page = pageAt(lines, from);
       const head = `--- ${page ? `[p ${page}] 부근` : '쪽 미상'}, 줄 ${from + 1}~${to + 1} ---`;
       const slice = lines.slice(from, to + 1);
@@ -248,11 +251,11 @@ export function buildExcerpt(input: ExcerptInput): ExcerptResult {
     });
     const b: FileBlock = { file, head: `=== 파일: ${file.name} (${file.kindLabel}) ===`, segs, truncated: false };
     // 파일 상한: 관련도 낮은(같으면 뒤쪽) 구간부터 제거, 구간 하나만 남아도 넘으면 자른다.
-    while (blockText(b).length > EXCERPT_FILE_MAX_CHARS && b.segs.length > 1) { b.segs.splice(weakestSeg(b.segs), 1); b.truncated = true; }
-    if (blockText(b).length > EXCERPT_FILE_MAX_CHARS) {
-      b.segs[0]!.text = b.segs[0]!.text.slice(0, Math.max(0, EXCERPT_FILE_MAX_CHARS - b.head.length - 1)); b.truncated = true;
+    while (blockText(b).length > cap && b.segs.length > 1) { b.segs.splice(weakestSeg(b.segs), 1); b.truncated = true; }
+    if (blockText(b).length > cap) {
+      b.segs[0]!.text = b.segs[0]!.text.slice(0, Math.max(0, cap - b.head.length - 1)); b.truncated = true;
     }
-    if (b.truncated) warnings.push(`${file.name}: 파일 발췌 상한(${EXCERPT_FILE_MAX_CHARS.toLocaleString('en-US')}자)을 넘어 ${focus.length ? '관련도 낮은' : '뒤쪽'} 구간을 뺐습니다.`);
+    if (b.truncated) warnings.push(`${file.name}: 파일 발췌 상한(${cap.toLocaleString('en-US')}자)을 넘어 ${focus.length ? '관련도 낮은' : '뒤쪽'} 구간을 뺐습니다.`);
     return b;
   });
 

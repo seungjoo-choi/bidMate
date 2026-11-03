@@ -5,6 +5,7 @@ import type { FsStatus } from '../../messaging/protocol';
 import { parseHandoffReasons } from '../../core/model/handoff';
 import { ErrorBoundary, Logo, StatusBadge } from '../../ui/components';
 import { EvalAutoDock } from './evaluations/EvalAutoDock';
+import { NoticeSearchProvider } from './search/NoticeSearchProvider';
 import { EvaluationDetailPage } from './evaluations/EvaluationDetailPage';
 import { EvaluationsPage } from './evaluations/EvaluationsPage';
 import { GrantPage } from './GrantPage';
@@ -67,6 +68,7 @@ export function App() {
   const active: Page = route.page === 'mail' && route.query.from === 'mails' ? 'mails' : route.page === 'notice' || route.page === 'mail' ? 'notices' : route.page === 'template' ? 'templates' : route.page === 'evaluation' ? 'evaluations' : route.page === 'rfp-compare' ? 'rfp' : route.page;
 
   return (
+    <NoticeSearchProvider>
     <div className="flex min-h-screen bg-canvas">
       <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col gap-6 border-r border-line bg-surface px-3 py-6">
         <a href="#/home" className="flex items-center gap-2.5 px-3" aria-label="홈으로">
@@ -115,5 +117,6 @@ export function App() {
       </main>
       <EvalAutoDock onEvaluations={route.page === 'evaluations'} />
     </div>
+    </NoticeSearchProvider>
   );
 }

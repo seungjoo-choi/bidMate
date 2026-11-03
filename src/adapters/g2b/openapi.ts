@@ -33,14 +33,28 @@ export function redactKey(text: string, key?: string): string {
   return out;
 }
 
-const err = (code: string, message: string, retryable = false, key?: string): { ok: false; error: JobError } => ({
+export interface G2bErrorDetail { httpStatus?: number; operation?: string; g2bMsg?: string }
+
+/** JobError.detail에서 허용된 세 키만 타입 검사해 꺼낸다. */
+export function g2bDetailOf(e: JobError): G2bErrorDetail {
+  const d = (e as { detail?: unknown }).detail;
+  if (typeof d !== 'object' || d === null || Array.isArray(d)) return {};
+  const o = d as Record<string, unknown>;
+  const out: G2bErrorDetail = {};
+  if (typeof o.httpStatus === 'number') out.httpStatus = o.httpStatus;
+  if (typeof o.operation === 'string') out.operation = o.operation;
+  if (typeof o.g2bMsg === 'string') out.g2bMsg = o.g2bMsg;
+  return out;
+}
+
+const err = (code: string, message: string, retryable = false, key?: string, detail?: G2bErrorDetail): { ok: false; error: JobError } => ({
   ok: false,
-  error: { code, message: redactKey(message, key), step: 'fetch_basic', retryable },
+  error: { code, message: redactKey(message, key), step: 'fetch_basic', retryable, ...(detail ? { detail } : {}) },
 });
 
 type Parsed =
   | { kind: 'items'; items: ApiItem[] }
-  | { kind: 'error'; code: string; message: string };
+  | { kind: 'error'; code: string; message: string; g2bMsg?: string };
 
 function normalizeItems(raw: unknown): ApiItem[] {
   if (!raw) return [];
@@ -65,16 +79,19 @@ export function parseResponse(text: string): Parsed {
   if (svc) {
     const msg = String(svc.errMsg ?? '');
     if (/SERVICE_KEY_IS_NOT_REGISTERED_ERROR|SERVICE_KEY_IS_NULL/.test(msg)) {
-      return { kind: 'error', code: 'G2B_KEY_INVALID', message: `서비스키 오류: ${msg}` };
+      return { kind: 'error', code: 'G2B_KEY_INVALID', message: `서비스키 오류: ${msg}`, g2bMsg: msg };
     }
-    return { kind: 'error', code: 'G2B_API_ERROR', message: `API 오류: ${msg} ${svc.returnAuthMsg ?? ''}`.trim() };
+    if (/LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR/.test(msg) || String(svc.returnReasonCode ?? '') === '22') {
+      return { kind: 'error', code: 'G2B_RATE_LIMIT', message: `호출 한도 초과: ${msg}`.trim(), g2bMsg: msg };
+    }
+    return { kind: 'error', code: 'G2B_API_ERROR', message: `API 오류: ${msg} ${svc.returnAuthMsg ?? ''}`.trim(), g2bMsg: msg };
   }
   const errBody = json['nkoneps.com.response.ResponseError'];
   const response = json.response ?? errBody;
   const header = response?.header;
   if (!header) return { kind: 'error', code: 'G2B_API_ERROR', message: 'API 응답 형식이 올바르지 않습니다.' };
   if (String(header.resultCode) !== '00') {
-    return { kind: 'error', code: 'G2B_API_ERROR', message: `API 오류 ${header.resultCode}: ${header.resultMsg ?? ''}`.trim() };
+    return { kind: 'error', code: 'G2B_API_ERROR', message: `API 오류 ${header.resultCode}: ${header.resultMsg ?? ''}`.trim(), g2bMsg: String(header.resultMsg ?? '') };
   }
   return { kind: 'items', items: normalizeItems(response.body?.items) };
 }
@@ -104,7 +121,7 @@ export async function fetchJsonOp(url: string, operation: string, ctx: G2bContex
     ]));
   } catch (e) {
     if (ctx.signal?.aborted) return cancelled();
-    return err('G2B_NETWORK', `네트워크 오류 또는 시간 초과 (${operation}): ${e instanceof Error ? e.message : String(e)}`, true, key);
+    return err('G2B_NETWORK', `네트워크 오류 또는 시간 초과 (${operation}): ${e instanceof Error ? e.message : String(e)}`, true, key, { operation });
   } finally {
     clearTimeout(timer);
     ctx.signal?.removeEventListener('abort', onExternal);
@@ -112,11 +129,11 @@ export async function fetchJsonOp(url: string, operation: string, ctx: G2bContex
   if (status < 200 || status >= 300) {
     if (!text.trim().startsWith('{')) {
       if (/SERVICE_KEY_IS_NOT_REGISTERED_ERROR|SERVICE_KEY_IS_NULL/.test(text)) return err('G2B_KEY_INVALID', '서비스키가 등록되지 않았거나 비어 있습니다.', false, key);
-      return err('G2B_API_ERROR', `HTTP ${status} (${operation})`, status >= 500, key);
+      return err('G2B_API_ERROR', `HTTP ${status} (${operation})`, status >= 500, key, { httpStatus: status, operation });
     }
   }
   const parsed = parseResponse(text);
-  if (parsed.kind === 'error') return err(parsed.code, parsed.message, false, key);
+  if (parsed.kind === 'error') return err(parsed.code, parsed.message, false, key, { httpStatus: status, operation, ...(parsed.g2bMsg !== undefined ? { g2bMsg: parsed.g2bMsg } : {}) });
   return { ok: true, items: parsed.items };
 }
 
@@ -223,6 +240,7 @@ export function mapApiItem(item: ApiItem, fetchedAt: string): FieldMap {
       set('evalMethod', text('sucsfbidMthdNm'));
     }
   }
+  set('priceEvalRate', num('bidPrceEvlRt'));
   return out;
 }
 

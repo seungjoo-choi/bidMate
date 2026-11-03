@@ -1,7 +1,7 @@
 # 공고 단위 통합검색 설계 (1단계 로컬 키워드 검색 + 2단계 AI 질문)
 
 - 작성: 2026-10-21, 설계 fable-advisor, 정리 메인
-- 상태: 설계 완료, 구현 전. 다음 세션에서 S0부터 단계별로 위임한다.
+- 상태: S0 구현 완료(2026-10-22). 사용자 확인: 진입점은 대시보드만, 상세 전문은 AI 재검토 입력에 포함(1.5절), 나머지(1·4·5·6)는 설계안대로.
 - 결정 기록: `.claude/specs/decisions.md` "2026-10-21 · 공고 통합검색 (Fable)" 절
 
 ## 요구사항 (사용자 확정)
@@ -17,7 +17,7 @@ S2·S4 UI 작업 전에 한 메시지로 묶어 물어본다. 1, 4, 5, 6은 설�
 
 1. 단축키를 `Ctrl+Shift+F`와 `/`(입력 중이 아닐 때)로 해도 되는지
 2. 사이드패널·나라장터 플로팅 패널에도 "통합검색 열기" 링크를 둘지 (설계는 대시보드만)
-3. 상세 전문을 AI 재검토(`prepareRun`) 입력에도 넣을지 (설계는 미포함, 별도 결정)
+3. ~~상세 전문을 AI 재검토 입력에도 넣을지~~ → 2026-10-22 사용자 결정: 포함(1.5절)
 4. FilesTab에 "나라장터 상세화면" 가상 행을 보일지 (설계는 표시)
 5. 질문 이력 30건과 prompt/response txt를 저장할지 (설계는 저장)
 6. 질문 컨텍스트 상한 40k자와 "전문 재질문" 상한 25만 자를 쓸지, 설정 `ai.sendFullText`를 따를지
@@ -77,7 +77,7 @@ S2·S4 UI 작업 전에 한 메시지로 묶어 물어본다. 1, 4, 5, 6은 설�
 - **기존 공고**: 마이그레이션하지 않는다. 패널에 "상세화면 전문이 없습니다. 이 공고를 다시 수집하면 포함됩니다"라고 안내한다.
   - 이유: 전문은 렌더된 DOM에서만 얻을 수 있다. 백필하려면 공고마다 탭을 열어야 해서 비용이 크다. 필요한 공고만 사용자가 재수집한다.
 - **표시**: `FilesTab` 첫 행에 "나라장터 상세화면" 가상 행을 둔다(종류 "상세화면", 상태 "저장됨", 클릭하면 TextDrawer). `notice.detailText`가 있을 때만 보인다.
-- AI 재검토(`prepareRun`)의 입력에는 **이번에 넣지 않는다**. 넣으면 run.files의 의미가 바뀌므로 별도로 결정한다.
+- AI 재검토(`prepareRun`)의 입력에 **포함한다**(2026-10-22 사용자 결정). 설계는 1.5절.
 
 ### 1.2 항목값 가상 문서
 
@@ -106,6 +106,101 @@ S2·S4 UI 작업 전에 한 메시지로 묶어 물어본다. 1, 4, 5, 6은 설�
   - 읽기에 실패한 파일은 `skipped`에 `reason:'failed'`로 넣는다. NEEDS_FS_PERMISSION은 그대로 던진다.
   - `source/text/` 경로 검증은 `readExtractionText`와 같다.
 - `router.ts`의 `EXTENSION_ONLY_TYPES`에 추가하고, `TIMEOUT_MS`에 `['notice/texts', 60_000]`을 넣는다. offscreen `main.ts`에 `listen('notice/texts', …)`를 추가한다.
+
+### 1.5 상세 전문의 AI 재검토 입력 포함 (S1b)
+
+2026-10-22 사용자 결정("상세 전문을 AI 재검토 입력에도 넣는다"), fable-advisor 보완 설계.
+
+확인된 사실(설계 근거):
+- `prepareRun`(`src/engine/ai/ai-review-api.ts:99-154`)은 `extraction.files` 중 parsed+textPath만 `ExcerptFileInput`으로 만들고 `p.files`(textPath 배열)로 거른다. `run.files`는 `excerpt.files`를 그대로 저장하며 소비처는 `finishRun`(181-186행) 하나뿐이다. 대시보드는 `run.files`를 표시하지 않는다(`run.skipped`만 `AiRunPanel.tsx:179`).
+- AI 근거 열기는 `ReviewTab.tsx:65-69 openText` → `findTextPath`(`src/ui/review/view.ts:149-153`). `ResolveDialog`는 규칙 근거만 연다.
+- `locateQuote`·`evidenceSpan`·`buildExcerpt`는 render-text 줄 배열 전제라 상세 전문(D1, 같은 형식)에 그대로 쓴다. 상세에는 `[p N]`이 없어 page는 항상 null.
+- `readFileText`(63-72행)는 `<folder>/source/text/` 아래만 허용, 상세 경로 통과.
+- parsed 첨부 priority는 1..5(`classify.ts:4`). 상세를 priority 0으로 두면 항상 맨 앞.
+- 재수집하면 extract가 다시 돌아 `extractionJobId`가 바뀌므로 기존 stale 판정이 상세 갱신까지 덮는다.
+- 가정: 상세 전문 20k~60k자(S1 후 실제 3건으로 재어 `DETAIL_EXCERPT_MAX_CHARS` 조정), `Attachment.id`에 `__detail__`은 쓰이지 않음.
+
+#### 1.5.0 핵심 결정
+
+| # | 결정 | 이유 | 기각 대안 |
+|---|---|---|---|
+| D11 | 상세 전문은 `prepareRun` 입력에 **기본 포함**. AiRunDialog 체크리스트 첫 행, 해제 가능. 해제는 기존 `files`(textPath) 파라미터, `skipped: unselected` | 공고 잎 9개의 1차 출처가 상세화면. textPath 통일로 프로토콜 무변경 | 해제 불가 / `includeDetail` 플래그 |
+| D12 | 가상 식별자 `attachmentId = '__detail__'`, `sourceFile = name = '[상세] 나라장터 상세화면'`, `kindLabel = '상세화면'`, `VerifyFile.docKind = 'notice'`. **`DocKind` 무변경.** 상수는 `src/core/model/detail-text.ts`(S1도 사용) | run.files·EvidenceRef 형태 유지. DocKind 확장은 Record 2곳과 분류 규칙까지 번짐 | DocKind `'detail'` / Extraction.files 삽입 |
+| D13 | 발췌 순서 priority 0(맨 앞), 상세 전용 상한 `DETAIL_EXCERPT_MAX_CHARS = 10_000`을 `ExcerptFileInput.maxChars?`(신규)로. 전문 모드는 상한 없이, 총 250k 초과 시 기존 폴백 | 상세는 발췌 키워드를 거의 다 포함해 24k를 채우고 수동 30k에서 첨부를 밀어냄 | 맨 뒤 priority / 전문 모드에서 상세 제외 / 전문 상한 상향 |
+| D14 | `AiRun`·`run.files` 스키마 불변. `finishRun`은 `attachmentId === '__detail__'`면 `notice.detailText.textPath`로 읽음 | 옛 run은 분기에 안 들어감. stale은 extractionJobId로 충분 | `AiRun.detailCapturedAt` |
+| D15 | 근거 열기는 `evidenceTextPath(e, files, detail?)` 헬퍼, 변경은 `ReviewTab.openText` 한 곳 | AI 근거를 여는 곳은 ReviewTab뿐 | `findTextPath` 시그니처 변경 |
+| D16 | `SYSTEM_PROMPT` [여러 값] 절에 상세화면 우선 규칙 1줄, `PROMPT_VERSION = '2.3.0'` | 새 종류 "상세화면"의 충돌 우선순위 필요 | 프롬프트 무변경 |
+| D17 | 공고 잎 verdict·valueInQuote·ruleRelation 계산 불변, 상세 출처 match 별도 표시 없음 | 같은 화면의 독립 파싱으로서 확인 가치. cite에 파일명이 보임 | "같은 출처" 배지 |
+| D18 | 커버리지 기준선 재생성 안 함, 픽스처에 상세 txt 넣지 않음 | 발췌 알고리즘 불변. 기존 회귀 38건을 덮으면 안 됨 | `AI_EVAL_UPDATE_BASELINE=1` |
+
+#### 1.5.1 입력 구성 (`prepareRun`)
+- `notice.detailText`가 있으면 첨부 루프 뒤(109~120행 뒤, `NO_DOCUMENTS` 검사 앞)에 처리:
+  - `p.files`가 있고 `detailText.textPath`가 없으면 `skipped.push({ name: DETAIL_TEXT_NAME, reason: 'unselected' })`.
+  - 아니면 `readFileText(store, notice, detailText.textPath)`. null이면 `skipped … 'failed'`. 성공 시 `inputs.unshift({ attachmentId: DETAIL_ATTACHMENT_ID, sourceFile: DETAIL_TEXT_NAME, name: DETAIL_TEXT_NAME, kindLabel: DETAIL_KIND_LABEL, priority: 0, maxChars: DETAIL_EXCERPT_MAX_CHARS, text })`.
+- parsed 첨부가 0개여도 상세가 있으면 실행된다(의도된 변경). `extraction` 자체가 없으면 기존대로 `NOT_FOUND`.
+- 프롬프트 머리글 `=== 파일: [상세] 나라장터 상세화면 (상세화면) ===`, 구간 머리 `--- 쪽 미상, 줄 a~b ---`(기존 함수).
+- `excludedFiles`는 UNREADABLE만 세므로 변경 없음. 원클릭(`ai/run scope auto`)·일괄·비교 실행은 `files`가 없어 상세 기본 포함.
+
+#### 1.5.2 발췌 (`src/core/ai/excerpt.ts`)
+- `ExcerptFileInput.maxChars?: number`. `cap = Math.min(file.maxChars ?? EXCERPT_FILE_MAX_CHARS, maxTotal)`. 243행 `buildSegments(..., Math.min(EXCERPT_FILE_MAX_CHARS, maxTotal))` → `cap`, 251~255행의 `EXCERPT_FILE_MAX_CHARS` 3곳(while 조건, slice, 경고 숫자) → `cap`.
+- `buildFullText` 변경 없음. 총 상한 제거 순서 그대로.
+
+#### 1.5.3 검증·근거 위치
+- `finishRun` 181행 루프: `rf.attachmentId === DETAIL_ATTACHMENT_ID`면 `notice.detailText?.textPath`로 읽어 `VerifyFile { attachmentId: DETAIL_ATTACHMENT_ID, sourceFile: rf.sourceFile, name: rf.name, docKind: 'notice', text }`. `detailText`가 없으면 건너뜀(그 인용은 `quote_not_found`로 거부, 허용).
+- `locateQuote`·`findFileByName`·`evidenceOf`·`applySuggestion`·TextDrawer 변경 없음. EvidenceRef는 `{ attachmentId: '__detail__', sourceFile: '[상세] 나라장터 상세화면', line, location: 'line N', docKind: 'notice' }`.
+
+#### 1.5.4 출처 표시
+- `AiSuggestionBlock.tsx:87`이 `s.file`을 보이므로 cite에 상세 이름. 쪽 없음. 해제 시 AiRunPanel 제외 파일에 이름. 추가 UI 없음.
+
+#### 1.5.5 공고 잎 비교 영향
+- 상세에서 읽은 일정·금액이 html/api 값과 같으면 match 증가, 파서가 놓친 항목은 new, 오독은 differs. datetime `2026/10/21 10:00`은 `toIsoKst`로 환산, amount는 `amountFromText`, text는 포함 규칙(4자 이상). match가 "같은 화면을 두 번 읽은 결과"일 수 있음은 D17로 수용.
+
+#### 1.5.6 옛 run 호환
+- `ai-review.json` schemaVersion 1 유지. 옛 run에는 `__detail__`이 없어 신규 분기에 안 들어감. awaiting 반자동 run을 닫을 때도 `run.files`만 순회. `isStale` 변경 없음.
+
+#### 1.5.7 커버리지 기준선
+- 픽스처만 입력이고 `maxChars`는 선택이라 기록 불변. 기존 회귀 38건은 완료 조건에서 제외, **기준선 재생성 금지**.
+
+#### 1.5.8 프롬프트 (`src/core/ai/prompt.ts`)
+- `PROMPT_VERSION = '2.3.0'`. [여러 값] 절 "문서 간에 같은 개념의 값이 다르면 …" 줄 바로 뒤에:
+  `'- 종류가 "상세화면"인 문서는 나라장터에 등록된 현재 공고 정보입니다. 일정, 금액, 계약 조건이 첨부 문서와 다르면 상세화면 값을 쓰고 다른 값은 note에 적습니다. 정량평가 기준(배점, 실적 조건)은 첨부 문서를 우선합니다.'`
+- 숫자 토큰 없음. 테스트의 `'2.2.0'` 리터럴 단언은 `PROMPT_VERSION` 참조로.
+
+#### 1.5.9 위임 단위
+S1 보강: `src/core/model/detail-text.ts`는 S1에 포함하고 collect-job 파일명·경로는 이 상수를 쓴다.
+```ts
+export const DETAIL_TEXT_FILE = '[상세] 나라장터 상세화면.txt';
+export const DETAIL_TEXT_NAME = '[상세] 나라장터 상세화면';
+export const DETAIL_ATTACHMENT_ID = '__detail__';
+export const DETAIL_KIND_LABEL = '상세화면';
+export const DETAIL_EXCERPT_MAX_CHARS = 10_000;
+export const detailTextPath = (folder: string) => `${folder}/source/text/${DETAIL_TEXT_FILE}`;
+export const isDetailEvidence = (e: { attachmentId: string }) => e.attachmentId === DETAIL_ATTACHMENT_ID;
+```
+
+| 단위 | 파일 | 작업 | 선행 |
+|---|---|---|---|
+| S1b-core | `src/core/ai/excerpt.ts`, `src/core/ai/prompt.ts`, `tests/core/ai-excerpt.test.ts`, `tests/core/ai-prompt*.test.ts` | 1.5.2, 1.5.8. 테스트: maxChars 2,000 파일만 상한 적용·다른 파일은 24k / 경고 문구에 그 파일 상한 / maxChars 없으면 기존 결과 동일 / 버전 리터럴·린트 | S1과 병렬 |
+| S1b-engine (리뷰 필수) | `src/engine/ai/ai-review-api.ts`, `tests/engine/ai-review-api.test.ts` | 1.5.1, 1.5.3, 1.5.10 케이스 | S1, S1b-core |
+| S1b-ui | `src/ui/review/ai-view.ts`(`fileChecklist(files, detail?)` 첫 행, `selectedChars(files, selected, detail?)`), `src/ui/review/view.ts`(`evidenceTextPath`), `AiRunDialog.tsx`(prop `detailText`, 48·76행), `ReviewTab.tsx`(66행, 239행), `tests/ui/ai-view.test.ts`, `tests/ui/review-view.test.ts` | 1.5.4, D15 | S1 |
+
+#### 1.5.10 테스트 케이스 (engine)
+- prepareRun: detailText 있으면 `run.files[0]`이 `{ attachmentId: '__detail__', name: '[상세] 나라장터 상세화면' }`, 프롬프트에 상세 머리글.
+- prepareRun: `files`에 첨부만 → skipped `unselected`, run.files에 상세 없음.
+- prepareRun: parsed 첨부 0개 + detailText → NO_DOCUMENTS 아님.
+- prepareRun: textPath가 `source/text/` 밖이거나 파일 없음 → skipped `failed`, 계속.
+- prepareRun manual: 상세 15k자(키워드 줄 다수) → 상세 블록 ≤ 10,000 + 머리글, 경고에 "10,000자".
+- finishRun: 상세에만 있는 문장 quote의 postedAt 제안 → evidence.attachmentId `__detail__`, file DETAIL_TEXT_NAME, line 일치, page 없음, 같은 분이면 verdict match.
+- finishRun: 옛 run(files에 상세 없음)은 상세 txt가 있어도 상세 인용 `quote_not_found`.
+- finishRun: run.files에 상세가 있는데 notice.detailText가 없으면 예외 없이 그 인용만 거부.
+
+#### 1.5.11 완료 조건
+- tsc, 위 테스트 통과. `ai-eval-coverage` 실패 38건 변화 없음(새 회귀 0, 기준선 파일 무변경).
+- 수동: 재수집 공고의 [AI로 다시 찾기] 첫 행에 "[상세] 나라장터 상세화면 (상세화면)" 체크 → 실행 → 공고 잎 cite에 그 이름 → [원문에서 확인]이 상세 txt 해당 줄 → 해제 후 실행하면 "제외 파일"에 표시 → 이전 run 정상 열림. 프롬프트 복사 모드에서 상세 블록 10k 이내, 첨부 구간 남음.
+
+#### 1.5.12 하지 말 것
+1. `DocKind`에 `'detail'` 추가 금지. 2. `AiRun`·`run.files`·`EvidenceRef` 필드 추가 금지. 3. `Extraction.files`에 상세 삽입 금지. 4. `API_FULLTEXT_MAX_CHARS`·`EXCERPT_MAX_CHARS` 상향 금지. 5. 상세 상한을 24k로 두지 않음. 6. 기준선 재생성·픽스처 추가 금지. 7. 상세 출처 match를 숨기거나 verdict 변경 금지. 8. extraction 없음 → NOT_FOUND 유지. 9. ResolveDialog 무변경. 10. AskRunner(D9)와 섞지 않음. 11. 프롬프트 문구에 숫자 금지, 버전은 올림. 12. 상세 page null은 정상. 13. 별도 플래그 금지(`filesParam`이 처리).
+
 
 ---
 

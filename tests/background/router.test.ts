@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../src/messaging/bus', () => ({ listen: vi.fn(), send: vi.fn() }));
 vi.mock('../../src/background/offscreen-manager', () => ({ ensureOffscreen: vi.fn() }));
 vi.mock('../../src/background/dashboard-tabs', () => ({ openDashboard: vi.fn() }));
+vi.mock('../../src/background/g2b-failures', () => ({ recordG2bFailure: vi.fn() }));
 
 import { EXTENSION_ONLY_TYPES, registerRouter } from '../../src/background/router';
 import { listen, send } from '../../src/messaging/bus';
 import { ensureOffscreen } from '../../src/background/offscreen-manager';
 import { openDashboard } from '../../src/background/dashboard-tabs';
+import { recordG2bFailure } from '../../src/background/g2b-failures';
 
 describe('라우터 등록', () => {
   it('수신자/그룹/템플릿/메일/config 메시지 18종을 SW에 등록한다', () => {
@@ -61,6 +63,20 @@ describe('SW 릴레이 발신자 검사', () => {
     expect(vi.mocked(send)).toHaveBeenLastCalledWith('g2b/test', expect.objectContaining({ kind: 'prespec' }), expect.objectContaining({ target: 'offscreen' }));
     await handlerOf('g2b/test')({}, ext);
     expect(vi.mocked(send).mock.calls.at(-1)![1]).not.toHaveProperty('kind');
+  });
+
+  it('g2b/test 실패 응답은 key-test 실패로 기록하고 응답은 그대로 돌려준다', async () => {
+    const ext = { id: RID, url: `chrome-extension://${RID}/dashboard.html` };
+    const reply = { ok: false, error: { code: 'G2B_KEY_INVALID', message: '키 오류' } };
+    vi.mocked(send).mockResolvedValue(reply as never);
+    await expect(handlerOf('g2b/test')({ kind: 'prespec' }, ext)).resolves.toBe(reply);
+    expect(recordG2bFailure).toHaveBeenLastCalledWith({ flow: 'key-test', stage: 'prespec', code: 'G2B_KEY_INVALID', message: '키 오류', trigger: 'manual' });
+    await handlerOf('g2b/test')({}, ext);
+    expect(recordG2bFailure).toHaveBeenLastCalledWith(expect.objectContaining({ flow: 'key-test', stage: 'bid' }));
+    vi.mocked(recordG2bFailure).mockClear();
+    vi.mocked(send).mockResolvedValue({ ok: true } as never);
+    await handlerOf('g2b/test')({}, ext);
+    expect(recordG2bFailure).not.toHaveBeenCalled();
   });
 
   it('fs/permission-granted는 수신 서비스(inbox) 호스트 탭에 알린다', async () => {
@@ -126,6 +142,14 @@ describe('ui/open', () => {
 });
 
 describe('performances 메시지', () => {
+  it('estimate/* 2종을 SW에 등록하고 EXTENSION_ONLY로 처리한다', () => {
+    registerRouter();
+    const registered = vi.mocked(listen).mock.calls.filter((c) => c[2] === 'sw').map((c) => c[0] as string);
+    for (const t of ['estimate/get', 'estimate/save']) {
+      expect(registered).toContain(t);
+      expect(EXTENSION_ONLY_TYPES as readonly string[]).toContain(t);
+    }
+  });
   it('performances/* 4종을 SW에 등록하고 EXTENSION_ONLY로 처리한다', () => {
     registerRouter();
     const registered = vi.mocked(listen).mock.calls.filter((c) => c[2] === 'sw').map((c) => c[0] as string);

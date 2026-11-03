@@ -1,7 +1,9 @@
 import { BusError, listen, send, sendToTab } from '../messaging/bus';
 import type { EvalCollectResult, EvalProbeResult, EvalRef, MsgType, PayloadOf, ResponseOf } from '../messaging/protocol';
 import { EVAL_FETCH_WAIT_MS, EVAL_REUSE_PROBE_MS, EVAL_SAVE_WAIT_MS, EVAL_RETRY_MAX_MS, EVAL_RETRY_MS, EVAL_TAB_LOAD_WAIT_MS } from '../core/evaluation/limits';
+import type { G2bFailureInput, G2bTabPath } from '../core/diagnostics/g2b-failure';
 import { waitComplete } from './compose-relay';
+import { recordG2bFailure } from './g2b-failures';
 import { assertExtensionSender, senderKind } from './job-coordinator';
 import { ensureOffscreen } from './offscreen-manager';
 
@@ -133,7 +135,10 @@ async function reloadAndWait(tabId: number): Promise<boolean> {
  * 잠깐 응답이 없으면 새로고침해 CS를 다시 띄우고, 새로고침도 안 되면 새 탭을 연다.
  * 새 탭으로 바꾸면 onSwitch로 알린다.
  */
-async function sendWithRecovery(tab: AcquiredTab, payload: EvalFetchPayload, onSwitch: (t: AcquiredTab) => void): Promise<ResponseOf<'g2b/eval-fetch'>> {
+async function sendWithRecovery(
+  tab: AcquiredTab, payload: EvalFetchPayload,
+  onEvent: (e: { kind: 'reloaded' } | { kind: 'switched'; tab: AcquiredTab }) => void,
+): Promise<ResponseOf<'g2b/eval-fetch'>> {
   const last = async (tabId: number) => {
     try { return await sendEvalFetch(tabId, payload); } catch (e) { throw isNoReceiver(e) ? unreachable() : e; }
   };
@@ -143,18 +148,27 @@ async function sendWithRecovery(tab: AcquiredTab, payload: EvalFetchPayload, onS
   } catch (e) {
     if (!isNoReceiver(e)) throw e;
   }
-  if (await reloadAndWait(tab.tabId)) return last(tab.tabId);
+  if (await reloadAndWait(tab.tabId)) {
+    onEvent({ kind: 'reloaded' });
+    return last(tab.tabId);
+  }
   const fresh = await createG2bTab();
-  onSwitch(fresh);
+  onEvent({ kind: 'switched', tab: fresh });
   return last(fresh.tabId);
 }
 
-async function fetchRawOnce(sender: Sender, ref: { noticeNo: string; round: string }, withoutIdHeaders: boolean): Promise<ResponseOf<'g2b/eval-fetch'>> {
+interface FetchMeta { tab?: G2bTabPath }
+
+async function fetchRawOnce(sender: Sender, ref: { noticeNo: string; round: string }, withoutIdHeaders: boolean, meta: FetchMeta): Promise<ResponseOf<'g2b/eval-fetch'>> {
   const d = deps();
   let tab = await acquireG2bTab(sender);
+  meta.tab = tab.kind;
   let keep = tab.kind !== 'created';
   try {
-    return await sendWithRecovery(tab, { ...ref, ...(withoutIdHeaders ? { withoutIdHeaders } : {}) }, (t) => { tab = t; keep = false; });
+    return await sendWithRecovery(tab, { ...ref, ...(withoutIdHeaders ? { withoutIdHeaders } : {}) }, (e) => {
+      if (e.kind === 'reloaded') { meta.tab = 'reused-reloaded'; return; }
+      tab = e.tab; keep = false; meta.tab = 'created-fallback';
+    });
   } catch (e) {
     if (tab.kind === 'created' && (e as { code?: unknown })?.code === 'EVAL_NOT_LOGGED_IN') {
       // 사용자가 로그인할 수 있게 만든 탭을 남기고 앞으로 가져온다.
@@ -170,8 +184,19 @@ async function fetchRawOnce(sender: Sender, ref: { noticeNo: string; round: stri
 // 동시 1개 FIFO. 앞 항목의 성패와 무관하게 다음 항목을 시작한다.
 let chain: Promise<unknown> = Promise.resolve();
 
-export function fetchEvalViaTab(sender: Sender, ref: { noticeNo: string; round: string }, withoutIdHeaders = false): Promise<ResponseOf<'g2b/eval-fetch'>> {
-  const p = chain.then(() => fetchRawOnce(sender, ref, withoutIdHeaders));
+export function fetchEvalViaTab(
+  sender: Sender, ref: { noticeNo: string; round: string },
+  opts: { withoutIdHeaders?: boolean; trigger?: string } = {},
+): Promise<ResponseOf<'g2b/eval-fetch'>> {
+  const meta: FetchMeta = {};
+  let t0: number | undefined;
+  const p = chain.then(() => {
+    t0 = deps().now();
+    return fetchRawOnce(sender, ref, !!opts.withoutIdHeaders, meta);
+  }).catch((e) => {
+    void recordG2bFailure(evalFailureOf(e, ref, meta, t0 === undefined ? 0 : deps().now() - t0, opts.trigger));
+    throw e;
+  });
   chain = p.catch(() => undefined);
   return p;
 }
@@ -182,12 +207,33 @@ function splitStep(message: string): { step?: number; message: string } {
   return m ? { step: Number(m[1]), message: message.slice(m[0].length) } : { message };
 }
 
+const TAB_STAGE_CODES = new Set(['EVAL_TAB_FAILED', 'EVAL_TAB_TIMEOUT', 'EVAL_CS_UNREACHABLE']);
+
+function evalFailureOf(e: unknown, ref: { noticeNo: string; round: string }, meta: FetchMeta, ms: number, trigger?: string): G2bFailureInput {
+  const rawCode = (e as { code?: unknown })?.code;
+  const code = typeof rawCode === 'string' ? rawCode : 'INTERNAL';
+  const rawDetail = (e as { detail?: unknown })?.detail;
+  const detail: Record<string, unknown> = rawDetail && typeof rawDetail === 'object' ? (rawDetail as Record<string, unknown>) : {};
+  const { step: prefixStep, message } = splitStep(e instanceof Error ? e.message : String(e));
+  const step = typeof detail.step === 'number' ? detail.step : prefixStep;
+  return {
+    flow: 'eval', stage: TAB_STAGE_CODES.has(code) ? 'tab' : 'fetch', code, message,
+    noticeNo: ref.noticeNo, round: ref.round, ms,
+    ...(step !== undefined ? { step } : {}),
+    ...(typeof detail.endpoint === 'string' ? { endpoint: detail.endpoint } : {}),
+    ...(typeof detail.httpStatus === 'number' ? { httpStatus: detail.httpStatus } : {}),
+    ...(typeof detail.g2bMsg === 'string' ? { g2bMsg: detail.g2bMsg } : {}),
+    ...(meta.tab ? { tab: meta.tab } : {}),
+    ...(trigger ? { trigger } : {}),
+  };
+}
+
 async function probe(sender: Sender, p: { ref: EvalRef; withoutIdHeaders?: boolean }): Promise<EvalProbeResult> {
   const ref = normalizeEvalRef(p.ref);
   const d = deps();
   const t0 = d.now();
   try {
-    const { raw } = await fetchEvalViaTab(sender, ref, !!p.withoutIdHeaders);
+    const { raw } = await fetchEvalViaTab(sender, ref, { withoutIdHeaders: !!p.withoutIdHeaders, trigger: p.withoutIdHeaders ? 'probe-noid' : 'probe' });
     return {
       ok: true, ms: d.now() - t0,
       counts: {
@@ -214,9 +260,19 @@ async function collect(sender: Sender, p: { ref: EvalRef }): Promise<EvalCollect
   const ref = normalizeEvalRef(p.ref);
   const d = deps();
   let fetched: ResponseOf<'g2b/eval-fetch'>;
-  try { fetched = await fetchEvalViaTab(sender, ref); } catch (e) { return withStep(e); }
+  const trigger = senderKind(sender) === 'g2b' ? 'panel' : 'dashboard';
+  try { fetched = await fetchEvalViaTab(sender, ref, { trigger }); } catch (e) { return withStep(e); }
   const serviceKey = await d.readServiceKey();
-  return d.toOffscreen('eval/save', { ref, raw: fetched.raw, ...(serviceKey ? { serviceKey } : {}), ...(fetched.warnings.length > 0 ? { fetchWarnings: fetched.warnings } : {}) }, EVAL_SAVE_WAIT_MS);
+  try {
+    return await d.toOffscreen('eval/save', { ref, raw: fetched.raw, ...(serviceKey ? { serviceKey } : {}), ...(fetched.warnings.length > 0 ? { fetchWarnings: fetched.warnings } : {}) }, EVAL_SAVE_WAIT_MS);
+  } catch (e) {
+    const code = (e as { code?: unknown })?.code;
+    void recordG2bFailure({
+      flow: 'eval', stage: 'save', code: typeof code === 'string' ? code : 'INTERNAL',
+      message: e instanceof Error ? e.message : String(e), noticeNo: ref.noticeNo, round: ref.round, trigger,
+    });
+    throw e;
+  }
 }
 
 export function registerEvalCollector(d: Partial<EvalCollectorDeps> = {}): void {

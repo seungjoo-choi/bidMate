@@ -22,6 +22,8 @@ export interface AutoComposeSettings {
   reviewGate: ReviewGate;
 }
 export type MailProvider = 'naverworks' | 'gmail';
+export type CreditKind = 'corporate' | 'bond' | 'cp';   // 기업신용평가 / 회사채 / 기업어음
+export interface CreditGrade { grade: string /* 1~10자, 예 "BBB+", "A3" */; evaluatedAt?: string /* 'YYYY-MM-DD' */; agency?: string /* ≤30자 */ }
 export interface Settings {
   schemaVersion: 1;
   g2b: { apiBaseUrl: string; detailUrlPatterns: string[] };
@@ -39,7 +41,7 @@ export interface Settings {
   mail: { provider: MailProvider; defaultGroupId?: string; defaultTemplateId?: string };
   customFields: FieldMapping[];
   /** 우리 회사. 평가 분석의 우리 회사 기준 보기에서 쓴다. bizNo는 숫자 10자리 */
-  company: { bizNo: string; name?: string };
+  company: { bizNo: string; name?: string; credit?: Partial<Record<CreditKind, CreditGrade>>; attributes?: string[] /* 각 1~40자, 중복 제거, 최대 30개 */ };
   /** AI 재검토. models는 공급자별 모델 ID(비면 실행 시 AI_MODEL_MISSING) */
   ai: { provider: AiProvider; mode: AiMode; models: Partial<Record<AiProvider, string>>; /** API 실행 시 문서 전문 전송(기본 true). false면 관련 구간만 */ sendFullText: boolean };
   /** 결과 추적 알림(팔로우 공고). expired도 final에 묶는다 */

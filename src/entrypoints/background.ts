@@ -4,8 +4,10 @@ import { registerComposeRelay } from '../background/compose-relay';
 import { registerNaverworksContacts } from '../background/naverworks-contacts';
 import { registerEvalCollector } from '../background/eval-collector';
 import { registerDeadlineScheduler } from '../background/deadline-scheduler';
+import { registerOrgRelay } from '../background/org-relay';
 import { registerResultScheduler } from '../background/result-scheduler';
 import { registerDetailReader } from '../background/detail-reader';
+import { registerG2bFailures } from '../background/g2b-failures';
 import { registerCoordinator } from '../background/job-coordinator';
 import { registerRouter } from '../background/router';
 import { registerSiteRegistry } from '../background/site-registry';
@@ -18,6 +20,7 @@ export default defineBackground({
   type: 'module',
   main() {
     registerRouter();
+    registerG2bFailures();
     registerSidePanelPorts();
     registerCoordinator();
     registerAutoCompose();
@@ -28,6 +31,7 @@ export default defineBackground({
     registerDetailReader();
     registerEvalCollector();
     registerResultScheduler();
+    registerOrgRelay();
     registerDeadlineScheduler();
     registerSiteRegistry();
     registerNoticeDelete();

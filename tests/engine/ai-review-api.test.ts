@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { loadRules } from '../../src/core/extraction/rules/load';
 import { pendingKeys } from '../../src/core/extraction/review-count';
 import { REVIEW_LEAF_KEYS, isExtractionLeaf, pendingLeafKeys } from '../../src/core/extraction/review-rows';
+import { PROMPT_VERSION } from '../../src/core/ai/prompt';
+import { DETAIL_ATTACHMENT_ID, DETAIL_TEXT_NAME, detailTextPath } from '../../src/core/model/detail-text';
 import { getField } from '../../src/core/model/notice-fields';
 import type { AiReviewFile } from '../../src/core/types/ai';
 import type { Extraction } from '../../src/core/types/extraction';
@@ -135,6 +137,141 @@ describe('prepareRun 문서 전달 방식', () => {
   });
 });
 
+/** 공고 폴더에 상세 txt를 쓰고 notice.detailText를 세팅한다. path를 주면 그 경로를 textPath로 쓴다(파일은 쓰지 않음). */
+async function setDetail(store: MemoryStore, noticeId: string, lines: string[], opts: { textPath?: string; noFile?: boolean; postedAt?: string } = {}) {
+  const k = fileKey(store, '/notice.json');
+  const n = JSON.parse(store.files.get(k) as string) as Notice;
+  const textPath = opts.textPath ?? detailTextPath(n.folder);
+  n.detailText = { textPath, capturedAt: '2026-10-22T00:00:00.000Z', chars: lines.join('\n').length };
+  if (opts.postedAt) n.basic.postedAt = { ...n.basic.postedAt, value: opts.postedAt };
+  store.files.set(k, JSON.stringify(n));
+  if (!opts.textPath && !opts.noFile) await store.writeText(textPath, lines.join('\n'));
+  return { notice: n, textPath };
+}
+const clearDetail = (store: MemoryStore) => {
+  const k = fileKey(store, '/notice.json');
+  const n = JSON.parse(store.files.get(k) as string) as Notice;
+  delete n.detailText;
+  store.files.set(k, JSON.stringify(n));
+};
+const DETAIL_LINES = ['나라장터 상세 안내', '공고일시 2026/10/21 10:00 게시', '기타 상세 문장'];
+const manualReq = (noticeId: string, extra: object = {}) => ({ noticeId, scope: 'all' as const, provider: 'claude' as const, mode: 'manual' as const, model: null, ...extra });
+
+describe('prepareRun 상세화면 입력', () => {
+  it('detailText가 있으면 run.files[0]이 상세이고 프롬프트에 상세 머리글이 있다', async () => {
+    const { store, noticeId, deps } = await setup();
+    await setDetail(store, noticeId, DETAIL_LINES);
+    const p = await prepareRun(store, manualReq(noticeId), deps);
+    expect(p.run.files[0]).toMatchObject({ attachmentId: DETAIL_ATTACHMENT_ID, name: DETAIL_TEXT_NAME });
+    expect(p.built.manualText).toContain('=== 파일: [상세] 나라장터 상세화면 (상세화면) ===');
+  });
+
+  it('files에 첨부만 주면 상세는 skipped unselected이고 run.files에 없다', async () => {
+    const { store, noticeId, deps } = await setup();
+    await setDetail(store, noticeId, DETAIL_LINES);
+    const x = readJsonFile<Extraction>(store, '/extraction.json');
+    const att = x.files.find((f) => f.status === 'parsed' && f.textPath)!.textPath!;
+    const p = await prepareRun(store, manualReq(noticeId, { files: [att] }), deps);
+    expect(p.run.skipped).toContainEqual({ name: DETAIL_TEXT_NAME, reason: 'unselected' });
+    expect(p.run.files.some((f) => f.attachmentId === DETAIL_ATTACHMENT_ID)).toBe(false);
+  });
+
+  it('parsed 첨부 0개여도 detailText가 있으면 NO_DOCUMENTS가 아니다', async () => {
+    const { store, noticeId, deps } = await setup();
+    const xk = fileKey(store, '/extraction.json');
+    const x = JSON.parse(store.files.get(xk) as string) as Extraction;
+    x.files = x.files.map((f) => ({ ...f, status: 'scanned' as const, textPath: undefined }));
+    store.files.set(xk, JSON.stringify(x));
+    await setDetail(store, noticeId, DETAIL_LINES);
+    const p = await prepareRun(store, manualReq(noticeId), deps);
+    expect(p.run.files.map((f) => f.attachmentId)).toEqual([DETAIL_ATTACHMENT_ID]);
+    clearDetail(store);
+    await expect(prepareRun(store, manualReq(noticeId), deps)).rejects.toMatchObject({ code: 'NO_DOCUMENTS' });
+  });
+
+  it('textPath가 source/text 밖이거나 파일이 없으면 skipped failed이고 계속 진행한다', async () => {
+    const { store, noticeId, deps } = await setup();
+    const n = readJsonFile<Notice>(store, '/notice.json');
+    await setDetail(store, noticeId, DETAIL_LINES, { textPath: `${n.folder}/outside.txt` });
+    const a = await prepareRun(store, manualReq(noticeId), deps);
+    expect(a.run.skipped).toContainEqual({ name: DETAIL_TEXT_NAME, reason: 'failed' });
+    expect(a.run.files.some((f) => f.attachmentId === DETAIL_ATTACHMENT_ID)).toBe(false);
+    await setDetail(store, noticeId, DETAIL_LINES, { noFile: true });
+    const b = await prepareRun(store, manualReq(noticeId), deps);
+    expect(b.run.skipped).toContainEqual({ name: DETAIL_TEXT_NAME, reason: 'failed' });
+    expect(b.run.files.length).toBeGreaterThan(0);
+  });
+
+  it('textPath에 ..가 있으면 예외 없이 skipped failed이고 계속 진행한다', async () => {
+    const { store, noticeId, deps } = await setup();
+    const n = readJsonFile<Notice>(store, '/notice.json');
+    await setDetail(store, noticeId, DETAIL_LINES, { textPath: `${n.folder}/source/text/../../x.txt` });
+    const p = await prepareRun(store, manualReq(noticeId), deps);
+    expect(p.run.skipped).toContainEqual({ name: DETAIL_TEXT_NAME, reason: 'failed' });
+    expect(p.run.files.some((f) => f.attachmentId === DETAIL_ATTACHMENT_ID)).toBe(false);
+    expect(p.run.files.length).toBeGreaterThan(0);
+  });
+
+  it('manual 상세 15k자는 상세 블록이 10,000자 이내이고 경고에 10,000자가 있다', async () => {
+    const { store, noticeId, deps } = await setup();
+    const many = Array.from({ length: 600 }, (_, i) => `신용평가 배점 10점 상세 문장 ${i} ${'가'.repeat(10)}`);
+    await setDetail(store, noticeId, many);
+    const p = await prepareRun(store, manualReq(noticeId), deps);
+    const head = '=== 파일: [상세] 나라장터 상세화면 (상세화면) ===';
+    const text = p.built.manualText;
+    const from = text.indexOf(head);
+    expect(from).toBeGreaterThanOrEqual(0);
+    const rest = text.slice(from + head.length);
+    const next = rest.indexOf('=== 파일:');
+    const block = next < 0 ? rest : rest.slice(0, next);
+    expect(block.length).toBeLessThanOrEqual(10_000);
+    expect(p.run.warnings.some((w) => w.includes('10,000자'))).toBe(true);
+  });
+});
+
+describe('finishRun 상세화면 근거', () => {
+  const detailItem = (runId: string) => resp(runId, [
+    { key: 'postedAt', value: '2026/10/21 10:00', quote: '공고일시 2026/10/21 10:00 게시', file: DETAIL_TEXT_NAME, page: null, note: '' },
+  ]);
+  const posted = '2026-10-21T10:00:00+09:00';
+
+  it('상세에만 있는 문장 인용은 __detail__ 근거(line 일치, page 없음)와 같은 분이면 match', async () => {
+    const { store, noticeId, deps } = await setup();
+    await setDetail(store, noticeId, DETAIL_LINES, { postedAt: posted });
+    const p = await prepareRun(store, manualReq(noticeId, { scope: 'keys', keys: ['postedAt'] }), deps);
+    const f = await finishRun(store, { noticeId, runId: p.run.id, responseText: detailItem(p.run.id) }, deps);
+    const s = f.runs[0]!.suggestions.postedAt!;
+    expect(s.evidence).toMatchObject({ attachmentId: DETAIL_ATTACHMENT_ID, sourceFile: DETAIL_TEXT_NAME, docKind: 'notice' });
+    expect(s.evidence!.line).toBe(DETAIL_LINES.findIndex((l) => l.startsWith('공고일시')) + 1);
+    expect(s.evidence!.page ?? null).toBeNull();
+    expect(s.file).toBe(DETAIL_TEXT_NAME);
+    expect(s.verdict).toBe('match');
+  });
+
+  it('옛 run(files에 상세 없음)은 상세 txt가 있어도 상세 인용을 quote_not_found로 거부한다', async () => {
+    const { store, noticeId, deps } = await setup();
+    const p = await prepareRun(store, manualReq(noticeId, { scope: 'keys', keys: ['postedAt'] }), deps);
+    expect(p.run.files.some((f) => f.attachmentId === DETAIL_ATTACHMENT_ID)).toBe(false);
+    await setDetail(store, noticeId, DETAIL_LINES, { postedAt: posted });
+    const f = await finishRun(store, { noticeId, runId: p.run.id, responseText: detailItem(p.run.id) }, deps);
+    expect(f.runs[0]!.rejected).toEqual([expect.objectContaining({ key: 'postedAt', reason: 'quote_not_found' })]);
+  });
+
+  it('run.files에 상세가 있는데 notice.detailText가 없으면 예외 없이 그 인용만 거부한다', async () => {
+    const { store, noticeId, deps } = await setup();
+    await setDetail(store, noticeId, DETAIL_LINES, { postedAt: posted });
+    const p = await prepareRun(store, manualReq(noticeId, { scope: 'keys', keys: ['postedAt', 'credibilityScore'] }), deps);
+    clearDetail(store);
+    const items = [
+      { key: 'postedAt', value: posted, quote: '공고일시 2026/10/21 10:00 게시', file: DETAIL_TEXT_NAME, page: null, note: '' },
+      goodItems[0],
+    ];
+    const f = await finishRun(store, { noticeId, runId: p.run.id, responseText: resp(p.run.id, items) }, deps);
+    expect(f.runs[0]!.rejected).toEqual([expect.objectContaining({ key: 'postedAt', reason: 'quote_not_found' })]);
+    expect(f.runs[0]!.suggestions.credibilityScore).toBeDefined();
+  });
+});
+
 describe('finishRun / 반자동 제출', () => {
   it('정상 응답은 done, 검증 실패는 rejected로 분리하고 응답 txt를 남긴다', async () => {
     const { store, noticeId, deps } = await setup();
@@ -183,7 +320,7 @@ describe('applySuggestion / dismissSuggestion', () => {
     const { store, noticeId, deps, runId } = await done();
     const r = await applySuggestion(store, { noticeId, runId, key: 'credibilityScore' }, deps);
     const item = r.extraction.items.credibilityScore;
-    expect(item.userEdited).toMatchObject({ value: 10, origin: { kind: 'ai', runId, provider: 'claude', model: null, promptVersion: '2.2.0' } });
+    expect(item.userEdited).toMatchObject({ value: 10, origin: { kind: 'ai', runId, provider: 'claude', model: null, promptVersion: PROMPT_VERSION } });
     expect(item.userEdited!.note).toContain('AI 제안 적용(Claude');
     expect(r.notice.evaluation.credibilityScore).toMatchObject({ value: 10, status: 'user_edited', source: { kind: 'user', ref: `ai:${runId}` } });
     expect(r.aiReview.runs[0]!.suggestions.credibilityScore!.appliedAt).toBeTruthy();

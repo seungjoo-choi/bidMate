@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+vi.mock('../../src/background/g2b-failures', () => ({ recordG2bFailure: vi.fn() }));
+
 import { BusError } from '../../src/messaging/bus';
+import { recordG2bFailure } from '../../src/background/g2b-failures';
 import { readDetail, setDetailReaderDeps } from '../../src/background/detail-reader';
 import type { Job } from '../../src/core/types/job';
 
@@ -50,7 +53,25 @@ function setup(o: {
 
 const code = async (p: Promise<unknown>) => p.then(() => 'ok', (e: BusError) => e.code);
 
-beforeEach(() => setDetailReaderDeps({}));
+beforeEach(() => { setDetailReaderDeps({}); vi.mocked(recordG2bFailure).mockClear(); });
+
+describe('실패 기록', () => {
+  it('DETAIL_TIMEOUT은 detail/read로 기록한다', async () => {
+    setup({ reply: () => ({ detected: null, match: false, html: null, readyState: 'loading' }) });
+    expect(await code(readDetail('j1'))).toBe('DETAIL_TIMEOUT');
+    expect(recordG2bFailure).toHaveBeenCalledTimes(1);
+    expect(recordG2bFailure).toHaveBeenCalledWith(expect.objectContaining({
+      flow: 'detail', stage: 'read', code: 'DETAIL_TIMEOUT', jobId: 'j1', noticeNo: REF.noticeNo, round: '000', ms: expect.any(Number),
+    }));
+  });
+
+  it('DETAIL_CANCELLED는 기록하지 않는다', async () => {
+    let cancelled = false;
+    setup({ job: () => mkJob({ status: cancelled ? 'cancelled' : 'running' }), onTick: (t) => { if (t === 1) cancelled = true; }, reply: () => ({ detected: null, match: false, html: null, readyState: 'loading' }) });
+    expect(await code(readDetail('j1'))).toBe('DETAIL_CANCELLED');
+    expect(recordG2bFailure).not.toHaveBeenCalled();
+  });
+});
 
 describe('readDetail', () => {
   it('(1) 2회 동일 스냅샷 + 1.5s 경과 후 성공, remove 1회', async () => {
@@ -159,7 +180,7 @@ describe('readDetail', () => {
     const logFn = vi.fn();
     const s = setup({ logFn });
     await readDetail('j1');
-    const ticks = s.sendToTab.mock.calls.length;
+    const ticks = s.sendToTab.mock.calls.length - 1; // 마지막 1회는 전문 읽기(trace 제외)
     const tickLogs = logFn.mock.calls.filter((c) => c[0] === '[detail-reader]');
     const traceLogs = logFn.mock.calls.filter((c) => c[0] === '[detail-reader] trace');
     expect(tickLogs).toHaveLength(ticks);
@@ -176,6 +197,52 @@ describe('readDetail', () => {
     const trace = JSON.parse(traceLog[2] as string) as Array<{ t: number }>;
     expect(trace).toHaveLength(120);
     expect(trace[0]!.t).toBeGreaterThan(0);
+  });
+
+  it('(17) 폴링 tick에는 withText 없음, 안정 후 마지막 1회만 withText true이고 pageText를 붙인다', async () => {
+    const s = setup({ reply: (_t, _c) => ({ detected: { noticeNo: REF.noticeNo }, match: true, html: html('A'), readyState: 'complete' }) });
+    s.sendToTab.mockImplementation((async (_id: number, _t: string, p: { withText?: boolean }) => ({
+      detected: { noticeNo: REF.noticeNo }, match: true, readyState: 'complete', diag: null,
+      html: p.withText ? { ...html('A'), pageText: '본문', pageTextTruncated: true } : html('A'),
+    })) as never);
+    const r = await readDetail('j1');
+    const payloads = s.sendToTab.mock.calls.map((c) => (c as unknown as [number, string, { withText?: boolean }])[2]);
+    expect(payloads.slice(0, -1).every((p) => p.withText === undefined)).toBe(true);
+    expect(payloads.filter((p) => p.withText === true)).toHaveLength(1);
+    expect(payloads[payloads.length - 1]!.withText).toBe(true);
+    expect(r.html).toMatchObject({ pageText: '본문', pageTextTruncated: true });
+  });
+
+  it('(18) 마지막 전문 읽기가 실패해도 성공하고 pageText는 없다', async () => {
+    const s = setup();
+    s.sendToTab.mockImplementation((async (_id: number, _t: string, p: { withText?: boolean }) => {
+      if (p.withText) throw new BusError('TIMEOUT', 'x');
+      return { detected: { noticeNo: REF.noticeNo }, match: true, html: html('A'), readyState: 'complete', diag: null };
+    }) as never);
+    const r = await readDetail('j1');
+    expect(r.html).toEqual(html('A'));
+    expect(recordG2bFailure).not.toHaveBeenCalled();
+  });
+
+  it('(19) 마지막 전문 읽기가 match:false(다른 공고)면 pageText를 붙이지 않는다', async () => {
+    const s = setup();
+    s.sendToTab.mockImplementation((async (_id: number, _t: string, p: { withText?: boolean }) => (p.withText
+      ? { detected: null, match: false, html: { ...html('A'), pageText: '다른 공고' }, readyState: 'complete', diag: null }
+      : { detected: { noticeNo: REF.noticeNo }, match: true, html: html('A'), readyState: 'complete', diag: null })) as never);
+    const r = await readDetail('j1');
+    expect(r.html).toEqual(html('A'));
+  });
+
+  it('(20) 타임아웃 경로에서는 withText 호출도 pageText도 없다', async () => {
+    const s = setup();
+    s.sendToTab.mockImplementation((async (_id: number, _t: string, p: { withText?: boolean }) => ({
+      detected: { noticeNo: REF.noticeNo }, match: true, readyState: 'complete', diag: null,
+      html: p.withText ? { ...html('x'), pageText: '본문' } : html(`v${Math.random()}`),
+    })) as never);
+    const r = await readDetail('j1');
+    expect(r.elapsedMs.stable).toBeGreaterThanOrEqual(45_000);
+    expect(s.sendToTab.mock.calls.some((c) => (c as unknown as [number, string, { withText?: boolean }])[2].withText)).toBe(false);
+    expect(r.html.pageText).toBeUndefined();
   });
 
   it('(16) NO_RECEIVER/TIMEOUT 틱도 기록', async () => {

@@ -16,10 +16,14 @@ import type { CollectStatus } from '../core/types/notice';
 import type { DetectedDetail } from '../adapters/g2b/detail-page';
 import type { ComposeSelectorSet, ComposeState, SendWatchConfig } from '../adapters/naverworks/types';
 import type { EvalRaw } from '../adapters/g2b/eval-api';
+import type { OrgProbeParams, OrgProbeResult } from '../adapters/g2b/org-api';
 import type { EvalIndexEntry, EvalRecord } from '../core/types/evaluation';
 import type { ISODate } from '../core/types/common';
+import type { EstimateFile, EstimateKey } from '../core/types/estimate';
+import type { G2bFailureInput } from '../core/diagnostics/g2b-failure';
 import type { NotifyEvent, ResultProbeResult, ResultRunSummary } from '../core/types/result';
 import type { AiBatchState, AiProvider, AiReviewFile, AiRunState, AiScope } from '../core/types/ai';
+import type { AskFile, AskRecord, NoticeTexts } from '../core/types/search';
 import type { RequirementSet, RfpCompareEntry, RfpCompareSession, RfpDocCandidate, RfpDocRef, RfpUploadEntry } from '../core/types/rfp';
 
 /** 'content'는 SW/팝업이 content script로 보내는 메시지의 대상. */
@@ -118,7 +122,10 @@ export type Msg =
   | { type: 'notice/delete'; payload: { noticeIds: string[] }; response: NoticeDeleteResult }  // 대시보드→SW→offscreen. 건별 결과
   | { type: 'extraction/edit'; payload: { noticeId: string; key: ExtractionKey; value: unknown | null; note?: string }; response: { notice: Notice; extraction: Extraction } }
   | { type: 'notice/field-edit'; payload: { noticeId: string; key: NoticeFieldKey | `custom.${string}`; value: unknown | null; raw?: string; note?: string }; response: { notice: Notice; extraction: Extraction | null } }
+  | { type: 'estimate/get'; payload: { noticeId: string }; response: EstimateFile | null }
+  | { type: 'estimate/save'; payload: { noticeId: string; key: EstimateKey; score: number | null; note?: string; max: number | null }; response: EstimateFile }
   | { type: 'extraction/text'; payload: { noticeId: string; textPath: string }; response: { text: string } }
+  | { type: 'notice/texts'; payload: { noticeId: string }; response: NoticeTexts }  // 통합검색 코퍼스. 상세 전문+첨부 txt 일괄
   | { type: 'rfp/docs'; payload: { noticeId: string }; response: RfpDocCandidate[] }  // 대시보드→SW→offscreen: 비교할 수 있는 첨부 후보
   | { type: 'rfp/extract'; payload: { ref: RfpDocRef; force?: boolean }; response: RequirementSet }
   | { type: 'rfp/upload'; payload: { name: string; size: number; b64: string }; response: { uploadId: string; set: RequirementSet } }
@@ -161,7 +168,7 @@ export type Msg =
   | { type: 'mail/sent-record'; payload: { noticeId: string; jobId: string; composeRecordId?: string; provider?: MailProvider; kind: 'click' | 'hotkey' | 'auto' | 'confirm'; confirmation?: SendConfirmation }; response: { recorded: boolean } }  // SW→offscreen
   | { type: 'config/repair'; payload: { file: 'recipients' | 'groups' | 'templates' | 'performances' }; response: { backupPath: string } }
   | { type: 'g2b/detect'; payload: void; response: G2bDetected | null }  // popup→CS
-  | { type: 'g2b/read-html'; payload: { noticeNo: string; round?: string };
+  | { type: 'g2b/read-html'; payload: { noticeNo: string; round?: string; withText?: boolean };
       response: { detected: DetectedDetail | null; match: boolean; html: HtmlFields | null; readyState: DocumentReadyState;
                   diag: null | { visibility: DocumentVisibilityState; readyState: DocumentReadyState; mainFrame: boolean; inputs: number;
                           noticeInputAny: boolean; noticeInputVisible: boolean; rafFiredSinceLast: boolean; timerSkewMs: number | null; url: string } } }  // SW→g2b 탭 CS(target content)
@@ -182,6 +189,8 @@ export type Msg =
   | { type: 'deadline/plan'; payload: void; response: DeadlinePlan }  // SW→offscreen 전용. index에서 계획 계산
   | { type: 'deadline/refresh'; payload: { reason: 'list' | 'manual' }; response: DeadlineRefreshSummary }  // 확장 페이지→SW. throw하지 않는다
   | { type: 'result/probe'; payload: { noticeNo: string; serviceKey?: string }; response: ResultProbeResult }  // 대시보드→SW→offscreen(키는 SW가 주입)
+  | { type: 'org/probe'; payload: OrgProbeParams; response: OrgProbeResult }  // 대시보드→SW. 키는 SW가 주입한다
+  | { type: 'org/probe-run'; payload: OrgProbeParams & { serviceKey: string }; response: OrgProbeResult }  // SW→offscreen 전용
   | { type: 'ai/get'; payload: { noticeId: string }; response: AiReviewFile | null }
   | { type: 'ai/run'; payload: { noticeId: string; scope: AiScope; keys?: AiKey[]; provider?: AiProvider; files?: string[] }; response: { runId: string } }  // 대시보드→SW. 키는 SW가 주입한다
   | { type: 'ai/compare-run'; payload: { noticeId: string; scope: AiScope; keys?: AiKey[]; providers: AiProvider[]; files?: string[] }; response: { compareId: string; runId: string } }  // 대시보드→SW. 키는 SW가 주입
@@ -202,6 +211,12 @@ export type Msg =
   | { type: 'ai/batch-get'; payload: Record<string, never>; response: AiBatchState | null }  // 대시보드→SW(고아 판정 포함), SW→offscreen(현재 배치)
   | { type: 'ai/batch-cancel'; payload: { batchId: string }; response: { cancelled: boolean } }
   | { type: 'ai/batch-clear'; payload: { batchId: string }; response: void }  // SW 단독. 실행 중이면 AI_BATCH_BUSY
+  | { type: 'search/ask'; payload: { noticeId: string; askId: string; question: string; fieldDocText: string; provider?: AiProvider; contextMode?: 'context' | 'full' }; response: AskRecord }  // 대시보드→SW. 키는 SW가 주입한다. question 500자·fieldDocText 20,000자 상한(SW 검사)
+  | { type: 'search/ask-exec'; payload: { noticeId: string; askId: string; question: string; fieldDocText: string; provider: AiProvider; contextMode?: 'context' | 'full'; api: { key: string; model: string } }; response: AskRecord }  // SW→offscreen 전용
+  | { type: 'search/ask-cancel'; payload: { noticeId: string; askId: string }; response: { cancelled: boolean } }
+  | { type: 'search/asks-get'; payload: { noticeId: string }; response: AskFile | null }
+  | { type: 'diag/g2b-failure'; payload: { failures: G2bFailureInput[] }; response: void }  // offscreen→SW 전용, 1회 50건 상한
+  | { type: 'diag/g2b-failures-clear'; payload: void; response: void }  // 대시보드→SW
   | { type: 'g2b/collect'; payload: void; response: { started: boolean; jobId?: string; code?: string } }  // popup→CS
   | { type: 'g2b/retry'; payload: { jobId: string }; response: { started: boolean; jobId?: string; code?: string } };  // sidepanel→CS: 이 탭 공고의 잡 재시도(SW가 공고/탭 일치 검사)
 
@@ -214,4 +229,4 @@ export type Envelope<T extends Msg = Msg> = {
   target: Target;
 };
 
-export type Reply<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string; path?: string } };
+export type Reply<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string; path?: string; detail?: Record<string, unknown> } };

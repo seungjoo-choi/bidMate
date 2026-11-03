@@ -2,6 +2,7 @@ import { detailUrlOf } from '../adapters/g2b/link';
 import type { HtmlFields, Job } from '../core/types/job';
 import { BusError, listen, sendToTab } from '../messaging/bus';
 import type { ResponseOf } from '../messaging/protocol';
+import { recordG2bFailure } from './g2b-failures';
 import { ACTIVE, getJob, isOffscreenSender } from './job-coordinator';
 
 const G2B_HOST = 'www.g2b.go.kr';
@@ -46,7 +47,7 @@ const hostOf = (url: string | undefined): string => { try { return new URL(url ?
 /** offscreen의 g2b/read-detail 송신 타임아웃(offscreen/main.ts runCollect와 같은 값). 큐 대기를 포함한다. */
 const REQUEST_WAIT_MS = 240_000;
 
-async function readOne(jobId: string, requestedAt: number): Promise<ResponseOf<'g2b/read-detail'>> {
+async function readOne(jobId: string, requestedAt: number, meta: { noticeNo?: string; round?: string }): Promise<ResponseOf<'g2b/read-detail'>> {
   const d = deps();
   const now = d.now ?? Date.now;
   const sleep = d.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
@@ -68,6 +69,8 @@ async function readOne(jobId: string, requestedAt: number): Promise<ResponseOf<'
   const url = job.ref ? detailUrlOf(job.ref) : null;
   if (!url || !job.ref) throw err('DETAIL_NO_URL', '상세화면 주소를 만들 수 없습니다.');
   const { noticeNo, round } = job.ref;
+  meta.noticeNo = noticeNo;
+  if (round) meta.round = round;
 
   let windowId: number | undefined;
   let openerTabId: number | undefined;
@@ -103,15 +106,26 @@ async function readOne(jobId: string, requestedAt: number): Promise<ResponseOf<'
     let firstMatchAt: number | undefined;
     let prev: string | undefined;
     let last: HtmlFields | undefined;
-    const done = (): ResponseOf<'g2b/read-detail'> => ({
+    const done = (stableAt: number = now()): ResponseOf<'g2b/read-detail'> => ({
       html: last as HtmlFields,
-      elapsedMs: { detect: (firstMatchAt ?? start) - start, stable: now() - start },
+      elapsedMs: { detect: (firstMatchAt ?? start) - start, stable: stableAt - start },
     });
+
+    // 안정 판정이 끝난 뒤 전문만 1회 더 읽어 붙인다. 실패·TIMEOUT·불일치면 전문 없이 진행한다(trace에는 넣지 않는다).
+    const finish = async (): Promise<ResponseOf<'g2b/read-detail'>> => {
+      const stableAt = now(); // 전문 읽기 시간은 stable에 섞지 않는다
+      try {
+        const r = await d.sendToTab(id, 'g2b/read-html', { noticeNo, ...(round ? { round } : {}), withText: true }, { timeoutMs: 2000 });
+        const { pageText, pageTextTruncated } = r.html ?? {};
+        if (r.match && pageText && last) last = { ...last, pageText, ...(pageTextTruncated ? { pageTextTruncated: true } : {}) };
+      } catch { /* 전문 없이 진행 */ }
+      return done(stableAt);
+    };
 
     for (;;) {
       if (closed) throw err('DETAIL_TAB_CLOSED', '상세화면 탭이 닫혔습니다.');
       if (now() - start >= timeoutMs) {
-        if (last) return done();
+        if (last) return done(); // 타임아웃 경로는 전문 읽기로 시간을 더 쓰지 않는다(240s 송신 한도 보호)
         throw err('DETAIL_TIMEOUT', '상세화면에서 공고를 찾지 못했습니다.');
       }
 
@@ -136,7 +150,7 @@ async function readOne(jobId: string, requestedAt: number): Promise<ResponseOf<'
           const snap = JSON.stringify(r.html.fields);
           firstMatchAt ??= now();
           last = r.html;
-          if (prev === snap && now() - firstMatchAt >= settleMs) return done();
+          if (prev === snap && now() - firstMatchAt >= settleMs) return finish();
           prev = snap;
         } else {
           prev = undefined;
@@ -161,8 +175,19 @@ async function readOne(jobId: string, requestedAt: number): Promise<ResponseOf<'
 let chain: Promise<unknown> = Promise.resolve();
 
 export function readDetail(jobId: string): Promise<ResponseOf<'g2b/read-detail'>> {
-  const requestedAt = (injected.now ?? Date.now)();
-  const p = chain.then(() => readOne(jobId, requestedAt));
+  const now = injected.now ?? Date.now;
+  const requestedAt = now();
+  const meta: { noticeNo?: string; round?: string } = {};
+  const p = chain.then(() => readOne(jobId, requestedAt, meta)).catch((e) => {
+    const code = (e as { code?: unknown })?.code;
+    if (code !== 'DETAIL_CANCELLED') {
+      void recordG2bFailure({
+        flow: 'detail', stage: 'read', code: typeof code === 'string' ? code : 'DETAIL_READ_FAILED',
+        message: e instanceof Error ? e.message : String(e), jobId, ...meta, ms: now() - requestedAt,
+      });
+    }
+    throw e;
+  });
   chain = p.catch(() => undefined);
   return p;
 }

@@ -7,6 +7,7 @@ import { formatDate } from '../../../ui/review/format';
 import { TextDrawer } from '../review/TextDrawer';
 import { extLabel, formatSize, QUALITY_LABEL } from './rfp-page-logic';
 import { SideChip } from './SideChip';
+import { SearchButton } from '../search/SearchButton';
 
 export type Side = 'prev' | 'next';
 
@@ -224,6 +225,8 @@ export function DocSlot({ side, data, picking, uploadCount, onPick, onFile, onLi
           <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{data.fileName ?? data.subtitle}</span>
         </div>
       )}
+
+      {data.source === 'notice' && data.noticeId && <div className="mt-3"><SearchButton variant="text" noticeId={data.noticeId} title={data.title} /></div>}
 
       {data.status === 'loading' && <Extracting data={data} />}
 

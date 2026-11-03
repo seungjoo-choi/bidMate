@@ -7,6 +7,7 @@ import type { Settings } from '../core/types/settings';
 import { BusError, isOffscreenAllowedSender, listen, send } from '../messaging/bus';
 import type { MsgType, PayloadOf, ResponseOf } from '../messaging/protocol';
 import { openDashboard } from './dashboard-tabs';
+import { recordG2bFailure } from './g2b-failures';
 import { assertExtensionSender } from './job-coordinator';
 import { clipTitle, openNoticeFromNotification, showNotification } from './notify';
 import { ensureOffscreen } from './offscreen-manager';
@@ -107,21 +108,30 @@ export async function refreshResults(reason: RefreshReason, d: ResultSchedulerDe
       const last = ((await d.storage.session.get(THROTTLE_KEY))[THROTTLE_KEY] as number | undefined) ?? 0;
       if (d.now() - last < RESULT_REFRESH_THROTTLE_MS) return emptySummary({ skipped: 'THROTTLED' });
     }
-    const r = await d.toOffscreen('result/run', { mode, serviceKey, bizNo }, RESULT_RUN_TIMEOUT_MS);
+    let r: ResultRunSummary;
+    try {
+      r = await d.toOffscreen('result/run', { mode, serviceKey, bizNo }, RESULT_RUN_TIMEOUT_MS);
+    } catch (e) {
+      const code = (e as { code?: unknown })?.code;
+      void recordG2bFailure({ flow: 'result', stage: 'run', code: typeof code === 'string' ? code : 'INTERNAL', message: redactKey(e instanceof Error ? e.message : String(e), serviceKey), trigger: reason });
+      throw e;
+    }
     // 알림과 알람 재예약은 offscreen의 result/done이 맡는다. 여기서는 BUSY와 실패 재시도만 건다.
     if (r.skipped === 'BUSY') {
       await armFollowAlarm(new Date(d.now() + BUSY_RETRY_MS).toISOString(), d);
       return r;
     }
     if (r.ran && reason === 'list') await d.storage.session.set({ [THROTTLE_KEY]: d.now() });
+    if (r.error) void recordG2bFailure({ flow: 'result', stage: 'run', code: 'RESULT_RUN_FAILED', message: r.error, trigger: reason });
     if (r.error) await armFollowAlarm(new Date(d.now() + FAIL_RETRY_MS).toISOString(), d);
     // result/done 송신이 실패해도 알람이 걸리게 응답으로도 한 번 건다(병합 규칙이라 두 번 걸어도 같다).
     else if (r.ran) await armFollowAlarm(r.nextFollowCheckAt, d);
     return r;
   } catch (e) {
+    const message = redactKey(e instanceof Error ? e.message : String(e), serviceKey);
     // 응답이 늦거나 실패해도 팔로우 확인이 멈추지 않게 재시도 알람을 건다.
     try { await armFollowAlarm(new Date(d.now() + FAIL_RETRY_MS).toISOString(), d); } catch { /* 알람 실패는 무시 */ }
-    return emptySummary({ error: redactKey(e instanceof Error ? e.message : String(e), serviceKey) });
+    return emptySummary({ error: message });
   }
 }
 

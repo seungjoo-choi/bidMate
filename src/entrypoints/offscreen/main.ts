@@ -5,11 +5,13 @@ import { loadRules } from '../../core/extraction/rules/load';
 import { SELECTOR_SETS } from '../../adapters/naverworks/selectors';
 import { runCollectJob } from '../../engine/jobs/collect-job';
 import type { JobError, JobStatus } from '../../core/types/job';
+import type { G2bFailureInput } from '../../core/diagnostics/g2b-failure';
 import { runComposeJob } from '../../engine/jobs/compose-job';
 import { runExtractJob } from '../../engine/jobs/extract-job';
 import { createParserRegistry } from '../../engine/parsers/registry';
 import { createRfpService } from '../../engine/rfp/rfp-service';
-import { editExtraction, editNoticeField, getNotice, listNotices, readExtractionText } from '../../engine/notices/notice-api';
+import { getEstimate, saveEstimate } from '../../engine/estimate/estimate-store';
+import { editExtraction, editNoticeField, getNotice, listNotices, readExtractionText, readNoticeTexts } from '../../engine/notices/notice-api';
 import { repairConfig } from '../../engine/config/config-store';
 import { deletePerformance, importPerformances, listPerformances, savePerformance } from '../../engine/config/performances-api';
 import { deleteGroup, deleteRecipient, importRecipients, listRecipients, saveGroup, saveRecipient, setDefaultGroup } from '../../engine/config/recipients-api';
@@ -24,6 +26,7 @@ import { fileStore } from '../../engine/file-store/file-store';
 import { setFollow } from '../../engine/results/follow-api';
 import { runResultRefresh } from '../../engine/results/result-tracker';
 import type { ResultRunSummary } from '../../core/types/result';
+import { probeOrg } from '../../adapters/g2b/org-api';
 import { probeResult } from '../../engine/results/result-probe';
 import { saveEval } from '../../engine/evaluation/eval-api';
 import { EvalStore } from '../../engine/evaluation/eval-store';
@@ -33,6 +36,8 @@ import type { NoticeKind } from '../../core/types/notice';
 import { applySuggestion, dismissSuggestion, finishRun, getPrompt, getReview, listModels } from '../../engine/ai/ai-review-api';
 import { AiBatch } from '../../engine/ai/ai-batch';
 import { AiRunner } from '../../engine/ai/ai-runner';
+import { getAsks } from '../../engine/search/ask-api';
+import { AskRunner } from '../../engine/search/ask-runner';
 import type { G2bTestResult, NoticeLookup, JobRunPayload, SmokeTestResult } from '../../messaging/protocol';
 
 async function smokeTest(): Promise<SmokeTestResult> {
@@ -202,7 +207,9 @@ listen('job/run', (p) => {
   return { accepted: true as const, active: registry.active() };
 }, 'offscreen');
 // 확장 페이지 발신 정책 검증은 SW 릴레이(router.ts)에서 한다. SW를 거치지 않은 직접 발신은 bus.listen이 'offscreen' target에서 거부한다.
-listen('eval/save', (p) => saveEval(fileStore, p), 'offscreen');
+// 나라장터 연동 실패 보고: 기록은 SW가 한다. 응답을 기다리지 않고 실패는 삼킨다.
+const reportG2bFailure = (f: G2bFailureInput): void => { void send('diag/g2b-failure', { failures: [f] }, { target: 'sw', timeoutMs: 5_000 }).catch(() => undefined); };
+listen('eval/save', (p) => saveEval(fileStore, p, { onFailure: reportG2bFailure }), 'offscreen');
 listen('eval/list', async () => (await new EvalStore(fileStore).loadIndex()).entries, 'offscreen');
 listen('eval/get', ({ noticeId }) => new EvalStore(fileStore).get(noticeId), 'offscreen');
 listen('eval/get-many', ({ noticeIds }) => new EvalStore(fileStore).getMany(noticeIds), 'offscreen');
@@ -214,6 +221,7 @@ listen('result/run', ({ mode, serviceKey, bizNo }) => {
   resultRun = runResultRefresh({
     store: fileStore, fetch: (...a) => fetch(...a), serviceKey, bizNo,
     checkPermission: async () => { const st = await fileStore.status(); return st.hasRoot && st.permission === 'granted'; },
+    onFailure: reportG2bFailure,
   }, { mode }).then((r) => {
     // 응답이 타임아웃으로 SW에 못 가도 알림과 알람은 이 메시지로 전달된다.
     void send('result/done', { events: r.events, nextFollowCheckAt: r.nextFollowCheckAt, ...(r.skipped ? { skipped: r.skipped } : {}) }, { target: 'sw' }).catch(() => undefined);
@@ -226,7 +234,8 @@ listen('follow/set', async (p) => {
   void send('result/done', { events: [], nextFollowCheckAt: r.nextFollowCheckAt }, { target: 'sw' }).catch(() => undefined);
   return r;
 }, 'offscreen');
-listen('result/probe', ({ noticeNo, serviceKey }) => probeResult(noticeNo, serviceKey ?? ''), 'offscreen');
+listen('result/probe', ({ noticeNo, serviceKey }) => probeResult(noticeNo, serviceKey ?? '', undefined, reportG2bFailure), 'offscreen');
+listen('org/probe-run', ({ serviceKey, ...p }) => probeOrg(p, { serviceKey, fetch: (...a) => fetch(...a) }), 'offscreen');
 listen('notice/list', () => listNotices(fileStore), 'offscreen');
 listen('deadline/plan', async () => buildPlan(await listNotices(fileStore), Date.now()), 'offscreen');
 listen('notice/get', ({ noticeId }) => getNotice(fileStore, noticeId), 'offscreen');
@@ -235,6 +244,9 @@ const isNoticeBusy = (noticeId: string) => deletingNotices.has(noticeId) || regi
 listen('extraction/edit', (p) => editExtraction(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
 listen('notice/field-edit', (p) => editNoticeField(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
 listen('extraction/text', (p) => readExtractionText(fileStore, p), 'offscreen');
+listen('notice/texts', (p) => readNoticeTexts(fileStore, p), 'offscreen');
+listen('estimate/get', (p) => getEstimate(fileStore, p.noticeId), 'offscreen');
+listen('estimate/save', (p) => saveEstimate(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
 
 // RFP 요구사항 비교. 파일 쓰기는 이 서비스만 한다(단일 작성자).
 const rfp = createRfpService({ store: fileStore, parsers });
@@ -279,6 +291,11 @@ listen('ai/batch-exec', (p) => ({ batchId: aiBatch.start(p).batchId }), 'offscre
 listen('ai/batch-get', () => aiBatch.current(), 'offscreen');
 listen('ai/batch-cancel', ({ batchId }) => aiBatch.cancel(batchId), 'offscreen');
 listen('ai/models', ({ provider, apiKey }) => listModels(provider, apiKey, (...a) => fetch(...a)), 'offscreen');
+// 공고 AI 질문. AiRunner와 별개로 공고당 1개 실행(AbortController). 키는 SW가 search/ask-exec로 주입하며 저장하지 않는다.
+const askRunner = new AskRunner({ store: fileStore, fetch: (...a) => fetch(...a), isBusy: isNoticeBusy });
+listen('search/ask-exec', (p) => askRunner.exec(p), 'offscreen');
+listen('search/ask-cancel', (p) => askRunner.cancel(p), 'offscreen');
+listen('search/asks-get', ({ noticeId }) => getAsks(fileStore, noticeId), 'offscreen');
 listen('performances/list', () => listPerformances(fileStore), 'offscreen');
 listen('performances/save', ({ performance }) => savePerformance(fileStore, performance), 'offscreen');
 listen('performances/delete', ({ id }) => deletePerformance(fileStore, id), 'offscreen');
@@ -308,7 +325,7 @@ listen('notice/delete', async ({ noticeIds }) => {
     store: fileStore,
     isBusy: (id) => registry.findConflict({ type: 'extract', noticeId: id }) !== undefined
       || registry.findConflict({ type: 'compose', noticeId: id }) !== undefined
-      || aiRunner.isRunning(id) || rfp.isNoticeBusy(id),
+      || aiRunner.isRunning(id) || askRunner.isRunning(id) || rfp.isNoticeBusy(id),
     deleteCompares: (id) => rfp.deleteComparesForNotice(id),
     mark: { begin: (id) => deletingNotices.add(id), end: (id) => deletingNotices.delete(id) },
   });

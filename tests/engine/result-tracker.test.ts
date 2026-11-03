@@ -265,6 +265,32 @@ describe('runResultRefresh', () => {
     expect(rj(s).entries[R1]!.nextCheckAt).toBe(future);
   });
 
+  describe('onFailure 보고', () => {
+    it('개찰 조회 실패 시 1회 보고한다(noticeId·endpoint)', async () => {
+      const s = seedStore([sched(R1)]);
+      const calls: unknown[] = [];
+      await runResultRefresh(deps(s, fakeG2b(() => new Error('network')).fetch, { onFailure: (f) => calls.push(f) }), { mode: 'list' });
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toMatchObject({ flow: 'result', stage: 'opening', noticeNo: 'R26BK00000001', round: '000', noticeId: R1, trigger: 'list', endpoint: expect.any(String) });
+    });
+
+    it('낙찰 조회 실패 시 stage award로 보고한다', async () => {
+      const s = seedStore([sched(R1)]);
+      const calls: Array<{ stage: string }> = [];
+      const g = fakeG2b((op) => (op.includes('Openg') ? opening(1) : new Error('network')));
+      await runResultRefresh(deps(s, g.fetch, { onFailure: (f) => calls.push(f) }), { mode: 'list' });
+      expect(calls.some((c) => c.stage === 'award')).toBe(true);
+      expect(calls.some((c) => c.stage === 'opening')).toBe(false);
+    });
+
+    it('onFailure가 throw해도 run은 완료된다', async () => {
+      const s = seedStore([sched(R1)]);
+      const r = await runResultRefresh(deps(s, fakeG2b(() => new Error('network')).fetch, { onFailure: () => { throw new Error('boom'); } }), { mode: 'list' });
+      expect(r.error).toBeUndefined();
+      expect(r.checked).toBe(1);
+    });
+  });
+
   describe('투찰금액 백필', () => {
     const wonEntry = (id: string, o: Record<string, unknown> = {}) => ({ noticeId: id, noticeNo: id.slice(0, 13), round: '000', status: 'won', rank: 1, openingAt: PAST, startAt: PAST, attempts: 0, nextCheckAt: PAST, ...o });
     const seed = (ids: string[], o: Record<string, unknown> = {}): MemoryStore => {

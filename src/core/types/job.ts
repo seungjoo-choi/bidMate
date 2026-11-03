@@ -75,6 +75,9 @@ export interface HtmlFields {
   fields: Partial<Record<NoticeFieldKey, { raw: string; ref: string }>>;
   capturedAt: ISODate;
   pageTitle?: string;
+  /** 상세화면 전문(render-text 형식). JobRunPayload.html로만 흐르며 Job·session에는 넣지 않는다. */
+  pageText?: string;
+  pageTextTruncated?: boolean;
 }
 
 /** collect 잡의 Job.result 형태. */

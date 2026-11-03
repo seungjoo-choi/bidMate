@@ -4,6 +4,7 @@ import type { ExtractedItem, Extraction, ExtractionFile, ExtractionKey } from '.
 import {
   AGREEMENT_LABEL, REJECT_LABEL, VERDICT_LABEL, aiAgreement, aiOthers, buildAiCardsByProvider, compareAgreementSummary, compareRows, afterCopy, buildAiCards, copyOpenButton, terminalSignal, fileChecklist, filesParam, isStale, latestRun, olderCardCount, quickView, runSummary, scopeLabel, selectedChars, suggestionActions,
 } from '../../src/ui/review/ai-view';
+import { DETAIL_KIND_LABEL, DETAIL_TEXT_NAME } from '../../src/core/model/detail-text';
 import { AI_KEYS, isDocAiKey } from '../../src/core/ai/keys';
 import { buildCard, buildCards, userEditedBadgeText } from '../../src/ui/review/view';
 
@@ -150,6 +151,16 @@ describe('파일 체크리스트', () => {
     expect(filesParam(rows, new Set(['p/a.txt']))).toEqual(['p/a.txt']);
     expect(selectedChars(files, new Set(['p/a.txt', 'p/d.txt']))).toBe(5000);
     expect(selectedChars(files, new Set(['p/d.txt']))).toBe(3000);
+  });
+  it('detail이 있으면 첫 행(선택 가능)으로 들어가고 selectedChars·filesParam에 반영된다', () => {
+    const detail = { textPath: 'p/detail.txt', capturedAt: '2026-01-01T00:00:00Z', chars: 700 };
+    const rows = fileChecklist(files, detail);
+    expect(rows[0]).toEqual({ textPath: 'p/detail.txt', name: DETAIL_TEXT_NAME, kindLabel: DETAIL_KIND_LABEL, selectable: true });
+    expect(rows).toHaveLength(fileChecklist(files).length + 1);
+    expect(selectedChars(files, new Set(['p/a.txt', 'p/detail.txt']), detail)).toBe(2700);
+    expect(selectedChars(files, new Set(['p/a.txt']), detail)).toBe(2000);
+    expect(filesParam(rows, new Set(['p/a.txt', 'p/d.txt']))).toEqual(['p/a.txt', 'p/d.txt']);
+    expect(filesParam(rows, new Set(['p/detail.txt', 'p/a.txt', 'p/d.txt']))).toBeUndefined();
   });
 });
 

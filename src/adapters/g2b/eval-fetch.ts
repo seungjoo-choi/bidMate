@@ -12,13 +12,15 @@ export interface EvalFetchCtx {
 
 export type EvalFetchResult =
   | { ok: true; raw: EvalRaw; warnings: string[] }
-  | { ok: false; error: { code: string; message: string; step: number } };
+  | { ok: false; error: { code: string; message: string; step: number; endpoint?: string; httpStatus?: number; g2bMsg?: string } };
 
 const CALL_MS = 15_000;
 const TOTAL_MS = 60_000;
 
+interface StepExtra { endpoint: string; httpStatus?: number; g2bMsg?: string }
+
 class StepError extends Error {
-  constructor(public code: string, message: string, public step: number) { super(message); }
+  constructor(public code: string, message: string, public step: number, public extra: StepExtra = { endpoint: '' }) { super(message); }
 }
 
 const STEP: Record<EvalEndpointKey, number> = { open: 1, base: 2, targets: 3, members: 4, items: 5, scores: 6 };
@@ -30,9 +32,10 @@ export async function fetchEvalRaw(ref: { noticeNo: string; round?: string }, ct
 
   const call = async (key: EvalEndpointKey, body: unknown): Promise<Record<string, unknown>> => {
     const step = STEP[key];
+    const endpoint = EVAL_ENDPOINTS[key].path;
     const left = TOTAL_MS - (Date.now() - startedAt);
-    if (left <= 0) throw new StepError('EVAL_TIMEOUT', '전체 시간 제한(60초)을 넘었습니다.', step);
-    if (ctx.signal?.aborted) throw new StepError('EVAL_CANCELLED', '취소되었습니다.', step);
+    if (left <= 0) throw new StepError('EVAL_TIMEOUT', '전체 시간 제한(60초)을 넘었습니다.', step, { endpoint });
+    if (ctx.signal?.aborted) throw new StepError('EVAL_CANCELLED', '취소되었습니다.', step, { endpoint });
     const ac = new AbortController();
     const onAbort = () => ac.abort();
     ctx.signal?.addEventListener('abort', onAbort, { once: true });
@@ -45,23 +48,24 @@ export async function fetchEvalRaw(ref: { noticeNo: string; round?: string }, ct
       const res = await ctx.fetch(EVAL_ENDPOINT_URL(key), { method: 'POST', credentials: 'same-origin', headers, body: JSON.stringify(body), signal: ac.signal });
       const text = await res.text();
       // 쿠키 없는 호출은 HTTP 403 + ErrorCode -801로 응답한다(실측). 상태와 무관하게 -801이면 로그인(권한) 필요로 본다.
-      const loginErr = () => new StepError('EVAL_NOT_LOGGED_IN', '나라장터 로그인(권한)이 필요합니다.', step);
+      const loginErr = (g2bMsg?: string) => new StepError('EVAL_NOT_LOGGED_IN', '나라장터 로그인(권한)이 필요합니다.', step, { endpoint, httpStatus: res.status, ...(g2bMsg ? { g2bMsg } : {}) });
       if (res.status === 401 || res.status === 403) throw loginErr();
       const parsed = parseG2bJson(text);
-      if (parsed.ok && Number(parsed.json.ErrorCode) === -801) throw loginErr();
-      if (!parsed.ok) throw new StepError(parsed.code, parsed.code === 'EVAL_NOT_LOGGED_IN' ? '나라장터에 로그인되어 있지 않습니다.' : `응답을 해석하지 못했습니다(HTTP ${res.status}).`, step);
-      const msg = typeof parsed.json.ErrorMsg === 'string' ? parsed.json.ErrorMsg.trim() : '';
-      if (!res.ok) throw new StepError('EVAL_API_ERROR', `HTTP ${res.status}${msg ? `: ${msg}` : ''}`, step);
+      const msg = parsed.ok && typeof parsed.json.ErrorMsg === 'string' ? parsed.json.ErrorMsg.trim() : '';
+      const extra: StepExtra = { endpoint, httpStatus: res.status, g2bMsg: msg || undefined };
+      if (parsed.ok && Number(parsed.json.ErrorCode) === -801) throw loginErr(msg);
+      if (!parsed.ok) throw new StepError(parsed.code, parsed.code === 'EVAL_NOT_LOGGED_IN' ? '나라장터에 로그인되어 있지 않습니다.' : `응답을 해석하지 못했습니다(HTTP ${res.status}).`, step, extra);
+      if (!res.ok) throw new StepError('EVAL_API_ERROR', `HTTP ${res.status}${msg ? `: ${msg}` : ''}`, step, extra);
       const code = Number(parsed.json.ErrorCode);
       if (code !== 0) {
-        throw new StepError('EVAL_API_ERROR', `ErrorCode ${Number.isFinite(code) ? code : '?'}${msg ? `: ${msg}` : ''}`, step);
+        throw new StepError('EVAL_API_ERROR', `ErrorCode ${Number.isFinite(code) ? code : '?'}${msg ? `: ${msg}` : ''}`, step, extra);
       }
       return parsed.json;
     } catch (e) {
       if (e instanceof StepError) throw e;
-      if (ctx.signal?.aborted) throw new StepError('EVAL_CANCELLED', '취소되었습니다.', step);
-      if (timedOut) throw new StepError('EVAL_TIMEOUT', '응답 시간 초과', step);
-      throw new StepError('EVAL_API_ERROR', e instanceof Error ? e.message : String(e), step);
+      if (ctx.signal?.aborted) throw new StepError('EVAL_CANCELLED', '취소되었습니다.', step, { endpoint });
+      if (timedOut) throw new StepError('EVAL_TIMEOUT', '응답 시간 초과', step, { endpoint });
+      throw new StepError('EVAL_API_ERROR', e instanceof Error ? e.message : String(e), step, { endpoint });
     } finally {
       clearTimeout(timer);
       ctx.signal?.removeEventListener('abort', onAbort);
@@ -92,7 +96,10 @@ export async function fetchEvalRaw(ref: { noticeNo: string; round?: string }, ct
     const raw = pickEvalRaw({ open, base, targets, members, items, scores }, (ctx.now?.() ?? new Date()).toISOString());
     return { ok: true, raw, warnings };
   } catch (e) {
-    if (e instanceof StepError) return { ok: false, error: { code: e.code, message: e.message, step: e.step } };
+    if (e instanceof StepError) {
+      const { endpoint, httpStatus, g2bMsg } = e.extra;
+      return { ok: false, error: { code: e.code, message: e.message, step: e.step, ...(endpoint ? { endpoint } : {}), ...(httpStatus !== undefined ? { httpStatus } : {}), ...(g2bMsg ? { g2bMsg } : {}) } };
+    }
     return { ok: false, error: { code: 'EVAL_API_ERROR', message: e instanceof Error ? e.message : String(e), step: 1 } };
   }
 }
