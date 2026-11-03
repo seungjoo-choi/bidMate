@@ -1,0 +1,131 @@
+{
+  "noticeNo": "R26BK01514146",
+  "docsRead": [
+    "1_1_001_입찰공고문_제2026-067호.hwp.txt",
+    "4_4_003_과업지시서_제2026-067호.hwp.txt",
+    "5_5_004_제안서 평가기준_제2026-067호.hwp.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-05-11 14:00:08",
+      "src": "api",
+      "quote": "API bidNtceDt=2026-05-11 14:00:08",
+      "confidence": "high",
+      "reason": "문서 재공고문 일자 2026.04.17"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-05-11 14:00",
+      "src": "api",
+      "quote": "API bidQlfctRgstDt=2026-05-11 14:00",
+      "confidence": "medium",
+      "reason": "문서에는 입찰참가자격 등록 마감 별도 없음(입찰등록 마감 2026년 04월 23일 11:00)"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026-05-11 14:00:00 ~ 2026-05-11 18:00:00",
+      "src": "api",
+      "quote": "API bidBeginDt=2026-05-11 14:00:00",
+      "confidence": "low",
+      "reason": "문서는 시작일 없이 마감일시만 \"2026년 04월 23일 11:00\"(재공고문 기준). API와 문서가 다름"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "문서에 평가 일시 없음. 공고문: 기술제안서 평가 시 참여업체의 제안서 발표를 요청할 수 있습니다",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "720000000",
+      "src": "api",
+      "quote": "API asignBdgtAmt=720000000",
+      "confidence": "high",
+      "reason": "문서: 전체사업금액 720,000,000원(부가가치세 포함)"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약일로부터 2027.11.30일까지",
+      "src": "doc",
+      "file": "1_1_001_입찰공고문_제2026-067호.hwp.txt",
+      "quote": "마. 전체사업기간 : 계약일로부터 2027.11.30일까지",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "수의시담-수의시담",
+      "src": "api",
+      "quote": "API sucsfbidMthdNm=수의시담-수의시담",
+      "confidence": "low",
+      "reason": "문서: 기술/가격 분리동시입찰, 기술평가 70점 이상 적격자 중 예정가격 이하 최저가 낙찰. API는 수의시담. 문서 공고문은 재공고(2026.04.17, 마감 2026.04.23)이고 API는 수의시담(2026-05-11 당일 마감)이라 불일치. 문서의 평가표는 유효하다고 보고 기재"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "평가기준에 등급별(수우미양가) 배점은 있으나 \"차등점수제\" 적용 여부 문구는 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "평가표에 신인도 항목 없음(일반현황의 과업수행실적과 업체신용도, 과업수행부분뿐)",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 10,
+      "src": "doc",
+      "file": "5_5_004_제안서 평가기준_제2026-067호.hwp.txt",
+      "quote": "2) 업체신용도(10점)",
+      "confidence": "medium",
+      "reason": "재정상태 견실도(신용평가등급) 10점. 문서 공고문은 재공고(2026.04.17, 마감 2026.04.23)이고 API는 수의시담(2026-05-11 당일 마감)이라 불일치. 문서의 평가표는 유효하다고 보고 기재"
+    },
+    "performanceScore": {
+      "kind": "value",
+      "value": 10,
+      "src": "doc",
+      "file": "5_5_004_제안서 평가기준_제2026-067호.hwp.txt",
+      "quote": "1) 과업수행실적(10점)",
+      "confidence": "medium",
+      "reason": "문서 공고문은 재공고(2026.04.17, 마감 2026.04.23)이고 API는 수의시담(2026-05-11 당일 마감)이라 불일치. 문서의 평가표는 유효하다고 보고 기재"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "최근 5년간(입찰공고일 기준)",
+      "src": "doc",
+      "file": "5_5_004_제안서 평가기준_제2026-067호.hwp.txt",
+      "quote": "○ 과업실적은 최근 5년간(입찰공고일 기준)으로 평가한다.",
+      "confidence": "medium",
+      "reason": "문서 공고문은 재공고(2026.04.17, 마감 2026.04.23)이고 API는 수의시담(2026-05-11 당일 마감)이라 불일치. 문서의 평가표는 유효하다고 보고 기재"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 평가가 건수 기준(1건~5건 이상)이고 금액 하한 요건 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "value",
+      "value": "과업수행실적의 관련분야는 “도심화물열차 개조설계(계획 또는 설계 용역 포함)” 혹은 “화물열차 부품개발(갭필러, 결박장치 등)” 분야로 한다.",
+      "src": "doc",
+      "file": "5_5_004_제안서 평가기준_제2026-067호.hwp.txt",
+      "quote": "※ 과업수행실적의 관련분야는 “도심화물열차 개조설계(계획 또는 설계 용역 포함)” 혹은 “화물열차 부품개발(갭필러, 결박장치 등)” 분야로 한다.",
+      "confidence": "medium",
+      "reason": "유사사업 정의 문단은 없고 관련분야 지정 주석만 있음"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "API cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서: 공동수급 불허"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "단일예가",
+      "src": "api",
+      "quote": "API prearngPrceDcsnMthdNm=단일예가",
+      "confidence": "high",
+      "reason": "문서에 예정가격 결정 방법 상세 없음(예정가격 이하 최저가 입찰자 낙찰)"
+    }
+  }
+}

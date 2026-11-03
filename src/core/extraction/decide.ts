@@ -4,7 +4,7 @@ import type { DocKind } from './classify';
 import { periodKey } from '../model/period';
 import { compact } from './normalize';
 import { parseQuantValue, QUANT_TABLE_EXTRA } from './quant-table';
-import { itemReviewState } from './review-count';
+import { isNotApplicable, itemReviewState } from './review-count';
 import type { RuleSet } from './rules/schema';
 
 export interface Candidate {
@@ -173,7 +173,65 @@ function applyPerfAggregate(items: Record<ExtractionKey, ExtractedItem<unknown>>
   items.performanceMinAmount = { value: null, status: 'verified', reason: 'not_applicable', naKind: 'perf_aggregate', raw, evidence };
 }
 
-export function decide(cands: Candidate[], rules: RuleSet): Decision {
+/**
+ * 나라장터 낙찰방법(API 원문)으로 평가가 성립하지 않는 항목을 "해당 없음"으로 판정한다.
+ * 근거 원문은 공고문에서 같은 낙찰방법을 밝힌 줄(extras.awardMethodDoc)이며, 그 줄이 없으면 판정하지 않는다.
+ * - 소액수의견적: 배점 3개, 실적 4개, 차등점수제, 제안서 평가일자. 문서에서 배점이나 정량/정성 배점표를 찾았으면 실제 평가가 있는 것이라 판정하지 않는다.
+ *   실적 하위 3개는 참가자격 실적 제한(extras.perfRestriction)이 없을 때만.
+ * - 적격심사, 최저가: 차등점수제만(기술평가가 없음). 배점과 실적은 적격심사 세부기준으로 평가될 수 있어 건드리지 않는다.
+ * 못 찾은 항목만 바꾼다(찾은 값과 충돌 후보는 유지).
+ */
+export const AWARD_METHOD_DOC_EXTRA = 'awardMethodDoc';
+export interface DecideContext {
+  /** 나라장터 API 낙찰방법(sucsfbidMthdNm) 원문 */
+  awardMethod?: string | null;
+}
+const AWARD_KINDS: Array<{ kind: 'small_quote' | 'qualified' | 'lowest_price'; api: RegExp; doc: RegExp }> = [
+  { kind: 'small_quote', api: /소액수의견적/, doc: /소액수의|수의견적|견적서?제출/ },
+  { kind: 'qualified', api: /^적격심사/, doc: /적격심사(?!비대상|대상이?아|제외|를?하지)/ },
+  { kind: 'lowest_price', api: /^(?:최저가낙찰|제한적최저가)/, doc: /최저가/ },
+];
+function applyAwardMethod(items: Record<ExtractionKey, ExtractedItem<unknown>>, extras: Record<string, ExtractedItem<unknown>>, ctx: DecideContext): void {
+  const method = compact(ctx.awardMethod ?? '');
+  const spec = method ? AWARD_KINDS.find((k) => k.api.test(method)) : undefined;
+  if (!spec) return;
+  const doc = extras[AWARD_METHOD_DOC_EXTRA];
+  const pool = doc ? [...(doc.evidence ? [{ raw: doc.raw, evidence: doc.evidence }] : []), ...(doc.candidates ?? [])] : [];
+  const hit = pool.find((c) => spec.doc.test(compact(c.evidence.evidence)));
+  if (!hit) return;
+  const isNF = (it?: ExtractedItem<unknown>) => !!it && it.status === 'needs_review' && it.reason === 'not_found' && !it.candidates?.length;
+  const naItem = (): ExtractedItem<unknown> => ({ value: null, status: 'verified', reason: 'not_applicable', naKind: spec.kind, raw: hit.raw, evidence: hit.evidence });
+  if (spec.kind !== 'small_quote') {
+    if (isNF(items.differentialScoring)) items.differentialScoring = naItem();
+    return;
+  }
+  const scores = ['credibilityScore', 'managementScore', 'performanceScore'] as const;
+  // 못 찾음과 해당 없음이 아니면(확정 값, 충돌, 질의답변 값, 합계 없음 등) 문서에 배점 단서가 있는 것이라 판정하지 않는다
+  if (scores.some((k) => items[k].reason !== 'not_found' && !isNotApplicable(items[k]))) return;
+  if (found(extras[QUANT_TABLE_EXTRA]) || found(extras[QUAL_TABLE_EXTRA])) return;
+  for (const k of [...scores, 'differentialScoring'] as const) if (isNF(items[k])) items[k] = naItem();
+  // 참가자격 실적 제한이나 "… 실적이 있는 업체" 줄이 있으면 실적 조건이 있는 것이라 실적 하위는 남긴다
+  if (!found(extras[PERF_RESTRICTION_EXTRA]) && !found(extras.perfConditionLine)) {
+    for (const k of ['performancePeriod', 'performanceMinAmount', 'performanceCondition'] as const) if (isNF(items[k])) items[k] = naItem();
+  }
+  // 제안서 평가일자(공고 필드)는 extras를 통해 문서 보충 필드로 간다(docOnlyFieldsOf).
+  if (isNF(extras.proposalEvalAt) || !extras.proposalEvalAt) extras.proposalEvalAt = naItem();
+}
+
+/**
+ * 유사사업 정의 문단이 없어 실적 인정조건을 못 찾았으면, 공고문/제안요청서의 "… 실적이 있는 업체", "… 실적을 보유한 자" 한 줄로 채운다.
+ * 해당 없음 판정 뒤에 돌려서 해당 없음이 된 항목은 건드리지 않는다. 여러 줄이 다르면 충돌로 남긴다.
+ */
+export const PERF_CONDITION_LINE_EXTRA = 'perfConditionLine';
+function applyPerfConditionLine(items: Record<ExtractionKey, ExtractedItem<unknown>>, extras: Record<string, ExtractedItem<unknown>>): void {
+  const cur = items.performanceCondition;
+  if (cur.status !== 'needs_review' || cur.reason !== 'not_found' || cur.candidates?.length) return;
+  const line = extras[PERF_CONDITION_LINE_EXTRA];
+  if (!found(line) || line.value === null) return;
+  items.performanceCondition = { ...line };
+}
+
+export function decide(cands: Candidate[], rules: RuleSet, ctx: DecideContext = {}): Decision {
   const by = new Map<string, Candidate[]>();
   for (const c of cands) {
     const l = by.get(c.target);
@@ -191,6 +249,8 @@ export function decide(cands: Candidate[], rules: RuleSet): Decision {
   applyQuantTable(items, extras);
   applyQuantNone(items, extras);
   applyPerfAggregate(items, extras);
+  applyAwardMethod(items, extras, ctx);
+  applyPerfConditionLine(items, extras);
   return { items, extras };
 }
 

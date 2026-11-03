@@ -1,5 +1,5 @@
 {
-  "version": "1.12.0",
+  "version": "1.14.0",
   "synonyms": {
     "credibility": [
       "대외신인도",
@@ -196,7 +196,7 @@
       "target": "performanceCondition",
       "strategy": "block-capture",
       "weight": 1,
-      "anchor": "^[※*＊]?유사(사업|용역|실적)[:：]|실적인정(대상|범위|기준)(?!(은|는)?제안요청서|와|과)|유사(사업|용역)(이란|은|의범위|(인정)?범위[:：]|(의)?정의(?!에|와|가|를|로|하))",
+      "anchor": "^[※*＊\\-ㅇ○∘•]?(?:(?:유사|동등이상)(?:사업|용역|실적)(?:범위)?|동일종류(?:사업|용역)(?:및평가비율)?)[:：]|실적의?관련분야(?:는|[:：])|실적인정(대상|범위|기준)(?!(은|는)?제안요청서|와|과)|유사(사업|용역)(이란|은|의범위|(인정)?범위[:：]|(의)?정의(?!에|와|가|를|로|하))",
       "stopAt": "^※|^[가-힣]\\.|^\\d+\\.|^□|^○|^-?이행실적에따른배점|^수행실적평가기준|^평가(등급|항목)|^실적등급|^평점",
       "maxBlocks": 6,
       "maxChars": 600,
@@ -370,6 +370,18 @@
       "pattern": "(?<![가-힣])(?<v>정량적?평가(?:기관)?:(?:없음|미실시|해당없음|해당사항없음|미적용))(?![가-힣]|\\d)"
     },
     {
+      "id": "na.awardMethodDoc",
+      "target": "extras.awardMethodDoc",
+      "strategy": "window-regex",
+      "weight": 1,
+      "blocksAfter": 0,
+      "valueType": "text",
+      "conflictPolicy": "prefer_priority",
+      "docKinds": ["notice", "rfp", "other"],
+      "anchor": "소액수의|수의견적|견적서?제출|적격심사|최저가",
+      "pattern": "(?<v>(?:소액수의|수의견적|견적서?제출|적격심사|최저가)[가-힣]{0,10})"
+    },
+    {
       "id": "elig.perfRestriction",
       "target": "extras.perfRestriction",
       "strategy": "window-regex",
@@ -380,6 +392,18 @@
       "docKinds": ["notice"],
       "anchor": "실적제한|실적(?:이|을|를)?(?:보유|갖춘|있는)",
       "pattern": "(?<!하수급(?:인|업체|자)?의?(?:수행|이행|납품|공급|용역|시공|사업)?)(?<v>실적제한(?!없|을두지|이없|을하지|미적용|해당없)|(?:수행|이행|납품|공급|용역|시공|사업)?실적(?:이|을|를)?(?:보유|갖춘|있는))"
+    },
+    {
+      "id": "perf.conditionLine",
+      "target": "extras.perfConditionLine",
+      "strategy": "window-regex",
+      "weight": 1,
+      "blocksAfter": 0,
+      "valueType": "text",
+      "conflictPolicy": "prefer_priority",
+      "docKinds": ["notice", "rfp"],
+      "anchor": "실적(?:이|을|를)?(?:보유|갖춘|있는)",
+      "pattern": "^(?<v>(?!.*(?:하수급|있는경우|신용과실적|수행할수있는)).{8,}?실적(?:이|을|를)?(?:보유|갖춘|있는).*)$"
     }
   ]
 }

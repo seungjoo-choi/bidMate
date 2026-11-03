@@ -1,0 +1,113 @@
+{
+  "noticeNo": "R26BK01513971",
+  "docsRead": [
+    "1_1_(2026-3 공고문) (사)부산항시설관리센터 관목전정 및 제초작업 용역 입찰 공고.hwp.txt",
+    "3_3_(2026-3 과업지시서) (사)부산항시설관리센터 관목전정 및 제초작업 용역 입찰 공고.hwp.txt"
+  ],
+  "contractType": "최저가",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-05-11 13:59:16",
+      "src": "api",
+      "file": "candidates.json:bidNtceDt",
+      "quote": "2026-05-11 13:59:16",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "최저가낙찰제-최저가낙찰자",
+      "src": "api",
+      "file": "candidates.json:sucsfbidMthdNm",
+      "quote": "최저가낙찰제-최저가낙찰자",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "file": "candidates.json:cmmnSpldmdMethdNm",
+      "quote": "(없음)공동수급불허",
+      "confidence": "high"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "단일예가",
+      "src": "api",
+      "file": "candidates.json:prearngPrceDcsnMthdNm",
+      "quote": "단일예가",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "125877400",
+      "src": "api",
+      "file": "candidates.json:asignBdgtAmt",
+      "quote": "125877400",
+      "confidence": "high",
+      "reason": "문서 기초금액 125,877,400(부가세 포함), 추정가격 114,434,000"
+    },
+    "registrationDeadline": {
+      "kind": "absent",
+      "reason": "API 입찰참가자격등록 마감 값 없음. 공고문에 \"입찰등록 마감시간까지\"라는 문구만 있고 일시 없음",
+      "confidence": "medium"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 05. 26.(화) 14:00까지 경영관리부로 제출",
+      "src": "doc",
+      "file": "1_1_(2026-3 공고문) (사)부산항시설관리센터 관목전정 및 제초작업 용역 입찰 공고.hwp.txt",
+      "quote": "[셀 3 1] 2026. 05. 26.(화) 14:00까지 경영관리부로 제출",
+      "confidence": "medium",
+      "reason": "API bidBeginDt/bidClseDt 빈 값. 시작시각 없이 마감만 있음"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약체결일로부터 2026년 12월 31일 내",
+      "src": "doc",
+      "file": "3_3_(2026-3 과업지시서) (사)부산항시설관리센터 관목전정 및 제초작업 용역 입찰 공고.hwp.txt",
+      "quote": "3. 용역 기간: 계약체결일로부터 2026년 12월 31일 내",
+      "confidence": "high"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "최저가낙찰제 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "최저가낙찰제 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "최저가낙찰제 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "최저가낙찰제 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "최저가낙찰제 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "최저가낙찰제 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "최저가낙찰제 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "최저가낙찰제 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    }
+  }
+}

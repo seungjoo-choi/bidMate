@@ -1,0 +1,23 @@
+{
+  "noticeNo": "R26BK01257556",
+  "docsRead": ["1_1_2026학년도 한성과학고등학교 학교급식 일부 위탁 입찰 공고문.hwp.txt"],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {"kind":"value","value":"2026-01-05 08:08:40","src":"api","confidence":"high"},
+    "registrationDeadline": {"kind":"value","value":"2026-01-26 11:00","src":"api","confidence":"high"},
+    "proposalPeriod": {"kind":"value","value":"2026. 1. 21.(수) 10:00 ~ 2026. 1. 26.(월) 11:00","src":"doc","file":"1_1_2026학년도 한성과학고등학교 학교급식 일부 위탁 입찰 공고문.hwp.txt","quote":"1) 제출기간: 2026. 1. 21.(수) 10:00 ~ 2026. 1. 26.(월) 11:00","confidence":"high"},
+    "proposalEvalAt": {"kind":"value","value":"2026. 2. 5.(목) 14:00 (예정)","src":"doc","file":"1_1_2026학년도 한성과학고등학교 학교급식 일부 위탁 입찰 공고문.hwp.txt","quote":"1) 일시: 2026. 2. 5.(목) 14:00 (예정)","confidence":"high"},
+    "budgetAmount": {"kind":"value","value":"486053868","src":"api","reason":"배정예산 asignBdgtAmt, 문서에서는 금액 미확인","confidence":"high"},
+    "projectPeriod": {"kind":"value","value":"2026. 3. 1. ~ 2027. 2. 28.(1년)","src":"doc","file":"1_1_2026학년도 한성과학고등학교 학교급식 일부 위탁 입찰 공고문.hwp.txt","quote":"나. 일부위탁 운영기간: 2026. 3. 1. ~ 2027. 2. 28.(1년)","confidence":"high"},
+    "evalMethod": {"kind":"value","value":"협상에 의한 계약, 기술(제안서) 능력평가(80%) + 가격 평가(20%)","src":"api","reason":"API 협상에의한계약-협상에 의한 낙찰자 결정, 문서 비율 80:20","confidence":"high"},
+    "differentialScoring": {"kind":"absent","reason":"공고문에서 차등점수제 문구 검색 결과 없음","confidence":"medium"},
+    "credibilityScore": {"kind":"na","reason":"정량평가표(운영실적, 인력, 경영상태)에 신인도 항목 없음","confidence":"high"},
+    "managementScore": {"kind":"value","value":5,"src":"doc","file":"1_1_2026학년도 한성과학고등학교 학교급식 일부 위탁 입찰 공고문.hwp.txt","quote":"○ 경영상태 : 배점한도 5점","confidence":"high"},
+    "performanceScore": {"kind":"value","value":5,"src":"doc","file":"1_1_2026학년도 한성과학고등학교 학교급식 일부 위탁 입찰 공고문.hwp.txt","quote":"주1) 위탁급식 운영 실적: 배점한도 5점","confidence":"high"},
+    "performancePeriod": {"kind":"value","value":"최근 2년간","src":"doc","file":"1_1_2026학년도 한성과학고등학교 학교급식 일부 위탁 입찰 공고문.hwp.txt","quote":"- 평가항목: 공고일 현재부터 최근 2년간 위탁 급식 운영 실적 건수","confidence":"high"},
+    "performanceMinAmount": {"kind":"na","reason":"금액 하한 없음, 급식인원 500명 이상과 계약기간 1년 이상 요건만 있음","confidence":"high"},
+    "performanceCondition": {"kind":"value","value":"단일사업으로서 계약기간 1년 이상 급식인원 500명 이상 수행 실적(※ 1개교에 2년간 실적이 있을 경우 2개교로 인정)","src":"doc","file":"1_1_2026학년도 한성과학고등학교 학교급식 일부 위탁 입찰 공고문.hwp.txt","quote":"- 실적 인정범위: 단일사업으로서 계약기간 1년 이상 급식인원 500명 이상 수행 실적(※ 1개교에 2년간 실적이 있을 경우 2개교로 인정)","confidence":"high"},
+    "jointVentureAllowed": {"kind":"value","value":"공동수급불허","src":"api","reason":"문서도 공동수급이 허용되지 않습니다","confidence":"high"},
+    "priceMethod": {"kind":"value","value":"비예가","src":"api","reason":"협상 공고, 문서에 예정가격 결정방법 별도 기재 없음","confidence":"medium"}
+  }
+}

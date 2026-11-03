@@ -1,0 +1,121 @@
+{
+  "noticeNo": "R26BK01735617",
+  "docsRead": [
+    "1_1_1.입찰공고문(2026-53호)_재공고.hwp.txt",
+    "4_4_(용역제안요청서) 2026 경산교육발전특구 성과공유 컨퍼런스.hwp.txt"
+  ],
+  "contractType": "최저가",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-09-17 17:04:48",
+      "src": "api",
+      "quote": "bidNtceDt=2026-09-17 17:04:48",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026. 9. 30.(수) 10:40~11:00",
+      "src": "doc",
+      "file": "1_1_1.입찰공고문(2026-53호)_재공고.hwp.txt",
+      "quote": "[셀 2 1] 2026. 9. 30.(수) 10:40~11:00",
+      "confidence": "low",
+      "reason": "API 값 없음, 현장 입찰등록 시간"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 9. 30.(수) 11:00",
+      "src": "doc",
+      "file": "1_1_1.입찰공고문(2026-53호)_재공고.hwp.txt",
+      "quote": "[셀 3 1] 2026. 9. 30.(수) 11:00",
+      "confidence": "low",
+      "reason": "API 값 없음, 현장입찰이라 제안서와 가격을 입찰 시 직접 제출"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "제안 설명회 일시는 해당자에 한하여 개별 통보(제안요청서 6-다)",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "27000000",
+      "src": "api",
+      "quote": "asignBdgtAmt=27000000",
+      "confidence": "high",
+      "reason": "문서: 사업예산 금27,000,000원, 부가가치세 포함"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약일로부터 2026. 12. 4.까지",
+      "src": "doc",
+      "file": "1_1_1.입찰공고문(2026-53호)_재공고.hwp.txt",
+      "quote": "라. 계약기간: 계약일로부터 2026. 12. 4.까지",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "최저가낙찰제-최저가낙찰자",
+      "src": "api",
+      "quote": "sucsfbidMthdNm=최저가낙찰제-최저가낙찰자",
+      "confidence": "high",
+      "reason": "문서: 제안서 적합 판정(평균 80점 이상)을 득한 자 중 예정가격 이하 최저가격 입찰자"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "제안요청서에서 차등점수제 문구를 찾지 못함",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "심사표에 신인도 항목 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "심사표에 경영상태 항목 없음(실적, 이해도, 수행계획, 사업관리)",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "value",
+      "value": 10,
+      "src": "doc",
+      "file": "4_4_(용역제안요청서) 2026 경산교육발전특구 성과공유 컨퍼런스.hwp.txt",
+      "quote": "[셀 1 2 rs3] 최근 3년간 유사 용역 이행 실적",
+      "confidence": "high",
+      "reason": "배점 칸 10"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "공고일 기준 최근 3년간",
+      "src": "doc",
+      "file": "4_4_(용역제안요청서) 2026 경산교육발전특구 성과공유 컨퍼런스.hwp.txt",
+      "quote": "※ 실적은 공고일 기준 최근 3년간 단일 건으로 완료 실적만 인정(용역 완료 건에 한함)",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적은 건수 구간(5건 이상 등)으로만 평가하고 금액 하한 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "absent",
+      "reason": "유사 용역 정의 문단이 공고문과 제안요청서에 없음(실적 인정 방식만 기술)",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서에 공동수급 언급 없음"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "quote": "prearngPrceDcsnMthdNm=비예가",
+      "confidence": "high"
+    }
+  }
+}

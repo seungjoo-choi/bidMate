@@ -1,0 +1,116 @@
+{
+  "noticeNo": "R26BK01257172",
+  "docsRead": [
+    "1_1_공고문-2026년도 소방시설물 점검 및 월 정기점검 용역.hwp.txt",
+    "2_2_(붙임 1) 2025년도 소방시설물 점검 및 월 정기점검 용역 과업지시서.hwp.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-01-02 17:03:51",
+      "src": "api",
+      "file": "candidates.json:bidNtceDt",
+      "quote": "2026-01-02 17:03:51",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "src": "api",
+      "file": "candidates.json:sucsfbidMthdNm",
+      "quote": "소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "file": "candidates.json:cmmnSpldmdMethdNm",
+      "quote": "(없음)공동수급불허",
+      "confidence": "high"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "file": "candidates.json:prearngPrceDcsnMthdNm",
+      "quote": "복수예가",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-01-07 18:00",
+      "src": "api",
+      "file": "candidates.json:bidQlfctRgstDt",
+      "quote": "2026-01-07 18:00",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "3416300",
+      "src": "api",
+      "file": "candidates.json:asignBdgtAmt",
+      "quote": "3416300",
+      "confidence": "medium",
+      "reason": "문서 추정 예산 34,163,000원(VAT 포함)으로 자릿수가 다름. 추정가격 API 3,105,727의 1.1배가 3,416,300이라 API가 정합"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026-01-02 17:05:00 ~ 2026-01-08 17:00:00",
+      "src": "api",
+      "file": "candidates.json:bidBeginDt~bidClseDt",
+      "quote": "2025.01.02.17:05",
+      "confidence": "high",
+      "reason": "문서 표는 연도를 2025.01.02.17:05 ~ 2025.01.08. 17:00으로 적음(연도 오기로 보임)"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약일 ~ 1년",
+      "src": "doc",
+      "file": "1_1_공고문-2026년도 소방시설물 점검 및 월 정기점검 용역.hwp.txt",
+      "quote": "나. 계약기간 : 계약일 ~ 1년",
+      "confidence": "high"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서/정량평가/실적 평가 없음",
+      "confidence": "high"
+    }
+  }
+}

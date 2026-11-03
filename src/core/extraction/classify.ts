@@ -16,8 +16,9 @@ const RULES: Array<[RegExp, Classified]> = [
   [/질의|답변|Q&A|FAQ/i, { kind: 'qna', priority: 4 }],
   [/규정|지침|예규|일반\s*조건|표준\s*계약|참고|매뉴얼|안내서|설명회/, { kind: 'reference', priority: 0 }],
   [/평가\s*기준|배점|정량\s*평가|평가\s*표|평가\s*항목/, { kind: 'eval_criteria', priority: 1 }],
-  [/입찰\s*공고|공고문|공고서/, { kind: 'notice', priority: 2 }],
-  [/제안\s*요청|RFP|과업\s*(내용|지시|설명)서|사업\s*설명서/i, { kind: 'rfp', priority: 3 }],
+  // "[공고] …", "[GH공고 제2026-0411호] …", "… 공고 제2026-275호(…)", "건축설계 공모 공고(안)"도 공고문이다.
+  [/입찰\s*공고|공고문|공고서|공고\s*제\s*\d|\[[^\]]*공고|공모\s*공고/, { kind: 'notice', priority: 2 }],
+  [/제안\s*요청|RFP|과업\s*(내용|지시|설명|이행\s*요청)서|사업\s*설명서/i, { kind: 'rfp', priority: 3 }],
 ];
 
 const SUPPORTED_EXT = new Set(['hwp', 'hwpx', 'pdf', 'docx', 'xlsx', 'xlsm', 'txt', 'zip']);

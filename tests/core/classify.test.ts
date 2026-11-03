@@ -27,6 +27,12 @@ describe('classifyName', () => {
     ['제안요청서(계약일반조건 포함).hwp', 'rfp', 3],
     ['입찰공고문(붙임 규정 포함).pdf', 'notice', 2],
     ['참고자료(제안요청서 포함).zip', 'reference', 0],
+    ['[공고][8권역] 약사가온유 등 13교 저수조 청소 용역.pdf', 'notice', 2],
+    ['부산교통공사 공고 제2026-275호(호포차량기지 축구장 조성공사 건설폐기물 처리용역).hwp', 'notice', 2],
+    ['[GH공고 제2026-0411호] 하남교산 공공주택지구 소각폐기물 처리용역(2차).hwp', 'notice', 2],
+    ['붙임 1. 건축설계 공모 공고(안).hwp', 'notice', 2],
+    ['과업이행요청서(춘천시 수도정비 기본계획(변경) 수립용역).hwpx', 'rfp', 3],
+    ['청렴계약이행서약서.hwp', 'other', 5],
   ])('%s', (name, kind, priority) => {
     expect(classifyName(name)).toEqual({ kind, priority });
   });

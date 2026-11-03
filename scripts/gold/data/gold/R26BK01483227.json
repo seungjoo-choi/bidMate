@@ -1,0 +1,117 @@
+{
+  "noticeNo": "R26BK01483227",
+  "docsRead": [
+    "1_1_입찰 재공고문_2026년 푸른환경지킴이.hwpx.txt",
+    "3_3_2026년 「푸른환경지킴이」 운영사업 제안요청서.hwpx.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-04-23 13:24:53",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 공고일 2026. 4. 23."
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-05-03 18:00",
+      "src": "api",
+      "file": "1_1_입찰 재공고문_2026년 푸른환경지킴이.hwpx.txt",
+      "quote": "다. ... 전자입찰서 제출마감일 전일 18:00까지 ... 자격을 등록한 업체",
+      "confidence": "high",
+      "reason": "문서: 전자입찰서 제출마감일 전일 18:00까지"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 5. 1. (금) 10:00 ~ 2026. 5. 4. (월) 10:00",
+      "src": "doc",
+      "file": "1_1_입찰 재공고문_2026년 푸른환경지킴이.hwpx.txt",
+      "quote": "아. 전자입찰서(가격) 및 제안서 접수개시일시: 2026. 5. 1. (금) 10:00 / 자. 접수마감일시: 2026. 5. 4. (월) 10:00",
+      "confidence": "high"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "나. 기술능력평가 - 평가일정 : 별도 통보",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "61950000",
+      "src": "api",
+      "file": "1_1_입찰 재공고문_2026년 푸른환경지킴이.hwpx.txt",
+      "quote": "라. 사업예산: 61,950,000원(부가가치세 포함)",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약일로부터 2026년 12월 10일까지",
+      "src": "doc",
+      "file": "1_1_입찰 재공고문_2026년 푸른환경지킴이.hwpx.txt",
+      "quote": "나. 용역기간: 계약일로부터 2026년 12월 10일까지",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+      "src": "api",
+      "file": "1_1_입찰 재공고문_2026년 푸른환경지킴이.hwpx.txt",
+      "quote": "기술능력평가 점수(80%)와 입찰가격평가 점수(20%)의 합산점수가 높은 순서에 따라 협상순위를 결정합니다.",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "공고문과 제안요청서에서 차등점수제 문구를 찾지 못함",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "평가항목표(총점 80)에 신인도 항목 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 5,
+      "src": "doc",
+      "file": "3_3_2026년 「푸른환경지킴이」 운영사업 제안요청서.hwpx.txt",
+      "quote": "[셀 2 0 cs2] 1. 경영상태 [셀 2 2] 5",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "평가항목표에 수행실적 항목 없음(경영상태, 정성 항목)",
+      "confidence": "medium"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "실적 평가 항목 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 평가 항목 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "실적 평가 항목 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(전자)공동이행",
+      "src": "api",
+      "file": "1_1_입찰 재공고문_2026년 푸른환경지킴이.hwpx.txt",
+      "quote": "⑧ (공동수급일 경우) 수급원 전원의 공동수급표준협정서, 합의각서, 경쟁입찰 참가자격 등록증",
+      "confidence": "high",
+      "reason": "문서에 허용 문구는 없으나 공동수급 제출서류와 공동이행방식 협정서 양식이 있음"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "confidence": "medium",
+      "reason": "문서: 입찰가격평가시 사업예산으로 하는 경우 추정가격에 부가세 포함 적용(예정가격 작성 여부 직접 문구 없음)"
+    }
+  }
+}

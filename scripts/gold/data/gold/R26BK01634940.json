@@ -1,0 +1,110 @@
+{
+  "noticeNo": "R26BK01634940",
+  "docsRead": [
+    "1_1_건설 폐기물 처리 시방서.hwpx.txt",
+    "2_2_공고문(서원 국민체육센터 건립사업 건설폐기물 처리 용역).hwpx.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-07-15 17:21:42",
+      "src": "api",
+      "quote": "API bidNtceDt=2026-07-15 17:21:42",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-07-21 18:00",
+      "src": "api",
+      "quote": "API bidQlfctRgstDt=2026-07-21 18:00",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 7. 16.(목) 10:00 ~ 2026. 7. 22.(수) 10:00",
+      "src": "doc",
+      "file": "2_2_공고문(서원 국민체육센터 건립사업 건설폐기물 처리 용역).hwpx.txt",
+      "quote": "2. 견적제출 개시일시 : 2026. 7. 16.(목) 10:00",
+      "confidence": "high",
+      "reason": "개시일시와 마감일시(3. 견적제출 마감일시 : 2026. 7. 22.(수) 10:00)가 별도 줄"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "소액수의견적, 제안서 제출과 평가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "55264000",
+      "src": "api",
+      "quote": "API asignBdgtAmt=55264000",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 510일",
+      "src": "doc",
+      "file": "2_2_공고문(서원 국민체육센터 건립사업 건설폐기물 처리 용역).hwpx.txt",
+      "quote": "마. 사업기간 : 착수일로부터 510일",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "src": "api",
+      "quote": "API sucsfbidMthdNm=소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "소액수의견적, 실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "소액수의견적, 실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "소액수의견적, 유사사업 실적 평가 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "API cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서에 공동수급 언급 없음"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "quote": "API prearngPrceDcsnMthdNm=복수예가",
+      "confidence": "high"
+    }
+  }
+}

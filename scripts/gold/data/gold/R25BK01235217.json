@@ -1,0 +1,111 @@
+{
+ "noticeNo": "R25BK01235217",
+ "docsRead": [
+  "1_1_건설공사 안전점검 수행기관 지정 공고문[금흥동(연수원길， 중로1 11호) 도시계획도로 개설사업].hwp.txt",
+  "2_2_(공주시 공고 제2025 2427호) 공주시 건설공사 안전점검 수행기관 등록명부 공개 공고문.hwp.txt",
+  "3_3_(공주시 공고 제2021 1995호) 공주시 건설공사 안전점검 수행기관 평가기준.hwp.txt"
+ ],
+ "contractType": "최저가",
+ "items": {
+  "postedAt": {
+   "kind": "value",
+   "value": "2025-12-17 10:26:10",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "registrationDeadline": {
+   "kind": "value",
+   "value": "2025-12-22 18:00",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "proposalPeriod": {
+   "kind": "value",
+   "value": "2025. 12. 17. (수) 17:00 ~ 2025. 12. 23. (화) 10:00",
+   "src": "doc",
+   "quote": "일 시 : 2025. 12. 17. (수) 17:00 ~ 2025. 12. 23. (화) 10:00",
+   "confidence": "high",
+   "file": "1_1_건설공사 안전점검 수행기관 지정 공고문[금흥동(연수원길， 중로1 11호) 도시계획도로 개설사업].hwp.txt",
+   "reason": "제안서가 아닌 전자입찰서 제출 일시"
+  },
+  "proposalEvalAt": {
+   "kind": "na",
+   "reason": "제안서 평가 없음. 제한적최저가 입찰, 점검비용 1억원 미만은 입찰가격 100점 심사로 정성/정량 평가 없음",
+   "confidence": "high"
+  },
+  "budgetAmount": {
+   "kind": "value",
+   "value": "4791000",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 기초금액 금4,791,000원(VAT포함), 안전점검 비용 금4,490,478원(VAT미포함)"
+  },
+  "projectPeriod": {
+   "kind": "absent",
+   "reason": "점검시기는 현장 협의로만 기재. 공사기간(예정) 2025. 04. 07. ~ 2027. 01. 06.은 시공 기간이라 용역기간이 아님. 공고문 3개에서 용역기간 검색했으나 없음",
+   "confidence": "medium"
+  },
+  "evalMethod": {
+   "kind": "value",
+   "value": "제한적최저가(낙찰하한율)-제한적최저가(낙찰하한율)",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 1억원 미만은 입찰가격 100점, 낙찰하한율 87.745%"
+  },
+  "differentialScoring": {
+   "kind": "na",
+   "reason": "제한적최저가 입찰, 점검비용 1억원 미만은 입찰가격 100점 심사로 정성/정량 평가 없음",
+   "confidence": "high"
+  },
+  "credibilityScore": {
+   "kind": "na",
+   "reason": "제한적최저가 입찰, 점검비용 1억원 미만은 입찰가격 100점 심사로 정성/정량 평가 없음",
+   "confidence": "high"
+  },
+  "managementScore": {
+   "kind": "na",
+   "reason": "제한적최저가 입찰, 점검비용 1억원 미만은 입찰가격 100점 심사로 정성/정량 평가 없음",
+   "confidence": "high"
+  },
+  "performanceScore": {
+   "kind": "na",
+   "reason": "제한적최저가 입찰, 점검비용 1억원 미만은 입찰가격 100점 심사로 정성/정량 평가 없음",
+   "confidence": "high"
+  },
+  "performancePeriod": {
+   "kind": "na",
+   "reason": "실적 평가 없음. 제한적최저가 입찰, 점검비용 1억원 미만은 입찰가격 100점 심사로 정성/정량 평가 없음",
+   "confidence": "high"
+  },
+  "performanceMinAmount": {
+   "kind": "na",
+   "reason": "실적 평가 없음. 제한적최저가 입찰, 점검비용 1억원 미만은 입찰가격 100점 심사로 정성/정량 평가 없음",
+   "confidence": "high"
+  },
+  "performanceCondition": {
+   "kind": "na",
+   "reason": "실적 평가 없음. 제한적최저가 입찰, 점검비용 1억원 미만은 입찰가격 100점 심사로 정성/정량 평가 없음",
+   "confidence": "high"
+  },
+  "jointVentureAllowed": {
+   "kind": "value",
+   "value": "(없음)공동수급불허",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서에 공동수급 언급 없음"
+  },
+  "priceMethod": {
+   "kind": "value",
+   "value": "복수예가",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 복수예비가격 기타, 예비가격번호 2개 추첨 후 선택 빈도 상위 4개 평균으로 예정가격 산출"
+  }
+ }
+}

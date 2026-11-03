@@ -1,0 +1,112 @@
+{
+  "noticeNo": "R26BK01574060",
+  "docsRead": [
+    "1_1_00. (PQ,TP후)가격입찰공고문(제2026-1939호).hwpx.txt",
+    "3_3_05-1. ★과업지시서_강서선(심의결과 최종본).hwp.txt",
+    "5_5_★[공고문_첨부]상생결제제도_안내자료.zip__(공고문 첨부용)[상생결제제도 안내자료] 1차이하 협력기업(전체본).pdf.txt"
+  ],
+  "contractType": "적격심사",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-06-16 09:08:51",
+      "src": "api",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-06-23 18:00",
+      "src": "api",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026.6.22. 09:00 ~ 2026.6.24. 10:00",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_00. (PQ,TP후)가격입찰공고문(제2026-1939호).hwpx.txt",
+      "quote": "입찰서 제출기간: 2026.6.22. 09:00 ~ 2026.6.24. 10:00"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "PQ,TP 후 가격입찰 공고로 기술제안서 평가는 선행 공고(R26BK01462679)에서 완료, 이 공고는 적격심사 가격입찰만 진행",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "3736590000",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 기초금액 3,736,590,000원(부가세 포함), 1차수 1,000,000,000원"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 24개월",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_00. (PQ,TP후)가격입찰공고문(제2026-1939호).hwpx.txt",
+      "quote": "나. 용역기간: 착수일로부터 24개월  ※1차수: 착수일로부터 12개월",
+      "reason": "1차수 12개월은 단계 기간, 총 기간 24개월 사용"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "적격심사제-추정가격이 10억원 이상인 설계 기술용역의 평가기준(TP심사포함)",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 적격심사, 낙찰하한율 79.995% 이상 최저가 순, 종합평점 92점 이상"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "적격심사 가격입찰 공고, 기술제안서 평가는 선행 공고에서 진행",
+      "confidence": "medium"
+    },
+    "credibilityScore": {
+      "kind": "absent",
+      "reason": "적격심사 세부항목 설명(해당용역수행능력, 사업책임자 경력, 지역업체 참여도, 경영상태, 기술인력)에 신인도 항목과 배점표가 없음",
+      "confidence": "medium"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 2,
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_00. (PQ,TP후)가격입찰공고문(제2026-1939호).hwpx.txt",
+      "quote": "경영상태: 사업수행능력(PQ) 평가시 ‘재정상태 건실도’로 평가반영되어 배점한도(2점) 부여",
+      "reason": "적격심사 항목 설명 문장의 배점한도"
+    },
+    "performanceScore": {
+      "kind": "absent",
+      "reason": "해당용역수행능력은 PQ 평가점수 환산 적용이라고만 하고 수행실적 배점은 이 공고에 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "absent",
+      "reason": "공고문과 과업지시서에 실적 인정기간 없음(PQ는 선행 공고)",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "absent",
+      "reason": "공고문과 과업지시서에 실적 인정금액 없음(PQ는 선행 공고)",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "absent",
+      "reason": "공고문과 과업지시서에 유사사업 정의 없음(PQ는 선행 공고)",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(전자)혼합방식",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 단독또는공동(공동이행,분담이행,혼합이행)"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 기초금액 ±3% 범위 복수예비가격 15개 중 4개 산술평균"
+    }
+  }
+}

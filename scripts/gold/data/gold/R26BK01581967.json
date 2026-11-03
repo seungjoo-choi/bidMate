@@ -1,0 +1,110 @@
+{
+  "noticeNo": "R26BK01581967",
+  "docsRead": [
+    "1_1_1. 견적제출공고문(안)_2026-072_2026년 울릉군 연안해조장 통합 사후관리.pdf.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-06-15 17:40:50",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidNtceDt=2026-06-15 17:40:50"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-06-18 18:00",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidQlfctRgstDt=2026-06-18 18:00"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 06. 15. (월) 19:00 ∼ 2026. 06. 19. (금) 10:00",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_1. 견적제출공고문(안)_2026-072_2026년 울릉군 연안해조장 통합 사후관리.pdf.txt",
+      "quote": "나. 입찰서 제출 기간: 2026. 06. 15. (월) 19:00 ∼ 2026. 06. 19. (금) 10:00",
+      "reason": "견적제출 공고, 제안서 아닌 입찰서 제출기간"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "소액수의 견적제출 공고, 제안서 제출과 평가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "54115000",
+      "src": "api",
+      "confidence": "high",
+      "quote": "asignBdgtAmt=54115000",
+      "reason": "문서: 기초금액 금 54,115,000원 (부가가치세 포함)"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약일로부터 2026. 11. 30. 까지",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_1. 견적제출공고문(안)_2026-072_2026년 울릉군 연안해조장 통합 사후관리.pdf.txt",
+      "quote": "용역기간 계약일로부터 2026. 11. 30. 까지"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "src": "api",
+      "confidence": "high",
+      "quote": "sucsfbidMthdNm=소액수의견적-소액수의견적(2인 이상 견적 제출)"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "소액수의 견적제출, 제안서 평가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "소액수의 견적제출, 정량평가 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "소액수의 견적제출, 정량평가 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "소액수의 견적제출, 실적 평가 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "실적 인정 조건 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 금액 요건 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "유사사업 정의 없음, 소액수의 견적제출",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(전자)혼합방식",
+      "src": "api",
+      "confidence": "high",
+      "quote": "cmmnSpldmdMethdNm=(전자)혼합방식",
+      "reason": "문서: 다. 공동계약 가능 1) 공동+분담이행방식(혼합)으로 가능"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "confidence": "high",
+      "quote": "prearngPrceDcsnMthdNm=복수예가"
+    }
+  }
+}

@@ -20,7 +20,7 @@ export interface EvidenceRef {
   ruleId: string; docKind: DocKind;
   origin?: AttachmentOrigin;
 }
-export type NaKind = 'quant_table' | 'quant_none' | 'perf_aggregate';
+export type NaKind = 'quant_table' | 'quant_none' | 'perf_aggregate' | 'small_quote' | 'qualified' | 'lowest_price';
 export interface ExtractedItem<T> {
   value: T | null; raw?: string; status: ExtractionStatus;
   reason?: 'not_found' | 'conflict' | 'multi' | 'low_confidence' | 'no_documents' | 'no_total' | 'not_applicable';

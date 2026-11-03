@@ -1,0 +1,117 @@
+{
+  "noticeNo": "R26BK01513868",
+  "docsRead": [
+    "1_1_2-1. 입찰공고문(사본).pdf.txt",
+    "2_2_2-1. 입찰공고문.hwpx.txt",
+    "3_3_2-2. 제안요청서.hwpx.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-05-11 13:52:36",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidNtceDt=2026-05-11 13:52:36"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-05-21 18:00",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidQlfctRgstDt=2026-05-21 18:00"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 05. 20. 10:00 ~ 2026. 05. 22. 12:00",
+      "src": "doc",
+      "confidence": "high",
+      "file": "2_2_2-1. 입찰공고문.hwpx.txt",
+      "quote": "1) 접수개시일자 : 2026. 05. 20. 10:00 / 2) 접수마감일시 : 2026. 05. 22. 12:00"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "발표 일시 및 장소는 제안서 접수 시 발주부서에서 별도 안내합니다",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "100000000",
+      "src": "api",
+      "confidence": "high",
+      "quote": "asignBdgtAmt=100000000",
+      "reason": "문서: 사업예산 100,000,000원(부가세 포함), 추정가격 90,909,091원"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 7개월",
+      "src": "doc",
+      "confidence": "high",
+      "file": "2_2_2-1. 입찰공고문.hwpx.txt",
+      "quote": "[셀 7 1] 착수일로부터 7개월"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+      "src": "api",
+      "confidence": "high",
+      "quote": "sucsfbidMthdNm=협상에의한계약-협상에 의한 낙찰자 결정"
+    },
+    "differentialScoring": {
+      "kind": "value",
+      "value": false,
+      "src": "doc",
+      "confidence": "high",
+      "file": "2_2_2-1. 입찰공고문.hwpx.txt",
+      "quote": "가. 차등점수제 적용 여부 : 비해당"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "계량평가는 경영상태만 시행, 사회적책임 가감점도 제외 (각주 1)",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 10,
+      "src": "doc",
+      "confidence": "high",
+      "file": "3_3_2-2. 제안요청서.hwpx.txt",
+      "quote": "[셀 2 2] a. 경영상태 평가 [셀 2 3] 10"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "추정가격이 고시금액 미만이므로 수행실적 평가는 제외 (각주 1)",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "수행실적 평가 제외",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "수행실적 평가 제외",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "수행실적 평가 제외",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(전자)공동이행",
+      "src": "api",
+      "confidence": "high",
+      "quote": "cmmnSpldmdMethdNm=(전자)공동이행"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "confidence": "high",
+      "quote": "prearngPrceDcsnMthdNm=비예가",
+      "reason": "문서: 국가계약법 시행령 제7조의2제2항에 따라 예정가격을 작성하지 않으며"
+    }
+  }
+}

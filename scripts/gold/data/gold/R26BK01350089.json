@@ -1,0 +1,122 @@
+{
+ "noticeNo": "R26BK01350089",
+ "docsRead": [
+  "1_1_(재)공고문_입체지적.hwp.txt",
+  "3_3_제안요청서_입체지적.hwp.txt"
+ ],
+ "contractType": "협상",
+ "items": {
+  "postedAt": {
+   "kind": "value",
+   "value": "2026-02-23 17:29:41",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "registrationDeadline": {
+   "kind": "value",
+   "value": "2026-03-05 18:00",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "proposalPeriod": {
+   "kind": "value",
+   "value": "2026. 3. 3.(10:00) ~ 2026. 3. 6.(10:00)",
+   "src": "doc",
+   "quote": "① 제출기간: 2026. 3. 3.(10:00) ~ 2026. 3. 6.(10:00)",
+   "confidence": "high",
+   "file": "1_1_(재)공고문_입체지적.hwp.txt"
+  },
+  "proposalEvalAt": {
+   "kind": "value",
+   "value": "2026. 3. 11.(14:00)",
+   "src": "doc",
+   "quote": "① 일자 및 장소: 2026. 3. 11.(14:00) / 한국국토정보공사 회의실",
+   "confidence": "high",
+   "file": "1_1_(재)공고문_입체지적.hwp.txt"
+  },
+  "budgetAmount": {
+   "kind": "value",
+   "value": "33000000",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 33,000,000원(부가가치세 포함), 추정가격 30,000,000원"
+  },
+  "projectPeriod": {
+   "kind": "value",
+   "value": "계약일로부터 2026. 12. 31.",
+   "src": "doc",
+   "quote": "사업기간: 계약일로부터 2026. 12. 31.",
+   "confidence": "high",
+   "file": "1_1_(재)공고문_입체지적.hwp.txt"
+  },
+  "evalMethod": {
+   "kind": "value",
+   "value": "협상에의한계약-협상에 의한 낙찰자 결정(SW사업)",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 종합평가점수(100%) = 기술능력평가(90%) + 입찰가격평가(10%)"
+  },
+  "differentialScoring": {
+   "kind": "value",
+   "value": false,
+   "src": "doc",
+   "quote": "차등점수제를 미적용한 사업임",
+   "confidence": "high",
+   "file": "3_3_제안요청서_입체지적.hwp.txt"
+  },
+  "credibilityScore": {
+   "kind": "na",
+   "reason": "기술성 평가기준표에 신인도 항목 없음(정량 경영상태 10, 전략 15, 사업수행 30 등)",
+   "confidence": "high"
+  },
+  "managementScore": {
+   "kind": "value",
+   "value": 10,
+   "src": "doc",
+   "quote": "정량평가 (10)",
+   "confidence": "medium",
+   "file": "3_3_제안요청서_입체지적.hwp.txt",
+   "reason": "기술성 평가기준표 정량평가 경영상태(신용평가등급) 배점한도 10"
+  },
+  "performanceScore": {
+   "kind": "na",
+   "reason": "기술성 평가기준표에 수행실적 항목 없음(정량평가는 경영상태 10점뿐)",
+   "confidence": "high"
+  },
+  "performancePeriod": {
+   "kind": "na",
+   "reason": "수행실적 평가와 실적 참가자격 요건 없음",
+   "confidence": "high"
+  },
+  "performanceMinAmount": {
+   "kind": "na",
+   "reason": "실적 금액 요건 없음",
+   "confidence": "high"
+  },
+  "performanceCondition": {
+   "kind": "na",
+   "reason": "유사사업 인정 정의 없음",
+   "confidence": "high"
+  },
+  "jointVentureAllowed": {
+   "kind": "value",
+   "value": "(전자)공동이행",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 단독 또는 공동수급체(공동이행방식)를 구성하여 입찰에 참여할 수 있으며 5개사 이내"
+  },
+  "priceMethod": {
+   "kind": "value",
+   "value": "비예가",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 예정가격을 작성하지 않으며 사업금액을 예정가격으로 간주"
+  }
+ }
+}

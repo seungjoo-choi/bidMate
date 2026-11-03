@@ -1,0 +1,23 @@
+{
+  "noticeNo": "R26BK01735849",
+  "docsRead": ["1_1_1.공고서.hwp.txt"],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {"kind":"value","value":"2026-09-17 18:23:28","src":"api","confidence":"high"},
+    "registrationDeadline": {"kind":"value","value":"2026-10-01 18:00","src":"api","confidence":"high"},
+    "proposalPeriod": {"kind":"value","value":"2026.9.30.(수) 09:00 ~ 2026.10.2.(금) 11:00","src":"doc","file":"1_1_1.공고서.hwp.txt","quote":"2026.9.30.(수) 09:00 ~ 2026.10.2.(금) 11:00","confidence":"high"},
+    "proposalEvalAt": {"kind":"value","value":"2026.10.12.(월) 14:00","src":"doc","file":"1_1_1.공고서.hwp.txt","quote":"가. 일시 : 2026.10.12.(월) 14:00","confidence":"high"},
+    "budgetAmount": {"kind":"value","value":"43990000","src":"api","reason":"문서: 총 사업예산 : 43,990,000원(부가가치세 포함)","confidence":"high"},
+    "projectPeriod": {"kind":"value","value":"계약일로부터 270일","src":"doc","file":"1_1_1.공고서.hwp.txt","quote":"나. 계약기간(용역기한) : 계약일로부터 270일","confidence":"high"},
+    "evalMethod": {"kind":"value","value":"협상에 의한 계약(SW사업), 기술평가(90%) + 가격평가(10%)","src":"api","reason":"문서: 제안서 기술평가(90%)와 가격평가(10%)를 종합평가","confidence":"high"},
+    "differentialScoring": {"kind":"value","value":true,"src":"doc","file":"1_1_1.공고서.hwp.txt","quote":"나. 본 공고는 (계약예규)「협상에의한계약체결기준」제7조 제6항에 따른 차등점수제를 적용하는 평가임","confidence":"high"},
+    "credibilityScore": {"kind":"absent","reason":"공고서만 첨부, 평가항목 배점표 없음(제안요청서 미첨부)","confidence":"medium"},
+    "managementScore": {"kind":"absent","reason":"공고서만 첨부, 평가항목 배점표 없음(제안요청서 미첨부)","confidence":"medium"},
+    "performanceScore": {"kind":"absent","reason":"공고서만 첨부, 평가항목 배점표 없음(제안요청서 미첨부)","confidence":"medium"},
+    "performancePeriod": {"kind":"absent","reason":"공고서에서 실적 관련 문구 검색 결과 없음","confidence":"medium"},
+    "performanceMinAmount": {"kind":"absent","reason":"공고서에서 실적 관련 문구 검색 결과 없음","confidence":"medium"},
+    "performanceCondition": {"kind":"absent","reason":"공고서에서 유사사업 정의 없음(참가자격은 개인정보 영향평가 기관 지정서만)","confidence":"medium"},
+    "jointVentureAllowed": {"kind":"value","value":"공동수급불허","src":"api","reason":"문서: 본 입찰은 공동수급 및 하도급을 불허함","confidence":"high"},
+    "priceMethod": {"kind":"value","value":"비예가","src":"api","reason":"문서: 국가계약법 시행령 제7조의2 제2항에 따라 예정가격을 작성하지 않음","confidence":"high"}
+  }
+}

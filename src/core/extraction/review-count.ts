@@ -13,6 +13,9 @@ export const NA_NOTES: Record<NaKind, string> = {
   quant_table: '정량평가 표에 해당 항목 없음',
   quant_none: '정량평가 없음',
   perf_aggregate: '건당 하한 없음, 실적 금액 합산 비율로 평가',
+  small_quote: '나라장터 낙찰방법이 소액수의견적이라 제안서 평가와 배점 없음',
+  qualified: '나라장터 낙찰방법이 적격심사라 제안서 기술평가(차등점수제) 없음',
+  lowest_price: '나라장터 낙찰방법이 최저가 낙찰이라 제안서 기술평가(차등점수제) 없음',
 };
 // 기존 값은 저장된 notice.json 판별에 쓰이므로 변경 금지
 export const NA_NOTE = NA_NOTES.quant_table;

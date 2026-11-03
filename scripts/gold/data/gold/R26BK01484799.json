@@ -1,0 +1,110 @@
+{
+  "noticeNo": "R26BK01484799",
+  "docsRead": [
+    "1_1_[공고문] 2026년 숲해설 위탁운영(재공고).hwpx.txt",
+    "3_3_2026년 울릉군 숲해설 위탁운영사업 과업지시서.hwpx.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-04-23 12:56:49",
+      "src": "api",
+      "quote": "API bidNtceDt=2026-04-23 12:56:49",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-04-28 18:00",
+      "src": "api",
+      "quote": "API bidQlfctRgstDt=2026-04-28 18:00",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 4. 27. 10:00 ~ 2026. 4. 29. 10:00",
+      "src": "doc",
+      "file": "1_1_[공고문] 2026년 숲해설 위탁운영(재공고).hwpx.txt",
+      "quote": "[셀 2 0] 2026. 4. 27. 10:00",
+      "confidence": "high",
+      "reason": "제출 2026. 4. 27. 10:00 / 마감 2026. 4. 29. 10:00 표 칸"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "소액수의견적, 제안서 제출과 평가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "90000000",
+      "src": "api",
+      "quote": "API asignBdgtAmt=90000000",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 270일",
+      "src": "doc",
+      "file": "1_1_[공고문] 2026년 숲해설 위탁운영(재공고).hwpx.txt",
+      "quote": "라. 용역기간 : 착수일로부터 270일",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "src": "api",
+      "quote": "API sucsfbidMthdNm=소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "소액수의견적, 실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "소액수의견적, 실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "소액수의견적, 유사사업 실적 평가 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "API cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서: 공동도급 : 불허"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "quote": "API prearngPrceDcsnMthdNm=복수예가",
+      "confidence": "high"
+    }
+  }
+}

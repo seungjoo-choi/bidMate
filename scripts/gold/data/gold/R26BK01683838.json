@@ -1,0 +1,121 @@
+{
+ "noticeNo": "R26BK01683838",
+ "docsRead": [
+  "1_1_[GH공고 제2026-0411호] 하남교산 공공주택지구(1공구,GH구역) 소각폐기물 처리용역(2차).hwp.txt",
+  "3_3_과업내용서(소각폐기물).hwp.txt",
+  "7_7_안전보건수준평가.zip__붙임4_안전보건수준평가 1식04-2.도급사업 적격 수급업체 선정용 안전보건수준평가 기준.hwp.txt"
+ ],
+ "contractType": "적격심사",
+ "items": {
+  "postedAt": {
+   "kind": "value",
+   "value": "2026-08-14 16:55:49",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "registrationDeadline": {
+   "kind": "value",
+   "value": "2026-08-24 18:00",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "proposalPeriod": {
+   "kind": "value",
+   "value": "2026. 08. 21.(금) 09:00 ~ 2026. 08. 25.(화) 10:00",
+   "src": "doc",
+   "quote": "전자 입찰서 제출 개시 일시 : 2026. 08. 21.(금) 09:00",
+   "confidence": "high",
+   "file": "1_1_[GH공고 제2026-0411호] 하남교산 공공주택지구(1공구,GH구역) 소각폐기물 처리용역(2차).hwp.txt",
+   "reason": "제안서가 아닌 전자입찰서 제출 개시/마감 일시"
+  },
+  "proposalEvalAt": {
+   "kind": "na",
+   "reason": "적격심사 공고로 제안서 제출과 제안서 평가 없음",
+   "confidence": "high"
+  },
+  "budgetAmount": {
+   "kind": "value",
+   "value": "2201430000",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 기초금액 금 2,201,430,000원(VAT 포함)"
+  },
+  "projectPeriod": {
+   "kind": "value",
+   "value": "착수일로부터 30개월",
+   "src": "doc",
+   "quote": "착수일로부터 30개월",
+   "confidence": "medium",
+   "file": "1_1_[GH공고 제2026-0411호] 하남교산 공공주택지구(1공구,GH구역) 소각폐기물 처리용역(2차).hwp.txt"
+  },
+  "evalMethod": {
+   "kind": "value",
+   "value": "적격심사제-관리규정외 수기심사(총점입력)",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 낙찰하한율 77.995% 이상 최저가 순 적격심사, 종합평점 90점 이상 낙찰"
+  },
+  "differentialScoring": {
+   "kind": "na",
+   "reason": "적격심사 공고로 기술평가 차등점수제 없음",
+   "confidence": "high"
+  },
+  "credibilityScore": {
+   "kind": "value",
+   "value": "+4.5~△5.0",
+   "src": "doc",
+   "quote": "신인도(+4.5~△5.0)",
+   "confidence": "low",
+   "file": "1_1_[GH공고 제2026-0411호] 하남교산 공공주택지구(1공구,GH구역) 소각폐기물 처리용역(2차).hwp.txt",
+   "reason": "적격심사 배점한도 식의 신인도 가감 범위(가점 4.5 ~ 감점 5.0), 합계 한도 형태의 단일 배점 아님"
+  },
+  "managementScore": {
+   "kind": "absent",
+   "reason": "배점한도 식에 수행능력 67 합계만 있고 경영상태 개별 배점 없음. 적격심사 세부기준 별표는 첨부에 없음(경영상태 평가 방법과 기준비율만 기재)",
+   "confidence": "high"
+  },
+  "performanceScore": {
+   "kind": "absent",
+   "reason": "배점한도 식에 수행능력 67 합계만 있고 이행실적 개별 배점 없음. 적격심사 세부기준 별표는 첨부에 없음",
+   "confidence": "high"
+  },
+  "performancePeriod": {
+   "kind": "value",
+   "value": "최근 5년간",
+   "src": "doc",
+   "quote": "당해 용역 기준금액 대비 최근 5년간 당해 용역수행금액",
+   "confidence": "high",
+   "file": "1_1_[GH공고 제2026-0411호] 하남교산 공공주택지구(1공구,GH구역) 소각폐기물 처리용역(2차).hwp.txt"
+  },
+  "performanceMinAmount": {
+   "kind": "na",
+   "reason": "건당 하한 없음. 이행실적 평가 기준금액(중간처리업 1,729,080,000원, 수집운반업 241,366,760원, 부가세 제외)은 비율 평가의 분모",
+   "confidence": "medium"
+  },
+  "performanceCondition": {
+   "kind": "absent",
+   "reason": "이행실적 인정범위 및 여부는 발주부서의 판단이라고만 기재, 유사용역 정의 문단 없음",
+   "confidence": "medium"
+  },
+  "jointVentureAllowed": {
+   "kind": "value",
+   "value": "(전자)분담이행",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 단독 또는 공동계약(분담이행방식만 허용), 구성원 2개사 이내"
+  },
+  "priceMethod": {
+   "kind": "value",
+   "value": "복수예가",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 기초금액 기준 ±3% 15개 복수예비가격, 선택 빈도 상위 4개 산술평균"
+  }
+ }
+}

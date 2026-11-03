@@ -1,0 +1,119 @@
+{
+  "noticeNo": "R26BK01635715",
+  "docsRead": [
+    "1_1_1. 입찰공고(에너지데이터 이용 활성화 방안 마련(확대)).hwp.txt",
+    "3_3_[붙임2] 제안요청서(에너지데이터 이용 활성화 방안)_확대.hwp.txt",
+    "5_5_(입찰용)청렴공정계약 이행 통합 서약서(26.6.30.).hwp.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-07-15 17:04:03",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 공고일 2026. 7. 15."
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-07-27 18:00",
+      "src": "api",
+      "file": "1_1_1. 입찰공고(에너지데이터 이용 활성화 방안 마련(확대)).hwp.txt",
+      "quote": "전자입찰서 제출마감일 전일 18:00까지 등록",
+      "confidence": "high",
+      "reason": "문서: 전자입찰서 제출마감일 전일 18:00까지"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 7. 23.(목) 10:00 ~ 2026. 7. 28.(화) 10:00",
+      "src": "doc",
+      "file": "1_1_1. 입찰공고(에너지데이터 이용 활성화 방안 마련(확대)).hwp.txt",
+      "quote": "① 전자입찰서접수 개시 일시 : 2026. 7. 23.(목) 10:00 / ② 마감 일시 : 2026. 7. 28.(화) 10:00",
+      "confidence": "high"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "3) 기술제안서 평가일시 및 장소 : 수요부서에서 별도 안내",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "100000000",
+      "src": "api",
+      "file": "1_1_1. 입찰공고(에너지데이터 이용 활성화 방안 마련(확대)).hwp.txt",
+      "quote": "3) 예 산 금 액 : \\100,000,000원(부가가치세 포함)",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약체결일로부터 120일 이내",
+      "src": "doc",
+      "file": "1_1_1. 입찰공고(에너지데이터 이용 활성화 방안 마련(확대)).hwp.txt",
+      "quote": "4) 과 업 기 한 : 계약체결일로부터 120일 이내",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+      "src": "api",
+      "file": "1_1_1. 입찰공고(에너지데이터 이용 활성화 방안 마련(확대)).hwp.txt",
+      "quote": "제안서의 종합평가(기술평가80% + 가격평가20%) 결과 고득점자부터 순차적으로 협상을 실시합니다.",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "공고문, 제안요청서에서 차등점수제 문구를 찾지 못함",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "평가표에 신인도 항목 없음(업체 일반사항 경영상태, 인력투입 / 용역수행계획 / 용역추진전략)",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 10,
+      "src": "doc",
+      "file": "3_3_[붙임2] 제안요청서(에너지데이터 이용 활성화 방안)_확대.hwp.txt",
+      "quote": "[셀 4 2] ① 경영상태(신용평가등급) ... [셀 4 8] 10",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "평가표에 수행실적 항목 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "실적 평가 항목 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 평가 항목 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "실적 평가 항목 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(전자)공동이행",
+      "src": "api",
+      "file": "1_1_1. 입찰공고(에너지데이터 이용 활성화 방안 마련(확대)).hwp.txt",
+      "quote": "6) 공 동 계 약 : 허용(공동이행방식)",
+      "confidence": "high",
+      "reason": "문서: 공동이행방식, 대표사 포함 5개사 이하, 최소 지분율 10%"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "file": "1_1_1. 입찰공고(에너지데이터 이용 활성화 방안 마련(확대)).hwp.txt",
+      "quote": "예정가격을 작성하지 않습니다.",
+      "confidence": "high"
+    }
+  }
+}

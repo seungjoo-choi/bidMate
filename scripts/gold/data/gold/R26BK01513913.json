@@ -1,0 +1,118 @@
+{
+  "noticeNo": "R26BK01513913",
+  "docsRead": [
+    "1_1_입찰공고문(재공고) 1부.pdf.txt",
+    "2_2_과업지시서 1부.hwpx.txt",
+    "3_3_제안요청서 1부.hwp.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-05-11 13:22:24",
+      "src": "api",
+      "quote": "API bidNtceDt=2026-05-11 13:22:24",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-05-21 18:00",
+      "src": "api",
+      "quote": "API bidQlfctRgstDt=2026-05-21 18:00",
+      "confidence": "high",
+      "reason": "문서에는 입찰참가자격 등록 마감 일시가 따로 없음(입찰마감일 전일까지 등록)"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026.05.11.(월) 14:00 ~ 2026.05.22.(금) 10:00",
+      "src": "doc",
+      "file": "1_1_입찰공고문(재공고) 1부.pdf.txt",
+      "quote": "2026.05.11.(월 ) 14:00 2026.05.22.( 금) 10:00",
+      "confidence": "high",
+      "reason": "제안서 제출기간은 가격입찰서 제출기간과 동일(6. 제안서 제출 가. 기간)"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "제안요청서: 제안서 발표일시 및 장소는 제안사에 사전 통보함",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "83000000",
+      "src": "api",
+      "quote": "API asignBdgtAmt=83000000",
+      "confidence": "high",
+      "reason": "문서: 83,000,000원 (부가세 포함)"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약일로부터 2026년 12월 15일까지",
+      "src": "doc",
+      "file": "3_3_제안요청서 1부.hwp.txt",
+      "quote": "계약일로부터 2026년 12월 15일까지",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+      "src": "api",
+      "quote": "API sucsfbidMthdNm=협상에의한계약-협상에 의한 낙찰자 결정",
+      "confidence": "high",
+      "reason": "문서: 기술평가 비중 100분의 90, 가격평가 100분의 10 (협상적격 기술평가 85% 이상)"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "제안요청서, 입찰공고문에서 차등점수제 문구를 찾지 못함",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "정량평가가 경영상태 5점과 인력평가 15점뿐, 신인도 항목 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 5,
+      "src": "doc",
+      "file": "3_3_제안요청서 1부.hwp.txt",
+      "quote": "경영상태 평가 (기업 신용평가등급) [5점]",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "평가표에 수행실적 항목 없음(정량평가는 경영상태와 해당분야 기술인력 보유현황만)",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "수행실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "수행실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "수행실적 평가 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "API cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서: 공동수급 불허"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "quote": "API prearngPrceDcsnMthdNm=비예가",
+      "confidence": "high",
+      "reason": "문서: 입찰의 예정가격은 시행령 제2조의7 제2항에 의거 작성하지 않습니다"
+    }
+  }
+}

@@ -450,6 +450,8 @@ describe('규칙 격리', () => {
     const d = decide([], loadRules());
     expect(JSON.parse(JSON.stringify(d.extras))).toEqual({
       bonusTable: { value: null, status: 'needs_review', reason: 'not_found' },
+      awardMethodDoc: { value: null, status: 'needs_review', reason: 'not_found' },
+      perfConditionLine: { value: null, status: 'needs_review', reason: 'not_found' },
       evalMethodDoc: { value: null, status: 'needs_review', reason: 'not_found' },
       projectPeriod: { value: null, status: 'needs_review', reason: 'not_found' },
       projectPeriodCell: { value: null, status: 'needs_review', reason: 'not_found' },

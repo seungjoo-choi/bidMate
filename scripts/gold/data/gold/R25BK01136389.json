@@ -1,0 +1,131 @@
+{
+ "noticeNo": "R25BK01136389",
+ "docsRead": [
+  "2_2_0. 입찰공고문.pdf.txt",
+  "1_1_2. 제안요청서.hwp.txt"
+ ],
+ "contractType": "기타",
+ "items": {
+  "postedAt": {
+   "kind": "value",
+   "value": "2025-11-05 18:16:07",
+   "src": "api",
+   "confidence": "high",
+   "reason": "문서(게시판 머리) 일시 2025-11-05 18:07:12, 입찰공고일 2025. 11. 5."
+  },
+  "registrationDeadline": {
+   "kind": "value",
+   "value": "2025. 11. 13.(목) 11:00까지",
+   "src": "doc",
+   "confidence": "medium",
+   "file": "2_2_0. 입찰공고문.pdf.txt",
+   "quote": "가. 일시 및 장소: 2025. 11. 13.(목) 11:00까지, 성서캠퍼스 행소관 235호 구매팀",
+   "reason": "API 값 비어 있음, 문서의 입찰 등록 마감(제안서 제출 서류 포함)"
+  },
+  "proposalPeriod": {
+   "kind": "value",
+   "value": "2025. 11. 13.(목) 11:00까지",
+   "src": "doc",
+   "confidence": "medium",
+   "file": "2_2_0. 입찰공고문.pdf.txt",
+   "quote": "9) 제안서(출력물) 1부 및 USB(제안서 파일) 1개",
+   "reason": "API 입찰서 제출 기간 비어 있음, 제안서는 입찰 등록 시 제출서류로 2025. 11. 13.(목) 11:00까지 방문, 택배, 우편 제출, 시작 일시 없음"
+  },
+  "proposalEvalAt": {
+   "kind": "value",
+   "value": "2025. 11. 13.(목) ~ 11. 19.(수)까지",
+   "src": "doc",
+   "confidence": "medium",
+   "file": "2_2_0. 입찰공고문.pdf.txt",
+   "quote": "가. 기 술 능 력 평 가 : 2025. 11. 13.(목) ~ 11. 19.(수)까지, 교무․교직팀 주관",
+   "reason": "기간으로만 기재, 단일 일시 없음"
+  },
+  "budgetAmount": {
+   "kind": "value",
+   "value": "75600000",
+   "src": "api",
+   "confidence": "high",
+   "reason": "문서: 추정금액 75,600,000원(부가세 포함)"
+  },
+  "projectPeriod": {
+   "kind": "value",
+   "value": "2026. 3. 12. ~ 2029. 3. 11.(3년간)",
+   "src": "doc",
+   "confidence": "high",
+   "file": "2_2_0. 입찰공고문.pdf.txt",
+   "quote": "나. 계약기간: 2026. 3. 12. ~ 2029. 3. 11.(3년간)",
+   "reason": "구축기간은 2026. 3. 11.까지"
+  },
+  "evalMethod": {
+   "kind": "value",
+   "value": "2단계경쟁입찰-가격입찰서제출자 중 예가 내 최저가 투찰자",
+   "src": "api",
+   "confidence": "high",
+   "reason": "문서: 1차 기술능력평가 합격 업체 중 2단계 가격입찰, 예정가격 이하 최저금액 응찰자 낙찰"
+  },
+  "differentialScoring": {
+   "kind": "absent",
+   "reason": "공고문과 제안요청서에서 차등점수제 문구 없음(차등은 학교 수수료 차등 문맥뿐)",
+   "confidence": "medium"
+  },
+  "credibilityScore": {
+   "kind": "na",
+   "reason": "정량평가표(경영상태, 일반현황, 수행실적)에 신인도 항목 없음",
+   "confidence": "high"
+  },
+  "managementScore": {
+   "kind": "value",
+   "value": 5,
+   "src": "doc",
+   "confidence": "high",
+   "file": "1_1_2. 제안요청서.hwp.txt",
+   "quote": "[셀 1 1] 경영상태",
+   "reason": "배점한도 칸 5, 신용평가 등급에 의한 평가"
+  },
+  "performanceScore": {
+   "kind": "value",
+   "value": 25,
+   "src": "doc",
+   "confidence": "high",
+   "file": "1_1_2. 제안요청서.hwp.txt",
+   "quote": "[셀 3 2] - 최근 1년 이내 대학 인터넷 증명 발급 수행 실적",
+   "reason": "인터넷 증명발급 서비스 수행실적 배점한도 25"
+  },
+  "performancePeriod": {
+   "kind": "value",
+   "value": "공고일로부터 1년 이내",
+   "src": "doc",
+   "confidence": "high",
+   "file": "1_1_2. 제안요청서.hwp.txt",
+   "quote": "※ 공고일로부터 1년 이내의 ‘재학생 10,000명 이상 대학’에 대한 실적 관련 증빙 서류첨부 필요"
+  },
+  "performanceMinAmount": {
+   "kind": "na",
+   "reason": "금액 하한 없음, 재학생 10,000명 이상 대학 서비스 개교 수 기준",
+   "confidence": "high"
+  },
+  "performanceCondition": {
+   "kind": "value",
+   "value": "최근 1년 이내 대학 인터넷 증명 발급 수행 실적, 공고일로부터 1년 이내의 ‘재학생 10,000명 이상 대학’에 대한 실적(서비스 개교 수로 평가)",
+   "src": "doc",
+   "confidence": "low",
+   "file": "1_1_2. 제안요청서.hwp.txt",
+   "quote": "- 최근 1년 이내 대학 인터넷 증명 발급 수행 실적에 대한 평가기준",
+   "reason": "유사사업 정의 문단은 없고 평가기준 표 문구를 발췌"
+  },
+  "jointVentureAllowed": {
+   "kind": "value",
+   "value": "공동수급불허",
+   "src": "api",
+   "confidence": "high",
+   "reason": "문서에 공동수급 문구 없음"
+  },
+  "priceMethod": {
+   "kind": "value",
+   "value": "단일예가",
+   "src": "api",
+   "confidence": "high",
+   "reason": "문서: 2단계 가격입찰에서 예정가격 이하 최저금액 응찰자 낙찰"
+  }
+ }
+}

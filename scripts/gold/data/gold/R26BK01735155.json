@@ -1,0 +1,109 @@
+{
+  "noticeNo": "R26BK01735155",
+  "docsRead": [
+    "1_1_[견적공고문] 2026 울산 과·수·정 융합 축전 행사 대행 용역.hwp.txt",
+    "3_3_[과업지시서] 2026 울산 과·수·정 융합 축전 행사 대행 용역.hwpx.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-09-17 16:55:25",
+      "src": "api",
+      "quote": "API bidNtceDt=2026-09-17 16:55:25",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-09-22 18:00",
+      "src": "api",
+      "quote": "API bidQlfctRgstDt=2026-09-22 18:00",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 9. 21.(월) 10:00 ~ 2026. 9. 23.(수) 10:00",
+      "src": "doc",
+      "file": "1_1_[견적공고문] 2026 울산 과·수·정 융합 축전 행사 대행 용역.hwp.txt",
+      "quote": "3-1. 견적서 제출기간 : 2026. 9. 21.(월) 10:00 ~ 2026. 9. 23.(수) 10:00",
+      "confidence": "high"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "소액수의견적, 제안서 제출과 평가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "108847450",
+      "src": "api",
+      "quote": "API asignBdgtAmt=108847450",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 2026. 11. 6.(금)까지",
+      "src": "doc",
+      "file": "1_1_[견적공고문] 2026 울산 과·수·정 융합 축전 행사 대행 용역.hwp.txt",
+      "quote": "1-4. 용역기간 : 착수일로부터 2026. 11. 6.(금)까지",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "src": "api",
+      "quote": "API sucsfbidMthdNm=소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "소액수의견적, 실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "소액수의견적, 실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "소액수의견적, 유사사업 실적 평가 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "API cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서: 공동계약은 불허합니다."
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "quote": "API prearngPrceDcsnMthdNm=복수예가",
+      "confidence": "high"
+    }
+  }
+}

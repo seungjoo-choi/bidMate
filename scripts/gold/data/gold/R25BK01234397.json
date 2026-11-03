@@ -1,0 +1,105 @@
+{
+  "noticeNo": "R25BK01234397",
+  "docsRead": [
+    "1_1_공고문(예산국토 제2권역 도로유지보수분야 통합건설사업관리용역).hwpx.txt"
+  ],
+  "contractType": "적격심사",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2025-12-17 10:01:21",
+      "src": "api",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2025-12-22 18:00",
+      "src": "api",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2025. 12. 17. ~ 2025. 12. 23. 12:00",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_공고문(예산국토 제2권역 도로유지보수분야 통합건설사업관리용역).hwpx.txt",
+      "quote": "2.2 전자입찰서 제출기간 : 2025. 12. 17. ~ 2025. 12. 23. 12:00"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "적격심사 대상, 제안서 평가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "3500000000",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 1.6 추정금액 3,500,000,000원(추정가격 3,181,818,182원 + 부가세 318,181,818원), 금차 1,070,000,000원"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 1,080일(36개월)(금차 300일, 10개월)",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_공고문(예산국토 제2권역 도로유지보수분야 통합건설사업관리용역).hwpx.txt",
+      "quote": "1.4 용역기간 : 착수일로부터 1,080일(36개월)(금차 300일, 10개월)"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "제한적최저가(낙찰하한율)-제한적최저가(낙찰하한율)",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서는 적격심사: 낙찰하한율 80.495% 이상 최저가 순 심사, 종합평점 85점 이상 낙찰"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "적격심사 대상이라 제안서 정성평가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "absent",
+      "reason": "사업수행능력 세부평가기준(우리 사무소 기준)을 가리킬 뿐 평가표가 첨부에 없음",
+      "confidence": "medium"
+    },
+    "managementScore": {
+      "kind": "absent",
+      "reason": "사업수행능력 세부평가기준을 가리킬 뿐 평가표가 첨부에 없음",
+      "confidence": "medium"
+    },
+    "performanceScore": {
+      "kind": "absent",
+      "reason": "사업수행능력 세부평가기준을 가리킬 뿐 평가표가 첨부에 없음",
+      "confidence": "medium"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "사업수행능력(PQ+SOQ) 평가 적격업체만 참가하는 입찰, 공고문에 실적 인정 조건 없음",
+      "confidence": "medium"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "사업수행능력(PQ+SOQ) 평가 적격업체만 참가하는 입찰, 공고문에 실적 인정 조건 없음",
+      "confidence": "medium"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "사업수행능력(PQ+SOQ) 평가 적격업체만 참가하는 입찰, 공고문에 실적 인정 조건 없음",
+      "confidence": "medium"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(전자)공동이행",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서는 적격업체 표에 공동수급 지분(60%/40%) 업체가 있고 공동수급협정서 접수 마감 2025.12.22. 18:00"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 6.1 기초금액 기준 ±2% 복수 예비가격 15개 중 4개 산술평균"
+    }
+  }
+}

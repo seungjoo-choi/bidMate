@@ -1,0 +1,131 @@
+{
+  "noticeNo": "R26BK01257215",
+  "docsRead": [
+    "1_1_1. 공고문_2026학년도 서울왕북초등학교 방과후·맞춤형 프로그램 운영 용역 입찰 공고(긴급) (1).hwp.txt",
+    "2_2_2. (왕북초)2026 방과후·맞춤형 프로그램 위탁운영 과업내용서.hwpx.txt",
+    "3_3_3. (왕북초)2026 방과후·맞춤형 프로그램 강사료 합산 원가 계산서.xlsx.txt",
+    "4_4_4. (왕북초)2026 방과후·맞춤형 프로그램 위탁운영 제안요청서.hwpx.txt"
+  ],
+  "contractType": "기타",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-01-02 17:53:37",
+      "src": "api",
+      "file": "candidates.json:bidNtceDt",
+      "quote": "2026-01-02 17:53:37",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "규격가격동시입찰-제안적격자 중 예가 내 최저가 투찰자",
+      "src": "api",
+      "file": "candidates.json:sucsfbidMthdNm",
+      "quote": "규격가격동시입찰-제안적격자 중 예가 내 최저가 투찰자",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "file": "candidates.json:cmmnSpldmdMethdNm",
+      "quote": "(없음)공동수급불허",
+      "confidence": "high"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "file": "candidates.json:prearngPrceDcsnMthdNm",
+      "quote": "복수예가",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-01-12 18:00",
+      "src": "api",
+      "file": "candidates.json:bidQlfctRgstDt",
+      "quote": "2026-01-12 18:00",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "499776000",
+      "src": "api",
+      "file": "candidates.json:asignBdgtAmt",
+      "quote": "499776000",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 1. 8. 09:00 ~ 2026. 1. 13. 10:00(마감)",
+      "src": "doc",
+      "file": "1_1_1. 공고문_2026학년도 서울왕북초등학교 방과후·맞춤형 프로그램 운영 용역 입찰 공고(긴급) (1).hwp.txt",
+      "quote": "[셀 7 2 cs3] 2026. 1. 8. 09:00 ~ 2026. 1. 13. 10:00(마감)",
+      "confidence": "high"
+    },
+    "proposalEvalAt": {
+      "kind": "value",
+      "value": "2026. 1. 26. 13:00 예정",
+      "src": "doc",
+      "file": "1_1_1. 공고문_2026학년도 서울왕북초등학교 방과후·맞춤형 프로그램 운영 용역 입찰 공고(긴급) (1).hwp.txt",
+      "quote": "[셀 11 2] 2026. 1. 26. 13:00 예정",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "2026. 3. 1. ~ 2027. 2. 28.",
+      "src": "doc",
+      "file": "1_1_1. 공고문_2026학년도 서울왕북초등학교 방과후·맞춤형 프로그램 운영 용역 입찰 공고(긴급) (1).hwp.txt",
+      "quote": "[셀 4 1 cs4] ◦ 2026. 3. 1. ~ 2027. 2. 28.",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "제안서 정성평가가 있으나 \"차등점수제\" 문구가 공고문, 제안요청서, 과업내용서 어디에도 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "정량평가(30점) 항목은 수행실적 10, 경영상태 5, 근로환경 15로 신인도 항목 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 5,
+      "src": "doc",
+      "file": "4_4_4. (왕북초)2026 방과후·맞춤형 프로그램 위탁운영 제안요청서.hwpx.txt",
+      "quote": "[셀 6 1 rs2] 2.경영상태(5점)",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "value",
+      "value": 10,
+      "src": "doc",
+      "file": "4_4_4. (왕북초)2026 방과후·맞춤형 프로그램 위탁운영 제안요청서.hwpx.txt",
+      "quote": "[셀 1 1 rs5] 1.동 용역이행 수행실적(10점)",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "최근 3년 이내",
+      "src": "doc",
+      "file": "4_4_4. (왕북초)2026 방과후·맞춤형 프로그램 위탁운영 제안요청서.hwpx.txt",
+      "quote": "입찰공고일 기준 최근 3년 이내 완료한 초·중등교육법에 따른 학교의 방과후·맞춤형 프로그램 운영 용역 이행 실적",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적은 당해용역 평가기준 규모대비 비율 구간(75% 이상 등)으로 점수화, 건당 하한 금액 요건 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "value",
+      "value": "입찰공고일 기준 최근 3년 이내 완료한 초·중등교육법에 따른 학교의 방과후·맞춤형 프로그램 운영 용역 이행 실적으로 하되, 2023년 본 입찰공고일부터 2023년 2월 28일까지 완료(준공)된 2022학년도 전체 실적을 포함하며 2025학년도는 본 입찰공고일까지 기성검사 후 대금이 지급된 분까지 실적으로 인정",
+      "src": "doc",
+      "file": "4_4_4. (왕북초)2026 방과후·맞춤형 프로그램 위탁운영 제안요청서.hwpx.txt",
+      "quote": "∘ 입찰공고일 기준 최근 3년 이내 완료한 초·중등교육법에 따른 학교의 방과후·맞춤형 프로그램 운영 용역 이행 실적으로 하되",
+      "confidence": "medium"
+    }
+  }
+}

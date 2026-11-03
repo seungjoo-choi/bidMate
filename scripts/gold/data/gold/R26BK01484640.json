@@ -1,0 +1,104 @@
+{
+  "noticeNo": "R26BK01484640",
+  "docsRead": [
+    "1_1_부산교통공사 공고 제2026-275호(호포차량기지 축구장 조성공사 건설폐기물 처리용역).hwp.txt",
+    "3_3_과업지시서(호포차량기지 축구장 조성공사 폐기물처리용역).hwp.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-04-23 11:31:35",
+      "src": "api",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-04-28 18:00",
+      "src": "api",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026.04.24 09:00 ~ 2026.04.29 10:00",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_부산교통공사 공고 제2026-275호(호포차량기지 축구장 조성공사 건설폐기물 처리용역).hwp.txt",
+      "quote": "견적서 접수 마감",
+      "reason": "접수 개시 2026.04.24 09:00, 마감 2026.04.29 10:00(표 칸이 분리되어 이어 적음)"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "수의견적 공고, 제안서 제출과 평가가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "18287500",
+      "src": "api",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 150일",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_부산교통공사 공고 제2026-275호(호포차량기지 축구장 조성공사 건설폐기물 처리용역).hwp.txt",
+      "quote": "착수일로부터 150일"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "src": "api",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "실적 평가가 없는 수의견적 공고",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 평가가 없는 수의견적 공고",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "실적 평가가 없는 수의견적 공고",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 공동계약: 불가"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "confidence": "high"
+    }
+  }
+}

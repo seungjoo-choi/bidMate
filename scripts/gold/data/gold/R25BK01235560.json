@@ -1,0 +1,113 @@
+{
+ "noticeNo": "R25BK01235560",
+ "docsRead": [
+  "1_1_공고문(2026년도 농어촌폐기물 매립시설 수질검사 위탁 용역).hwp.txt"
+ ],
+ "contractType": "적격심사",
+ "items": {
+  "postedAt": {
+   "kind": "value",
+   "value": "2025-12-17 12:28:50",
+   "src": "api",
+   "confidence": "high"
+  },
+  "registrationDeadline": {
+   "kind": "value",
+   "value": "2025-12-23 18:00",
+   "src": "api",
+   "confidence": "high"
+  },
+  "proposalPeriod": {
+   "kind": "value",
+   "value": "2025. 12. 22.(월) 10:00 ~ 2025. 12. 24.(수) 10:00",
+   "src": "doc",
+   "confidence": "high",
+   "file": "1_1_공고문(2026년도 농어촌폐기물 매립시설 수질검사 위탁 용역).hwp.txt",
+   "quote": "가. 입찰서 제출 : 2025. 12. 22.(월) 10:00 ~ 2025. 12. 24.(수) 10:00",
+   "reason": "적격심사 공고의 입찰서 제출기간"
+  },
+  "proposalEvalAt": {
+   "kind": "na",
+   "reason": "적격심사 공고, 제안서 제출과 제안서 평가 없음",
+   "confidence": "high"
+  },
+  "budgetAmount": {
+   "kind": "value",
+   "value": "138220000",
+   "src": "api",
+   "confidence": "high",
+   "reason": "문서: 기초금액 138,220,000원, 추정가격 125,654,545원(부가가치세 12,565,455원)"
+  },
+  "projectPeriod": {
+   "kind": "value",
+   "value": "2026. 01. 01. ~ 2026. 12. 13. (1년간)",
+   "src": "doc",
+   "confidence": "high",
+   "file": "1_1_공고문(2026년도 농어촌폐기물 매립시설 수질검사 위탁 용역).hwp.txt",
+   "quote": "나. 용역기간 : 2026. 01. 01. ~ 2026. 12. 13. (1년간)"
+  },
+  "evalMethod": {
+   "kind": "value",
+   "value": "적격심사제-추정가격이 2억원 미만 1억원 이상인 P.Q비대상 기술용역의 평가기준",
+   "src": "api",
+   "confidence": "high",
+   "reason": "문서: 적격심사대상용역, 지방자치단체 입찰시 낙찰자 결정기준 별표 2의 4. 평가기준"
+  },
+  "differentialScoring": {
+   "kind": "na",
+   "reason": "적격심사 공고, 기술평가 없음",
+   "confidence": "high"
+  },
+  "credibilityScore": {
+   "kind": "na",
+   "reason": "적격심사, 제안서 정량평가표 없음(신인도 배점 미기재, 별표 2 평가기준표 참조만 있음)",
+   "confidence": "medium"
+  },
+  "managementScore": {
+   "kind": "na",
+   "reason": "적격심사, 정량평가표 없음(경영상태 평가방법만 기재, 배점 미기재)",
+   "confidence": "medium"
+  },
+  "performanceScore": {
+   "kind": "na",
+   "reason": "적격심사, 정량평가표 없음(이행실적 평가기준만 기재, 배점 미기재)",
+   "confidence": "medium"
+  },
+  "performancePeriod": {
+   "kind": "value",
+   "value": "2022. 12. 17. ~ 2025. 12. 16.(공고일 기준 최근 3년)",
+   "src": "doc",
+   "confidence": "high",
+   "file": "1_1_공고문(2026년도 농어촌폐기물 매립시설 수질검사 위탁 용역).hwp.txt",
+   "quote": "- 실적인정기간 : 2022. 12. 17. ~ 2025. 12. 16.(공고일 기준 최근 3년)"
+  },
+  "performanceMinAmount": {
+   "kind": "na",
+   "reason": "실적 1건 하한 금액 없음, 실적인정기준 금액 125,654,545원(추정가격)은 실적 합계를 나누는 비율 기준금액으로 보임",
+   "confidence": "medium"
+  },
+  "performanceCondition": {
+   "kind": "value",
+   "value": "동일종류용역 및 평가비율 : 수질검사 용역(100%) / 용역실적 인정 범위에 이견이 있을 경우에는 사업부서의 의견을 따릅니다. / 기성실적은 인정하지 않으며 준공(완료)실적만을 인정합니다.",
+   "src": "doc",
+   "confidence": "high",
+   "file": "1_1_공고문(2026년도 농어촌폐기물 매립시설 수질검사 위탁 용역).hwp.txt",
+   "quote": "- 동일종류용역 및 평가비율 : 수질검사 용역(100%)",
+   "reason": "이어진 문단에서 요약 없이 발췌한 세 문장"
+  },
+  "jointVentureAllowed": {
+   "kind": "value",
+   "value": "공동수급불허",
+   "src": "api",
+   "confidence": "high",
+   "reason": "문서: 다. 공동계약 비대상 용역입니다."
+  },
+  "priceMethod": {
+   "kind": "value",
+   "value": "복수예가",
+   "src": "api",
+   "confidence": "high",
+   "reason": "문서: 기초금액의 ±3% 범위 내 복수예비가격 15개, 4개 산술평균"
+  }
+ }
+}

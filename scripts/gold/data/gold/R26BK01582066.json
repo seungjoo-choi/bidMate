@@ -1,0 +1,118 @@
+{
+ "noticeNo": "R26BK01582066",
+ "docsRead": [
+  "2_2_붙임 1. 건축설계 공모 공고(안).hwp.txt",
+  "3_3_붙임 2_8층 병동 리모델링공사 건축설계 용역 과업지시서.pdf.txt"
+ ],
+ "contractType": "기타",
+ "items": {
+  "postedAt": {
+   "kind": "value",
+   "value": "2026-06-15 18:25:13",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "registrationDeadline": {
+   "kind": "value",
+   "value": "2026.06.23.(화) 09:00 ~ 17:00 방문접수(우편접수 불가)",
+   "src": "doc",
+   "quote": "일시 : 2026.06.23.(화) 09:00 ~ 17:00 방문접수(우편접수 불가)",
+   "confidence": "medium",
+   "file": "2_2_붙임 1. 건축설계 공모 공고(안).hwp.txt",
+   "reason": "API bidQlfctRgstDt 빈 값. 설계공모 참가등록 일정을 사용"
+  },
+  "proposalPeriod": {
+   "kind": "value",
+   "value": "2026.07.15.(수) 09:00 ~ 17:00",
+   "src": "doc",
+   "quote": "일시 : 2026.07.15.(수) 09:00 ~ 17:00 설계공모 참가자가 직접제출(우편접수 불가)",
+   "confidence": "medium",
+   "file": "2_2_붙임 1. 건축설계 공모 공고(안).hwp.txt",
+   "reason": "작품접수(공동수급협정서제출) 일정. API bidBeginDt/bidClseDt 빈 값"
+  },
+  "proposalEvalAt": {
+   "kind": "value",
+   "value": "2026.07.22.(수) 14:00",
+   "src": "doc",
+   "quote": "2026.07.22.(수) 14:00 (남원의료원 4층 대회의실)",
+   "confidence": "high",
+   "file": "2_2_붙임 1. 건축설계 공모 공고(안).hwp.txt",
+   "reason": "심사위원회 일시"
+  },
+  "budgetAmount": {
+   "kind": "value",
+   "value": "312411000",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "API 배정예산. 문서: 설계용역비 금312,411천원(부가가치세 포함), 예정공사비 금4,284,000천원"
+  },
+  "projectPeriod": {
+   "kind": "value",
+   "value": "계약일로부터 70일간(공휴일 포함, 단, 심의기간 제외)",
+   "src": "doc",
+   "quote": "본 과업의 기간은 계약일로부터 70일간(공휴일 포함, 단, 심의기간 제외)",
+   "confidence": "high",
+   "file": "3_3_붙임 2_8층 병동 리모델링공사 건축설계 용역 과업지시서.pdf.txt"
+  },
+  "evalMethod": {
+   "kind": "value",
+   "value": "설계공모-제안설계공모",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 공모방식 제안설계공모, 심사위원회 심사, 계약금액은 수의계약 운영요령"
+  },
+  "differentialScoring": {
+   "kind": "absent",
+   "reason": "심사기준은 설계공모지침서 참조라고만 되어 있고 지침서는 첨부에 없음",
+   "confidence": "high"
+  },
+  "credibilityScore": {
+   "kind": "na",
+   "reason": "설계공모 작품 심사 공고로 정량평가 배점표 자체가 없음",
+   "confidence": "low"
+  },
+  "managementScore": {
+   "kind": "na",
+   "reason": "설계공모 작품 심사 공고로 경영상태 평가 없음",
+   "confidence": "low"
+  },
+  "performanceScore": {
+   "kind": "na",
+   "reason": "설계공모 작품 심사 공고로 수행실적 배점 없음",
+   "confidence": "low"
+  },
+  "performancePeriod": {
+   "kind": "absent",
+   "reason": "응모자격은 설계공모지침서 참조로만 기재, 지침서 첨부 없음. 공고문과 과업지시서에서 실적 인정기간 검색했으나 없음",
+   "confidence": "high"
+  },
+  "performanceMinAmount": {
+   "kind": "absent",
+   "reason": "응모자격은 설계공모지침서 참조로만 기재, 지침서 첨부 없음",
+   "confidence": "high"
+  },
+  "performanceCondition": {
+   "kind": "absent",
+   "reason": "응모자격은 설계공모지침서 참조로만 기재, 지침서 첨부 없음",
+   "confidence": "high"
+  },
+  "jointVentureAllowed": {
+   "kind": "value",
+   "value": "(수기)공동이행 또는 분담이행",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 작품접수에 공동수급협정서제출 일정만 있고 방식 명시 없음"
+  },
+  "priceMethod": {
+   "kind": "value",
+   "value": "비예가",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  }
+ }
+}

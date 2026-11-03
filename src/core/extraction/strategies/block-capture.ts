@@ -32,7 +32,8 @@ export function blockCapture(p: Prepared, rule: R, syn: Synonyms): RawHit[] {
     const stoppedNow = j < units.length && j === i + 1 && stopRe.test(units[j]!.m.c);
     // 한 줄짜리라도 "실적 인정 범위 : 결제 …"처럼 콜론 뒤에 내용이 있으면 제목이 아니라 본문이다.
     const inlineBody = hasInlineBody(units[i]!.m.c, anchorRe);
-    const keep = hasBody || (units[i]!.m.c.length >= 20 && (!stoppedNow || inlineBody));
+    // 콜론 뒤 본문이 있으면 20자 미만이어도 정의 한 줄이다("- 유사용역 : 어업피해영향 조사 용역").
+    const keep = hasBody || inlineBody || (units[i]!.m.c.length >= 20 && !stoppedNow);
     if (keep) {
       const text = units.slice(i, j).filter((x) => !END_MARK.test(x.m.c)).map((x) => x.u.text).join('\n').slice(0, rule.maxChars);
       out.push({ ...hitFromUnit(units[i]!.u), value: text, raw: text, evidence: text, context: text });

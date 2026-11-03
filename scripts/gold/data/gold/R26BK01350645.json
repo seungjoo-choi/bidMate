@@ -1,0 +1,129 @@
+{
+  "noticeNo": "R26BK01350645",
+  "docsRead": [
+    "2_2_1. 2026-용역-2 입찰공고.hwp.txt",
+    "3_3_3. LN2 펌프 실험장치 배관 수정 및 보완 입찰평가기준서 (2).hwp.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-02-23 17:25:38",
+      "src": "api",
+      "quote": "bidNtceDt=2026-02-23 17:25:38",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-03-08 18:00",
+      "src": "api",
+      "quote": "bidQlfctRgstDt=2026-03-08 18:00",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026.02.23.(월) 17:30 ~ 2026.03.09.(월) 10:00",
+      "src": "doc",
+      "file": "2_2_1. 2026-용역-2 입찰공고.hwp.txt",
+      "quote": "2.3. 전자입찰서(가격·제안서)제출 개시일시: 2026.02.23.(월) 17:30",
+      "confidence": "high",
+      "reason": "2.4 마감 2026.03.09.(월) 10:00"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "평가일시 및 장소는 별도 공지 예정(발표평가 일시: 제안서 접수 후 별도 공지)",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "31300000",
+      "src": "api",
+      "quote": "asignBdgtAmt=31300000",
+      "confidence": "high",
+      "reason": "문서: 사업예산 31,300,000원(VAT 포함)"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약일로부터 90일 이내",
+      "src": "doc",
+      "file": "2_2_1. 2026-용역-2 입찰공고.hwp.txt",
+      "quote": "1.5. 계약기간: 계약일로부터 90일 이내",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+      "src": "api",
+      "quote": "sucsfbidMthdNm=협상에의한계약-협상에 의한 낙찰자 결정",
+      "confidence": "high",
+      "reason": "문서: 기술능력평가(90%) + 가격평가(10%)"
+    },
+    "differentialScoring": {
+      "kind": "value",
+      "value": false,
+      "src": "doc",
+      "file": "2_2_1. 2026-용역-2 입찰공고.hwp.txt",
+      "quote": "기술능력평가 차등점수제 미적용",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "기술평가표에 신인도 항목 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 10,
+      "src": "doc",
+      "file": "3_3_3. LN2 펌프 실험장치 배관 수정 및 보완 입찰평가기준서 (2).hwp.txt",
+      "quote": "5) 재무구조 및 경영상태 (10점)",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "value",
+      "value": 20,
+      "src": "doc",
+      "file": "3_3_3. LN2 펌프 실험장치 배관 수정 및 보완 입찰평가기준서 (2).hwp.txt",
+      "quote": "4) 납품경험(20)",
+      "confidence": "high",
+      "reason": "정량적 30점 중 극저온 시스템 납품실적 20"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "입찰 공고일 기준 최근 5년 이내",
+      "src": "doc",
+      "file": "3_3_3. LN2 펌프 실험장치 배관 수정 및 보완 입찰평가기준서 (2).hwp.txt",
+      "quote": "◎ 입찰 공고일 기준 최근 5년 이내 극저온 시스템 관련 납품실적(납품실적 자료 제출)",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "납품실적 건수(3건 이상 등)로만 평가, 금액 하한 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "value",
+      "value": "입찰 공고일 기준 최근 5년 이내 극저온 시스템 관련 납품실적 (연구책임자 또는 참여연구원으로서 수행한 용역 실적 포함, 계약서 및 관련자료로 증빙)",
+      "src": "doc",
+      "file": "3_3_3. LN2 펌프 실험장치 배관 수정 및 보완 입찰평가기준서 (2).hwp.txt",
+      "quote": "* 연구책임자 또는 참여연구원으로서 수행한 용역 실적 포함, 계약서 및 관련자료로 증빙",
+      "confidence": "low",
+      "reason": "별도 유사사업 정의 문단 없음, 납품실적 평가 항목 설명을 이어 붙임"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서: 본 사업은 공동수급, 하도급을 허용하지 않음"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "quote": "prearngPrceDcsnMthdNm=비예가",
+      "confidence": "high"
+    }
+  }
+}

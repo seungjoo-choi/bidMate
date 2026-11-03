@@ -1,0 +1,118 @@
+{
+  "noticeNo": "R26BK01762551",
+  "docsRead": [
+    "1_1_1. 입찰공고_2027년 민주화운동기념관 전시 미디어 통합유지관리 용역.hwp.txt",
+    "3_3_2. 제안요청서_2027년 민주화운동기념관 전시 미디어 통합유지관리 용역.hwp.txt",
+    "4_4_3. [별첨] 콘텐츠 및 운영 장비 목록.pdf.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-10-08 13:45:01",
+      "src": "api",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-10-18 18:00",
+      "src": "api",
+      "file": "1_1_1. 입찰공고_2027년 민주화운동기념관 전시 미디어 통합유지관리 용역.hwp.txt",
+      "quote": "입찰참가를 위하여는 입찰서 제출 마감일 전일까지 등록을 하여야 합니다.",
+      "confidence": "high",
+      "reason": "문서에는 마감일 전일까지로만 기재"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026/10/08 14:00 ~ 2026/10/19 14:00",
+      "src": "doc",
+      "file": "1_1_1. 입찰공고_2027년 민주화운동기념관 전시 미디어 통합유지관리 용역.hwp.txt",
+      "quote": "전자입찰서접수개시일자 : 2026/10/08 14:00 / 전자입찰서마감일시 : 2026/10/19 14:00",
+      "confidence": "high",
+      "reason": "5-2 제안서 제출기간은 전자입찰서 제출기간과 동일"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "* 기술능력평가일은 입찰마감일 이후 7일 이내 예정으로, 추후 안내합니다.",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "200000000",
+      "src": "api",
+      "file": "1_1_1. 입찰공고_2027년 민주화운동기념관 전시 미디어 통합유지관리 용역.hwp.txt",
+      "quote": "사 업 금액 : 200,000,000원(금이억원정, 부가세 포함)",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "2027. 1. 1.부터 2027. 12. 31.까지",
+      "src": "doc",
+      "file": "1_1_1. 입찰공고_2027년 민주화운동기념관 전시 미디어 통합유지관리 용역.hwp.txt",
+      "quote": "계 약 기 한 : 2027. 1. 1.부터 2027. 12. 31.까지",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+      "src": "api",
+      "file": "1_1_1. 입찰공고_2027년 민주화운동기념관 전시 미디어 통합유지관리 용역.hwp.txt",
+      "quote": "협상순서는 기술능력평가(90%)와 입찰가격평가(10%)를 종합평가한 결과 고득점자순으로 진행",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "공고문과 제안요청서에서 차등점수제 문구를 찾지 못함",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "평가 배점표에 신인도 항목 없음(정량 5점은 경영상태뿐)",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 5,
+      "src": "doc",
+      "file": "3_3_2. 제안요청서_2027년 민주화운동기념관 전시 미디어 통합유지관리 용역.hwp.txt",
+      "quote": "[셀 1 2] 경영상태 [셀 1 3] ∘기업신용도 평가등급 [셀 1 4] 5",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "평가 배점표에 수행실적 항목 없음(정량평가는 경영상태 5점뿐). 주요사업실적은 제출 서식 참고용",
+      "confidence": "medium"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "실적 평가 항목 없음. 서식 주석에 \"최근 3년간 유관 실적 2천만원 이상 기재\"가 있으나 배점 항목 아님",
+      "confidence": "medium"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 평가 항목 없음. 서식 주석의 2천만원은 기재 대상 기준이며 배점 항목 아님",
+      "confidence": "medium"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "실적 평가 항목 없음",
+      "confidence": "medium"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "file": "1_1_1. 입찰공고_2027년 민주화운동기념관 전시 미디어 통합유지관리 용역.hwp.txt",
+      "quote": "3. 공동계약: 불가능",
+      "confidence": "high"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "file": "1_1_1. 입찰공고_2027년 민주화운동기념관 전시 미디어 통합유지관리 용역.hwp.txt",
+      "quote": "12-2. 본 입찰의 예정가격은「국가를 당사자로 하는 계약에 관한 법률 시행령」제7조의2제2항에 의거 작성하지 않습니다.",
+      "confidence": "high"
+    }
+  }
+}

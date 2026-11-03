@@ -1,0 +1,117 @@
+{
+  "noticeNo": "R25BK01136310",
+  "docsRead": [
+    "1_1_(공고문) 2026년 CCTV 통합관제센터 모니터링 용역.hwp.txt",
+    "2_2_(과업지시서) 2026년 CCTV 통합관제센터 모니터링 용역.hwp.txt"
+  ],
+  "contractType": "적격심사",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2025-11-05 18:33:36",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 공고일 2025. 11. 5."
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2025-11-12 18:00",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서에는 별도 등록 마감 일시 없음"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2025. 11. 6.(목) 09:00 ～ 2025. 11. 13.(목) 10:00",
+      "src": "doc",
+      "file": "1_1_(공고문) 2026년 CCTV 통합관제센터 모니터링 용역.hwp.txt",
+      "quote": "3. 전자입찰서 제출기간 : 2025. 11. 6.(목) 09:00 ～ 2025. 11. 13.(목) 10:00",
+      "confidence": "high"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "적격심사 공고, 제안서 평가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "777120000",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 기초금액 금777,120,000원(부가세 포함)"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "2026. 1. 1. ~ 2026. 12. 31.",
+      "src": "doc",
+      "file": "1_1_(공고문) 2026년 CCTV 통합관제센터 모니터링 용역.hwp.txt",
+      "quote": "라. 용역기간 : 2026. 1. 1. ~ 2026. 12. 31.",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "적격심사제-관리규정외 수기심사(총점입력)",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서: 적격심사 대상, 종합평점 95점 이상 낙찰"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "적격심사, 기술평가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "absent",
+      "reason": "적격심사 세부기준(울산광역시 공고 제2022-1100호) 별표 참조만 있고 배점표는 첨부에 없음",
+      "confidence": "low"
+    },
+    "managementScore": {
+      "kind": "absent",
+      "reason": "경영상태 평가를 하나 적격심사 세부기준(울산광역시 공고 제2022-1100호) 별표 참조만 있고 배점표는 첨부에 없음",
+      "confidence": "low"
+    },
+    "performanceScore": {
+      "kind": "absent",
+      "reason": "용역이행실적 평가를 하나 적격심사 세부기준(울산광역시 공고 제2022-1100호) 별표 참조만 있고 배점표는 첨부에 없음",
+      "confidence": "low"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "최근 5년",
+      "src": "doc",
+      "file": "1_1_(공고문) 2026년 CCTV 통합관제센터 모니터링 용역.hwp.txt",
+      "quote": "1) 최근 5년 내 용역이행실적 기준금액은 기초금액(777,120,000원 부가세 포함)이며 입찰공고일을 기준으로 완료된 실적이어야 합니다.",
+      "confidence": "high",
+      "reason": "창업기업, 소기업 소상공인은 7년(예외)"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "건당 하한 없음. 기준금액 777,120,000원은 실적 평가 비율 기준금액(분모)",
+      "confidence": "medium"
+    },
+    "performanceCondition": {
+      "kind": "value",
+      "value": "실적증명서상의 용역명 또는 용역개요에서 ‘CCTV 모니터링 용역’ 실적임을 확인할 수 있어야 하며, 공공기관의 이행실적이 아닌 경우에는 세금계산서 사본(원본 제시), 계약서 사본 등 증빙자료를 첨부하여야 합니다.",
+      "src": "doc",
+      "file": "1_1_(공고문) 2026년 CCTV 통합관제센터 모니터링 용역.hwp.txt",
+      "quote": "- 실적증명서상의 용역명 또는 용역개요에서 ‘CCTV 모니터링 용역’ 실적임을 확인할 수 있어야 하며",
+      "confidence": "medium"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(전자)공동이행",
+      "src": "api",
+      "file": "1_1_(공고문) 2026년 CCTV 통합관제센터 모니터링 용역.hwp.txt",
+      "quote": "단독 또는 공동도급(공동이행방식, 공동수급체 구성은 대표사를 포함 2인 이하)으로 참여가 가능하며",
+      "confidence": "high"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "file": "1_1_(공고문) 2026년 CCTV 통합관제센터 모니터링 용역.hwp.txt",
+      "quote": "15개의 복수예비가격 중 입찰참가자 전원이 2개씩 추첨한 결과에 따라 다빈도 순으로 4개를 산술평균한 금액",
+      "confidence": "high"
+    }
+  }
+}

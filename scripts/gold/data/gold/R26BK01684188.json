@@ -1,0 +1,104 @@
+{
+  "noticeNo": "R26BK01684188",
+  "docsRead": [
+    "1_1_01 공고문[매곡처리분구 노후하수관로 교체공사 준설토처리용역].hwpx.txt",
+    "2_2_공고문[매곡처리분구 노후하수관로 교체공사 준설토처리용역].pdf.txt",
+    "4_4_시방서.hwpx.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-08-14 19:59:29",
+      "src": "api",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-08-20 18:00",
+      "src": "api",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 8. 18.(화) 14:00 ~ 2026. 8. 21.(금) 14:00",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_01 공고문[매곡처리분구 노후하수관로 교체공사 준설토처리용역].hwpx.txt",
+      "quote": "가. 견적서 접수기간 : 2026. 8. 18.(화) 14:00 ~ 2026. 8. 21.(금) 14:00"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "수의견적 공고, 제안서 제출과 평가가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "33402000",
+      "src": "api",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 18개월",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_01 공고문[매곡처리분구 노후하수관로 교체공사 준설토처리용역].hwpx.txt",
+      "quote": "라. 사업기간 : 착수일로부터 18개월"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "src": "api",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "실적 평가가 없는 수의견적 공고",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 평가가 없는 수의견적 공고",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "실적 평가가 없는 수의견적 공고",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(전자)분담이행",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 3.라 자격보완을 위한 공동도급(분담이행) 가능, 대표사 포함 2개사 이내"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "confidence": "high"
+    }
+  }
+}

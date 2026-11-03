@@ -1,0 +1,105 @@
+{
+  "noticeNo": "R26BK01683961",
+  "docsRead": [
+    "1_1_2026-730 공고문[2026년 하천하구쓰레기 정화사업 폐스티로폼 운반·처리 용역(화양권역)].hwpx.txt",
+    "3_3_과업지시서[2026년 하천하구쓰레기 정화사업 폐스티로폼 운반·처리 용역(화양권역)].hwpx.txt",
+    "4_4_청렴계약이행서약서.hwp.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-08-14 16:50:18",
+      "src": "api",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-08-20 18:00",
+      "src": "api",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 8. 18.(화) 09:00 ~ 2026. 8. 21.(금) 12:00",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_2026-730 공고문[2026년 하천하구쓰레기 정화사업 폐스티로폼 운반·처리 용역(화양권역)].hwpx.txt",
+      "quote": "2026. 8. 18.(화) 09:00",
+      "reason": "입찰서 접수개시/마감 표 칸 값을 이어 적음"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "수의견적 공고, 제안서 제출과 평가가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "40000000",
+      "src": "api",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 2026. 12. 31. 까지",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_2026-730 공고문[2026년 하천하구쓰레기 정화사업 폐스티로폼 운반·처리 용역(화양권역)].hwpx.txt",
+      "quote": "라. 용역기간 : 착수일로부터 2026. 12. 31. 까지"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "src": "api",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "실적 평가가 없는 수의견적 공고",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 평가가 없는 수의견적 공고",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "실적 평가가 없는 수의견적 공고",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(전자)분담이행",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 5.가 면허보완을 위한 공동계약(분담이행방식) 허용, 대표사 포함 2인 이내"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "confidence": "high"
+    }
+  }
+}

@@ -9,7 +9,7 @@ import { normalizePath } from '../../core/model/path';
 import { withoutNamePrefix } from '../../core/model/names';
 import type { FieldValue } from '../../core/types/common';
 import type { Extraction, ExtractionKey } from '../../core/types/extraction';
-import { NA_VALUE_TEXT, isNotApplicable, coveringKey, fieldReviewState, naNoteOf } from '../../core/extraction/review-count';
+import { NA_VALUE_TEXT, isNotApplicable, isNotApplicableField, coveringKey, fieldReviewState, naNoteOf } from '../../core/extraction/review-count';
 import type { IndexEntry } from '../../core/types/index-file';
 import { RESULT_TERMINAL } from '../../core/types/result';
 import { formatCheckAt, resultCell } from '../notices/result-view';
@@ -126,7 +126,9 @@ export function overviewGroups(n: Notice, index: IndexEntry[], x: Extraction | n
         row('입찰 개시', s.bidStartAt, formatDateTime),
         row('입찰 마감', s.bidCloseAt, formatDateTime),
         row('제안서 제출기간', s.proposalPeriod, text),
-        row('제안서 평가', s.proposalEvalAt, formatDateTime),
+        isNotApplicableField(s.proposalEvalAt)
+          ? { label: '제안서 평가', value: NA_VALUE_TEXT, ...(s.proposalEvalAt.note ? { hint: s.proposalEvalAt.note } : {}) }
+          : row('제안서 평가', s.proposalEvalAt, formatDateTime),
         row('개찰', s.openingAt, formatDateTime),
       ],
     },

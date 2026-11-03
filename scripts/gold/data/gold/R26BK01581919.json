@@ -1,0 +1,114 @@
+{
+  "noticeNo": "R26BK01581919",
+  "docsRead": [
+    "1_1_공고문(춘천시 수도정비 기본계획(변경) 수립 용역[긴급]).hwpx.txt",
+    "5_5_계약심사 조정사유서[춘천시 수도정비 기본계획(변경) 수립 용역].hwpx.txt"
+  ],
+  "contractType": "적격심사",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-06-16 09:21:35",
+      "src": "api",
+      "quote": "bidNtceDt=2026-06-16 09:21:35",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-06-22 18:00",
+      "src": "api",
+      "quote": "bidQlfctRgstDt=2026-06-22 18:00",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 6. 19. 09:00 ~ 2026. 6. 23. 10:00",
+      "src": "doc",
+      "file": "1_1_공고문(춘천시 수도정비 기본계획(변경) 수립 용역[긴급]).hwpx.txt",
+      "quote": "사. 입찰서 제출기간: 2026. 6. 19. 09:00 ~ 2026. 6. 23. 10:00",
+      "confidence": "high"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "PQ 후 적격심사 공고, 제안서 평가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "1876000000",
+      "src": "api",
+      "quote": "asignBdgtAmt=1876000000",
+      "confidence": "high",
+      "reason": "문서: 추정금액 1,876,000,000원(추정가격 1,705,454,545원 + 부가세), 기초금액 동일"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 720일",
+      "src": "doc",
+      "file": "1_1_공고문(춘천시 수도정비 기본계획(변경) 수립 용역[긴급]).hwpx.txt",
+      "quote": "라. 용역기간: 착수일로부터 720일",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "적격심사제-추정가격이 10억원 이상인 P.Q대상 기술용역의 평가기준",
+      "src": "api",
+      "quote": "sucsfbidMthdNm=적격심사제-추정가격이 10억원 이상인 P.Q대상 기술용역의 평가기준",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "적격심사 공고, 기술평가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "적격심사 공고문에 신인도 배점 언급 없음",
+      "confidence": "low"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 2,
+      "src": "doc",
+      "file": "1_1_공고문(춘천시 수도정비 기본계획(변경) 수립 용역[긴급]).hwpx.txt",
+      "quote": "2) P.Q 심사 시 경영상태 평가가 반영되었으므로, 평가에서 제외하고 배점한도(2점)를 부여합니다.",
+      "confidence": "low",
+      "reason": "PQ에서 평가되어 적격심사에서는 배점한도 2점을 부여한다는 문구"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "PQ 대상 기술용역 적격심사, 공고문에 실적 배점과 실적 요건 없음",
+      "confidence": "low"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "PQ 대상 기술용역 적격심사, 공고문에 실적 배점과 실적 요건 없음",
+      "confidence": "low"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "PQ 대상 기술용역 적격심사, 공고문에 실적 배점과 실적 요건 없음",
+      "confidence": "low"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "PQ 대상 기술용역 적격심사, 공고문에 실적 배점과 실적 요건 없음",
+      "confidence": "low"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(전자)공동이행 또는 분담이행",
+      "src": "api",
+      "quote": "cmmnSpldmdMethdNm=(전자)공동이행 또는 분담이행",
+      "confidence": "high",
+      "reason": "문서: 공동수급협정서 전자제출, 참여 비율은 사업수행능력평가서의 공동수급비율과 일치"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "quote": "prearngPrceDcsnMthdNm=복수예가",
+      "confidence": "high"
+    }
+  }
+}

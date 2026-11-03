@@ -1,0 +1,117 @@
+{
+  "noticeNo": "R26BK01350093",
+  "docsRead": [
+    "1_1_공고문(HWP).hwp.txt"
+  ],
+  "contractType": "적격심사",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-02-23 17:08:50",
+      "src": "api",
+      "quote": "bidNtceDt=2026-02-23 17:08:50",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-03-02 18:00",
+      "src": "api",
+      "quote": "bidQlfctRgstDt=2026-03-02 18:00",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 02. 25.(수) 10:00 ∼ 2026. 03. 03.(화) 10:00",
+      "src": "doc",
+      "file": "1_1_공고문(HWP).hwp.txt",
+      "quote": "가. 입찰서 제출기간: 2026. 02. 25.(수) 10:00 ∼ 2026. 03. 03.(화) 10:00",
+      "confidence": "high"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "적격심사 공고, 제안서 제출과 평가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "134000000",
+      "src": "api",
+      "quote": "asignBdgtAmt=134000000",
+      "confidence": "high",
+      "reason": "문서: 예정금액 134,000,000원(추정가격 121,818,182원 + 부가가치세)"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "2026. 03. 16. ~ 2026. 12. 15.",
+      "src": "doc",
+      "file": "1_1_공고문(HWP).hwp.txt",
+      "quote": "라. 용역기간: 2026. 03. 16. ~ 2026. 12. 15.",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "적격심사제-관리규정외 수기심사(총점입력)",
+      "src": "api",
+      "quote": "sucsfbidMthdNm=적격심사제-관리규정외 수기심사(총점입력)",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "적격심사 공고, 기술평가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "absent",
+      "reason": "신인도 심사항목은 언급되나 배점 한도는 경기도 적격심사 세부기준에 따른다고만 하고 수치 없음(특별신인도 가점 +2만 명시)",
+      "confidence": "low"
+    },
+    "managementScore": {
+      "kind": "absent",
+      "reason": "경영상태 평가는 경기도 적격심사 세부기준 [별표2]에 따른다고만 하고 배점 없음",
+      "confidence": "low"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "적격심사이며 실적은 특별신인도 가점(+2) 조건으로만 쓰이고 별도 실적 배점 없음",
+      "confidence": "low"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "입찰공고일 기준 최근 5년 이내",
+      "src": "doc",
+      "file": "1_1_공고문(HWP).hwp.txt",
+      "quote": "입찰공고일 기준 최근 5년 이내에 이행 완료(준공)된 해당 용역의 실적금액 합계액이 당해 용역 기준금액 이상인 경우 인정합니다.",
+      "confidence": "low",
+      "reason": "특별신인도 가점(+2) 적용 기준의 실적 기간"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 합계액이 추정가격 121,818,182원 이상이면 가점 인정하는 합계 요건뿐이고 건당 하한 없음",
+      "confidence": "low"
+    },
+    "performanceCondition": {
+      "kind": "value",
+      "value": "해당 용역: 조경시설 관리용역(100%)",
+      "src": "doc",
+      "file": "1_1_공고문(HWP).hwp.txt",
+      "quote": "해당 용역: 조경시설 관리용역(100%)",
+      "confidence": "low",
+      "reason": "특별신인도 가점용 해당 용역 정의"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서: 6. 공동계약 : 해당없음"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "quote": "prearngPrceDcsnMthdNm=복수예가",
+      "confidence": "high"
+    }
+  }
+}

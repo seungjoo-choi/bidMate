@@ -1,0 +1,131 @@
+{
+  "noticeNo": "R26BK01373164",
+  "docsRead": [
+    "1_1_[입찰공고문(최종)](긴급)(협상)2026년 용인시 공공기관 통합채용 대행 용역.hwp.txt",
+    "3_3_[제안요청서]2026년 용인시 공공기관 통합채용 대행 용역.hwp.txt",
+    "4_4_[과업지시서]2026년 용인시 공공기관 통합채용 대행 용역.hwp.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-03-05 19:40:17",
+      "src": "api",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-03-16 18:00",
+      "src": "api",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 3. 6. 10:00 ~ 2026. 3. 17. 17:00",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_[입찰공고문(최종)](긴급)(협상)2026년 용인시 공공기관 통합채용 대행 용역.hwp.txt",
+      "quote": "① 기    간: 2026. 3. 6. 10:00 ~ 2026. 3. 17. 17:00",
+      "reason": "가격입찰(전자입찰) 기간, 제안서 접수(사업부서 방문)는 2026. 3. 17.(화) 10:00 ~ 17:00"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "평가일시 및 장소 등 상세내용은 사업부서(예산과)에서 제안서 접수 시 별도 공지 예정 / 일시/장소 : 추후 참가 등록업체 별도 통보",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "221170000",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 용역금액 금221,170,000원 ※ 부가가치세 포함"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일 ~ 2026. 12. 21.",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_[입찰공고문(최종)](긴급)(협상)2026년 용인시 공공기관 통합채용 대행 용역.hwp.txt",
+      "quote": "라. 용역기간: 착수일 ~ 2026. 12. 21."
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 기술능력평가(80점)와 가격평가(20점) 합산, 70점 이상 중 고득점자"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "입찰공고문, 제안요청서, 과업지시서에 차등점수제 문구 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "value",
+      "value": 2,
+      "src": "doc",
+      "confidence": "high",
+      "file": "3_3_[제안요청서]2026년 용인시 공공기관 통합채용 대행 용역.hwp.txt",
+      "quote": "⦁부정당업자 제재 여부",
+      "reason": "평가표 신인도 행 배점한도 2점(공고일 최근 3년 제재 0회 2점, 1회 이상 0점)"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 6,
+      "src": "doc",
+      "confidence": "high",
+      "file": "3_3_[제안요청서]2026년 용인시 공공기관 통합채용 대행 용역.hwp.txt",
+      "quote": "□ 경영상태 평가기준(6점)",
+      "reason": "평가표 경영상태 행 배점한도 6점"
+    },
+    "performanceScore": {
+      "kind": "value",
+      "value": 6,
+      "src": "doc",
+      "confidence": "high",
+      "file": "3_3_[제안요청서]2026년 용인시 공공기관 통합채용 대행 용역.hwp.txt",
+      "quote": "□ 실적기준(6점)",
+      "reason": "평가표 수행실적 행 배점한도 6점"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "입찰공고일 기준 최근 3년 이내",
+      "src": "doc",
+      "confidence": "high",
+      "file": "3_3_[제안요청서]2026년 용인시 공공기관 통합채용 대행 용역.hwp.txt",
+      "quote": "① 입찰공고일 기준 최근 3년 이내 통합채용(국가‧지자체 및 공공기관) 또는 공공기관 채용 대행용역 사업 수행실적",
+      "reason": "창업기업(7년 이내 개시)은 최근 7년간 합산, 이는 예외라 제외"
+    },
+    "performanceMinAmount": {
+      "kind": "value",
+      "value": "건당 1억원 이상(VAT 제외)",
+      "src": "doc",
+      "confidence": "high",
+      "file": "3_3_[제안요청서]2026년 용인시 공공기관 통합채용 대행 용역.hwp.txt",
+      "quote": "② 제안사가 직접 수행한 실적이 건당 1억원 이상(VAT 제외)인 용역에 한함."
+    },
+    "performanceCondition": {
+      "kind": "value",
+      "value": "입찰공고일 기준 최근 3년 이내 통합채용(국가‧지자체 및 공공기관) 또는 공공기관 채용 대행용역 사업 수행실적(건수기준)을 합산하여 적용. 제안사가 직접 수행한 실적이 건당 1억원 이상(VAT 제외)인 용역에 한함. ※ 총괄수행한 건에 대하여만 실적으로 인정(공동수급실적 및 하도실적 제외)",
+      "src": "doc",
+      "confidence": "medium",
+      "file": "3_3_[제안요청서]2026년 용인시 공공기관 통합채용 대행 용역.hwp.txt",
+      "quote": "※ 총괄수행한 건에 대하여만 실적으로 인정(공동수급실적 및 하도실적 제외)",
+      "reason": "실적기준 ①②와 주석을 이어 붙임(중간 줄바꿈 생략)"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 공동계약을 허용하지 않습니다."
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 예정가격 작성의 예외에 따라 예정가격을 작성하지 않음"
+    }
+  }
+}

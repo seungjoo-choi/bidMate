@@ -1,0 +1,117 @@
+{
+  "noticeNo": "R26BK01513873",
+  "docsRead": [
+    "1_1_용역 과업 지시서_오염관리전략 문서화 및 오염관리전략 측면의 품질위험평가 수행.hwp.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-05-11 13:20:07",
+      "src": "api",
+      "quote": "bidNtceDt=2026-05-11 13:20:07",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-05-11 17:00",
+      "src": "api",
+      "quote": "bidQlfctRgstDt=2026-05-11 17:00",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026-05-11 14:00:00 ~ 2026-05-11 17:00:00",
+      "src": "api",
+      "quote": "bidBeginDt=2026-05-11 14:00:00",
+      "confidence": "high",
+      "reason": "문서에 제출기간 없음, API 입찰서 제출 개시와 마감"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "수의시담 공고, 제안서 평가 없음(과업지시서에 평가 일정 없음)",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "253000000",
+      "src": "api",
+      "quote": "asignBdgtAmt=253000000",
+      "confidence": "high",
+      "reason": "문서에 사업금액 없음, 추정가격 230000000"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약 개시일로부터 8개월",
+      "src": "doc",
+      "file": "1_1_용역 과업 지시서_오염관리전략 문서화 및 오염관리전략 측면의 품질위험평가 수행.hwp.txt",
+      "quote": "4. 과업기한 : 계약 개시일로부터 8개월",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "수의시담-수의시담",
+      "src": "api",
+      "quote": "sucsfbidMthdNm=수의시담-수의시담",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "수의시담, 기술평가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "수의시담 공고, 평가표와 배점 없음(과업지시서에 자격요건만 있음)",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "수의시담 공고, 평가표와 배점 없음(과업지시서에 자격요건만 있음)",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "수의시담 공고, 평가표와 배점 없음(과업지시서에 자격요건만 있음)",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "최근 3년 이내",
+      "src": "doc",
+      "file": "1_1_용역 과업 지시서_오염관리전략 문서화 및 오염관리전략 측면의 품질위험평가 수행.hwp.txt",
+      "quote": "최근 3년 이내에 GMP 적격업체에 대한 오염관리전략(Contamination Control Strategy) 문서화",
+      "confidence": "high",
+      "reason": "수행자격요건의 실적 기간"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 금액 요건 없음(수행 경험 유무만 요구)",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "value",
+      "value": "최근 3년 이내에 GMP 적격업체에 대한 오염관리전략(Contamination Control Strategy) 문서화 및 오염관리전략 측면의 품질위험평가 수행 수행한 실적이 있는 업체",
+      "src": "doc",
+      "file": "1_1_용역 과업 지시서_오염관리전략 문서화 및 오염관리전략 측면의 품질위험평가 수행.hwp.txt",
+      "quote": "최근 3년 이내에 GMP 적격업체에 대한 오염관리전략(Contamination Control Strategy) 문서화",
+      "confidence": "low",
+      "reason": "자격요건 문장, 유사사업 정의 문단은 아님"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서: 하도급은 불허함(공동수급 언급 없음)"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "단일예가",
+      "src": "api",
+      "quote": "prearngPrceDcsnMthdNm=단일예가",
+      "confidence": "high"
+    }
+  }
+}

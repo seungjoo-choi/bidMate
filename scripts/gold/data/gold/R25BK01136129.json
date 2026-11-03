@@ -1,0 +1,23 @@
+{
+  "noticeNo": "R25BK01136129",
+  "docsRead": ["1_1_1. 입찰공고문_2025 청년 아트페어 UNDER39 (재공고).pdf.txt", "2_2_2. 제안요청서_2025 청년 아트페어 UNDER39 (재공고).hwp.txt"],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {"kind":"value","value":"2025-11-05 17:03:21","src":"api","reason":"문서: 입찰공고 2025. 11. 5. (수)","confidence":"high"},
+    "registrationDeadline": {"kind":"value","value":"2025-11-16 18:00","src":"api","reason":"문서에 입찰참가자격 등록 마감 별도 기재 없음","confidence":"high"},
+    "proposalPeriod": {"kind":"value","value":"2025. 11. 14. (금) / 11. 17. (월) 09:00~17:00까지","src":"doc","file":"1_1_1. 입찰공고문_2025 청년 아트페어 UNDER39 (재공고).pdf.txt","quote":"○ 제안서 접수: 2025. 11. 14. (금) / 11. 17. (월) 09:00~17:00까지","reason":"가격투찰 기간 2025. 11. 5. (수) ~ 11. 17. 17:00, API 입찰서 2025-11-05 17:30 ~ 2025-11-17 17:00","confidence":"medium"},
+    "proposalEvalAt": {"kind":"value","value":"2025. 11. 19. (수) 14:00","src":"doc","file":"1_1_1. 입찰공고문_2025 청년 아트페어 UNDER39 (재공고).pdf.txt","quote":"○ 제안서 평가: 2025. 11. 19. (수) 14:00","confidence":"high"},
+    "budgetAmount": {"kind":"value","value":"80000000","src":"api","reason":"문서: 금80,000,000원(금팔천만원), 부가가치세 포함","confidence":"high"},
+    "projectPeriod": {"kind":"value","value":"계약체결일로부터 ~ 2025. 12. 23.(화) (용역수행결과 보고서 제출일)","src":"doc","file":"2_2_2. 제안요청서_2025 청년 아트페어 UNDER39 (재공고).hwp.txt","quote":"○ 과업기간: 계약체결일로부터 ~ 2025. 12. 23.(화) (용역수행결과 보고서 제출일)","confidence":"high"},
+    "evalMethod": {"kind":"value","value":"협상에 의한 계약, 기술능력평가(80점) + 입찰가격평가(20점)","src":"api","reason":"문서: 제안서 평가는 기술능력평가(80점)와 입찰가격평가(20점), 종합 70점 이상 협상적격자","confidence":"high"},
+    "differentialScoring": {"kind":"absent","reason":"공고문과 제안요청서에서 차등점수제 문구 없음","confidence":"medium"},
+    "credibilityScore": {"kind":"value","value":5,"src":"doc","file":"2_2_2. 제안요청서_2025 청년 아트페어 UNDER39 (재공고).hwp.txt","quote":"(4) 신인도(5점)","confidence":"high"},
+    "managementScore": {"kind":"value","value":5,"src":"doc","file":"2_2_2. 제안요청서_2025 청년 아트페어 UNDER39 (재공고).hwp.txt","quote":"(1) 경영상태 평가 : 5점","confidence":"high"},
+    "performanceScore": {"kind":"value","value":5,"src":"doc","file":"2_2_2. 제안요청서_2025 청년 아트페어 UNDER39 (재공고).hwp.txt","quote":"(2) 수행실적(5점)","confidence":"high"},
+    "performancePeriod": {"kind":"value","value":"공고일 기준 최근 5년간(2020년도~2024년도)","src":"doc","file":"2_2_2. 제안요청서_2025 청년 아트페어 UNDER39 (재공고).hwp.txt","quote":"❍ 공고일 기준 최근 5년간(2020년도~2024년도)","reason":"평가표에는 공고일 전일기준 최근 5년 이내","confidence":"high"},
+    "performanceMinAmount": {"kind":"value","value":"5천만원 이상","src":"doc","file":"2_2_2. 제안요청서_2025 청년 아트페어 UNDER39 (재공고).hwp.txt","quote":"단일 계약 건으로 5천만원 이상 수행한 실적이 있는 업체","reason":"5천만원 이상 실적 없으면 5년 누적 2억원 이상 시 3점 부여(합계 요건)","confidence":"high"},
+    "performanceCondition": {"kind":"value","value":"국가, 지방자치단체, 공공기관, 출자출연기관, 정부투자기관, 민간행사에서 시행한 축제, 박람회, 엑스포 등의 단일 계약 건으로 5천만원 이상 수행한 실적이 있는 업체","src":"doc","file":"2_2_2. 제안요청서_2025 청년 아트페어 UNDER39 (재공고).hwp.txt","quote":"국가, 지방자치단체, 공공기관, 출자출연기관, 정부투자기관, 민간행사에서 시행한 축제, 박람회, 엑스포 등의 단일 계약 건으로 5천만원 이상 수행한 실적이 있는 업체","reason":"이어서 평가 대상 실적은 준공 또는 납품 완료된 것만 인정","confidence":"high"},
+    "jointVentureAllowed": {"kind":"value","value":"공동수급 가능(공동이행)","src":"api","reason":"문서: 공동수급(컨소시엄)관한 사항: 공동수급 가능, 공동이행의 경우 출자비율에 따라 구성","confidence":"high"},
+    "priceMethod": {"kind":"value","value":"비예가","src":"api","reason":"문서에 예정가격 결정방법 별도 기재 없음","confidence":"medium"}
+  }
+}

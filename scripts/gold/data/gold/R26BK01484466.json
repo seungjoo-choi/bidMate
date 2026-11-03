@@ -1,0 +1,116 @@
+{
+  "noticeNo": "R26BK01484466",
+  "docsRead": [
+    "1_1_입찰공고문.hwp.txt",
+    "3_3_제안요청서(안)_AI 기반 공공데이터·데이터기반행정 체계 개선 컨설팅 용역.hwp.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-04-23 11:42:22",
+      "src": "api",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-05-01 18:00",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서에 별도 등록 마감 기재 없음"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026-04-23 13:00:00 ~ 2026-05-04 14:00:00",
+      "src": "api",
+      "file": "1_1_입찰공고문.hwp.txt",
+      "quote": "제안서 제출기간: 가격입찰서 제출기간과 동일",
+      "confidence": "high",
+      "reason": "문서는 입찰서 제출기간 \"전자공고문에 따름\"으로만 기재"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "제안서 제출 마감 후 개별 통보",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "74867000",
+      "src": "api",
+      "file": "1_1_입찰공고문.hwp.txt",
+      "quote": "(사업금액) 74,867,000원(부가세 포함)",
+      "confidence": "high",
+      "reason": "문서 74,867,000원(부가세 포함)"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약체결일(착수일)로부터 4개월",
+      "src": "doc",
+      "file": "1_1_입찰공고문.hwp.txt",
+      "quote": "(용역기간) 계약체결일(착수일)로부터 4개월",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정(SW사업)",
+      "src": "api",
+      "file": "1_1_입찰공고문.hwp.txt",
+      "quote": "기술능력평가(70점)와 입찰가격평가(30점)를 종합 평가한 결과에 따라 고득점자 순으로 선정",
+      "confidence": "high",
+      "reason": "문서: 기술평가 70%, 가격평가 30%"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "제안요청서와 공고문에서 차등점수제 문구를 찾지 못함",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "정량평가 표(10점)에 경영상태 항목만 있고 신인도 항목 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 10,
+      "src": "doc",
+      "file": "3_3_제안요청서(안)_AI 기반 공공데이터·데이터기반행정 체계 개선 컨설팅 용역.hwp.txt",
+      "quote": "[셀 1 2] 경영상태 ... [셀 1 4] 10",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "정량평가 표에 수행실적 항목 없음(정량 10점은 경영상태뿐)",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "실적 평가 항목 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 평가 항목 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "실적 평가 항목 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "file": "1_1_입찰공고문.hwp.txt",
+      "quote": "본 사업은 하도급 및 공동계약은 불허함",
+      "confidence": "high"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서에 예정가격 결정방법 별도 기재 없음"
+    }
+  }
+}

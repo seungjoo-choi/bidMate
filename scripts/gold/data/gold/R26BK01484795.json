@@ -1,0 +1,115 @@
+{
+ "noticeNo": "R26BK01484795",
+ "docsRead": [
+  "1_1_(붙임) 입찰공고문(재공고).hwp.txt",
+  "3_3_(붙임) 제안요청서(재공고).hwp.txt"
+ ],
+ "contractType": "협상",
+ "items": {
+  "postedAt": {
+   "kind": "value",
+   "value": "2026-04-23 12:54:41",
+   "src": "api",
+   "confidence": "high"
+  },
+  "registrationDeadline": {
+   "kind": "value",
+   "value": "2026-05-06 18:00",
+   "src": "api",
+   "confidence": "high",
+   "reason": "문서: 공동수급협정서제출일시 2026.05.06.(수) 18:00"
+  },
+  "proposalPeriod": {
+   "kind": "value",
+   "value": "2026.04.29.(수) 10:00 ~ 2026.05.07.(목) 10:00",
+   "src": "doc",
+   "confidence": "high",
+   "file": "1_1_(붙임) 입찰공고문(재공고).hwp.txt",
+   "quote": "[셀 16 3] 2026.05.07.(목)",
+   "reason": "입찰서접수개시 2026.04.29.(수) 10:00, 제안서접수마감 2026.05.07.(목) 10:00, 표 칸이 분리되어 인용은 마감일 칸"
+  },
+  "proposalEvalAt": {
+   "kind": "absent",
+   "reason": "종합심사(Presentation 심사) 일자 ''26. 5월 예정', 세부 평가일정은 입찰참여자에게 별도 통보 예정(일시 없음)",
+   "confidence": "medium"
+  },
+  "budgetAmount": {
+   "kind": "value",
+   "value": "75000000",
+   "src": "api",
+   "confidence": "high",
+   "reason": "문서: 금75,000,000원정(금칠천오백만원정/VAT 포함)"
+  },
+  "projectPeriod": {
+   "kind": "value",
+   "value": "계약체결일 ~ 2026.11.27.",
+   "src": "doc",
+   "confidence": "high",
+   "file": "1_1_(붙임) 입찰공고문(재공고).hwp.txt",
+   "quote": "[셀 3 3 cs2] 계약체결일 ~ 2026.11.27."
+  },
+  "evalMethod": {
+   "kind": "value",
+   "value": "협상에 의한 낙찰자 결정, 기술평가(80%) + 가격평가(20%)",
+   "src": "api",
+   "confidence": "high",
+   "reason": "문서: 협상은 제안서 기술능력평가(80%), 가격평가(20%)를 종합평가"
+  },
+  "differentialScoring": {
+   "kind": "value",
+   "value": true,
+   "src": "doc",
+   "confidence": "high",
+   "file": "3_3_(붙임) 제안요청서(재공고).hwp.txt",
+   "quote": "□ 재정경제부 계약예규「협상에 의한 계약체결기준」 제7조에 따라 차등점수제를 적용함"
+  },
+  "credibilityScore": {
+   "kind": "na",
+   "reason": "정량평가표에 경영상태(5)와 우선구매대상(2)만 있고 신인도 항목 없음",
+   "confidence": "high"
+  },
+  "managementScore": {
+   "kind": "value",
+   "value": 5,
+   "src": "doc",
+   "confidence": "high",
+   "file": "3_3_(붙임) 제안요청서(재공고).hwp.txt",
+   "quote": "[셀 3 2] 경영상태",
+   "reason": "배점 칸 5, 신용등급에 의한 경영상태"
+  },
+  "performanceScore": {
+   "kind": "na",
+   "reason": "정량평가표에 수행실적 항목 없음(서식 4 수행실적은 참고 서식, 배점 없음)",
+   "confidence": "high"
+  },
+  "performancePeriod": {
+   "kind": "na",
+   "reason": "실적 인정 요건 없음, 평가 배점 없음(서식 4 유사사업 수행실적(최근 3년)은 작성 서식 안내)",
+   "confidence": "medium"
+  },
+  "performanceMinAmount": {
+   "kind": "na",
+   "reason": "실적 금액 하한 없음",
+   "confidence": "high"
+  },
+  "performanceCondition": {
+   "kind": "na",
+   "reason": "유사사업 정의와 인정 범위 없음",
+   "confidence": "medium"
+  },
+  "jointVentureAllowed": {
+   "kind": "value",
+   "value": "허용(공동)",
+   "src": "api",
+   "confidence": "high",
+   "reason": "문서: 공동수급방식 허용(공동), 공동이행방식, 5개사 이하, 최소 지분율 10% 이상"
+  },
+  "priceMethod": {
+   "kind": "value",
+   "value": "비예가",
+   "src": "api",
+   "confidence": "medium",
+   "reason": "문서에서 예정가격 결정 방법 문구 확인 못함, 협상 공고"
+  }
+ }
+}

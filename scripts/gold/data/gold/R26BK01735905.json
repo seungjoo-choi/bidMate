@@ -1,0 +1,110 @@
+{
+  "noticeNo": "R26BK01735905",
+  "docsRead": [
+    "1_1_수의견적제출 안내 공고문(지방도 15톤덤프_강릉).hwpx.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-09-17 19:19:41",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidNtceDt=2026-09-17 19:19:41"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-09-27 18:00",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidQlfctRgstDt=2026-09-27 18:00"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 9. 18.(금) 10:00 ~ 9. 28.(월) 10:00",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_수의견적제출 안내 공고문(지방도 15톤덤프_강릉).hwpx.txt",
+      "quote": "라. 견적서 제출기간: 2026. 9. 18.(금) 10:00 ~ 9. 28.(월) 10:00",
+      "reason": "제안서가 아닌 전자견적서 제출기간"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "소액수의 견적제출(장비 임차), 제안서 평가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "53172000",
+      "src": "api",
+      "confidence": "high",
+      "quote": "asignBdgtAmt=53172000",
+      "reason": "문서는 1대 기준 기초금액 53,172,000원(11,816천원/월 x 4.5개월, 부가세 포함), 7대 임차"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "2026. 11. 16. ~ 2027. 3. 31.",
+      "src": "doc",
+      "confidence": "medium",
+      "file": "1_1_수의견적제출 안내 공고문(지방도 15톤덤프_강릉).hwpx.txt",
+      "quote": "나. 임차기간: 2026. 11. 16. ~ 2027. 3. 31.",
+      "reason": "임차기간 표기, 용역기간 줄은 없음"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "src": "api",
+      "confidence": "high",
+      "quote": "sucsfbidMthdNm=소액수의견적-소액수의견적(2인 이상 견적 제출)"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "소액수의 견적제출, 제안서 평가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "소액수의 견적제출, 정량평가 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "소액수의 견적제출, 정량평가 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "소액수의 견적제출, 실적 평가 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "실적 인정 조건 없음(2010년 1월 1일 이후 최초 등록 건설기계 요건은 장비 연식)",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 금액 요건 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "유사사업 정의 없음, 장비 임차 견적제출",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "confidence": "high",
+      "quote": "cmmnSpldmdMethdNm=(없음)공동수급불허"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "confidence": "high",
+      "quote": "prearngPrceDcsnMthdNm=복수예가"
+    }
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "noticeNo": "R26BK01635946",
+  "docsRead": [
+    "1_1_입찰공고문_[긴급]2026년 인천형 직업교육 혁신지구 반도체분야 교육운영 위탁 용역.pdf.txt",
+    "2_2_과업지시서_2026년 인천형 직업교육 혁신지구 반도체분야 교육운영 위탁 용역.hwp.txt",
+    "3_3_제안요청서_2026년 인천형 직업교육 혁신지구 반도체분야 교육운영 위탁 용역.hwp.txt",
+    "4_4_긴급 입찰 사유서.hwp.txt"
+  ],
+  "contractType": "기타",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-07-15 18:40:28",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidNtceDt=2026-07-15 18:40:28"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-07-27 18:00",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidQlfctRgstDt=2026-07-27 18:00"
+    },
+    "proposalPeriod": {
+      "kind": "multi",
+      "values": {
+        "가격입찰서(전자입찰) 제출": "2026. 7. 20.(월) 10:00 ~ 2026. 7. 28.(화) 10:00",
+        "제안서 제출": "2026. 7. 28.(화) 10:00 ~ 16:00 [점심시간 12:00 ~ 13:00 제외]"
+      },
+      "src": "doc",
+      "file": "1_1_입찰공고문_[긴급]2026년 인천형 직업교육 혁신지구 반도체분야 교육운영 위탁 용역.pdf.txt",
+      "quote": "2) 제안서 제출: 2026. 7. 28.(화) 10:00 ~ 16:00 [점심시간 12:00 ~ 13:00 제외]",
+      "confidence": "medium",
+      "reason": "규격가격동시입찰이라 제출 서류별 기간이 다름"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "제안서 제출 마감 후 제안서 평가 대상자 별도 통보 (제안요청서), 공고문은 제안 설명회 일시 별도 안내",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "80000000",
+      "src": "api",
+      "confidence": "high",
+      "quote": "asignBdgtAmt=80000000",
+      "reason": "문서: 기초금액 금80,000,000원(금팔천만원)[부가가치세 포함], 사업기간 계약일로부터 ~ 2027. 1. 31."
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약일로부터 ~ 2027. 1. 31.",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_입찰공고문_[긴급]2026년 인천형 직업교육 혁신지구 반도체분야 교육운영 위탁 용역.pdf.txt",
+      "quote": "마. 사업기간: 계약일로부터 ~ 2027. 1. 31."
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "규격가격동시입찰-제안적격자 중 예가 내 최저가 투찰자",
+      "src": "api",
+      "confidence": "high",
+      "quote": "sucsfbidMthdNm=규격가격동시입찰-제안적격자 중 예가 내 최저가 투찰자"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "협상형 제안서 평가(정성 80점)가 있으나 차등점수제 문구가 공고문, 제안요청서, 과업지시서 어디에도 없음",
+      "confidence": "medium"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "정량평가 표가 인력조직관리기술, 용역수행실적, 경영상태로 구성되며 신인도 항목이 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 5,
+      "src": "doc",
+      "confidence": "high",
+      "file": "3_3_제안요청서_2026년 인천형 직업교육 혁신지구 반도체분야 교육운영 위탁 용역.hwp.txt",
+      "quote": "[셀 3 2] 경영 상태 - 신용평가등급 ... [셀 3 4] 5"
+    },
+    "performanceScore": {
+      "kind": "value",
+      "value": 10,
+      "src": "doc",
+      "confidence": "high",
+      "file": "3_3_제안요청서_2026년 인천형 직업교육 혁신지구 반도체분야 교육운영 위탁 용역.hwp.txt",
+      "quote": "[셀 2 2] 용역 수행 실적 ... [셀 2 4] 10"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "최근 3년간",
+      "src": "doc",
+      "confidence": "high",
+      "file": "3_3_제안요청서_2026년 인천형 직업교육 혁신지구 반도체분야 교육운영 위탁 용역.hwp.txt",
+      "quote": "입찰공고일 기준 최근 3년간 단일 계약 건으로 1천만원 이상인 반도체 분야 교육 용역 또는 유사한 용역 수행실적"
+    },
+    "performanceMinAmount": {
+      "kind": "value",
+      "value": "단일 계약 건으로 1천만원 이상",
+      "src": "doc",
+      "confidence": "high",
+      "file": "3_3_제안요청서_2026년 인천형 직업교육 혁신지구 반도체분야 교육운영 위탁 용역.hwp.txt",
+      "quote": "입찰공고일 기준 최근 3년간 단일 계약 건으로 1천만원 이상인 반도체 분야 교육 용역 또는 유사한 용역 수행실적"
+    },
+    "performanceCondition": {
+      "kind": "value",
+      "value": "반도체 분야 교육 용역 또는 유사한 용역 수행실적 (단일 계약 건 1천만원 이상, 입찰공고일 기준 최근 3년간)",
+      "src": "유사사업 별도 정의 문단 없음, 평가표 문구가 유일",
+      "confidence": "medium",
+      "quote": "입찰공고일 기준 최근 3년간 단일 계약 건으로 1천만원 이상인 반도체 분야 교육 용역 또는 유사한 용역 수행실적"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "confidence": "high",
+      "quote": "cmmnSpldmdMethdNm=(없음)공동수급불허"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "confidence": "high",
+      "quote": "prearngPrceDcsnMthdNm=복수예가"
+    }
+  }
+}

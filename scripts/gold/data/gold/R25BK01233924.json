@@ -1,0 +1,109 @@
+{
+  "noticeNo": "R25BK01233924",
+  "docsRead": [
+    "1_1_공고문[고성지구 하천재해예방사업 석면해체공사 감리용역].hwp.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2025-12-17 07:41:41",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 공고일 2025. 12. 17."
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2025-12-22 18:00",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서에는 입찰참가신청 별도 신청 불필요로만 기재"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2025. 12. 19.(금) 09:00 ~ 2025. 12. 23.(화) 10:00",
+      "src": "doc",
+      "file": "1_1_공고문[고성지구 하천재해예방사업 석면해체공사 감리용역].hwp.txt",
+      "quote": "[셀 1 5] 2025. 12. 19.(금) 09:00 / [셀 2 5] 2025. 12. 23.(화) 10:00",
+      "confidence": "high"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "소액수의견적, 제안서 제출 및 평가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "37642000",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 기초금액 37,642,000원, 추정가격 34,220,000원"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 50일",
+      "src": "doc",
+      "file": "1_1_공고문[고성지구 하천재해예방사업 석면해체공사 감리용역].hwp.txt",
+      "quote": "[셀 0 1] 착수일로부터 50일",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서: 제한최저가낙찰제-낙찰하한선(88%)"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가 및 정량평가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가 및 정량평가 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가 및 정량평가 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가 및 정량평가 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "실적 평가 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "file": "1_1_공고문[고성지구 하천재해예방사업 석면해체공사 감리용역].hwp.txt",
+      "quote": "3. 공동도급 불허",
+      "confidence": "high",
+      "reason": "문서도 공동도급 불허"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서: 기초금액 기준 ±3% 범위 복수예비가격 15개 작성, 4개 산술평균"
+    }
+  }
+}

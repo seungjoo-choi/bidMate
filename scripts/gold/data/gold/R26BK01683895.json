@@ -1,0 +1,117 @@
+{
+ "noticeNo": "R26BK01683895",
+ "docsRead": [
+  "1_1_입찰공고문(건축정책 성과보고서 작성 연구).hwpx.txt",
+  "3_3_제안요청서(건축정책 성과보고서 작성 연구).hwpx.txt"
+ ],
+ "contractType": "협상",
+ "items": {
+  "postedAt": {
+   "kind": "value",
+   "value": "2026-08-14 16:32:15",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "registrationDeadline": {
+   "kind": "value",
+   "value": "2026-08-24 18:00",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "proposalPeriod": {
+   "kind": "value",
+   "value": "2026. 8. 21. (금) 10:00 ~ 2026. 8. 25. (화) 10:00",
+   "src": "doc",
+   "quote": "2026. 8. 21. (금) 10:00",
+   "confidence": "medium",
+   "file": "1_1_입찰공고문(건축정책 성과보고서 작성 연구).hwpx.txt",
+   "reason": "제안서 제출기간은 가격입찰서 제출기간과 동일하다고 기재, 전자입찰서 접수 개시/마감일시 칸을 조합"
+  },
+  "proposalEvalAt": {
+   "kind": "absent",
+   "reason": "제안서 기술평가 일정 등은 제안서 접수 후 사업부서에서 별도 안내",
+   "confidence": "high"
+  },
+  "budgetAmount": {
+   "kind": "value",
+   "value": "20000000",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 금 20,000,000원(부가세 포함)"
+  },
+  "projectPeriod": {
+   "kind": "value",
+   "value": "계약일로부터 4개월(120일)",
+   "src": "doc",
+   "quote": "용역기간: 계약일로부터 4개월(120일)",
+   "confidence": "high",
+   "file": "3_3_제안요청서(건축정책 성과보고서 작성 연구).hwpx.txt"
+  },
+  "evalMethod": {
+   "kind": "value",
+   "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 기술능력평가 80%, 입찰가격평가 20%의 비중으로 협상에 의한 낙찰자 결정"
+  },
+  "differentialScoring": {
+   "kind": "absent",
+   "reason": "두 문서에 차등점수제 언급 없음",
+   "confidence": "high"
+  },
+  "credibilityScore": {
+   "kind": "na",
+   "reason": "기술능력 평가표에 신인도 항목 없음",
+   "confidence": "high"
+  },
+  "managementScore": {
+   "kind": "value",
+   "value": 10,
+   "src": "doc",
+   "quote": "재무구조 · 경영상태",
+   "confidence": "medium",
+   "file": "3_3_제안요청서(건축정책 성과보고서 작성 연구).hwpx.txt",
+   "reason": "평가표 제안업체 일반현황의 재무구조 경영상태 배점 10, 계량평가"
+  },
+  "performanceScore": {
+   "kind": "na",
+   "reason": "평가표에 수행실적 항목 없음(기관평가 연구인력 보유현황 5, 책임연구원 경력 5뿐)",
+   "confidence": "high"
+  },
+  "performancePeriod": {
+   "kind": "na",
+   "reason": "실적 요건과 실적 평가 없음",
+   "confidence": "high"
+  },
+  "performanceMinAmount": {
+   "kind": "na",
+   "reason": "실적 금액 요건 없음",
+   "confidence": "high"
+  },
+  "performanceCondition": {
+   "kind": "na",
+   "reason": "유사사업 정의 없음",
+   "confidence": "high"
+  },
+  "jointVentureAllowed": {
+   "kind": "value",
+   "value": "(전자)공동이행",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 공동수급(공동이행방식)을 허용"
+  },
+  "priceMethod": {
+   "kind": "value",
+   "value": "비예가",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서에 예정가격 결정 방법 언급 없음"
+  }
+ }
+}

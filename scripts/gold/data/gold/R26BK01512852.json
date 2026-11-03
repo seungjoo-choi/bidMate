@@ -1,0 +1,104 @@
+{
+  "noticeNo": "R26BK01512852",
+  "docsRead": [
+    "1_1_설계서(마도면 청원리 753번지 일원 노후관로 교체공사 폐기물처리용역).hwpx.txt",
+    "2_2_화성시 맑은물사업소 공고 제2026_110호 마도면 청원리 753번지 일원 노후관로 교체공사 폐기물처리용역.hwp.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-05-11 13:50:01",
+      "src": "api",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-05-14 18:00",
+      "src": "api",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 5. 12.(화) 10:00 ~ 2026. 5. 15.(금) 10:00",
+      "src": "doc",
+      "confidence": "high",
+      "file": "2_2_화성시 맑은물사업소 공고 제2026_110호 마도면 청원리 753번지 일원 노후관로 교체공사 폐기물처리용역.hwp.txt",
+      "quote": "2026. 5. 12.(화) 10:00",
+      "reason": "입찰서 접수 개시/마감 표 칸 값을 이어 적음(마감 2026. 5. 15.(금) 10:00)"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "수의견적 공고, 제안서 제출과 평가가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "61150000",
+      "src": "api",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 90일간",
+      "src": "doc",
+      "confidence": "high",
+      "file": "2_2_화성시 맑은물사업소 공고 제2026_110호 마도면 청원리 753번지 일원 노후관로 교체공사 폐기물처리용역.hwp.txt",
+      "quote": "나. 용역기간: 착수일로부터 90일간"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "src": "api",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 최저가 견적 선정이라 제안서 평가와 정량평가가 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "실적 평가가 없는 수의견적 공고",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 평가가 없는 수의견적 공고",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "실적 평가가 없는 수의견적 공고",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(전자)분담이행",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 5.가 건설폐기물 수집운반업자와 공동도급(분담이행) 가능, 5개사 이내"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "confidence": "high"
+    }
+  }
+}

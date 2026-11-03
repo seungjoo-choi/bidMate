@@ -1,0 +1,23 @@
+{
+  "noticeNo": "R26BK01513871",
+  "docsRead": ["1_1_입찰공고문_재공고.hwpx.txt", "3_3_1. 제안요청서(2026 온라인 유통시장 연구용역).hwpx.txt"],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {"kind":"value","value":"2026-05-11 13:16:14","src":"api","confidence":"high"},
+    "registrationDeadline": {"kind":"value","value":"2026-05-21 18:00","src":"api","confidence":"high"},
+    "proposalPeriod": {"kind":"value","value":"2026.5.11.(월)17:00 ~ 2026.5.22.(금)10:00","src":"doc","file":"1_1_입찰공고문_재공고.hwpx.txt","quote":"가. 기  간 : 가격입찰서 제출기간과 동일","reason":"문서는 제안서 제출기간을 가격입찰서 제출기간과 동일하다고 하고, 가격입찰서 접수개시 2026.5.11.(월)17:00, 마감 2026.5.22.(금)10:00","confidence":"high"},
+    "proposalEvalAt": {"kind":"absent","reason":"서면평가 실시(제안서 설명회 미개최), 평가 일시 기재 없음, 개찰은 제안서 기술평가 후","confidence":"high"},
+    "budgetAmount": {"kind":"value","value":"50000000","src":"api","reason":"문서: 사업예산 : 50,000천원 (부가가치세 포함)","confidence":"high"},
+    "projectPeriod": {"kind":"value","value":"계약체결일로부터 4개월","src":"doc","file":"1_1_입찰공고문_재공고.hwpx.txt","quote":"[셀 1 1 cs3]  계약체결일로부터 4개월","confidence":"high"},
+    "evalMethod": {"kind":"value","value":"협상에 의한 계약, 기술평가 80% + 가격평가 20%","src":"api","reason":"문서: 제안서 기술평가(80%)와 가격평가(20%)를 종합평가","confidence":"high"},
+    "differentialScoring": {"kind":"absent","reason":"공고문과 제안요청서에서 차등점수제 문구 없음","confidence":"medium"},
+    "credibilityScore": {"kind":"na","reason":"평가기준표(기술능력 6항목, 가격)에 신인도 항목 없음","confidence":"high"},
+    "managementScore": {"kind":"na","reason":"평가기준표에 경영상태 항목 없음","confidence":"high"},
+    "performanceScore": {"kind":"value","value":20,"src":"doc","file":"3_3_1. 제안요청서(2026 온라인 유통시장 연구용역).hwpx.txt","quote":"[셀 4 0]  ▪ 제안요청 관련 분야 실적 및 업무수행의 전문성","reason":"배점 칸 20, 실적과 업무수행의 전문성이 묶인 기술평가 항목이라 순수 실적 배점인지 불명확","confidence":"low"},
+    "performancePeriod": {"kind":"na","reason":"참가자격에 실적 요건 없음, 실적은 기술평가 항목일 뿐 인정기간 규정 없음","confidence":"medium"},
+    "performanceMinAmount": {"kind":"na","reason":"참가자격에 실적 요건 없음, 금액 하한 없음","confidence":"medium"},
+    "performanceCondition": {"kind":"na","reason":"유사사업 정의 없음, 제안서에 관련 분야 선행 연구실적을 기재하는 정도","confidence":"medium"},
+    "jointVentureAllowed": {"kind":"value","value":"공동계약(공동이행) 가능","src":"api","reason":"API (전자)공동이행, 문서 일치","confidence":"high"},
+    "priceMethod": {"kind":"value","value":"비예가","src":"api","reason":"문서: 예정가격은 국가계약법 시행령 제7조의2 제2항에 의거 작성하지 않습니다","confidence":"high"}
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "noticeNo": "R26BK01635582",
+  "docsRead": [
+    "1_1_1. 공고문_굿뜨래페이 시스템 고도화.pdf.txt",
+    "2_2_2. 제안요청서_굿뜨래페이 시스템 고도화.hwp.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-07-15 17:07:53",
+      "src": "api",
+      "quote": "API bidNtceDt=2026-07-15 17:07:53",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026. 8. 5.(수) 10시까지",
+      "src": "doc",
+      "file": "1_1_1. 공고문_굿뜨래페이 시스템 고도화.pdf.txt",
+      "quote": "가. 제출기한: 2026. 8. 4.(화)~2026. 8. 5.(수) 10시까지",
+      "confidence": "medium",
+      "reason": "API bidQlfctRgstDt가 빈 값. 문서의 입찰참가신청 및 제안서 제출기한을 등록 마감으로 봄"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 8. 4.(화)~2026. 8. 5.(수) 10시까지",
+      "src": "doc",
+      "file": "1_1_1. 공고문_굿뜨래페이 시스템 고도화.pdf.txt",
+      "quote": "가. 제출기한: 2026. 8. 4.(화)~2026. 8. 5.(수) 10시까지",
+      "confidence": "high",
+      "reason": "API bidBeginDt와 bidClseDt가 빈 값"
+    },
+    "proposalEvalAt": {
+      "kind": "value",
+      "value": "2026. 8. 7.(금) 14시 예정",
+      "src": "doc",
+      "file": "1_1_1. 공고문_굿뜨래페이 시스템 고도화.pdf.txt",
+      "quote": "2) 제안서 평가 일시: 2026. 8. 7.(금) 14시 예정",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "147000000",
+      "src": "api",
+      "quote": "API asignBdgtAmt=147000000",
+      "confidence": "high",
+      "reason": "문서: 소요예산 147,000천원(부가치세 포함)"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 ~ 2026.12.31.까지",
+      "src": "doc",
+      "file": "1_1_1. 공고문_굿뜨래페이 시스템 고도화.pdf.txt",
+      "quote": "나. 용역기간: 착수일로부터 ~ 2026.12.31.까지",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정(SW사업)",
+      "src": "api",
+      "quote": "API sucsfbidMthdNm=협상에의한계약-협상에 의한 낙찰자 결정(SW사업)",
+      "confidence": "high",
+      "reason": "문서: 기술능력평가(90점) 및 입찰가격평가(10점) 종합평가"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "공고문과 제안요청서에서 차등점수제 문구를 찾지 못함(위규 수준별 차등 부과는 보안 조항)",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "평가표에 신인도 항목 없음(정량평가는 경영상태 10점뿐)",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 10,
+      "src": "doc",
+      "file": "2_2_2. 제안요청서_굿뜨래페이 시스템 고도화.hwp.txt",
+      "quote": "[셀 1 2] 경영상태",
+      "confidence": "high",
+      "reason": "정량평가(10) 경영상태 배점 10"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "평가표에 수행실적 항목 없음(정량평가는 경영상태뿐)",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "수행실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "수행실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "수행실적 평가 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "API cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서: 본 용역은 공도수급 불가"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "quote": "API prearngPrceDcsnMthdNm=비예가",
+      "confidence": "medium",
+      "reason": "문서에 예정가격 결정 방법 없음(예정가격을 작성하지 않은 경우에는 추정가격에 부가가치세를 포함한 금액으로 한다는 조건문만)"
+    }
+  }
+}

@@ -127,7 +127,7 @@ export function docOnlyFieldsOf(extras: Record<string, ExtractedItem<unknown>>, 
     for (const k of [key, ...(DOC_FALLBACK[key] ?? [])]) {
       const it = extras[k];
       let f = it && it.reason !== 'no_total' ? fieldOfItem(it, fetchedAt, true) : undefined;
-      if (f && key === 'proposalEvalAt') {
+      if (f && key === 'proposalEvalAt' && !isNotApplicable(it!)) {
         // schedule.proposalEvalAt은 ISODate다. 변환에 실패하면 값으로 보지 않고, 후보도 변환되는 것만 남긴다.
         const iso = typeof f.value === 'string' ? docDateToIso(f.value) : null;
         if (!iso) f = undefined;
@@ -337,7 +337,8 @@ export async function runExtractStep(job: Job, notice: Notice, prior: Extraction
   const files = slots.flat();
   const { candidates, warnings: rw } = runRules(inputs, deps.rules);
   warnings.push(...rw);
-  const { items, extras } = decide(candidates, deps.rules);
+  const award = getField(notice, 'awardMethod')?.value;
+  const { items, extras } = decide(candidates, deps.rules, { awardMethod: typeof award === 'string' ? award : null });
   if (!files.some((f) => f.status === 'parsed')) {
     for (const k of EXTRACTION_KEYS) if (items[k].reason === 'not_found') items[k].reason = 'no_documents';
   }

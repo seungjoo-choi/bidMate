@@ -1,0 +1,122 @@
+{
+  "noticeNo": "R26BK01762401",
+  "docsRead": [
+    "1_1_입찰공고문.hwpx.txt",
+    "3_3_과업내용서.hwp.txt",
+    "4_4_기술적격평가표.hwp.txt"
+  ],
+  "contractType": "기타",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-10-08 13:14:30",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서에 공고일 줄 없음, 입찰서 등록 2026. 10. 8.(목) 14:00"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-10-15 18:00",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서에 입찰참가자격 등록 마감 일시 별도 기재 없음"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 10. 8.(목) 14:00 ~ 2026. 10. 16.(금) 14:00까지(온라인 제출)",
+      "src": "doc",
+      "file": "1_1_입찰공고문.hwpx.txt",
+      "quote": "[셀 3 1 cs3] 2026. 10. 8.(목) 14:00 ~ 2026. 10. 16.(금) 14:00까지(온라인 제출)",
+      "confidence": "high",
+      "reason": "기술평가 서류 제출기간. 제안서가 아닌 규격가격동시입찰"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "기술평가(적격) 일정 미기재: \"가격개찰은 규격평가 완료 후 진행되며, 개찰일시는 평가 일정에 따라 변경될 수 있습니다\"",
+      "confidence": "medium"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "30690000",
+      "src": "api",
+      "file": "1_1_입찰공고문.hwpx.txt",
+      "quote": "[셀 5 1 cs3] 금30,690,000원(금삼천육십구만원정, 부가세 포함)",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약체결일로부터 2026. 12. 15.",
+      "src": "doc",
+      "file": "1_1_입찰공고문.hwpx.txt",
+      "quote": "[셀 7 1 cs3] 계약체결일로부터 2026. 12. 15.",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "규격가격동시입찰-제안적격자 중 예가 내 최저가 투찰자",
+      "src": "api",
+      "file": "1_1_입찰공고문.hwpx.txt",
+      "quote": "가. 기술평가 적격자 중 예정가격 이하 최저가 입찰한 자를 낙찰자로 선정합니다.",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "기술적격평가(적/부) 방식, 배점 평가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "기술적격평가(적/부) 방식, 배점 평가 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "기술적격평가(적/부) 방식, 배점 평가 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "기술적격평가(적/부) 방식, 배점 평가 없음. 실적은 적/부 요건",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "최근 3년간",
+      "src": "doc",
+      "file": "4_4_기술적격평가표.hwp.txt",
+      "quote": "영양성분·잔류농약성분 정량분석 실적 (최근 3년간)",
+      "confidence": "medium",
+      "reason": "적격 요건(적/부)상의 실적 기간"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 요건은 분석 건수(항목별 30건 이상)이며 금액 요건 없음",
+      "confidence": "medium"
+    },
+    "performanceCondition": {
+      "kind": "value",
+      "value": "조단백질, 조지방, 구성아미노산, 유리아미노산, 지방산, 잔류농약 분석 업무에 대한 다수의 경험 및 실적을 보유한 자",
+      "src": "doc",
+      "file": "1_1_입찰공고문.hwpx.txt",
+      "quote": "- 조단백질, 조지방, 구성아미노산, 유리아미노산, 지방산, 잔류농약 분석 업무에 대한 다수의 경험 및 실적을 보유한 자",
+      "confidence": "low",
+      "reason": "유사사업 정의 문단은 없고 참가자격 문장만 있음"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "file": "1_1_입찰공고문.hwpx.txt",
+      "quote": "라. 본 입찰은 공동도급 및 하도급을 허용하지 않습니다.",
+      "confidence": "high"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "file": "1_1_입찰공고문.hwpx.txt",
+      "quote": "나. 가격입찰은 전자입찰로만 가능하며, 예정가격 작성은 복수예정가격으로 작성하여야 합니다.",
+      "confidence": "high"
+    }
+  }
+}

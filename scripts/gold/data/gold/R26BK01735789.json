@@ -1,0 +1,131 @@
+{
+  "noticeNo": "R26BK01735789",
+  "docsRead": [
+    "1_1_4. 비전자 도면 DB구축 제안요청서(광주광역시도시공사)(과업심의결과포함).hwpx.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-09-17 17:59:38",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서(제안요청서)에 공고일 없음, 표지 2026. 6."
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-09-17 18:00",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서에는 입찰서 제출 마감일 전일까지 등록으로만 기재"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026-09-18 10:00:00 ~ 2026-09-18 12:00:00",
+      "src": "api",
+      "file": "1_1_4. 비전자 도면 DB구축 제안요청서(광주광역시도시공사)(과업심의결과포함).hwpx.txt",
+      "quote": "〇 신청 및 제출기간 : 입찰 공고문에 의함",
+      "confidence": "high",
+      "reason": "문서에는 기간 없고 공고문 참조로만 기재. 공고문은 첨부에 없음"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "제안요청서에 제안발표(30분) 방식은 있으나 평가 일시 기재 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "90000000",
+      "src": "api",
+      "file": "1_1_4. 비전자 도면 DB구축 제안요청서(광주광역시도시공사)(과업심의결과포함).hwpx.txt",
+      "quote": "5. 사 업 비 : 90,000천원(VAT 포함)",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약일로부터 4개월 이내",
+      "src": "doc",
+      "file": "1_1_4. 비전자 도면 DB구축 제안요청서(광주광역시도시공사)(과업심의결과포함).hwpx.txt",
+      "quote": "4. 사업기간 : 계약일로부터 4개월 이내",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "수의시담-수의시담",
+      "src": "api",
+      "file": "1_1_4. 비전자 도면 DB구축 제안요청서(광주광역시도시공사)(과업심의결과포함).hwpx.txt",
+      "quote": "1. 계약방법 : 협상에 의한 계약(제한경쟁 입찰)",
+      "confidence": "high",
+      "reason": "문서(제안요청서)는 협상에 의한 계약(제한경쟁)으로 기재, API는 수의시담. contractType은 API 기준"
+    },
+    "differentialScoring": {
+      "kind": "value",
+      "value": true,
+      "src": "doc",
+      "file": "1_1_4. 비전자 도면 DB구축 제안요청서(광주광역시도시공사)(과업심의결과포함).hwpx.txt",
+      "quote": "- 기술평가 차등 점수제 실시 : 지방자치단체 입찰시 낙찰자 결정기준(행정안전부예규 제344호) 제7장",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "value",
+      "value": 5,
+      "src": "doc",
+      "file": "1_1_4. 비전자 도면 DB구축 제안요청서(광주광역시도시공사)(과업심의결과포함).hwpx.txt",
+      "quote": "[셀 5 2] 신인도(5) [셀 5 3] • 제안업체 명의의 상훈 및 인증(5)",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 3,
+      "src": "doc",
+      "file": "1_1_4. 비전자 도면 DB구축 제안요청서(광주광역시도시공사)(과업심의결과포함).hwpx.txt",
+      "quote": "[셀 1 2] 경영상태(3) [셀 1 3] • 신용평가등급에 의한 기업의 경영상태(3)",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "value",
+      "value": 3,
+      "src": "doc",
+      "file": "1_1_4. 비전자 도면 DB구축 제안요청서(광주광역시도시공사)(과업심의결과포함).hwpx.txt",
+      "quote": "[셀 2 2] 수행실적(3) [셀 2 3] • 최근 3년간 동일사업 수행 실적(3)",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "최근 3년간",
+      "src": "doc",
+      "file": "1_1_4. 비전자 도면 DB구축 제안요청서(광주광역시도시공사)(과업심의결과포함).hwpx.txt",
+      "quote": "해당 사업규모 대비 입찰공고일 기준 최근 3년간 동일사업수행실적(금액 기준)을 합산 적용하며 공고일 이전 수행 완료된 실적만 인정함.",
+      "confidence": "high",
+      "reason": "창업기업은 최근 7년(예외)"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "건당 하한 없음. 실적 합계를 해당 사업규모로 나눈 비율로 점수 부여(비율 기준금액은 사업규모)",
+      "confidence": "medium"
+    },
+    "performanceCondition": {
+      "kind": "value",
+      "value": "동등 이상 사업범위 : 기록물 전산화(DB구축) 용역 사업 (인사 호적, 제적부등 타 전산화(DB구축) 용역사업 실적은 인정하지 않음)",
+      "src": "doc",
+      "file": "1_1_4. 비전자 도면 DB구축 제안요청서(광주광역시도시공사)(과업심의결과포함).hwpx.txt",
+      "quote": "- 동등 이상 사업범위 : 기록물 전산화(DB구축) 용역 사업",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "file": "1_1_4. 비전자 도면 DB구축 제안요청서(광주광역시도시공사)(과업심의결과포함).hwpx.txt",
+      "quote": "단독 입찰만 가능하며, 공동수급 및 협력업체 참여는 할 수 없음(하도급 금지)",
+      "confidence": "high"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "단일예가",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서에 예정가격 결정방법 문구 없음"
+    }
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "noticeNo": "R26BK01761955",
+  "docsRead": [
+    "1_1_1. 입찰공고문_에스케이스토아주식회사_수의시담.hwp.txt",
+    "3_3_2. 과업지시서_에스케이스토아주식회사_수의시담.hwp.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-10-08 14:32:56",
+      "src": "api",
+      "quote": "bidNtceDt=2026-10-08 14:32:56",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-10-13 18:00",
+      "src": "api",
+      "quote": "bidQlfctRgstDt=2026-10-13 18:00",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026.10.12.(월) 15:00 ~ 2026.10.14.(수) 15:00",
+      "src": "doc",
+      "file": "1_1_1. 입찰공고문_에스케이스토아주식회사_수의시담.hwp.txt",
+      "quote": "[셀 4 1] 2026.10.12.(월)15:00",
+      "confidence": "high",
+      "reason": "마감 [셀 5 3] 2026.10.14.(수) 15:00 입찰제출서류 및 제안서 제출마감"
+    },
+    "proposalEvalAt": {
+      "kind": "value",
+      "value": "2026.10.14.(수)~10.15.(목)",
+      "src": "doc",
+      "file": "1_1_1. 입찰공고문_에스케이스토아주식회사_수의시담.hwp.txt",
+      "quote": "[셀 6 1] 2026.10.14.(수)~10.15.(목)",
+      "confidence": "high",
+      "reason": "서면평가 100%, 발표 없음"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "110000000",
+      "src": "api",
+      "quote": "asignBdgtAmt=110000000",
+      "confidence": "high",
+      "reason": "문서: 사업금액 110,000,000원(부가가치세 포함)"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약체결일로부터 2026. 12. 31.까지",
+      "src": "doc",
+      "file": "1_1_1. 입찰공고문_에스케이스토아주식회사_수의시담.hwp.txt",
+      "quote": "계약기간 : 계약체결일로부터 2026. 12. 31.까지",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "수의시담-수의시담",
+      "src": "api",
+      "quote": "sucsfbidMthdNm=수의시담-수의시담",
+      "confidence": "high",
+      "reason": "문서: 협상에 의한 계약, 기술능력평가 90점 + 입찰가격평가 10점(낙찰방법 API는 수의시담)"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "공고문과 과업지시서에서 차등점수제 문구를 찾지 못함(서면평가 방식 설명만 있음)",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "기술평가표에 신인도 항목 없음(경영상태 5, 조직 및 인력 5, 정성 80)",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 5,
+      "src": "doc",
+      "file": "3_3_2. 과업지시서_에스케이스토아주식회사_수의시담.hwp.txt",
+      "quote": "[셀 1 2] 경영 상태",
+      "confidence": "high",
+      "reason": "기술평가표 정량평가 10점 중 경영상태 배점 5(기업신용평가등급)"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "기술평가표에 수행실적 항목 없음, 이행실적으로 입찰참가자격을 제한하지 않음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "실적 평가 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서: 공동수급체 구성을 허용하지 아니함"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "단일예가",
+      "src": "api",
+      "quote": "prearngPrceDcsnMthdNm=단일예가",
+      "confidence": "high"
+    }
+  }
+}

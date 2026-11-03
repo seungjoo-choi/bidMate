@@ -1,0 +1,116 @@
+{
+  "noticeNo": "R26BK01684126",
+  "docsRead": [
+    "1_1_(공고문)_단체구기 리더스포츠클럽 지도자 역량강화 전문교육 운영.hwp.txt",
+    "3_3_제안요청서_2026년 단체구기 리더스포츠클럽 지도자 역량강화 전문교육 운영(20260810)_.hwp.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-08-14 18:16:21",
+      "src": "api",
+      "quote": "bidNtceDt=2026-08-14 18:16:21",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-08-24 18:00",
+      "src": "api",
+      "quote": "bidQlfctRgstDt=2026-08-24 18:00",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026/08/21 10:00 ~ 2026/08/25 10:00",
+      "src": "doc",
+      "file": "1_1_(공고문)_단체구기 리더스포츠클럽 지도자 역량강화 전문교육 운영.hwp.txt",
+      "quote": "전자입찰서접수개시일자 : 2026/08/21 10:00",
+      "confidence": "high",
+      "reason": "4-2 제출기간: 입찰서 제출 기간과 동일, 마감 2026/08/25 10:00"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "평가일시는 제안서 제출 시 별도 공지(5-2: 별도 공지할 예정), 날짜 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "150000000",
+      "src": "api",
+      "quote": "asignBdgtAmt=150000000",
+      "confidence": "high",
+      "reason": "문서: 사 업 금 액 : 150,000,000원, 추정가격 136,363,636원"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약체결일 ~ 2026. 12. 18.까지",
+      "src": "doc",
+      "file": "3_3_제안요청서_2026년 단체구기 리더스포츠클럽 지도자 역량강화 전문교육 운영(20260810)_.hwp.txt",
+      "quote": "ㅇ 계약기간: 계약체결일 ~ 2026. 12. 18.까지",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+      "src": "api",
+      "quote": "sucsfbidMthdNm=협상에의한계약-협상에 의한 낙찰자 결정",
+      "confidence": "high",
+      "reason": "문서: 제안서 기술평가(80%)와 가격평가(20%) 종합평가"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "공고문과 제안요청서에서 차등점수제 문구를 찾지 못함",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "평가표에 신인도 항목 없음(계량평가는 신용도 10점만)",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 10,
+      "src": "doc",
+      "file": "3_3_제안요청서_2026년 단체구기 리더스포츠클럽 지도자 역량강화 전문교육 운영(20260810)_.hwp.txt",
+      "quote": "ㅇ 신용평가등급에 의한 평가(10점)",
+      "confidence": "high",
+      "reason": "계량평가(10점) 기업의 신용도"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "평가표에 수행실적 항목 없음(계량평가는 신용도뿐)",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "absent",
+      "reason": "유사사업 수행 실적 서식에 ‘유사사업 범위’ 언급만 있고 정의 문단 없음",
+      "confidence": "low"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서: 2-5 단독 형태로 참가(하도급, 공동수급 참여 불가)"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "quote": "prearngPrceDcsnMthdNm=비예가",
+      "confidence": "high"
+    }
+  }
+}

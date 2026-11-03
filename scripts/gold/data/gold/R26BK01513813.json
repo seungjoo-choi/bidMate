@@ -1,0 +1,113 @@
+{
+ "noticeNo": "R26BK01513813",
+ "docsRead": [
+  "1_1_260415 제안요청서.hwp.txt",
+  "2_2_공고서(정책연구용역-국협 재공고).hwp.txt"
+ ],
+ "contractType": "협상",
+ "items": {
+  "postedAt": {
+   "kind": "value",
+   "value": "2026-05-11 13:00:25",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "registrationDeadline": {
+   "kind": "value",
+   "value": "2026-05-21 18:00",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "proposalPeriod": {
+   "kind": "value",
+   "value": "2026/05/20. 10:00 ~ 2026/05/22. 10:00",
+   "src": "doc",
+   "quote": "전자입찰서[제안서]접수개시일자 : 2026/05/20. 10:00",
+   "confidence": "high",
+   "file": "2_2_공고서(정책연구용역-국협 재공고).hwp.txt"
+  },
+  "proposalEvalAt": {
+   "kind": "absent",
+   "reason": "제안서 접수 후 별도 일정에 의해 평가위원 구성 평가합니다(공고서 7-2). 제안요청서도 서류심사 또는 제안발표 방식(예정)이라고만 기재",
+   "confidence": "high"
+  },
+  "budgetAmount": {
+   "kind": "value",
+   "value": "33006050",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "공고서: 품대 33,006,050원(추정가격 30,005,500원). 제안요청서 사업예산은 22,899,813원(부가세 포함)으로 상이"
+  },
+  "projectPeriod": {
+   "kind": "value",
+   "value": "계약일로부터 6개월",
+   "src": "doc",
+   "quote": "납 품 기 한 : 계약일로부터 6개월",
+   "confidence": "low",
+   "file": "2_2_공고서(정책연구용역-국협 재공고).hwp.txt",
+   "reason": "재공고서는 납품기한 계약일로부터 6개월, 제안요청서(260415)는 수행기간 착수일로부터 3개월간으로 상이. 더 나중인 재공고서 값 채택"
+  },
+  "evalMethod": {
+   "kind": "value",
+   "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 기술평가(80%)와 가격평가(20%) 종합평가"
+  },
+  "differentialScoring": {
+   "kind": "absent",
+   "reason": "두 문서에 차등점수제 언급 없음",
+   "confidence": "high"
+  },
+  "credibilityScore": {
+   "kind": "na",
+   "reason": "기술능력 평가표에 신인도 항목 없음(제안업체현황 20, 수행계획 50, 정책활용방안 및 기타 10)",
+   "confidence": "high"
+  },
+  "managementScore": {
+   "kind": "na",
+   "reason": "기술능력 평가표에 경영상태 항목 없음",
+   "confidence": "high"
+  },
+  "performanceScore": {
+   "kind": "na",
+   "reason": "기술능력 평가표에 수행실적 항목 없음(유사과제 수행능력은 수행조직 정성평가 요소 중 하나)",
+   "confidence": "high"
+  },
+  "performancePeriod": {
+   "kind": "na",
+   "reason": "실적 요건과 실적 평가 없음",
+   "confidence": "high"
+  },
+  "performanceMinAmount": {
+   "kind": "na",
+   "reason": "실적 금액 요건 없음",
+   "confidence": "high"
+  },
+  "performanceCondition": {
+   "kind": "na",
+   "reason": "유사사업 정의 없음",
+   "confidence": "high"
+  },
+  "jointVentureAllowed": {
+   "kind": "value",
+   "value": "(전자)공동이행",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 공동계약 허용, 공동계약(공동이행방식)이 가능"
+  },
+  "priceMethod": {
+   "kind": "value",
+   "value": "비예가",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 예정가격은 국가계약법 시행령 제7조의2 제2항에 의거 작성하지 않음"
+  }
+ }
+}

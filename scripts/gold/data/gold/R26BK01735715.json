@@ -1,0 +1,109 @@
+{
+  "noticeNo": "R26BK01735715",
+  "docsRead": [
+    "1_1_공고문[2026년 하반기 배수지 저수조 청소 용역(1권역)].hwpx.txt",
+    "3_3_과업지시서[2026년 하반기 배수지 저수조 청소용역(1권역)].hwpx.txt"
+  ],
+  "contractType": "수의",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-09-17 17:33:22",
+      "src": "api",
+      "quote": "API bidNtceDt=2026-09-17 17:33:22",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-09-22 18:00",
+      "src": "api",
+      "quote": "API bidQlfctRgstDt=2026-09-22 18:00",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 9. 18.(금) 10:00 ~ 2026. 9. 23.(수) 10:00",
+      "src": "doc",
+      "file": "1_1_공고문[2026년 하반기 배수지 저수조 청소 용역(1권역)].hwpx.txt",
+      "quote": "가. 전자입찰서 접수기간: 2026. 9. 18.(금) 10:00 ~ 2026. 9. 23.(수) 10:00",
+      "confidence": "high"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "소액수의견적, 제안서 제출과 평가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "30552000",
+      "src": "api",
+      "quote": "API asignBdgtAmt=30552000",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 30일간",
+      "src": "doc",
+      "file": "1_1_공고문[2026년 하반기 배수지 저수조 청소 용역(1권역)].hwpx.txt",
+      "quote": "라. 공사기간: 착수일로부터 30일간",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "src": "api",
+      "quote": "API sucsfbidMthdNm=소액수의견적-소액수의견적(2인 이상 견적 제출)",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "소액수의견적 공고, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "소액수의견적, 실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "소액수의견적, 실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "소액수의견적, 유사사업 실적 평가 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "API cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서에 공동수급 언급 없음"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "quote": "API prearngPrceDcsnMthdNm=복수예가",
+      "confidence": "high"
+    }
+  }
+}

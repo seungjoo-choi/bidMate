@@ -1,0 +1,134 @@
+{
+  "noticeNo": "R26BK01257210",
+  "docsRead": [
+    "1_1_(붙임1) 입찰설명서.hwp.txt",
+    "2_2_(붙임2) 제안요청서.hwp.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-01-02 18:28:09",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서 공고일 2026. 1. 2."
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-01-13 17:00",
+      "src": "api",
+      "file": "1_1_(붙임1) 입찰설명서.hwp.txt",
+      "quote": "다. ... 입찰서 제출 마감일 전일까지 입찰 참가자격을 등록한 자",
+      "confidence": "high",
+      "reason": "문서는 입찰서 제출 마감일 전일까지로 기재"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 1. 2(금) ~ 2026. 1. 13(화) 17:00",
+      "src": "doc",
+      "file": "1_1_(붙임1) 입찰설명서.hwp.txt",
+      "quote": "가격제안서(입찰금액*) 제출 : 2026. 1. 2(금) ~ 2026. 1. 13(화) 17:00",
+      "confidence": "high",
+      "reason": "제안서 서류는 방문 제출 2026. 1. 13(화) 17:00까지"
+    },
+    "proposalEvalAt": {
+      "kind": "value",
+      "value": "2026년 1월 14일(수)",
+      "src": "doc",
+      "file": "2_2_(붙임2) 제안요청서.hwp.txt",
+      "quote": "□ 제안서 평가 : 2026년 1월 14일(수)",
+      "confidence": "high",
+      "reason": "시각 없음, 일정은 변경될 수 있음"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "206250000",
+      "src": "api",
+      "file": "1_1_(붙임1) 입찰설명서.hwp.txt",
+      "quote": "라. 사업예산 : ￦206,250,000-이내(부가가치세 포함)",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약체결일 ~ 2026.12.31.",
+      "src": "doc",
+      "file": "1_1_(붙임1) 입찰설명서.hwp.txt",
+      "quote": "마. 사업기간(계약기간) : 계약체결일 ~ 2026.12.31.",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+      "src": "api",
+      "file": "1_1_(붙임1) 입찰설명서.hwp.txt",
+      "quote": "다. 입찰 및 낙찰자 결정방법 : 제한경쟁입찰(총액) · 협상에 의한 계약 · 전자입찰",
+      "confidence": "high",
+      "reason": "문서: 기술능력평가 80점 + 가격 20점(85%=68점 기준)"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "입찰설명서와 제안요청서에서 차등점수제 문구를 찾지 못함",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "평가항목표에 신인도 항목 없음(정량 20점: 경영상태, 유사사업실적, 협약 확보)",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 5,
+      "src": "doc",
+      "file": "2_2_(붙임2) 제안요청서.hwp.txt",
+      "quote": "가. 기관 경영상태 : 5점",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "value",
+      "value": 5,
+      "src": "doc",
+      "file": "2_2_(붙임2) 제안요청서.hwp.txt",
+      "quote": "나. 유사사업* 수행실적(계약 건수) : 5점",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "최근 2년 이내",
+      "src": "doc",
+      "file": "2_2_(붙임2) 제안요청서.hwp.txt",
+      "quote": "[셀 1 1] 최근 2년 이내에 계약금액 건당 5천만원 이상의 용역을 15개 이상 완료",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "value",
+      "value": "건당 5천만원 이상",
+      "src": "doc",
+      "file": "2_2_(붙임2) 제안요청서.hwp.txt",
+      "quote": "최근 2년 이내에 계약금액 건당 5천만원 이상의 용역을 15개 이상 완료",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "value",
+      "value": "정부[국가기관, 지방자치단체, 공공기관(「공공기관 운영에 관한 법률」제4조 제1항 각호의 요건에 해당하여 기획재정부장관이 지정한 공공기관)] 또는 민간기업을 대상으로 수행한 건강검진 위탁운영 및 임직원 건강관리 서비스 용역",
+      "src": "doc",
+      "file": "2_2_(붙임2) 제안요청서.hwp.txt",
+      "quote": "* 유사사업 : 정부[국가기관, 지방자치단체, 공공기관(「공공기관 운영에 관한 법률」제4조 제1항 각호의 요건에 해당하여 기획재정부장관이 지정한 공공기관)] 또는 민간기업을 대상으로",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "file": "1_1_(붙임1) 입찰설명서.hwp.txt",
+      "quote": "마. 본 입찰은 공동수급을 허용하지 않음",
+      "confidence": "high"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "confidence": "high",
+      "reason": "문서에 예정가격 결정방법 문구 없음(한국은행 입찰, 사업예산 이하 입찰가 기준)"
+    }
+  }
+}

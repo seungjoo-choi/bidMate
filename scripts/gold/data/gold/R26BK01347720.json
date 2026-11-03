@@ -1,0 +1,110 @@
+{
+  "noticeNo": "R26BK01347720",
+  "docsRead": [
+    "1_1_공고서(국가,제한,협상,자체,비영리)_R26BK01347720.hwp.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-02-23 17:26:07",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidNtceDt=2026-02-23 17:26:07"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-03-05 18:00",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidQlfctRgstDt=2026-03-05 18:00"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026/03/04 10:00 ~ 2026/03/06 10:00",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_공고서(국가,제한,협상,자체,비영리)_R26BK01347720.hwp.txt",
+      "quote": "제안서ㆍ가격 전자입찰서 제출 시작일시: 2026/03/04 10:00 / 제출 마감일시: 2026/03/06 10:00"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "발표평가 일시 및 장소는 수요기관에서 별도 공지할 예정입니다",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "161526000",
+      "src": "api",
+      "confidence": "high",
+      "quote": "asignBdgtAmt=161526000",
+      "reason": "문서: 사업금액 160,000,000원(부가가치세 포함), 추정가격 145,454,545원로 API 배정예산과 다름"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "2026/12/10",
+      "src": "doc",
+      "confidence": "low",
+      "file": "1_1_공고서(국가,제한,협상,자체,비영리)_R26BK01347720.hwp.txt",
+      "quote": "납품기한: 2026/12/10",
+      "reason": "시작일 없이 납품기한만 있음"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+      "src": "api",
+      "confidence": "high",
+      "quote": "sucsfbidMthdNm=협상에의한계약-협상에 의한 낙찰자 결정"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "받은 문서가 공고서뿐이고 평가표 없음, 차등점수제 문구 없음",
+      "confidence": "medium"
+    },
+    "credibilityScore": {
+      "kind": "absent",
+      "reason": "협상 공고이나 평가표(제안요청서)가 첨부에 없음, 공고서에 기술능력 80%/가격 20%만 기재",
+      "confidence": "medium"
+    },
+    "managementScore": {
+      "kind": "absent",
+      "reason": "평가표 없음",
+      "confidence": "medium"
+    },
+    "performanceScore": {
+      "kind": "absent",
+      "reason": "평가표 없음",
+      "confidence": "medium"
+    },
+    "performancePeriod": {
+      "kind": "absent",
+      "reason": "실적 인정 조건 문서 없음",
+      "confidence": "medium"
+    },
+    "performanceMinAmount": {
+      "kind": "absent",
+      "reason": "실적 인정 금액 문서 없음",
+      "confidence": "medium"
+    },
+    "performanceCondition": {
+      "kind": "absent",
+      "reason": "유사사업 정의 문서 없음",
+      "confidence": "medium"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "confidence": "high",
+      "quote": "cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "reason": "문서: 공동계약 및 구성방식: 불가 / 공동계약 불가"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "confidence": "high",
+      "quote": "prearngPrceDcsnMthdNm=비예가"
+    }
+  }
+}

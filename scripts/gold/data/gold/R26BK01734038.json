@@ -1,0 +1,23 @@
+{
+  "noticeNo": "R26BK01734038",
+  "docsRead": ["1_1_1. 공고문.hwp.txt"],
+  "contractType": "적격심사",
+  "items": {
+    "postedAt": {"kind":"value","value":"2026-09-17 18:06:53","src":"api","confidence":"high"},
+    "registrationDeadline": {"kind":"value","value":"2026-09-28 18:00","src":"api","confidence":"high"},
+    "proposalPeriod": {"kind":"value","value":"2026. 9. 23. 09:00 ~ 2026. 9. 29. 10:00","src":"doc","file":"1_1_1. 공고문.hwp.txt","quote":"2026. 9. 23. 09:00 ~","reason":"적격심사 공고의 입찰서 제출(투찰기간), 표 칸이 줄바꿈되어 있음, API 일치","confidence":"high"},
+    "proposalEvalAt": {"kind":"na","reason":"적격심사 공고, 제안서 제출과 제안서 평가 없음","confidence":"high"},
+    "budgetAmount": {"kind":"value","value":"101750000","src":"api","reason":"문서: 추정금액 101,750,000원(추정가격 92,500,000 부가가치세 9,250,000원)","confidence":"high"},
+    "projectPeriod": {"kind":"value","value":"착수일로부터 3개월","src":"doc","file":"1_1_1. 공고문.hwp.txt","quote":"라. 용역기간 : 착수일로부터 3개월","confidence":"high"},
+    "evalMethod": {"kind":"value","value":"적격심사제-관리규정외 수기심사(총점입력)","src":"api","reason":"문서: 낙찰하한율(87.745%) 직상의 최저가격 입찰자 순 적격심사, 종합평점 95점 이상","confidence":"high"},
+    "differentialScoring": {"kind":"na","reason":"적격심사 공고, 기술평가 없음","confidence":"high"},
+    "credibilityScore": {"kind":"na","reason":"적격심사, 제안서 정량평가표 없음(세부기준 별표 참조만 있고 배점 미기재)","confidence":"medium"},
+    "managementScore": {"kind":"na","reason":"적격심사, 정량평가표 없음(경영상태평가 방법만 기재, 배점 미기재)","confidence":"medium"},
+    "performanceScore": {"kind":"na","reason":"적격심사, 정량평가표 없음(대전광역시 일반용역 적격심사 세부기준 별표1-1 참조)","confidence":"medium"},
+    "performancePeriod": {"kind":"value","value":"공고일 전일부터 최근 5년 이내","src":"doc","file":"1_1_1. 공고문.hwp.txt","quote":"② 공고일 전일부터 최근 5년 이내","reason":"입찰참가자격 실적 요건","confidence":"high"},
+    "performanceMinAmount": {"kind":"na","reason":"실적 금액 하한 없음, 설비 용량 50N㎥/h 이상 요건만 있음","confidence":"high"},
+    "performanceCondition": {"kind":"value","value":"수소생산시설 50N㎥/h 이상의  개질형 수소생산 설비(수소추출기)의 설계, 제작 시공 또는 유지보수 실적이 있는 업체","src":"doc","file":"1_1_1. 공고문.hwp.txt","quote":"「수소생산시설 50N㎥/h 이상의  개질형 수소생산 설비(수소추출기)의 설계, 제작 시공 또는 유지보수 실적이 있는 업체」","confidence":"high"},
+    "jointVentureAllowed": {"kind":"value","value":"공동수급불허","src":"api","reason":"문서에 공동수급 문구 없음","confidence":"medium"},
+    "priceMethod": {"kind":"value","value":"복수예가","src":"api","reason":"문서: 기초금액의 ±3% 범위 내 15개 복수예비가격, 4개 산술평균","confidence":"high"}
+  }
+}

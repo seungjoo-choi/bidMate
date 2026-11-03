@@ -1,0 +1,112 @@
+{
+ "noticeNo": "R26BK01371994",
+ "docsRead": [
+  "1_1_재공고서_국가_제한_학술연구_1169_공동이행_수요기관평가_R26BK01371994-000.hwp.txt",
+  "3_3_(제안요청서) 군포 복합물류터미널 민간투자사업의 효율적 개선 방안 연구_수정.pdf.txt"
+ ],
+ "contractType": "협상",
+ "items": {
+  "postedAt": {
+   "kind": "value",
+   "value": "2026-03-06 09:19:58",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "registrationDeadline": {
+   "kind": "value",
+   "value": "2026-03-17 18:00",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "proposalPeriod": {
+   "kind": "value",
+   "value": "2026/03/16 10:00 ~ 2026/03/18 10:00",
+   "src": "doc",
+   "quote": "제안서ㆍ가격 전자입찰서 제출 시작일시:",
+   "confidence": "high",
+   "file": "1_1_재공고서_국가_제한_학술연구_1169_공동이행_수요기관평가_R26BK01371994-000.hwp.txt"
+  },
+  "proposalEvalAt": {
+   "kind": "absent",
+   "reason": "평가일시 및 장소는 수요기관에서 별도 공지할 예정이며 서면평가 가능성도 언급",
+   "confidence": "high"
+  },
+  "budgetAmount": {
+   "kind": "value",
+   "value": "131298000",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "API 배정예산. 문서 사업금액은 130,000,000원(부가가치세 포함)"
+  },
+  "projectPeriod": {
+   "kind": "value",
+   "value": "계약일로부터 9개월",
+   "src": "doc",
+   "quote": "과업의 수행기간은 계약일로부터 9개월로 한다.",
+   "confidence": "high",
+   "file": "3_3_(제안요청서) 군포 복합물류터미널 민간투자사업의 효율적 개선 방안 연구_수정.pdf.txt"
+  },
+  "evalMethod": {
+   "kind": "value",
+   "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 기술능력 평가(80%) + 입찰가격 평가(20%)"
+  },
+  "differentialScoring": {
+   "kind": "absent",
+   "reason": "두 문서에 차등점수제 언급 없음",
+   "confidence": "high"
+  },
+  "credibilityScore": {
+   "kind": "na",
+   "reason": "기술평가표에 신인도 항목 없음(제안서 개요, 접근방법, 수행계획, 용역관리, 연구조직, 기타, 기관평가)",
+   "confidence": "high"
+  },
+  "managementScore": {
+   "kind": "na",
+   "reason": "평가표에 경영상태 항목 없음",
+   "confidence": "high"
+  },
+  "performanceScore": {
+   "kind": "na",
+   "reason": "평가표 기관평가는 연구인력 보유수 15점뿐, 수행실적 항목 없음",
+   "confidence": "high"
+  },
+  "performancePeriod": {
+   "kind": "na",
+   "reason": "실적 요건과 실적 평가 없음",
+   "confidence": "high"
+  },
+  "performanceMinAmount": {
+   "kind": "na",
+   "reason": "실적 요건 없음",
+   "confidence": "high"
+  },
+  "performanceCondition": {
+   "kind": "na",
+   "reason": "유사사업 정의 없음, 실적 요건 없음",
+   "confidence": "high"
+  },
+  "jointVentureAllowed": {
+   "kind": "value",
+   "value": "(전자)공동이행",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 공동이행방식으로만 입찰참여가 가능"
+  },
+  "priceMethod": {
+   "kind": "value",
+   "value": "비예가",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 예정가격을 작성하지 않음(국가계약법 시행령 제7조의2제2항)"
+  }
+ }
+}

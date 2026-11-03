@@ -1,0 +1,121 @@
+{
+  "noticeNo": "R25BK01136410",
+  "docsRead": [
+    "1_1_신사업 모델 개발 공고.zip__입찰공고문(광산지역 신사업).hwp.txt",
+    "1_1_신사업 모델 개발 공고.zip__제안요청서(정정).hwp.txt",
+    "1_1_신사업 모델 개발 공고.zip__과업내용서.hwpx.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2025-11-05 17:57:05",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidNtceDt=2025-11-05 17:57:05"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2025-11-17 18:00",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidQlfctRgstDt=2025-11-17 18:00"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2025.11.14.(금) 10:00 ~ 2025.11.18.(화) 10:00",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_신사업 모델 개발 공고.zip__입찰공고문(광산지역 신사업).hwp.txt",
+      "quote": "마. 가격입찰서 제출기간 : 2025.11.14.(금) 10:00 ~ 2025.11.18.(화) 10:00 / 7. 제안서 제출 가. 기 간 : 가격입찰서 제출기간과 동일"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "9. 제안서 평가 가. 일시 : 추후 통보 / 사. 제안서 평가일은 추후 개별통지 예정",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "130000000",
+      "src": "api",
+      "confidence": "high",
+      "quote": "asignBdgtAmt=130000000",
+      "reason": "문서: 예산금액 130,000,000원, 추정가격 118,181,818"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약체결일로부터 210일",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_신사업 모델 개발 공고.zip__입찰공고문(광산지역 신사업).hwp.txt",
+      "quote": "‣ 사업기간 : 계약체결일로부터 210일"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+      "src": "api",
+      "confidence": "high",
+      "quote": "sucsfbidMthdNm=협상에의한계약-협상에 의한 낙찰자 결정"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "입찰공고문, 제안요청서, 과업내용서에 차등점수제 문구 없음",
+      "confidence": "medium"
+    },
+    "credibilityScore": {
+      "kind": "multi",
+      "values": {
+        "감점 한도": "△3",
+        "가점 한도(정부권장정책 등록)": "+2"
+      },
+      "src": "doc",
+      "file": "1_1_신사업 모델 개발 공고.zip__제안요청서(정정).hwp.txt",
+      "quote": "[셀 4 2] 신인도평가 등 ... [셀 4 4] △3-2",
+      "confidence": "medium",
+      "reason": "신인도 배점이 감점 3점, 가점 2점으로 가감 한도 표기"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 3,
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_신사업 모델 개발 공고.zip__제안요청서(정정).hwp.txt",
+      "quote": "[셀 3 2] 경영상태 ... [셀 3 4] 3"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "정량적 평가는 참여 기술인력 7, 경영상태 3, 신인도 뿐이며 수행실적 항목 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "수행실적 평가 항목 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "수행실적 평가 항목 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "수행실적 평가 항목 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(전자)공동이행",
+      "src": "api",
+      "confidence": "medium",
+      "quote": "cmmnSpldmdMethdNm=(전자)공동이행",
+      "reason": "문서가 상충: 표에 공동계약 가능(공동이행), 4항 공동이행방식 가능, 2항 본문에는 공동계약 불가"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "confidence": "high",
+      "quote": "prearngPrceDcsnMthdNm=비예가"
+    }
+  }
+}

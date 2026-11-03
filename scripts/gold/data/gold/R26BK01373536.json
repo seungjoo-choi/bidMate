@@ -1,0 +1,117 @@
+{
+  "noticeNo": "R26BK01373536",
+  "docsRead": [
+    "1_1_입찰공고문(긴급).hwp.txt",
+    "2_2_입찰공고문.pdf.txt",
+    "3_3_제안요청서(2026 해양지명 국제 네트워크 강화).hwp.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-03-06 07:00:51",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidNtceDt=2026-03-06 07:00:51"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-03-16 18:00",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidQlfctRgstDt=2026-03-16 18:00"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026.03.06. ~ 2026.03.17. 12:00",
+      "src": "doc",
+      "confidence": "medium",
+      "file": "1_1_입찰공고문(긴급).hwp.txt",
+      "quote": "◦ 가격서 제출 기간 : 2026.03.06. ~ 2026.03.17. 12:00한",
+      "reason": "제안서 제출시한 2026.03.17. 12:00 (온라인 제출)"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "업체별 제안발표 및 질의응답 예정 (일정 별도 통보); 세부일정(안)은 입찰 공고 + 25일 제안서 평가위원회 개최로 날짜 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "100000000",
+      "src": "api",
+      "confidence": "high",
+      "quote": "asignBdgtAmt=100000000",
+      "reason": "문서: 기초금액 금100,000,000원 (부가가치세 포함)"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약일로부터 ~ 2026.11.30.",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_입찰공고문(긴급).hwp.txt",
+      "quote": "◦ 용역기간 : 계약일로부터 ~ 2026.11.30."
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+      "src": "api",
+      "confidence": "high",
+      "quote": "sucsfbidMthdNm=협상에의한계약-협상에 의한 낙찰자 결정"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "평가 항목 및 배점 표, 공고문 어디에도 차등점수제 문구 없음",
+      "confidence": "medium"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "정량평가는 사업수행실적(10점) 1개뿐, 신인도 항목 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "정량평가는 사업수행실적(10점) 1개뿐, 경영상태 항목 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "value",
+      "value": 10,
+      "src": "doc",
+      "confidence": "high",
+      "file": "3_3_제안요청서(2026 해양지명 국제 네트워크 강화).hwp.txt",
+      "quote": "o 사업수행실적 ... [셀 1 2] 10 (정량평가 10점)"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "최근 3년간",
+      "src": "doc",
+      "confidence": "high",
+      "file": "3_3_제안요청서(2026 해양지명 국제 네트워크 강화).hwp.txt",
+      "quote": "※ 최근 3년간 사업수행실적(금액 기준)을 합산 적용"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "실적 1건 하한 금액 없음, 사업규모 대비 비율 구간(100% 이상 10점 등)로 점수 부여",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "absent",
+      "reason": "유사사업 정의 문단 없음, 평가표에 사업수행실적(금액 기준 합산)만 기재",
+      "confidence": "medium"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "confidence": "high",
+      "quote": "cmmnSpldmdMethdNm=(없음)공동수급불허"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "confidence": "high",
+      "quote": "prearngPrceDcsnMthdNm=비예가"
+    }
+  }
+}

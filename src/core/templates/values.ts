@@ -14,7 +14,7 @@ export const NEEDS_REVIEW_TEXT = '확인 필요';
 /** 그룹 충족인데 추출 설명(note)이 없을 때 쓰는 사유. */
 export const COVERED_TEXT = '별도 배점 없음';
 
-const NA_KEYS: string[] = ['performanceScore', 'performancePeriod', 'performanceMinAmount', 'performanceCondition', 'credibilityScore', 'managementScore'];
+const NA_KEYS: string[] = ['performanceScore', 'performancePeriod', 'performanceMinAmount', 'performanceCondition', 'credibilityScore', 'managementScore', 'differentialScoring', 'proposalEvalAt'];
 
 const MISSING: ResolvedValue = { text: NEEDS_REVIEW_TEXT, status: 'missing', raw: null };
 

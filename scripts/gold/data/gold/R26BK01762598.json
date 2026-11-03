@@ -1,0 +1,110 @@
+{
+  "noticeNo": "R26BK01762598",
+  "docsRead": [
+    "1_1_[강동구자원순환센터]중간가공음식물 운반,처리 연간단가계약  공고문.hwp.txt",
+    "3_3_[강동구자원순환센터]과업지시서(중간가공음식물류폐기물)_26.10.pdf.txt"
+  ],
+  "contractType": "적격심사",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-10-08 14:08:50",
+      "src": "api",
+      "quote": "bidNtceDt=2026-10-08 14:08:50",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-10-21 18:00",
+      "src": "api",
+      "quote": "bidQlfctRgstDt=2026-10-21 18:00",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 10. 15.  10:00 ~ 2026. 10. 22 . 10:00",
+      "src": "doc",
+      "file": "1_1_[강동구자원순환센터]중간가공음식물 운반,처리 연간단가계약  공고문.hwp.txt",
+      "quote": "㉠ 제출기간 : 2026. 10. 15.  10:00 ~ 2026. 10. 22 . 10:00",
+      "confidence": "high"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "적격심사 공고, 제안서 제출과 평가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "498300000",
+      "src": "api",
+      "quote": "asignBdgtAmt=498300000",
+      "confidence": "high",
+      "reason": "문서: 소요예정금액 498,300,000원(부가세포함), 기초금액 166,100원/톤 단가계약"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "2026. 10. 31 ~ 2027. 10. 30.",
+      "src": "doc",
+      "file": "1_1_[강동구자원순환센터]중간가공음식물 운반,처리 연간단가계약  공고문.hwp.txt",
+      "quote": "○ 중간가공음식물 용역기간 : 2026. 10. 31 ~ 2027. 10. 30.",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "적격심사제-관리규정외 수기심사(총점입력)",
+      "src": "api",
+      "quote": "sucsfbidMthdNm=적격심사제-관리규정외 수기심사(총점입력)",
+      "confidence": "high"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "적격심사 공고, 기술평가 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "서울시 폐기물처리용역 적격심사 세부기준을 따른다고만 하며 공고문과 과업지시서에 평가표와 실적 요건이 없음",
+      "confidence": "low"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "서울시 폐기물처리용역 적격심사 세부기준을 따른다고만 하며 공고문과 과업지시서에 평가표와 실적 요건이 없음",
+      "confidence": "low"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "서울시 폐기물처리용역 적격심사 세부기준을 따른다고만 하며 공고문과 과업지시서에 평가표와 실적 요건이 없음",
+      "confidence": "low"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "서울시 폐기물처리용역 적격심사 세부기준을 따른다고만 하며 공고문과 과업지시서에 평가표와 실적 요건이 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "서울시 폐기물처리용역 적격심사 세부기준을 따른다고만 하며 공고문과 과업지시서에 평가표와 실적 요건이 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "서울시 폐기물처리용역 적격심사 세부기준을 따른다고만 하며 공고문과 과업지시서에 평가표와 실적 요건이 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(전자)공동이행 또는 분담이행",
+      "src": "api",
+      "quote": "cmmnSpldmdMethdNm=(전자)공동이행 또는 분담이행",
+      "confidence": "high",
+      "reason": "문서: 공동이행 또는 분담이행으로 공동도급이 가능하며 3개사 이하"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "quote": "prearngPrceDcsnMthdNm=복수예가",
+      "confidence": "high"
+    }
+  }
+}

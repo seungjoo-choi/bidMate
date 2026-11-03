@@ -1,0 +1,112 @@
+{
+  "noticeNo": "R26BK01373228",
+  "docsRead": [
+    "1_1_과업지시서.hwp.txt",
+    "3_3_용역입찰공고문.hwpx.txt"
+  ],
+  "contractType": "최저가",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-03-05 19:39:28",
+      "src": "api",
+      "quote": "API bidNtceDt=2026-03-05 19:39:28",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-03-11 18:00",
+      "src": "api",
+      "quote": "API bidQlfctRgstDt=2026-03-11 18:00",
+      "confidence": "high"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 03. 09.(월) 10:00 ~ 03. 12.(목) 15:00",
+      "src": "doc",
+      "file": "3_3_용역입찰공고문.hwpx.txt",
+      "quote": "2026. 03. 09.(월) 10:00 ~ 03. 12.(목) 15:00",
+      "confidence": "medium",
+      "reason": "API bidBeginDt는 2026-03-06 10:00(공고기간 시작), 문서 투찰기간은 03.09 시작"
+    },
+    "proposalEvalAt": {
+      "kind": "na",
+      "reason": "최저가 낙찰, 제안서 평가 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "44792000",
+      "src": "api",
+      "quote": "API asignBdgtAmt=44792000",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약일로부터~ ‘26.12.31.",
+      "src": "doc",
+      "file": "3_3_용역입찰공고문.hwpx.txt",
+      "quote": "계약일로부터~",
+      "confidence": "medium",
+      "reason": "과업기간 칸이 \"계약일로부터~\"와 \"‘26.12.31.\"로 두 줄에 나뉨"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "제한적최저가(낙찰하한율)-제한적최저가(낙찰하한율)",
+      "src": "api",
+      "quote": "API sucsfbidMthdNm=제한적최저가(낙찰하한율)-제한적최저가(낙찰하한율)",
+      "confidence": "high",
+      "reason": "문서: 예정가격 대비 낙찰하한율 88% 이상 최저가격 제출자를 계약상대자로 결정, 제안서 평가 없음"
+    },
+    "differentialScoring": {
+      "kind": "na",
+      "reason": "제한적최저가(낙찰하한율) 낙찰, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "제한적최저가(낙찰하한율) 낙찰, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "na",
+      "reason": "제한적최저가(낙찰하한율) 낙찰, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "na",
+      "reason": "제한적최저가(낙찰하한율) 낙찰, 제안서 평가와 정량평가 배점 없음",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "na",
+      "reason": "최저가 낙찰, 실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "na",
+      "reason": "최저가 낙찰, 실적 평가 없음",
+      "confidence": "high"
+    },
+    "performanceCondition": {
+      "kind": "na",
+      "reason": "최저가 낙찰, 유사사업 실적 평가 없음",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "quote": "API cmmnSpldmdMethdNm=(없음)공동수급불허",
+      "confidence": "high",
+      "reason": "문서: 공동수급(컨소시엄)은 불허한다. 다만 발주기관이 필요하다고 인정하는 경우에 한해 사전 승인으로 제한적 허용할 수 있다."
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "복수예가",
+      "src": "api",
+      "quote": "API prearngPrceDcsnMthdNm=복수예가",
+      "confidence": "high"
+    }
+  }
+}

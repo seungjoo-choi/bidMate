@@ -1,0 +1,127 @@
+{
+  "noticeNo": "R26BK01513540",
+  "docsRead": [
+    "1_1_1. JBGSIC 홈페이지 고도화 입찰공고.pdf.txt",
+    "2_2_2. JBGSIC 홈페이지 고도화 제안요청서.hwp.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-05-11 13:28:18",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidNtceDt=2026-05-11 13:28:18"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026-05-21 18:00",
+      "src": "api",
+      "confidence": "high",
+      "quote": "bidQlfctRgstDt=2026-05-21 18:00"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 5. 11.(월) ~ 5. 22.(금) 15:00",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_1. JBGSIC 홈페이지 고도화 입찰공고.pdf.txt",
+      "quote": "◦ (제안서 제출기간) 2026. 5. 11.(월) ~ 5. 22.(금) 15:00"
+    },
+    "proposalEvalAt": {
+      "kind": "value",
+      "value": "2026. 6. 02.(화) 14:00 (예정)",
+      "src": "doc",
+      "confidence": "high",
+      "file": "1_1_1. JBGSIC 홈페이지 고도화 입찰공고.pdf.txt",
+      "quote": "◦ (평가일정) 2026. 6. 02.(화) 14:00 (예정)",
+      "reason": "추진상황에 따라 변경 가능"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "47000000",
+      "src": "api",
+      "confidence": "high",
+      "quote": "asignBdgtAmt=47000000",
+      "reason": "문서: 사업예산 금47,000,000원(금사천칠백만원), 부가가치세 포함"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "계약체결일 ~ 2026. 10. 30.",
+      "src": "doc",
+      "confidence": "high",
+      "file": "2_2_2. JBGSIC 홈페이지 고도화 제안요청서.hwp.txt",
+      "quote": "□ 수행기간 : 계약체결일 ~ 2026. 10. 30."
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정(SW사업)",
+      "src": "api",
+      "confidence": "high",
+      "quote": "sucsfbidMthdNm=협상에의한계약-협상에 의한 낙찰자 결정(SW사업)"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "협상 공고, 평가기준표(정량 10, 정성 80)와 공고문에 차등점수제 문구 없음",
+      "confidence": "medium"
+    },
+    "credibilityScore": {
+      "kind": "na",
+      "reason": "정량평가 표가 수행실적과 경영상태 2개이며 신인도 항목 없음",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 4,
+      "src": "doc",
+      "confidence": "high",
+      "file": "2_2_2. JBGSIC 홈페이지 고도화 제안요청서.hwp.txt",
+      "quote": "[셀 2 2] 경영상태 ... [셀 2 4] 4  (경영상태 평가 최대 4점)"
+    },
+    "performanceScore": {
+      "kind": "value",
+      "value": 6,
+      "src": "doc",
+      "confidence": "high",
+      "file": "2_2_2. JBGSIC 홈페이지 고도화 제안요청서.hwp.txt",
+      "quote": "[셀 1 2] 수행실적 ... [셀 1 4] 6  (수행실적 최대 6점)"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "최근 3년간(‘23.3~’26.3)",
+      "src": "doc",
+      "confidence": "high",
+      "file": "2_2_2. JBGSIC 홈페이지 고도화 제안요청서.hwp.txt",
+      "quote": "최근 3년간(‘23.3~’26.3) 스타트업 글로벌 IR 피칭 프로그램 운영 실적(단일 계약 건 기준, 건당 VAT포함 9천만원 이상)"
+    },
+    "performanceMinAmount": {
+      "kind": "value",
+      "value": "건당 VAT포함 9천만원 이상",
+      "src": "doc",
+      "confidence": "high",
+      "file": "2_2_2. JBGSIC 홈페이지 고도화 제안요청서.hwp.txt",
+      "quote": "최근 3년간(‘23.3~’26.3) 스타트업 글로벌 IR 피칭 프로그램 운영 실적(단일 계약 건 기준, 건당 VAT포함 9천만원 이상)"
+    },
+    "performanceCondition": {
+      "kind": "value",
+      "value": "스타트업 글로벌 IR 피칭 프로그램 운영 실적(단일 계약 건 기준, 건당 VAT포함 9천만원 이상) / 공동수급실적은 인정하지 아니함",
+      "src": "별도 유사사업 정의 문단 없고 평가표 요소가 정의 역할",
+      "confidence": "medium",
+      "quote": "최근 3년간(‘23.3~’26.3) 스타트업 글로벌 IR 피칭 프로그램 운영 실적(단일 계약 건 기준, 건당 VAT포함 9천만원 이상)"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "confidence": "high",
+      "quote": "cmmnSpldmdMethdNm=(없음)공동수급불허"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "confidence": "high",
+      "quote": "prearngPrceDcsnMthdNm=비예가"
+    }
+  }
+}

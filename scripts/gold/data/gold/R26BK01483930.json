@@ -1,0 +1,113 @@
+{
+ "noticeNo": "R26BK01483930",
+ "docsRead": [
+  "1_1_260424_입찰공고문(한중연 제2026-005호).hwp.txt",
+  "2_2_입찰공고문.pdf.txt",
+  "3_3_기술제안요청서.hwp.txt"
+ ],
+ "contractType": "협상",
+ "items": {
+  "postedAt": {
+   "kind": "value",
+   "value": "2026-04-23 11:01:06",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "registrationDeadline": {
+   "kind": "value",
+   "value": "2026-05-11 18:00",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "proposalPeriod": {
+   "kind": "value",
+   "value": "2026. 04. 24. 10:00 ~ 2026. 05. 12. 10:00",
+   "src": "doc",
+   "quote": "전자입찰서(제안서) 제출기간 : 2026. 04. 24. 10:00 ~ 2026. 05. 12. 10:00",
+   "confidence": "high",
+   "file": "1_1_260424_입찰공고문(한중연 제2026-005호).hwp.txt"
+  },
+  "proposalEvalAt": {
+   "kind": "absent",
+   "reason": "제안서 평가 일시 및 장소 : 추후 통보",
+   "confidence": "high"
+  },
+  "budgetAmount": {
+   "kind": "value",
+   "value": "48893480",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 금48,893,480원 [부가가치세 포함]"
+  },
+  "projectPeriod": {
+   "kind": "value",
+   "value": "계약체결일로부터 60일",
+   "src": "doc",
+   "quote": "사업기간 : 계약체결일로부터 60일",
+   "confidence": "high",
+   "file": "1_1_260424_입찰공고문(한중연 제2026-005호).hwp.txt"
+  },
+  "evalMethod": {
+   "kind": "value",
+   "value": "협상에의한계약-협상에 의한 낙찰자 결정(SW사업)",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 기술평가(90%), 가격평가(10%) 종합평가"
+  },
+  "differentialScoring": {
+   "kind": "absent",
+   "reason": "세 문서에 차등점수제 언급 없음(SW 기술성 평가기준 준용이라고만 기재)",
+   "confidence": "high"
+  },
+  "credibilityScore": {
+   "kind": "na",
+   "reason": "기술제안서 평가항목표에 신인도 항목 없음",
+   "confidence": "high"
+  },
+  "managementScore": {
+   "kind": "na",
+   "reason": "기술제안서 평가항목표에 경영상태 항목 없음(일반부문은 제안업체 일반 10, 대상사업 이해도 10)",
+   "confidence": "high"
+  },
+  "performanceScore": {
+   "kind": "na",
+   "reason": "기술제안서 평가항목표에 수행실적 항목 없음",
+   "confidence": "high"
+  },
+  "performancePeriod": {
+   "kind": "na",
+   "reason": "실적 요건과 실적 평가 없음",
+   "confidence": "high"
+  },
+  "performanceMinAmount": {
+   "kind": "na",
+   "reason": "실적 금액 요건 없음",
+   "confidence": "high"
+  },
+  "performanceCondition": {
+   "kind": "na",
+   "reason": "유사사업 정의 없음",
+   "confidence": "high"
+  },
+  "jointVentureAllowed": {
+   "kind": "value",
+   "value": "(전자)공동이행",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 필요 시 공동이행방식이 가능합니다"
+  },
+  "priceMethod": {
+   "kind": "value",
+   "value": "비예가",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서(제안요청서): 예정가격은 제안서 접수 이전에 결정이라 기재, API와 상충 가능"
+  }
+ }
+}

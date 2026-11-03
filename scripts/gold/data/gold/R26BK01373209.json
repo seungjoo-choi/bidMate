@@ -1,0 +1,135 @@
+{
+  "noticeNo": "R26BK01373209",
+  "docsRead": [
+    "1_1_재공고문(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).pdf.txt",
+    "2_2_제안요청서(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).hwpx.txt",
+    "3_3_과업내용서(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).hwpx.txt"
+  ],
+  "contractType": "협상",
+  "items": {
+    "postedAt": {
+      "kind": "value",
+      "value": "2026-03-05 19:35:50",
+      "src": "api",
+      "confidence": "high"
+    },
+    "registrationDeadline": {
+      "kind": "value",
+      "value": "2026. 3. 16.(월) 18:00까지",
+      "src": "doc",
+      "file": "1_1_재공고문(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).pdf.txt",
+      "quote": "- 기 한 : 2026. 3. 16.(월) 18:00까지",
+      "confidence": "high",
+      "reason": "API 값 비어 있어 문서 값 사용"
+    },
+    "proposalPeriod": {
+      "kind": "value",
+      "value": "2026. 3. 17.(화) 09:00 ~ 17:00 (점심시간 제외)",
+      "src": "doc",
+      "file": "1_1_재공고문(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).pdf.txt",
+      "quote": "- 일 시 : 2026. 3. 17.(화) 09:00 ~ 17:00 (점심시간 제외)",
+      "confidence": "high",
+      "reason": "API 입찰서 제출 기간 비어 있음, 오프라인 방문 접수"
+    },
+    "proposalEvalAt": {
+      "kind": "absent",
+      "reason": "가. 일 시: 2026년 3월 중(예정) / 제안요청서 일정표 별도 통보(개별 통보): 확정 일시 없음",
+      "confidence": "high"
+    },
+    "budgetAmount": {
+      "kind": "value",
+      "value": "100000000",
+      "src": "api",
+      "file": "1_1_재공고문(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).pdf.txt",
+      "quote": "마. 사 업 비 : 금100,000,000원(부가가치세, 대행료 등 일체 포함)",
+      "confidence": "high"
+    },
+    "projectPeriod": {
+      "kind": "value",
+      "value": "착수일로부터 2026. 11. 27.까지",
+      "src": "doc",
+      "file": "1_1_재공고문(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).pdf.txt",
+      "quote": "다. 용역기간 : 착수일로부터 2026. 11. 27.까지",
+      "confidence": "high"
+    },
+    "evalMethod": {
+      "kind": "value",
+      "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+      "src": "api",
+      "file": "1_1_재공고문(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).pdf.txt",
+      "quote": "기술능력평가(90점)와 입찰가격평가(10점)를 종합평가한 결과",
+      "confidence": "high",
+      "reason": "문서: 정량 20 + 정성 70 + 가격 10"
+    },
+    "differentialScoring": {
+      "kind": "absent",
+      "reason": "공고문, 제안요청서, 과업내용서에서 차등점수제 문구를 찾지 못함",
+      "confidence": "high"
+    },
+    "credibilityScore": {
+      "kind": "value",
+      "value": 1,
+      "src": "doc",
+      "file": "2_2_제안요청서(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).hwpx.txt",
+      "quote": "○ 입찰참가자격 제한 및 업무정지 : 업체 신인도 평가(1점)",
+      "confidence": "high"
+    },
+    "managementScore": {
+      "kind": "value",
+      "value": 6,
+      "src": "doc",
+      "file": "2_2_제안요청서(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).hwpx.txt",
+      "quote": "○ 회사 경영상태(6점) : 업체신용평가등급",
+      "confidence": "high"
+    },
+    "performanceScore": {
+      "kind": "value",
+      "value": 6,
+      "src": "doc",
+      "file": "2_2_제안요청서(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).hwpx.txt",
+      "quote": "○ 수행경험 : 유사용역 수행실적(6점)",
+      "confidence": "high"
+    },
+    "performancePeriod": {
+      "kind": "value",
+      "value": "최근 3년 이내",
+      "src": "doc",
+      "file": "2_2_제안요청서(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).hwpx.txt",
+      "quote": "입찰공고일 기준 최근 3년 이내에 준공된 1억원(부가세 포함) 이상의 행사대행 용역",
+      "confidence": "high"
+    },
+    "performanceMinAmount": {
+      "kind": "value",
+      "value": "1억원(부가세 포함) 이상",
+      "src": "doc",
+      "file": "2_2_제안요청서(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).hwpx.txt",
+      "quote": "입찰공고일 기준 최근 3년 이내에 준공된 1억원(부가세 포함) 이상의 행사대행 용역",
+      "confidence": "high",
+      "reason": "실적 건수 점수는 단일 건당 1억 이상 기준"
+    },
+    "performanceCondition": {
+      "kind": "value",
+      "value": "입찰공고일 기준 최근 3년 이내에 준공된 1억원(부가세 포함) 이상의 행사대행 용역(발주기관이 인정하는 축제, 문화행사, 이벤트 등)만 인정",
+      "src": "doc",
+      "file": "2_2_제안요청서(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).hwpx.txt",
+      "quote": "입찰공고일 기준 최근 3년 이내에 준공된 1억원(부가세 포함) 이상의 행사대행 용역(발주기관이 인정하는 축제, 문화행사, 이벤트 등)만 인정",
+      "confidence": "high"
+    },
+    "jointVentureAllowed": {
+      "kind": "value",
+      "value": "(없음)공동수급불허",
+      "src": "api",
+      "file": "1_1_재공고문(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).pdf.txt",
+      "quote": "본 사업은 공동수급이 불가합니다.",
+      "confidence": "high"
+    },
+    "priceMethod": {
+      "kind": "value",
+      "value": "비예가",
+      "src": "api",
+      "file": "1_1_재공고문(2026년 음악정원 피크닉 행사 기획 및 운영 대행 용역).pdf.txt",
+      "quote": "제8조제2항제2호에 따라 예정가격을 작성하지 않습니다.",
+      "confidence": "high"
+    }
+  }
+}

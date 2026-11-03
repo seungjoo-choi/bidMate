@@ -1,0 +1,138 @@
+{
+ "noticeNo": "R26BK01635979",
+ "docsRead": [
+  "1_1_붙임 1. (입찰공고문) 2026년 창원시 의료바이오 첨단기기 연구제조센터 도입장비 및 기업 수요조사.pdf.txt",
+  "2_2_붙임 2. (제안요청서) 2026년 창원시 의료바이오 첨단기기 연구제조센터 도입장비 및 기업 수요조사.hwpx.txt"
+ ],
+ "contractType": "협상",
+ "items": {
+  "postedAt": {
+   "kind": "value",
+   "value": "2026-07-15 18:18:19",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "registrationDeadline": {
+   "kind": "value",
+   "value": "2026-07-26 18:00",
+   "src": "api",
+   "quote": "",
+   "confidence": "high"
+  },
+  "proposalPeriod": {
+   "kind": "value",
+   "value": "2026.7.15.(수) 19:00 ~ 2026.7.27.(월) 14:00",
+   "src": "doc",
+   "quote": "입 찰 개 시 2026.7.15.(수) 19:00 입 찰 마 감 2026.7.27.(월) 14:00",
+   "confidence": "high",
+   "file": "1_1_붙임 1. (입찰공고문) 2026년 창원시 의료바이오 첨단기기 연구제조센터 도입장비 및 기업 수요조사.pdf.txt"
+  },
+  "proposalEvalAt": {
+   "kind": "value",
+   "value": "2026.8.3.(월)-예정",
+   "src": "doc",
+   "quote": "평 가 위 원 회 2026.8.3.(월)-예정",
+   "confidence": "medium",
+   "file": "1_1_붙임 1. (입찰공고문) 2026년 창원시 의료바이오 첨단기기 연구제조센터 도입장비 및 기업 수요조사.pdf.txt",
+   "reason": "공고문은 예정 일자만 기재, 제안요청서 일정표는 평가위원회 일시 및 장소 별도 통보"
+  },
+  "budgetAmount": {
+   "kind": "value",
+   "value": "39665000",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 기초금액 금 39,665,000원, 과업예산 금 39,665,000원(부가가치세 포함)"
+  },
+  "projectPeriod": {
+   "kind": "value",
+   "value": "계약일로부터 2026년 10월 31일까지",
+   "src": "doc",
+   "quote": "용 역 기 간 계약일로부터 2026년 10월 31일까지",
+   "confidence": "high",
+   "file": "1_1_붙임 1. (입찰공고문) 2026년 창원시 의료바이오 첨단기기 연구제조센터 도입장비 및 기업 수요조사.pdf.txt"
+  },
+  "evalMethod": {
+   "kind": "value",
+   "value": "협상에의한계약-협상에 의한 낙찰자 결정",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 기술능력평가 90점(정량 20 + 정성 70) + 입찰가격평가 10점"
+  },
+  "differentialScoring": {
+   "kind": "absent",
+   "reason": "두 문서에 차등점수제 언급 없음",
+   "confidence": "high"
+  },
+  "credibilityScore": {
+   "kind": "value",
+   "value": 5,
+   "src": "doc",
+   "quote": "신인도 (부정당업자 제재여부)",
+   "confidence": "high",
+   "file": "2_2_붙임 2. (제안요청서) 2026년 창원시 의료바이오 첨단기기 연구제조센터 도입장비 및 기업 수요조사.hwpx.txt",
+   "reason": "정량적 평가분야 신인도 배점 5"
+  },
+  "managementScore": {
+   "kind": "value",
+   "value": 5,
+   "src": "doc",
+   "quote": "경영상태: 신용 평가등급에 의한 평가",
+   "confidence": "high",
+   "file": "2_2_붙임 2. (제안요청서) 2026년 창원시 의료바이오 첨단기기 연구제조센터 도입장비 및 기업 수요조사.hwpx.txt",
+   "reason": "정량적 평가분야 경영상태 배점 5"
+  },
+  "performanceScore": {
+   "kind": "value",
+   "value": 5,
+   "src": "doc",
+   "quote": "최근 3년간 유사 용역 수행실적",
+   "confidence": "high",
+   "file": "2_2_붙임 2. (제안요청서) 2026년 창원시 의료바이오 첨단기기 연구제조센터 도입장비 및 기업 수요조사.hwpx.txt",
+   "reason": "정량적 평가분야 유사 용역 수행실적 배점 5"
+  },
+  "performancePeriod": {
+   "kind": "value",
+   "value": "공고일 기준 최근 3년간",
+   "src": "doc",
+   "quote": "실적 인정범위: 공고일 기준 최근 3년간 관련* 연구용역과제 부문 1천만원 이상 실적",
+   "confidence": "high",
+   "file": "2_2_붙임 2. (제안요청서) 2026년 창원시 의료바이오 첨단기기 연구제조센터 도입장비 및 기업 수요조사.hwpx.txt"
+  },
+  "performanceMinAmount": {
+   "kind": "value",
+   "value": "1천만원 이상",
+   "src": "doc",
+   "quote": "실적 인정범위: 공고일 기준 최근 3년간 관련* 연구용역과제 부문 1천만원 이상 실적",
+   "confidence": "medium",
+   "file": "2_2_붙임 2. (제안요청서) 2026년 창원시 의료바이오 첨단기기 연구제조센터 도입장비 및 기업 수요조사.hwpx.txt",
+   "reason": "건당 여부는 명시되지 않음"
+  },
+  "performanceCondition": {
+   "kind": "value",
+   "value": "공고일 기준 최근 3년간 관련* 연구용역과제 부문 1천만원 이상 실적 * 의료바이오, 의료기기 관련 정책, 연구, 전략수립, 기획, 수요조사 등",
+   "src": "doc",
+   "quote": "실적 인정범위: 공고일 기준 최근 3년간 관련* 연구용역과제 부문 1천만원 이상 실적",
+   "confidence": "high",
+   "file": "2_2_붙임 2. (제안요청서) 2026년 창원시 의료바이오 첨단기기 연구제조센터 도입장비 및 기업 수요조사.hwpx.txt"
+  },
+  "jointVentureAllowed": {
+   "kind": "value",
+   "value": "(없음)공동수급불허",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서: 본 입찰은 공동수급을 불허함"
+  },
+  "priceMethod": {
+   "kind": "value",
+   "value": "비예가",
+   "src": "api",
+   "quote": "",
+   "confidence": "high",
+   "reason": "문서에 예정가격 결정 방법 언급 없음(협상에 의한 계약, 기초금액 기재)"
+  }
+ }
+}
