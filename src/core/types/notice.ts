@@ -1,6 +1,7 @@
 import type { FieldValue, ISODate } from './common';
 import type { JobError } from './job';
 import type { DocKind } from '../extraction/classify';
+import type { NoticeCodes } from './org';
 
 export type NoticeKind = 'bid' | 'prespec' | 'orderplan';
 /** 수집 가능한 종류. orderplan은 유니언 예약만. */
