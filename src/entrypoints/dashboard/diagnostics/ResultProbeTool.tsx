@@ -31,7 +31,7 @@ function PartView({ step, title, part }: { step: string; title: string; part: Pr
 }
 
 export function ResultProbeTool() {
-  const [text, setText] = useState('R26BK01631407');
+  const [text, setText] = useState('R26BK01789254');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ResultProbeResult | null>(null);
@@ -53,14 +53,16 @@ export function ResultProbeTool() {
 
   return (
     <div className="space-y-4">
-      <NoticeInput id="diag-result-no" value={text} onChange={setText} help="개찰결과와 낙찰정보 API 응답을 확인합니다. 저장하지 않습니다.">
+      <NoticeInput id="diag-result-no" value={text} onChange={setText} help="공고정보, 개찰결과, 유찰 목록, 낙찰정보 API 응답을 확인합니다. 저장하지 않습니다.">
         <Button icon={<Search />} loading={busy} onClick={() => void run()}>확인</Button>
       </NoticeInput>
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
       {result && (
         <div className="space-y-3">
-          <PartView step="1단계" title="개찰결과" part={result.opening} />
-          {result.award.map((a) => <PartView key={a.op} step="2단계" title={a.op} part={a} />)}
+          <PartView step="0" title={result.notice.op ? `공고정보 ${result.notice.op}` : '공고정보'} part={result.notice} />
+          <PartView step="1" title="개찰결과" part={result.opening} />
+          {result.failing.map((a) => <PartView key={a.op} step="2 유찰 목록" title={a.op} part={a} />)}
+          {result.award.map((a) => <PartView key={a.op} step="3 낙찰정보" title={a.op} part={a} />)}
         </div>
       )}
     </div>

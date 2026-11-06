@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IndexEntry } from '../../src/core/types/index-file';
-import { followButton, followErrorText, followHint, followMenuItems, followToastParts, formatCheckAt, formatPercent, formatWonShort, isFollowing, isWon, resultCell, trackSteps } from '../../src/ui/notices/result-view';
+import { followButton, followErrorText, followHint, followMenuItems, followToastParts, formatCheckAt, formatPercent, formatWonShort, isFollowing, isNoBid, isWon, resultCell, trackSteps } from '../../src/ui/notices/result-view';
 
 // 2026-10-20(화) 12:00 로컬
 const NOW = new Date(2026, 9, 20, 12, 0);
@@ -113,7 +113,7 @@ describe('resultCell', () => {
     expect(resultCell({ result: { status: 'lost', rank: 2 } })).toEqual({ tone: 'idle', text: '탈락(2순위)' });
     expect(resultCell({ result: { status: 'lost' } })?.text).toBe('탈락');
     expect(resultCell({ result: { status: 'ranked', rank: 1 } })?.text).toBe('1순위');
-    expect(resultCell({ result: { status: 'no_bid' } })?.text).toBe('유찰');
+    expect(resultCell({ result: { status: 'no_bid' } })).toEqual({ tone: 'warn', text: '유찰' });
     expect(resultCell({ result: { status: 'not_participated' } })?.text).toBe('미참여');
     expect(resultCell({ result: { status: 'expired' } })?.text).toBe('추적 종료');
     expect(resultCell({ result: { status: 'waiting' } })?.text).toBe('결과 대기');
@@ -152,5 +152,13 @@ describe('formatWonShort/formatPercent', () => {
   it('퍼센트', () => {
     expect(formatPercent(null)).toBe('—');
     expect(formatPercent(0.254)).toBe('25%');
+  });
+});
+
+describe('isNoBid', () => {
+  it('no_bid만 true', () => {
+    expect(isNoBid({ result: { status: 'no_bid' } })).toBe(true);
+    expect(isNoBid({ result: { status: 'won' } })).toBe(false);
+    expect(isNoBid({})).toBe(false);
   });
 });

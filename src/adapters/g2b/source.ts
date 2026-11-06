@@ -1,5 +1,6 @@
 import { missing, type FieldValue } from '../../core/types/common';
 import type { NoticeKind, NoticeRef } from '../../core/types/notice';
+import type { NoticeCodes, OpKind } from '../../core/types/org';
 import { noticeId as makeNoticeId } from '../../core/model/ids';
 import type { FieldMap } from '../../core/model/notice-fields';
 import type { NewAttachment } from '../../engine/jobs/attachments';
@@ -19,6 +20,10 @@ export interface NoticeSource {
   isCorrection(item: ApiItem): boolean;
   /** 연계 사전규격 등록번호. 없으면 null. bid만 구현한다. */
   linkedPrespecNo?(item: ApiItem): string | null;
+  /** 재공고 검색용 기관 코드. 전부 없으면 undefined. bid만 구현한다. */
+  codesOf?(item: ApiItem, operation: string): NoticeCodes | undefined;
+  /** 원 공고 noticeNo. 재공고가 아니면 null. bid만 구현한다. */
+  reannounceOf?(item: ApiItem): string | null;
   extract: boolean;
   acceptsHtml: boolean;
 }
@@ -33,6 +38,17 @@ export const bidSource: NoticeSource = {
   sourceUrl: (item, _ref, fetchedAt) => sourceUrlOf(item, fetchedAt),
   isCorrection: isCorrectionOf,
   linkedPrespecNo: (item) => (item.bfSpecRgstNo ?? '').trim() || null,
+  codesOf: (item, operation) => {
+    const opKind = /(Servc|Thng|Cnstwk|Frgcpt)/.exec(operation)?.[1] as OpKind | undefined;
+    const c: NoticeCodes = {
+      ...((item.dminsttCd ?? '').trim() ? { demandOrgCode: item.dminsttCd!.trim() } : {}),
+      ...((item.ntceInsttCd ?? '').trim() ? { orderingOrgCode: item.ntceInsttCd!.trim() } : {}),
+      ...((item.pubPrcrmntClsfcNo ?? '').trim() ? { clsfcNo: item.pubPrcrmntClsfcNo!.trim() } : {}),
+      ...(opKind ? { opKind } : {}),
+    };
+    return Object.keys(c).length > 0 ? c : undefined;
+  },
+  reannounceOf: (item) => ((item.reNtceYn ?? '').trim().toUpperCase() === 'Y' && (item.befBidBbancNo ?? '').trim() !== '' ? item.befBidBbancNo!.trim() : null),
   extract: true,
   acceptsHtml: true,
 };

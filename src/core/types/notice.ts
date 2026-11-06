@@ -56,7 +56,11 @@ export interface Notice {
   schemaVersion: 1; id: string; ref: NoticeRef; folder: string;
   basic: NoticeBasic; schedule: NoticeSchedule; evaluation: NoticeEvaluation; prespec: NoticePrespec;
   customFields: Record<string, FieldValue<string>>; sourceUrl: FieldValue<string>;
-  isCorrection: boolean; previousNoticeId?: string; attachments: Attachment[]; linkedPrespec?: LinkedPrespec;
+  isCorrection: boolean; previousNoticeId?: string;
+  /** 입찰공고 API 기관 코드 등(재공고 검색용). 값이 없으면 생략 */
+  codes?: NoticeCodes;
+  /** 재공고의 원 공고 noticeNo(차수 없음). reNtceYn Y이고 befBidBbancNo가 있을 때만 */
+  reannounceOf?: string; attachments: Attachment[]; linkedPrespec?: LinkedPrespec;
   /** 나라장터 상세화면 전문 txt(source/text). 없으면 전문 없이 수집된 공고. */
   detailText?: { textPath: string; capturedAt: ISODate; chars: number; truncated?: boolean };
   collect: { status: CollectStatus; collectedAt: ISODate; lastJobId: string; errors: JobError[] };

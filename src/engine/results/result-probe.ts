@@ -1,5 +1,5 @@
-import { AWARD_OPS, fetchAwardRaw, fetchOpeningRaw, type RawResult } from '../../adapters/g2b/award-api';
-import { g2bDetailOf, redactKey } from '../../adapters/g2b/openapi';
+import { AWARD_OPS, FAILING_OPS, fetchAwardRaw, fetchFailingRaw, fetchOpeningRaw, type RawResult } from '../../adapters/g2b/award-api';
+import { fetchNotice, g2bDetailOf, redactKey } from '../../adapters/g2b/openapi';
 import type { G2bFailureInput } from '../../core/diagnostics/g2b-failure';
 import type { ProbePart, ResultProbeResult } from '../../core/types/result';
 
@@ -21,11 +21,17 @@ function toPart(r: RawResult, serviceKey: string, noticeNo: string, onFailure?: 
   return { ok: true, count: r.items.length, keys, sample: r.items.slice(0, 3) };
 }
 
-/** 1단계 1회와 2단계 전 op를 모두 호출해 응답 형태를 돌려준다(순회 중단 없음, 저장 없음). */
+/** 공고정보 1건, 1단계 1회, 유찰 목록 전 op, 2단계 전 op를 모두 호출해 응답 형태를 돌려준다(순회 중단 없음, 저장 없음). */
 export async function probeResult(noticeNo: string, serviceKey: string, fetchFn: typeof fetch = (...a) => fetch(...a), onFailure?: (f: G2bFailureInput) => void): Promise<ResultProbeResult> {
   const ctx = { serviceKey, fetch: fetchFn };
+  const nr = await fetchNotice(noticeNo, undefined, ctx);
+  const notice: ResultProbeResult['notice'] = nr.ok
+    ? { ok: true, count: 1, keys: Object.keys(nr.item).sort(), sample: [nr.item], op: nr.operation }
+    : { ...toPart(nr, serviceKey, noticeNo, onFailure), op: null };
   const opening = toPart(await fetchOpeningRaw(noticeNo, ctx), serviceKey, noticeNo, onFailure);
+  const failing: ResultProbeResult['failing'] = [];
+  for (const op of FAILING_OPS) failing.push({ op, ...toPart(await fetchFailingRaw(noticeNo, op, ctx), serviceKey, noticeNo, onFailure) });
   const award: ResultProbeResult['award'] = [];
   for (const op of AWARD_OPS) award.push({ op, ...toPart(await fetchAwardRaw(noticeNo, op, ctx), serviceKey, noticeNo, onFailure) });
-  return { opening, award };
+  return { notice, opening, failing, award };
 }

@@ -46,3 +46,6 @@ docs/probe/bidmate-probe-mail.*.json
 # 정답셋 측정: 첨부 원본과 측정 결과(scripts/gold/dl.mjs로 다시 받음)
 scripts/gold/files/
 scripts/gold/out/
+
+# 공공데이터포털 인증키
+/key

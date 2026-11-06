@@ -5,7 +5,10 @@ import { RESULT_TERMINAL, type FollowTarget } from '../../core/types/result';
 /** 낙찰 확정 여부. 1순위(ranked)는 낙찰이 아니다. */
 export const isWon = (e: Pick<IndexEntry, 'result'>): boolean => e.result?.status === 'won';
 
-export type ResultCell = { tone: 'ok' | 'idle'; text: string } | null;
+/** 유찰 확정 여부. */
+export const isNoBid = (e: Pick<IndexEntry, 'result'>): boolean => e.result?.status === 'no_bid';
+
+export type ResultCell = { tone: 'ok' | 'warn' | 'idle'; text: string } | null;
 
 /** 목록 "개찰/낙찰" 칸. 결과가 확정되면 결과, 아니면 개찰일 기준(개찰 전/개찰 완료). 정보가 없으면 null(대시). 낙찰만 강조. */
 export function resultCell(e: Pick<IndexEntry, 'result' | 'schedule' | 'kind'>, now: Date = new Date()): ResultCell {
@@ -23,7 +26,7 @@ export function resultCell(e: Pick<IndexEntry, 'result' | 'schedule' | 'kind'>, 
     case 'won': return { tone: 'ok', text: '낙찰' };
     case 'lost': return { tone: 'idle', text: r.rank ? `탈락(${r.rank}순위)` : '탈락' };
     case 'ranked': return { tone: 'idle', text: r.rank ? `${r.rank}순위` : '순위 확인 중' };
-    case 'no_bid': return { tone: 'idle', text: '유찰' };
+    case 'no_bid': return { tone: 'warn', text: '유찰' };
     case 'not_participated': return { tone: 'idle', text: '미참여' };
     case 'expired': return { tone: 'idle', text: '추적 종료' };
   }

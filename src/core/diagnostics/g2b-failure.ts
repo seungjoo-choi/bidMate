@@ -13,7 +13,7 @@ export const G2B_TAB_LABEL: Record<G2bTabPath, string> = { own: '요청한 탭',
 
 export interface G2bFailureInput {
   flow: G2bFlow;
-  stage: string;        // eval: 'tab'|'fetch'|'save'|'official' / result: 'opening'|'award'|'run'|'probe' / collect: 'fetch_basic'|'prespec' / detail: 'read' / attachment: 'download' / key-test: 'bid'|'prespec'
+  stage: string;        // eval: 'tab'|'fetch'|'save'|'official' / result: 'opening'|'failing'|'award'|'run'|'probe' / collect: 'fetch_basic'|'prespec' / detail: 'read' / attachment: 'download' / key-test: 'bid'|'prespec'
   code: string; message: string;
   noticeNo?: string; round?: string; noticeId?: string; jobId?: string;
   step?: number;        // eval 1~6

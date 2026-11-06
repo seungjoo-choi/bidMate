@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AwardResult, OpeningResult, OpeningRow } from '../../src/adapters/g2b/award-api';
+import type { AwardResult, FailingResult, OpeningResult, OpeningRow } from '../../src/adapters/g2b/award-api';
 import { applyOurAmount, backoffMs, fillScoreRanks, judge, shouldFetchAward } from '../../src/core/results/judge';
 import { backfillTargets, newEntry, planTargets, resetForBiz } from '../../src/core/results/plan';
 import type { IndexEntry } from '../../src/core/types/index-file';
@@ -17,8 +17,9 @@ const prevOf = (o: Partial<ResultEntry> = {}): ResultEntry => ({
   openingAt: new Date(NOW.getTime() - 2 * H).toISOString(), startAt: new Date(NOW.getTime() - 2 * H).toISOString(),
   attempts: 0, nextCheckAt: NOW.toISOString(), ...o,
 });
-const j = (o: { prev?: ResultEntry; opening: OpeningResult; award?: AwardResult | null }) =>
-  judge({ ourBizNo: OURS, now: NOW, prev: o.prev ?? prevOf(), opening: o.opening, award: o.award ?? null });
+const failing = (rbidNos: Array<string | null>): FailingResult => ({ ok: true, called: true, fetchedAt: NOW.toISOString(), rows: rbidNos.map((rbidNo) => ({ rbidNo, round: '000', at: null, reason: null })) });
+const j = (o: { prev?: ResultEntry; opening: OpeningResult; award?: AwardResult | null; failing?: FailingResult | null }) =>
+  judge({ ourBizNo: OURS, now: NOW, prev: o.prev ?? prevOf(), opening: o.opening, award: o.award ?? null, failing: o.failing ?? null });
 
 describe('judge', () => {
   it('규칙1: 오류는 상태 유지, attempts+1, backoff', () => {
@@ -111,6 +112,47 @@ const ie = (id: string, o: Partial<IndexEntry> = {}): IndexEntry => {
 };
 const rf = (entries: ResultEntry[], bizNo = OURS): ResultFile => ({ schemaVersion: 1, bizNo, updatedAt: '', entries: Object.fromEntries(entries.map((e) => [e.noticeId, e])) });
 const ff: FollowFile = { schemaVersion: 1, updatedAt: '', entries: {} };
+
+describe('judge 유찰', () => {
+  it('유찰 표기 행 1건이면 no_bid', () => {
+    const r = j({ opening: opening([row('999', null, { noBid: true })]) });
+    expect(r.entry).toMatchObject({ status: 'no_bid', bidders: 1 });
+    expect(r.event).toBe('final');
+  });
+
+  it('사업자번호 없는 유찰 표기 행만 있으면 no_bid, 투찰 업체 수는 넣지 않는다', () => {
+    const r = j({ opening: opening([row('', null, { noBid: true })]) });
+    expect(r.entry.status).toBe('no_bid');
+    expect(r.entry.bidders).toBeUndefined();
+  });
+
+  it('유찰 목록 1건과 개찰결과 0건이면 no_bid', () => {
+    const r = j({ opening: opening([]), failing: failing(['1']) });
+    expect(r.entry.status).toBe('no_bid');
+  });
+
+  it('유찰 목록 rbidNo 1, 개찰결과 최신 rbidNo 2(순위 없음)이면 waiting', () => {
+    const r = j({ opening: opening([row('999', null, { rbidNo: '2' })]), failing: failing(['1']) });
+    expect(r.entry.status).toBe('waiting');
+  });
+
+  it('유찰 목록 조회 실패는 무시하고 개찰결과 판정을 유지한다', () => {
+    const bad: FailingResult = { ok: false, error: { code: 'G2B_NETWORK', message: 'x', step: 'fetch_basic', retryable: true } };
+    const r = j({ opening: opening([row('999', null)]), failing: bad });
+    expect(r.entry).toMatchObject({ status: 'waiting', attempts: 1 });
+    expect(r.entry.lastError).toBeUndefined();
+  });
+
+  it('2단계 낙찰자가 있으면 유찰 목록이 있어도 won/lost', () => {
+    expect(j({ opening: opening([row(OURS, 2)]), award: award(OURS, '우리'), failing: failing(['1']) }).entry.status).toBe('won');
+    expect(j({ opening: opening([row(OURS, 2)]), award: award('999'), failing: failing(['1']) }).entry.status).toBe('lost');
+  });
+
+  it('유찰 목록이 있고 개찰결과 행에 순위가 있어도 no_bid', () => {
+    const r = j({ opening: opening([row(OURS, 1)]), failing: failing(['1']) });
+    expect(r.entry.status).toBe('no_bid');
+  });
+});
 
 describe('ourAmount와 applyOurAmount', () => {
   it('won/lost/ranked는 ourAmount를 설정하고 not_participated는 설정하지 않는다', () => {

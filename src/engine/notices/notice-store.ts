@@ -53,6 +53,7 @@ export function entryOf(n: Notice, prev?: IndexEntry, extractionStatus?: Extract
     isCorrection: n.isCorrection,
     supersededBy: prev?.supersededBy,
     ...(schedule ? { schedule } : {}),
+    ...(n.reannounceOf ? { reannounceOf: n.reannounceOf } : {}),
   };
 }
 

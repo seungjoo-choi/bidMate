@@ -1,4 +1,4 @@
-import { AWARD_OPS, fetchAward, fetchOpening } from '../../adapters/g2b/award-api';
+import { AWARD_OPS, fetchAward, fetchFailing, fetchOpening, type FailingResult } from '../../adapters/g2b/award-api';
 import { g2bDetailOf, redactKey, type G2bContext } from '../../adapters/g2b/openapi';
 import type { G2bFailureInput } from '../../core/diagnostics/g2b-failure';
 import type { JobError } from '../../core/types/job';
@@ -137,7 +137,7 @@ async function run(deps: ResultTrackerDeps, mode: 'list' | 'follow', ours: strin
     }
 
     const ctx: G2bContext = { serviceKey: deps.serviceKey, fetch: deps.fetch, now };
-    const fail = (stage: 'opening' | 'award', e: IndexEntry, err: JobError): void => {
+    const fail = (stage: 'opening' | 'failing' | 'award', e: IndexEntry, err: JobError): void => {
       const d = g2bDetailOf(err);
       try {
         deps.onFailure?.({
@@ -158,11 +158,20 @@ async function run(deps: ResultTrackerDeps, mode: 'list' | 'follow', ours: strin
       if (!opening.ok) fail('opening', e, opening.error);
       if (!opening.ok && isKeyError(opening.error.code)) { out.skipped = 'KEY_INVALID'; out.ran = false; break; }
       let j = judge({ ourBizNo: ours, now: nt, prev, opening, award: null });
+      let failing: FailingResult | null = null;
+      if (opening.ok && j.entry.status === 'waiting') {
+        failing = await fetchFailing(e.noticeNo, ctx);
+        if (!failing.ok) {
+          fail('failing', e, failing.error);
+          if (isKeyError(failing.error.code)) { out.skipped = 'KEY_INVALID'; out.ran = false; break; }
+        }
+        if (failing.ok && failing.called) j = judge({ ourBizNo: ours, now: nt, prev, opening, award: null, failing });
+      }
       if (shouldFetchAward(prev, opening, j.entry, ours)) {
         const award = await fetchAward(e.noticeNo, prev.listOp ? [prev.listOp] : AWARD_OPS, ctx);
         if (!award.ok) fail('award', e, award.error);
         if (!award.ok && isKeyError(award.error.code)) { out.skipped = 'KEY_INVALID'; out.ran = false; break; }
-        j = judge({ ourBizNo: ours, now: nt, prev, opening, award });
+        j = judge({ ourBizNo: ours, now: nt, prev, opening, award, failing });
       }
       let entry = j.entry;
       // 종료 판정에 쓴 1단계 응답에서 이미 투찰금액을 읽었으므로 백필 대상에서 뺀다(값 유무와 무관).

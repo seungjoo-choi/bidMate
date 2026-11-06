@@ -23,17 +23,17 @@ import { batchActive, batchBlockReason, batchModeNote, headerToggle, needsPaidCo
 import { dDayLevel, formatDDay, formatDate, formatDateTime, isDueSoon, isPast } from '../../ui/review/format';
 import { AiBatchPanel } from './AiBatchPanel';
 import { FollowMenu, useFollowToggle } from './FollowToggle';
-import { followButton, followHint, type FollowAction, isFollowing, isWon, resultCell } from '../../ui/notices/result-view';
+import { followButton, followHint, type FollowAction, isFollowing, isNoBid, isWon, resultCell } from '../../ui/notices/result-view';
 import { type EvalBatchState, runEvalBatch, selectableForEval } from '../../ui/notices/eval-fetch-view';
 import { PageTitle } from './menu';
 import { SearchButton } from './search/SearchButton';
 import { ResultSummaryStrip } from './stats/ResultSummaryStrip';
 import { SortHeader, useSort, type SortValue } from './table-sort';
 
-type Filter = 'all' | 'favorite' | 'review' | 'due' | 'follow' | 'won';
+type Filter = 'all' | 'favorite' | 'review' | 'due' | 'follow' | 'won' | 'no_bid';
 const FILTERS: Array<{ id: Filter; label: string }> = [
   { id: 'all', label: '전체' }, { id: 'favorite', label: '즐겨찾기' }, { id: 'review', label: '확인 필요' }, { id: 'due', label: '마감 임박' },
-  { id: 'follow', label: '팔로우' }, { id: 'won', label: '낙찰' },
+  { id: 'follow', label: '팔로우' }, { id: 'won', label: '낙찰' }, { id: 'no_bid', label: '유찰' },
 ];
 
 const COLLECT_BADGE: Record<CollectStatus, { tone: BadgeStatus; text: string }> = {
@@ -147,6 +147,7 @@ export function NoticesPage() {
       due: all.filter((n) => isDueSoon(n.bidCloseAt, now)).length,
       follow: all.filter(isFollowing).length,
       won: all.filter(isWon).length,
+      no_bid: all.filter(isNoBid).length,
     };
   }, [list, fav.ids]);
 
@@ -159,6 +160,7 @@ export function NoticesPage() {
           : filter === 'review' ? n.extractionStatus === 'needs_review'
           : filter === 'due' ? isDueSoon(n.bidCloseAt, now)
           : filter === 'follow' ? isFollowing(n)
+          : filter === 'no_bid' ? isNoBid(n)
           : isWon(n)))
       .filter((n) => !org || (n.orderingOrg ?? '').trim() === org)
       .filter((n) => !year || yearOf(n) === year)
@@ -377,7 +379,7 @@ export function NoticesPage() {
                   filter === f.id ? 'border-ink font-semibold text-ink' : 'border-transparent font-medium text-muted hover:text-ink'
                 }`}
               >
-                {f.label}<span className={`ml-1.5 font-mono text-sm tabular-nums ${f.id === 'won' && counts.won > 0 ? 'font-semibold text-ok' : 'font-normal text-faint'}`}>{counts[f.id]}</span>
+                {f.label}<span className={`ml-1.5 font-mono text-sm tabular-nums ${f.id === 'won' && counts.won > 0 ? 'font-semibold text-ok' : f.id === 'no_bid' && counts.no_bid > 0 ? 'font-semibold text-warn' : 'font-normal text-faint'}`}>{counts[f.id]}</span>
               </button>
             ))}
           </div>

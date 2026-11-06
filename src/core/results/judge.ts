@@ -1,4 +1,4 @@
-import type { AwardResult, OpeningResult, OpeningRow, AwardRow } from '../../adapters/g2b/award-api';
+import type { AwardResult, FailingResult, OpeningResult, OpeningRow, AwardRow } from '../../adapters/g2b/award-api';
 import { normalizeBizNo } from '../evaluation/company';
 import type { ISODate } from '../types/common';
 import { RESULT_TERMINAL, type ResultEntry, type ResultStatus } from '../types/result';
@@ -13,6 +13,8 @@ export interface JudgeInput {
   opening: OpeningResult;
   /** 2단계를 호출하지 않았으면 null */
   award: AwardResult | null;
+  /** 유찰 목록 조회 결과. 호출하지 않았으면 null/생략, ok false면 무시 */
+  failing?: FailingResult | null;
 }
 export interface JudgeOutput { entry: ResultEntry; event?: JudgeEvent }
 
@@ -31,6 +33,12 @@ export function latestBundle<T extends { rbidNo: string | null }>(rows: T[]): T[
   if (nums.length === 0) return rows;
   const max = Math.max(...nums);
   return rows.filter((r) => r.rbidNo !== null && Number(r.rbidNo) === max);
+}
+
+/** 숫자로 바꿀 수 있는 rbidNo 중 최대값. 없으면 null. */
+export function maxRbid(rows: Array<{ rbidNo: string | null }>): number | null {
+  const nums = rows.map((r) => (r.rbidNo === null ? NaN : Number(r.rbidNo))).filter((n) => Number.isFinite(n));
+  return nums.length === 0 ? null : Math.max(...nums);
 }
 
 /** 점수가 높을수록 좋은 순위인지. 순위 필드가 없을 때 점수로 순위를 채우는 방향(S0 실측에서 바뀔 수 있음). */
@@ -75,8 +83,14 @@ function decide(input: JudgeInput, ours: string, rows: OpeningRow[], awardRows: 
   const mine = rows.find((r) => r.bizNo === ours);
   // 3. 1단계 낙찰 플래그(필드 확인 전에는 won이 항상 null이라 비활성)
   if (mine?.won === true) return { status: 'won', ...(mine.rank !== null ? { rank: mine.rank } : {}), ...amtOf(mine), bidders: rows.length, awardedAt: fetchedAt };
-  // 4. 1단계 유찰 식별(필드 확인 전에는 비활성)
-  if (rows.some((r) => r.noBid === true)) return { status: 'no_bid' };
+  // 4. 유찰: 1단계 행의 유찰 표기, 또는 유찰 목록 건수가 있고 재입찰 번호가 1단계 최신 묶음 이상
+  const noBidByRow = rows.some((r) => r.noBid === true);
+  const f = input.failing && input.failing.ok ? input.failing.rows : [];
+  const fMax = maxRbid(f);
+  const rMax = maxRbid(rows);
+  const noBidByList = f.length > 0 && (rows.length === 0 || fMax === null || rMax === null || fMax >= rMax);
+  const bidders = rows.filter((r) => r.bizNo !== '').length; // 사업자번호 없는 유찰 표기 행은 투찰 업체가 아님
+  if (noBidByRow || noBidByList) return { status: 'no_bid', ...(bidders > 0 ? { bidders } : {}) };
   // 5~7
   const ranked = rows.filter(hasRank);
   let d: Decision;

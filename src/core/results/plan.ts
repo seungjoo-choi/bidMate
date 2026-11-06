@@ -67,7 +67,7 @@ export function resetForBiz(file: ResultFile, bizNo: string, now: Date): ResultF
   const nowIso = now.toISOString();
   const entries: Record<string, ResultEntry> = {};
   for (const [id, e] of Object.entries(file.entries)) {
-    const { rank: _r, bidders: _b, winnerBizNo: _w, winnerName: _n, awardedAt: _a, amount: _m, ourAmount: _oa, amountCheckedAt: _ac, lastError: _l, checkedAt: _c, listOp: _o, phase: _p, ...rest } = e;
+    const { rank: _r, bidders: _b, winnerBizNo: _w, winnerName: _n, awardedAt: _a, amount: _m, ourAmount: _oa, amountCheckedAt: _ac, lastError: _l, checkedAt: _c, listOp: _o, phase: _p, reannounce: _re, ...rest } = e;
     entries[id] = { ...rest, status: 'waiting', attempts: 0, nextCheckAt: nowIso };
   }
   return { ...file, bizNo, entries };

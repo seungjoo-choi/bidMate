@@ -253,6 +253,10 @@ export async function runCollectJob(input: CollectJobInput, deps: CollectJobDeps
       setFields(notice, merged);
       notice.sourceUrl = src.sourceUrl(item, ref, fetchedAt);
       notice.isCorrection = src.isCorrection(item);
+      const codes = src.codesOf?.(item, operation);
+      if (codes) notice.codes = codes;
+      const reOf = src.reannounceOf?.(item) ?? null;
+      if (reOf) notice.reannounceOf = reOf; else delete notice.reannounceOf;
       notice.attachments = matchAttachments(notice.attachments, [...src.attachments(item), ...prespecAtts], id);
       if (linked) notice.linkedPrespec = linked; else delete notice.linkedPrespec;
       notice.collect = { status: 'partial', collectedAt: now().toISOString(), lastJobId: job.id, errors: [] };

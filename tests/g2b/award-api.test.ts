@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AWARD_OPS, fetchAward, fetchAwardRaw, fetchOpening, fetchOpeningRaw, mapAwardRows, mapOpeningRows } from '../../src/adapters/g2b/award-api';
+import { AWARD_OPS, FAILING_OPS, fetchAward, fetchAwardRaw, fetchFailing, fetchFailingRaw, fetchOpening, fetchOpeningRaw, mapAwardRows, mapFailingRows, mapOpeningRows } from '../../src/adapters/g2b/award-api';
 import { probeResult } from '../../src/engine/results/result-probe';
 
 const body = (items: unknown) => ({ response: { header: { resultCode: '00', resultMsg: 'OK' }, body: { items } } });
@@ -45,8 +45,8 @@ describe('probeResult', () => {
       return ok([]);
     }) as unknown as typeof fetch;
     const r = await probeResult('R26BK01631407', 'SECRET', f);
-    expect(urls).toHaveLength(5);
-    expect(urls.filter((u) => u.includes('inqryDiv=4') && !u.includes('OpengCompt'))).toHaveLength(4);
+    expect(urls).toHaveLength(7);
+    expect(urls.filter((u) => u.includes('inqryDiv=4') && u.includes('getScsbidListSttus'))).toHaveLength(4);
     expect(r.opening).toMatchObject({ ok: true, count: 0 });
     expect(r.award.map((a) => a.op)).toEqual([...AWARD_OPS]);
     expect(r.award[0]).toMatchObject({ ok: true, count: 4, keys: ['a', 'b', 'c'] });
@@ -99,5 +99,50 @@ describe('award-api 매핑과 순회', () => {
     expect(n).toBe(1);
     const empty = (async () => ok([])) as unknown as typeof fetch;
     expect(await fetchAward('R26BK01631407', AWARD_OPS, { serviceKey: 'K', fetch: empty })).toMatchObject({ ok: true, rows: [], op: null });
+  });
+});
+
+describe('유찰 식별과 유찰 목록', () => {
+  it('mapOpeningRows: opengRsltDivNm에 유찰이 있으면 noBid true', () => {
+    const rows = mapOpeningRows([{ prcbdrBizno: '1198633696', opengRsltDivNm: '유찰' }]);
+    expect(rows[0]!.noBid).toBe(true);
+  });
+
+  it('mapOpeningRows: 사업자번호 없는 유찰 표기 행은 남기고, 사업자번호 없는 일반 행은 버린다', () => {
+    const rows = mapOpeningRows([{ opengRsltDivNm: '유찰' }, { opengRsltDivNm: '개찰완료' }]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ bizNo: '', noBid: true });
+  });
+
+  it('mapOpeningRows: 개찰완료는 noBid null', () => {
+    const rows = mapOpeningRows([{ prcbdrBizno: '1198633696', opengRsltDivNm: '개찰완료' }]);
+    expect(rows[0]!.noBid).toBeNull();
+  });
+
+  it('mapOpeningRows: 구분 필드가 없으면 noBid null', () => {
+    const rows = mapOpeningRows([{ prcbdrBizno: '1198633696' }]);
+    expect(rows[0]!.noBid).toBeNull();
+  });
+
+  it('fetchFailing: FAILING_OP가 비어 있으면 호출 없이 called false', async () => {
+    let n = 0;
+    const f = (async () => { n++; return ok([]); }) as unknown as typeof fetch;
+    const r = await fetchFailing('R26BK01631407', { serviceKey: 'KEY', fetch: f });
+    expect(n).toBe(0);
+    expect(r).toMatchObject({ ok: true, rows: [], called: false });
+  });
+
+  it('fetchFailingRaw: inqryDiv=4, numOfRows=100, 지정한 op', async () => {
+    let url = '';
+    const f = (async (u: string) => { url = u; return ok([]); }) as unknown as typeof fetch;
+    await fetchFailingRaw('R26BK01631407', FAILING_OPS[0], { serviceKey: 'KEY', fetch: f });
+    expect(url).toContain(FAILING_OPS[0]);
+    expect(url).toContain('inqryDiv=4');
+    expect(url).toContain('numOfRows=100');
+  });
+
+  it('mapFailingRows: rbidNo, round, at 변환과 reason null', () => {
+    const rows = mapFailingRows([{ rbidNo: '1', bidNtceOrd: '000', opengDt: '2026-10-20 11:00:00' }]);
+    expect(rows).toEqual([{ rbidNo: '1', round: '000', at: '2026-10-20T11:00:00+09:00', reason: null }]);
   });
 });

@@ -1,9 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as awardApi from '../../src/adapters/g2b/award-api';
 import type { FollowFile, ResultFile } from '../../src/core/types/result';
 import { backoffMs } from '../../src/core/results/judge';
 import { runResultRefresh, type ResultTrackerDeps } from '../../src/engine/results/result-tracker';
 import { fakeG2b, NOW, OURS, seedStore, type Seed } from '../helpers/result-fixture';
 import type { MemoryStore } from '../helpers/memory-store';
+
+vi.mock('../../src/adapters/g2b/award-api', async (orig) => {
+  const m = await orig<typeof import('../../src/adapters/g2b/award-api')>();
+  return { ...m, fetchFailing: vi.fn(m.fetchFailing) };
+});
 
 const PAST = '2026-10-20T09:00:00+09:00';
 const R1 = 'R26BK00000001-000';
@@ -344,5 +350,36 @@ describe('runResultRefresh', () => {
       await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
       expect(g.calls).toHaveLength(10);
     });
+  });
+});
+
+describe('runResultRefresh 유찰 목록 조회', () => {
+  const real = awardApi.fetchFailing;
+  const failingOk: awardApi.FailingResult = { ok: true, rows: [], fetchedAt: NOW.toISOString(), called: true };
+  afterEach(() => { vi.mocked(awardApi.fetchFailing).mockReset().mockImplementation(real); });
+
+  it('1차 판정이 waiting일 때만 유찰 목록을 조회한다', async () => {
+    const spy = vi.mocked(awardApi.fetchFailing).mockResolvedValue(failingOk);
+    const s = seedStore([sched(R1), sched(R2)]);
+    const g = fakeG2b((_op, no) => (no === 'R26BK00000001' ? opening(null) : opening(1, '999')));
+    await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(spy.mock.calls.map((c) => c[0])).toEqual(['R26BK00000001']);
+  });
+
+  it('ranked와 not_participated는 유찰 목록을 조회하지 않는다', async () => {
+    const spy = vi.mocked(awardApi.fetchFailing).mockResolvedValue(failingOk);
+    const s = seedStore([sched(R1), sched(R2)]);
+    const g = fakeG2b((_op, no) => (no === 'R26BK00000001' ? opening(1) : opening(1, '999')));
+    await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('유찰 목록 키 오류면 KEY_INVALID로 중단한다', async () => {
+    vi.mocked(awardApi.fetchFailing).mockResolvedValue({ ok: false, error: { code: 'G2B_KEY_INVALID', message: 'x', step: 'fetch_basic', retryable: false } });
+    const s = seedStore([sched(R1), sched(R2, '2026-10-20T08:00:00+09:00')]);
+    const g = fakeG2b(() => opening(null));
+    const r = await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(r.skipped).toBe('KEY_INVALID');
+    expect(r.checked).toBe(0);
   });
 });
