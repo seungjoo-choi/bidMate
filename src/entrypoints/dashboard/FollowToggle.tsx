@@ -1,7 +1,8 @@
 import { Check, ChevronDown, Loader2, Star } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
-import type { FollowTarget } from '../../core/types/result';
+import type { IndexEntry } from '../../core/types/index-file';
+import type { FollowTarget, ResultStatus } from '../../core/types/result';
 import { send } from '../../messaging/bus';
 import { Button } from '../../ui/components';
 import { FOLLOW_TARGET_LABEL, followErrorText, followMenuItems, followToastParts, type FollowAction } from '../../ui/notices/result-view';
@@ -13,12 +14,12 @@ export type FollowResult =
 /** follow/set 호출. 실패 사유는 화면 문구로 바꿔 돌려준다(throw 없음). prev: 적용 전 범위 */
 export function useFollowToggle() {
   const [busy, setBusy] = useState<Set<string>>(() => new Set());
-  const apply = async (noticeId: string, action: FollowAction, prev: FollowTarget | null): Promise<FollowResult> => {
+  const apply = async (noticeId: string, action: FollowAction, prev: FollowTarget | null, status?: ResultStatus): Promise<FollowResult> => {
     setBusy((s) => new Set(s).add(noticeId));
     try {
       const r = await send('follow/set', action.follow ? { noticeId, follow: true, target: action.target } : { noticeId, follow: false });
       const next = r.following ? r.target : null;
-      const parts = followToastParts(next, prev, r.startAt);
+      const parts = followToastParts(next, prev, r.startAt, new Date(), status);
       void send('deadline/refresh', { reason: 'manual' }).catch(() => undefined); // 팔로우는 마감 알림 대상을 바꾼다
       return { ok: true, following: next, startAt: r.startAt, title: parts.title, body: parts.text, mood: parts.mood };
     } catch (e) {
@@ -35,10 +36,10 @@ const ITEM_SELECTOR = '[role="menuitemradio"]:not(:disabled), [role="menuitem"]:
 const MENU_ROOM = 180;
 
 /** 팔로우 범위 메뉴. 목록의 별(star)과 상세 머리의 버튼(button) 두 모양. */
-export function FollowMenu({ variant, following, rankDone, notify, busy, disabled, reason, title, onSelect }: {
+export function FollowMenu({ variant, following, result, notify, busy, disabled, reason, title, onSelect }: {
   variant: 'star' | 'button';
   following: FollowTarget | null;
-  rankDone: boolean;
+  result: IndexEntry['result'] | undefined;
   notify: { rank: boolean; final: boolean };
   busy: boolean;
   disabled?: boolean;
@@ -51,7 +52,7 @@ export function FollowMenu({ variant, following, rankDone, notify, busy, disable
   const menuRef = useRef<HTMLDivElement>(null);
   const open = rect !== null;
   const blocked = busy || !!disabled;
-  const items = followMenuItems(following, rankDone, notify);
+  const items = followMenuItems(following, result, notify);
 
   const close = (restoreFocus: boolean) => { setRect(null); if (restoreFocus) triggerRef.current?.focus(); };
   const openMenu = () => {

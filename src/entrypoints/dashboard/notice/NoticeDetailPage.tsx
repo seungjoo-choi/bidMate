@@ -26,7 +26,7 @@ import { FollowMenu, useFollowToggle } from '../FollowToggle';
 import { useSearchContext } from '../search/NoticeSearchProvider';
 import { SearchButton } from '../search/SearchButton';
 import { useFavorites } from '../../../ui/hooks/useFavorites';
-import { WonCard } from './ResultStrip';
+import { ReannounceCard, WonCard } from './ResultStrip';
 import { followButton, isWon, type FollowAction } from '../../../ui/notices/result-view';
 import { evalFetchable } from '../../../ui/notices/eval-fetch-view';
 import { useSettings } from '../../../ui/hooks/useSettings';
@@ -39,6 +39,7 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
   const [loadError, setLoadError] = useState<string | null>(null);
   const [alert, setAlert] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [collecting, setCollecting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   /** 진행 팝업. open이면 띄우고, jobId는 이 화면에서 시작한 잡 */
@@ -100,6 +101,18 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
     }
   };
 
+  const collectReannounce = async (ref: { noticeNo: string; round: string }) => {
+    setCollecting(true);
+    try {
+      const r = await send('job/start', { type: 'collect', ref: { noticeNo: ref.noticeNo, round: ref.round, origin: 'g2b' } });
+      toast.show(r.code === 'JOB_ALREADY_RUNNING' ? '다른 수집이 끝난 뒤 다시 눌러 주세요' : '재공고 수집을 시작했습니다');
+    } catch (e) {
+      toast.show((e as { code?: string }).code === 'JOB_ALREADY_RUNNING' ? '다른 수집이 끝난 뒤 다시 눌러 주세요' : e instanceof Error ? e.message : String(e));
+    } finally {
+      setCollecting(false);
+    }
+  };
+
   const extract = async () => {
     setAlert(null);
     setStarting(true);
@@ -131,7 +144,7 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
   const entry = index.find((e) => e.noticeId === noticeId);
   const applyFollow = async (action: FollowAction) => {
     if (!entry) return;
-    const r = await follow.apply(noticeId, action, entry.following ?? null);
+    const r = await follow.apply(noticeId, action, entry.following ?? null, entry.result?.status);
     if (r.ok) toast.show(r.body, { mascot: r.mood, title: r.title });
     else toast.show(r.text);
     if (r.ok) void load();
@@ -203,7 +216,7 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
             icon={<Bookmark className={faved ? 'text-primary' : undefined} fill={faved ? 'currentColor' : 'none'} />}
             onClick={() => void fav.toggle(noticeId).then((ok) => { if (!ok) toast.show('즐겨찾기를 저장하지 못했습니다.'); })}
           >{faved ? '즐겨찾기됨' : '즐겨찾기'}</Button>
-          {entry && fb.visible && !fb.disabled && <FollowMenu variant="button" following={entry.following ?? null} rankDone={entry.result?.status === 'ranked'} notify={notify} busy={follow.isBusy(noticeId)} title={title} onSelect={(a) => void applyFollow(a)} />}
+          {entry && fb.visible && !fb.disabled && <FollowMenu variant="button" following={entry.following ?? null} result={entry.result} notify={notify} busy={follow.isBusy(noticeId)} title={title} onSelect={(a) => void applyFollow(a)} />}
           {/* 자주 쓰는 동작만 밖에 두고 나머지는 더보기로 접는다. 진행 중인 동작은 상태가 보이도록 밖으로 꺼낸다. */}
           {evalBusy && <Button variant="secondary" icon={<Download />} loading>평가점수 가져오기</Button>}
           {!isPrespec && <Button variant="secondary" loading={busy} icon={<RefreshCw />} onClick={() => void extract()}>{busy ? '수집 중' : '다시 수집'}</Button>}
@@ -237,6 +250,7 @@ export function NoticeDetailPage({ noticeId, tab, handoff }: { noticeId: string;
         {extraction && <InfoCell label="최근 수집"><span className="font-mono tabular-nums">{formatDateTime(extraction.extractedAt)}</span></InfoCell>}
       </dl>
       {entry?.result && isWon(entry) && <WonCard result={entry.result} />}
+      {entry && <ReannounceCard entry={entry} busy={collecting} onCollect={(ref) => void collectReannounce(ref)} />}
       {handoff && handoff.length > 0 && (
         <InlineAlert tone="warn">
           <div className="flex items-center justify-between gap-4">

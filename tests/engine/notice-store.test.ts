@@ -119,3 +119,12 @@ describe('NoticeStore', () => {
     expect('demandOrg' in entryOf(mk('R1-000', '가', 'f'))).toBe(false);
   });
 });
+
+describe('entryOf reannounceOf', () => {
+  it('reannounceOf를 복사하고 없으면 키를 생략한다', () => {
+    const n = mk('R1-000', '가', 'f');
+    expect('reannounceOf' in entryOf(n)).toBe(false);
+    n.reannounceOf = 'R0';
+    expect(entryOf(n).reannounceOf).toBe('R0');
+  });
+});

@@ -5,10 +5,10 @@ import type { ISODate } from '../core/types/common';
 import type { NotifyEvent, ResultProbeResult, ResultRunSummary } from '../core/types/result';
 import type { Settings } from '../core/types/settings';
 import { BusError, isOffscreenAllowedSender, listen, send } from '../messaging/bus';
-import type { MsgType, PayloadOf, ResponseOf } from '../messaging/protocol';
+import type { JobRequest, MsgType, PayloadOf, ResponseOf } from '../messaging/protocol';
 import { openDashboard } from './dashboard-tabs';
 import { recordG2bFailure } from './g2b-failures';
-import { assertExtensionSender } from './job-coordinator';
+import { assertExtensionSender, startJob, type StartResult } from './job-coordinator';
 import { clipTitle, openNoticeFromNotification, showNotification } from './notify';
 import { ensureOffscreen } from './offscreen-manager';
 
@@ -20,7 +20,7 @@ const BUSY_RETRY_MS = 2 * 60_000;
 const FAIL_RETRY_MS = 10 * 60_000;
 const NO_FS_RETRY_MS = 60 * 60_000;
 const NOTICE_NO_RE = /^R\d{2}[A-Z]{2}\d{8}$/;
-const NOTIFY_ID_RE = /^result:(.+):(rank|won|lost|not_participated|no_bid|expired)$/;
+const NOTIFY_ID_RE = /^result:(.+):(rank|won|lost|not_participated|no_bid|expired|reannounce|reannounce_expired)$/;
 const THROTTLE_KEY = 'resultRefreshAt';
 
 export type RefreshReason = 'alarm' | 'list' | 'manual' | 'follow';
@@ -34,6 +34,8 @@ export interface ResultSchedulerDeps {
   openDashboard: (hash: string) => Promise<unknown>;
   getURL: (path: string) => string;
   now: () => number;
+  /** 재공고 자동 수집 잡 시작 */
+  startJob: (req: JobRequest) => Promise<StartResult>;
 }
 
 let injected: Partial<ResultSchedulerDeps> = {};
@@ -52,6 +54,7 @@ function deps(): ResultSchedulerDeps {
     openDashboard: injected.openDashboard ?? ((h) => openDashboard(h)),
     getURL: injected.getURL ?? ((p) => chrome.runtime.getURL(p)),
     now: injected.now ?? Date.now,
+    startJob: injected.startJob ?? startJob,
   };
 }
 
@@ -76,12 +79,14 @@ export function notificationOf(ev: NotifyEvent): { id: string; title: string; me
   const t = clipTitle(ev.title);
   if (ev.kind === 'rank') return { id: `result:${ev.noticeId}:rank`, title: '개찰 순위 확인', message: `${t} 우리 ${ev.rank}위, 참여 ${ev.bidders}개사${ev.followEnded ? ' (팔로우 종료)' : ''}` };
   if (ev.kind === 'expired') return { id: `result:${ev.noticeId}:expired`, title: '추적 종료', message: `${t} 120일 동안 결과가 확정되지 않아 팔로우를 해제했습니다` };
+  if (ev.kind === 'reannounce') return { id: `result:${ev.noticeId}:reannounce`, title: '재공고 발견', message: `${t} 재공고 ${ev.noticeNo}가 올라왔습니다` };
+  if (ev.kind === 'reannounce_expired') return { id: `result:${ev.noticeId}:reannounce_expired`, title: '재공고 추적 종료', message: `${t} 60일 동안 재공고가 없어 팔로우를 해제했습니다` };
   const id = `result:${ev.noticeId}:${ev.status}`;
   switch (ev.status) {
     case 'won': return { id, title: '낙찰', message: `${t} 낙찰되었습니다` };
     case 'lost': return { id, title: '탈락', message: `${t} 낙찰 업체: ${ev.winnerName ?? '확인 필요'}` };
     case 'not_participated': return { id, title: '결과 확정', message: `${t} 개찰 결과에 우리 회사가 없습니다` };
-    case 'no_bid': return { id, title: '유찰', message: `${t} 유찰되었습니다` };
+    case 'no_bid': return { id, title: '유찰', message: `${t} ${ev.inferred ? '재공고가 올라와 유찰로 판단했습니다' : ev.watchingReannounce ? '유찰되었습니다. 재공고를 확인합니다' : '유찰되었습니다'}` };
   }
 }
 
@@ -138,7 +143,7 @@ export async function refreshResults(reason: RefreshReason, d: ResultSchedulerDe
 async function followSet(p: { noticeId: string; follow: boolean; target?: unknown }) {
   const d = deps();
   if (typeof p?.noticeId !== 'string' || p.noticeId === '') throw new BusError('FOLLOW_BAD_REF', '공고 ID가 올바르지 않습니다.');
-  if (p.target !== undefined && p.target !== 'rank' && p.target !== 'final') throw new BusError('FOLLOW_BAD_TARGET', '팔로우 범위가 올바르지 않습니다.');
+  if (p.target !== undefined && p.target !== 'rank' && p.target !== 'final' && p.target !== 'reannounce') throw new BusError('FOLLOW_BAD_TARGET', '팔로우 범위가 올바르지 않습니다.');
   const target = p.target ?? 'final';
   const { secrets } = await d.storage.local.get('secrets');
   const key = (secrets as { g2bServiceKey?: string } | undefined)?.g2bServiceKey;
@@ -158,9 +163,17 @@ export async function applyDone(p: PayloadOf<'result/done'>, d: ResultSchedulerD
     const { settingsCache } = await d.storage.local.get('settingsCache');
     await notify(Array.isArray(p.events) ? p.events : [], withDefaults(settingsCache as Settings | undefined), d);
   } catch { /* 설정 읽기 실패여도 알람은 건다 */ }
-  if (p.skipped === 'KEY_INVALID') return;
-  if (p.skipped === 'NO_FS') { await armFollowAlarm(new Date(d.now() + NO_FS_RETRY_MS).toISOString(), d); return; }
-  await armFollowAlarm(p.nextFollowCheckAt ?? null, d);
+  // 알람 재예약을 먼저 끝낸다. 자동 수집이 오래 걸리거나 실패해도 팔로우 확인은 이어져야 한다.
+  try {
+    if (p.skipped === 'NO_FS') await armFollowAlarm(new Date(d.now() + NO_FS_RETRY_MS).toISOString(), d);
+    else if (p.skipped !== 'KEY_INVALID') await armFollowAlarm(p.nextFollowCheckAt ?? null, d);
+  } finally {
+    // 재공고가 발견되면 자동 수집한다(알림 설정과 독립). 이미 다른 잡이 돌고 있으면 상세 화면의 수집 버튼으로 한다.
+    for (const ev of Array.isArray(p.events) ? p.events : []) {
+      if (ev.kind !== 'reannounce') continue;
+      try { await d.startJob({ type: 'collect', ref: { noticeNo: ev.noticeNo, round: ev.round, origin: 'g2b' } }); } catch { /* 무시 */ }
+    }
+  }
 }
 
 /** result/done은 offscreen 문서만 보낼 수 있다(대시보드 탭 등은 거부). */

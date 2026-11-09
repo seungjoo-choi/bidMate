@@ -10,7 +10,7 @@ const RID = 'ext-id';
 const NOW = Date.parse('2026-10-20T12:00:00Z');
 const summary = (o: Partial<ResultRunSummary> = {}): ResultRunSummary => ({ ran: true, checked: 1, updated: 1, won: 0, nextFollowCheckAt: null, events: [], ...o });
 
-interface Fakes { d: ResultSchedulerDeps; alarms: { create: ReturnType<typeof vi.fn>; clear: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> }; notif: { create: ReturnType<typeof vi.fn>; clear: ReturnType<typeof vi.fn> }; off: ReturnType<typeof vi.fn>; session: Record<string, unknown>; open: ReturnType<typeof vi.fn> }
+interface Fakes { d: ResultSchedulerDeps; alarms: { create: ReturnType<typeof vi.fn>; clear: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> }; notif: { create: ReturnType<typeof vi.fn>; clear: ReturnType<typeof vi.fn> }; off: ReturnType<typeof vi.fn>; start: ReturnType<typeof vi.fn>; session: Record<string, unknown>; open: ReturnType<typeof vi.fn> }
 
 function make(o: { existingAlarm?: number; key?: string | null; bizNo?: string; notify?: { rank: boolean; final: boolean }; run?: (type: string, payload: unknown) => unknown } = {}): Fakes {
   const session: Record<string, unknown> = {};
@@ -18,6 +18,7 @@ function make(o: { existingAlarm?: number; key?: string | null; bizNo?: string; 
   const notif = { create: vi.fn(async () => 'id'), clear: vi.fn(async () => true) };
   const off = vi.fn(async (type: string, payload: unknown) => (o.run ? o.run(type, payload) : summary()));
   const open = vi.fn(async () => 1);
+  const start = vi.fn(async (_req: unknown) => ({ jobId: 'j1' }));
   const local = {
     get: vi.fn(async () => ({
       ...(o.key === null ? {} : { secrets: { g2bServiceKey: o.key ?? 'SECRETKEY' } }),
@@ -27,9 +28,9 @@ function make(o: { existingAlarm?: number; key?: string | null; bizNo?: string; 
   const d = {
     alarms, notifications: notif,
     storage: { local, session: { get: vi.fn(async (k: string) => ({ [k]: session[k] })), set: vi.fn(async (v: Record<string, unknown>) => { Object.assign(session, v); }) } },
-    toOffscreen: off, openDashboard: open, getURL: (p: string) => `chrome-extension://${RID}/${p}`, now: () => NOW,
+    toOffscreen: off, startJob: start, openDashboard: open, getURL: (p: string) => `chrome-extension://${RID}/${p}`, now: () => NOW,
   } as unknown as ResultSchedulerDeps;
-  return { d, alarms, notif, off, session, open };
+  return { d, alarms, notif, off, start, session, open };
 }
 
 describe('armFollowAlarm', () => {
@@ -273,5 +274,78 @@ describe('registerResultScheduler 리스너', () => {
     expect(f.alarms.create).not.toHaveBeenCalled();
     expect((await call({ id: RID, url: `chrome-extension://${RID}/offscreen.html` })).ok).toBe(true);
     expect(f.alarms.create).toHaveBeenCalledWith('follow-check', { when: Date.parse('2026-10-20T13:00:00Z') });
+  });
+});
+
+describe('재공고 알림과 자동 수집', () => {
+  let clicked: ((id: string) => void) | undefined;
+  type MsgFn = (msg: unknown, sender: unknown, reply: (r: unknown) => void) => boolean;
+  const messageFns: MsgFn[] = [];
+  beforeEach(() => {
+    messageFns.length = 0;
+    vi.stubGlobal('chrome', {
+      runtime: { id: RID, onMessage: { addListener: (f: MsgFn) => { messageFns.push(f); } }, onStartup: { addListener: vi.fn() }, onInstalled: { addListener: vi.fn() } },
+      alarms: { onAlarm: { addListener: vi.fn() } },
+      notifications: { onClicked: { addListener: (f: typeof clicked) => { clicked = f; } } },
+      storage: { onChanged: { addListener: vi.fn() } },
+    });
+  });
+  afterEach(() => { vi.unstubAllGlobals(); });
+  it('알림 문구 5종', () => {
+    expect(notificationOf({ kind: 'final', noticeId: 'X', title: 't', status: 'no_bid' })).toEqual({ id: 'result:X:no_bid', title: '유찰', message: 't 유찰되었습니다' });
+    expect(notificationOf({ kind: 'final', noticeId: 'X', title: 't', status: 'no_bid', watchingReannounce: true })).toMatchObject({ id: 'result:X:no_bid', message: 't 유찰되었습니다. 재공고를 확인합니다' });
+    expect(notificationOf({ kind: 'final', noticeId: 'X', title: 't', status: 'no_bid', inferred: true })).toMatchObject({ message: 't 재공고가 올라와 유찰로 판단했습니다' });
+    expect(notificationOf({ kind: 'reannounce', noticeId: 'X', title: 't', noticeNo: 'R26BK00000002', round: '000', newTitle: 'n' })).toEqual({ id: 'result:X:reannounce', title: '재공고 발견', message: 't 재공고 R26BK00000002가 올라왔습니다' });
+    expect(notificationOf({ kind: 'reannounce_expired', noticeId: 'X', title: 't' })).toEqual({ id: 'result:X:reannounce_expired', title: '재공고 추적 종료', message: 't 60일 동안 재공고가 없어 팔로우를 해제했습니다' });
+  });
+
+  const reEvent = { kind: 'reannounce' as const, noticeId: 'R26BK00000001-000', title: '공고', noticeNo: 'R26BK00000002', round: '000', newTitle: '새 공고' };
+
+  it('새 알림 id는 클릭 정규식을 통과한다', async () => {
+    const f = make();
+    registerResultScheduler(f.d);
+    for (const kind of ['reannounce', 'reannounce_expired']) {
+      f.open.mockClear();
+      clicked!(`result:R26BK00000001-000:${kind}`);
+      await vi.waitFor(() => expect(f.open).toHaveBeenCalled());
+    }
+  });
+
+  it('notify.final이 꺼져 있으면 알림은 없지만 자동 수집은 한다', async () => {
+    const f = make({ notify: { rank: true, final: false } });
+    await applyDone({ events: [reEvent], nextFollowCheckAt: null }, f.d);
+    expect(f.notif.create).not.toHaveBeenCalled();
+    expect(f.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('reannounce 이벤트마다 collect 잡을 시작한다', async () => {
+    const f = make();
+    await applyDone({ events: [reEvent, { ...reEvent, noticeNo: 'R26BK00000003' }], nextFollowCheckAt: null }, f.d);
+    expect(f.start).toHaveBeenNthCalledWith(1, { type: 'collect', ref: { noticeNo: 'R26BK00000002', round: '000', origin: 'g2b' } });
+    expect(f.start).toHaveBeenCalledTimes(2);
+  });
+
+  it('events가 비어 있으면 잡을 시작하지 않는다', async () => {
+    const f = make();
+    await applyDone({ events: [], nextFollowCheckAt: null }, f.d);
+    expect(f.start).not.toHaveBeenCalled();
+  });
+
+  it('startJob이 throw해도 알람 재예약은 한다', async () => {
+    const f = make();
+    f.start.mockRejectedValueOnce(new Error('JOB_ALREADY_RUNNING'));
+    await applyDone({ events: [reEvent], nextFollowCheckAt: '2026-10-20T13:00:00Z' }, f.d);
+    expect(f.alarms.create).toHaveBeenCalledWith('follow-check', { when: Date.parse('2026-10-20T13:00:00Z') });
+  });
+
+  it('follow/set 릴레이는 reannounce target을 통과시키고 x는 거부한다', async () => {
+    const f = make({ run: () => ({ following: true, target: 'reannounce', nextFollowCheckAt: null, startAt: null }) });
+    registerResultScheduler(f.d);
+    const call = (extra: Record<string, unknown>) => new Promise<{ ok: boolean; error?: { code: string } }>((res) => {
+      for (const fn of messageFns) if (fn({ id: '1', type: 'follow/set', payload: { noticeId: 'R26BK00000001-000', follow: true, ...extra }, ts: 0, target: 'sw' }, { id: RID, url: `chrome-extension://${RID}/dashboard.html` }, res as (r: unknown) => void)) break;
+    });
+    expect((await call({ target: 'reannounce' })).ok).toBe(true);
+    expect(f.off).toHaveBeenLastCalledWith('follow/set', { noticeId: 'R26BK00000001-000', follow: true, target: 'reannounce' }, expect.any(Number));
+    expect(await call({ target: 'x' })).toMatchObject({ ok: false, error: { code: 'FOLLOW_BAD_TARGET' } });
   });
 });

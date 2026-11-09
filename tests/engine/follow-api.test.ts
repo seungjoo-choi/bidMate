@@ -97,3 +97,45 @@ describe('setFollow', () => {
     expect(Object.keys(fj(s).entries)).toEqual([ID]);
   });
 });
+
+describe('setFollow 재공고까지', () => {
+  const putResult = (s: MemoryStore, e: Record<string, unknown>) => s.files.set('results.json', JSON.stringify({ schemaVersion: 1, bizNo: '1', updatedAt: '', entries: { [ID]: { noticeId: ID, noticeNo: 'R26BK00000001', round: '000', startAt: '2026-10-20T10:00:00+09:00', openingAt: '2026-10-20T10:00:00+09:00', nextCheckAt: '', attempts: 0, ...e } } }));
+  const seed = () => seedStore([{ id: ID, openingAt: '2026-10-20T10:00:00+09:00' }]);
+  const FIRST = new Date(NOW.getTime() + 10 * 60_000).toISOString();
+
+  it('유찰 공고에 reannounce를 허용하고 watching을 만들며 startAt이 nextCheckAt이다', async () => {
+    const s = seed();
+    putResult(s, { status: 'no_bid' });
+    const r = await setFollow(s, { noticeId: ID, follow: true, target: 'reannounce' }, opts);
+    expect(r).toMatchObject({ following: true, target: 'reannounce', startAt: FIRST, nextFollowCheckAt: FIRST });
+    expect(rj(s).entries[ID]!.reannounce).toMatchObject({ status: 'watching', since: NOW.toISOString(), nextCheckAt: FIRST, attempts: 0 });
+    expect(fj(s).entries[ID]!.target).toBe('reannounce');
+  });
+
+  it('유찰 공고에 final은 FOLLOW_FINISHED', async () => {
+    const s = seed();
+    putResult(s, { status: 'no_bid' });
+    expect(await code(setFollow(s, { noticeId: ID, follow: true, target: 'final' }, opts))).toBe('FOLLOW_FINISHED');
+  });
+
+  it('재공고가 확인된 유찰은 FOLLOW_REANNOUNCED', async () => {
+    const s = seed();
+    putResult(s, { status: 'no_bid', reannounce: { status: 'found', since: 's', nextCheckAt: 'n', attempts: 0 } });
+    expect(await code(setFollow(s, { noticeId: ID, follow: true, target: 'reannounce' }, opts))).toBe('FOLLOW_REANNOUNCED');
+  });
+
+  it('expired 감시에 다시 켜면 since를 다시 시작한다', async () => {
+    const s = seed();
+    putResult(s, { status: 'no_bid', reannounce: { status: 'expired', since: '2026-01-01T00:00:00+09:00', nextCheckAt: 'n', attempts: 5, orgCode: 'B1' } });
+    await setFollow(s, { noticeId: ID, follow: true, target: 'reannounce' }, opts);
+    expect(rj(s).entries[ID]!.reannounce).toMatchObject({ status: 'watching', since: NOW.toISOString(), attempts: 0, orgCode: 'B1' });
+  });
+
+  it('옛 파일의 target reannounce는 그대로 유지된다', async () => {
+    const OLD = 'R26BK00000009-000';
+    const s = seedStore([{ id: ID, openingAt: '2026-10-20T10:00:00+09:00' }, { id: OLD, openingAt: '2026-10-20T10:00:00+09:00' }]);
+    s.files.set('follows.json', JSON.stringify({ schemaVersion: 1, updatedAt: '', entries: { [OLD]: { noticeId: OLD, followedAt: 'old', target: 'reannounce', notified: {} } } }));
+    await setFollow(s, { noticeId: ID, follow: true }, opts);
+    expect(fj(s).entries[OLD]!.target).toBe('reannounce');
+  });
+});

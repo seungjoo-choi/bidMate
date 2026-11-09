@@ -1,6 +1,9 @@
 import type { ISODate } from '../types/common';
-import { RESULT_TERMINAL, type ResultEntry } from '../types/result';
-import { FOLLOW_BURST_INTERVAL_MS, FOLLOW_BURST_MS, FOLLOW_FIRST_DELAY_MS, FOLLOW_OFFICE_HOURS, FOLLOW_RANKED_HOURS } from './limits';
+import { RESULT_TERMINAL, type ReannounceWatch, type ResultEntry } from '../types/result';
+import {
+  FOLLOW_BURST_INTERVAL_MS, FOLLOW_BURST_MS, FOLLOW_FIRST_DELAY_MS, FOLLOW_OFFICE_HOURS, FOLLOW_RANKED_HOURS,
+  REANNOUNCE_GENERAL_INTERVAL_MS, REANNOUNCE_HOURS, REANNOUNCE_TRACK_DAYS,
+} from './limits';
 
 export const KST_OFFSET_MS = 9 * 3600_000;
 const DAY_MS = 86_400_000;
@@ -49,4 +52,11 @@ export function followNextCheckAt(e: Pick<ResultEntry, 'status' | 'startAt'>, no
     return nextKstSlot(nowMs, FOLLOW_OFFICE_HOURS);
   }
   return nextKstSlot(nowMs, FOLLOW_RANKED_HOURS);
+}
+
+/** 재공고 감시의 다음 확인 시각(ms). watching이 아니거나 감시 기간을 넘기면 null(호출자가 expired 처리). */
+export function reannounceNextCheckAt(w: Pick<ReannounceWatch, 'status' | 'since'>, nowMs: number, followed: boolean): number | null {
+  if (w.status !== 'watching') return null;
+  if (nowMs - Date.parse(w.since) > REANNOUNCE_TRACK_DAYS * DAY_MS) return null;
+  return followed ? nextKstSlot(nowMs, REANNOUNCE_HOURS) : nowMs + REANNOUNCE_GENERAL_INTERVAL_MS;
 }

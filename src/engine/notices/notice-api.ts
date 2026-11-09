@@ -1,6 +1,7 @@
 import { computeStatus } from '../../core/extraction/decide';
 import { applyUserEdit, isEditableKey, revertUserEdit, validateFieldValue, VALUE_CHECK } from '../../core/model/field-edit';
 import { mergeDocumentLayer } from '../../core/model/merge';
+import { latestBids } from '../../core/results/plan';
 import { getField, setFields } from '../../core/model/notice-fields';
 import { normalizePath } from '../../core/model/path';
 import { EXTRACTION_KEYS, type ExtractedItem, type Extraction, type ExtractionKey } from '../../core/types/extraction';
@@ -29,14 +30,18 @@ export async function listNotices(store: IFileStore): Promise<IndexEntry[]> {
   try { follows = (await readJson<FollowFile>(store, 'follows.json')).entries ?? {}; } catch { /* 없음/손상 */ }
   if (typeof results !== 'object' || results === null) results = {};
   if (typeof follows !== 'object' || follows === null) follows = {};
+  const ids = new Set(notices.map((n) => n.noticeId));
+  const latestIdByNo = new Map(latestBids(notices).map((e) => [e.noticeNo, e.noticeId]));
   return notices.map((n) => {
+    const origId = n.reannounceOf ? latestIdByNo.get(n.reannounceOf) : undefined;
+    const withOrig = origId ? { ...n, reannounceOfId: origId } : n;
     const r = Object.hasOwn(results, n.noticeId) ? results[n.noticeId] : undefined;
     const following: FollowTarget | undefined = Object.hasOwn(follows, n.noticeId)
       ? ((follows[n.noticeId] as { target?: unknown } | null)?.target === 'rank' ? 'rank' : 'final')
       : undefined;
-    if (!r?.status && !following) return n;
+    if (!r?.status && !following) return withOrig;
     return {
-      ...n,
+      ...withOrig,
       ...(r?.status ? {
         result: {
           status: r.status,
@@ -48,6 +53,17 @@ export async function listNotices(store: IFileStore): Promise<IndexEntry[]> {
           ...(r.nextCheckAt ? { nextCheckAt: r.nextCheckAt } : {}),
           ...(r.ourAmount !== undefined ? { ourAmount: r.ourAmount } : {}),
           ...(r.openingAt ? { openingAt: r.openingAt } : {}),
+          ...(r.reannounce ? {
+            reannounce: {
+              status: r.reannounce.status,
+              ...(r.reannounce.found ? {
+                noticeNo: r.reannounce.found.noticeNo,
+                round: r.reannounce.found.round,
+                title: r.reannounce.found.title,
+                ...(ids.has(r.reannounce.found.noticeId) ? { noticeId: r.reannounce.found.noticeId } : {}),
+              } : {}),
+            },
+          } : {}),
         },
       } : {}),
       ...(following ? { following } : {}),

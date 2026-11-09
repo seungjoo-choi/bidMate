@@ -53,3 +53,33 @@ describe('listNotices 결과 병합', () => {
     expect(list[0]!.following).toBeUndefined();
   });
 });
+
+describe('listNotices 재공고 병합', () => {
+  const O = 'R26BK00000010-000';
+  const N = 'R26BK00000011-000';
+  const setIndexReannounceOf = (s: ReturnType<typeof seedStore>, id: string, of: string) => {
+    const idx = JSON.parse(s.files.get('index.json') as string);
+    idx.notices.find((e: { noticeId: string }) => e.noticeId === id).reannounceOf = of;
+    s.files.set('index.json', JSON.stringify(idx));
+  };
+  const results = (found: unknown) => JSON.stringify({ schemaVersion: 1, bizNo: '1', updatedAt: '', entries: { [O]: { noticeId: O, status: 'no_bid', startAt: 's', nextCheckAt: 'n', attempts: 0, reannounce: { status: 'found', since: 's', nextCheckAt: 'n', attempts: 0, found } } } });
+
+  it('found의 noticeId는 index에 있을 때만 병합한다', async () => {
+    const found = { noticeNo: 'R26BK00000011', round: '000', title: '재공고', noticeId: N, foundAt: 'f', via: 'collect' };
+    const s = seedStore([{ id: O }, { id: N }]);
+    s.files.set('results.json', results(found));
+    expect((await listNotices(s)).find((e) => e.noticeId === O)!.result!.reannounce).toEqual({ status: 'found', noticeNo: 'R26BK00000011', round: '000', title: '재공고', noticeId: N });
+    const s2 = seedStore([{ id: O }]);
+    s2.files.set('results.json', results(found));
+    expect((await listNotices(s2)).find((e) => e.noticeId === O)!.result!.reannounce).toEqual({ status: 'found', noticeNo: 'R26BK00000011', round: '000', title: '재공고' });
+  });
+
+  it('reannounceOfId는 원 공고가 index에 있을 때만 채운다', async () => {
+    const s = seedStore([{ id: O }, { id: N }]);
+    setIndexReannounceOf(s, N, 'R26BK00000010');
+    expect((await listNotices(s)).find((e) => e.noticeId === N)!.reannounceOfId).toBe(O);
+    const s2 = seedStore([{ id: N }]);
+    setIndexReannounceOf(s2, N, 'R26BK00000010');
+    expect((await listNotices(s2)).find((e) => e.noticeId === N)!.reannounceOfId).toBeUndefined();
+  });
+});

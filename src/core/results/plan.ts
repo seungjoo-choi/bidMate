@@ -2,7 +2,7 @@ import { kindOf } from '../model/ids';
 import { RESULT_TERMINAL, type FollowFile, type ResultEntry, type ResultFile } from '../types/result';
 import type { ISODate } from '../types/common';
 import type { IndexEntry } from '../types/index-file';
-import { FOLLOW_BATCH_MAX, RESULT_BACKFILL_MAX, RESULT_BATCH_MAX, RESULT_FIRST_DELAY_MS } from './limits';
+import { FOLLOW_BATCH_MAX, REANNOUNCE_BATCH_MAX, REANNOUNCE_GENERAL_MAX, RESULT_BACKFILL_MAX, RESULT_BATCH_MAX, RESULT_FIRST_DELAY_MS } from './limits';
 import { followStartAt } from './schedule';
 
 export interface PlanInput {
@@ -98,4 +98,36 @@ export function planTargets(a: PlanInput): Plan {
       .map((e) => e.noticeId);
   }
   return { targets: [...followTargets, ...general], prune, needOpening };
+}
+
+export interface ReannouncePlan { followed: string[]; general: string[] }
+
+/**
+ * 재공고 감시 대상. 종료 상태(no_bid) 위에 얹은 부가 상태라 planTargets와 따로 계획한다.
+ * followed: target reannounce 팔로우, nextCheckAt 오름차순 상한 10(두 모드 공통).
+ * general: list 모드만, 나머지 감시 항목을 since 내림차순 상한 5.
+ */
+export function planReannounce(a: PlanInput): ReannouncePlan {
+  const { index, results, follows, now, mode } = a;
+  const nowMs = now.getTime();
+  const latestIds = new Set(latestBids(index).map((e) => e.noticeId));
+  const watchDue = (id: string): ResultEntry | null => {
+    const r = results.entries[id];
+    const w = r?.reannounce;
+    if (!r || !w || !latestIds.has(id)) return null;
+    return r.status === 'no_bid' && w.status === 'watching' && Date.parse(w.nextCheckAt) <= nowMs ? r : null;
+  };
+  const due = [...latestIds].filter((id) => watchDue(id));
+  const isFollowed = (id: string) => follows.entries[id]?.target === 'reannounce';
+  const followed = due
+    .filter(isFollowed)
+    .sort((x, y) => Date.parse(results.entries[x]!.reannounce!.nextCheckAt) - Date.parse(results.entries[y]!.reannounce!.nextCheckAt))
+    .slice(0, REANNOUNCE_BATCH_MAX);
+  const general = mode === 'list'
+    ? due
+      .filter((id) => !isFollowed(id))
+      .sort((x, y) => Date.parse(results.entries[y]!.reannounce!.since) - Date.parse(results.entries[x]!.reannounce!.since))
+      .slice(0, REANNOUNCE_GENERAL_MAX)
+    : [];
+  return { followed, general };
 }

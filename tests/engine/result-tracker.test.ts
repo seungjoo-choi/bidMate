@@ -20,7 +20,7 @@ const opening = (rank: number | null, bizNo = OURS) => [{ prcbdrBizno: bizNo, op
 const deps = (store: MemoryStore, fetchFn: typeof fetch, o: Partial<ResultTrackerDeps> = {}): ResultTrackerDeps =>
   ({ store, fetch: fetchFn, serviceKey: 'KEY', bizNo: '123-45-67890', now: () => NOW, checkPermission: async () => true, ...o });
 const sched = (id: string, openingAt = PAST): Seed => ({ id, openingAt });
-const follow = (store: MemoryStore, id: string, notified = {}, target?: 'rank' | 'final') => store.files.set('follows.json', JSON.stringify({ schemaVersion: 1, updatedAt: '', entries: { [id]: { noticeId: id, followedAt: PAST, ...(target ? { target } : {}), notified } } }));
+const follow = (store: MemoryStore, id: string, notified = {}, target?: 'rank' | 'final' | 'reannounce') => store.files.set('follows.json', JSON.stringify({ schemaVersion: 1, updatedAt: '', entries: { [id]: { noticeId: id, followedAt: PAST, ...(target ? { target } : {}), notified } } }));
 
 describe('runResultRefresh', () => {
   it('키/사업자번호/권한이 없으면 호출 없이 skipped', async () => {
@@ -354,9 +354,11 @@ describe('runResultRefresh', () => {
 });
 
 describe('runResultRefresh 유찰 목록 조회', () => {
-  const real = awardApi.fetchFailing;
   const failingOk: awardApi.FailingResult = { ok: true, rows: [], fetchedAt: NOW.toISOString(), called: true };
-  afterEach(() => { vi.mocked(awardApi.fetchFailing).mockReset().mockImplementation(real); });
+  afterEach(async () => {
+    const actual = await vi.importActual<typeof awardApi>('../../src/adapters/g2b/award-api');
+    vi.mocked(awardApi.fetchFailing).mockReset().mockImplementation(actual.fetchFailing);
+  });
 
   it('1차 판정이 waiting일 때만 유찰 목록을 조회한다', async () => {
     const spy = vi.mocked(awardApi.fetchFailing).mockResolvedValue(failingOk);
@@ -381,5 +383,239 @@ describe('runResultRefresh 유찰 목록 조회', () => {
     const r = await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
     expect(r.skipped).toBe('KEY_INVALID');
     expect(r.checked).toBe(0);
+  });
+});
+
+describe('runResultRefresh 재공고 연결', () => {
+  const setReannounceOf = (s: MemoryStore, id: string, of: string) => {
+    const idx = JSON.parse(s.files.get('index.json') as string);
+    idx.notices.find((e: { noticeId: string }) => e.noticeId === id).reannounceOf = of;
+    s.files.set('index.json', JSON.stringify(idx));
+  };
+  const seed = () => {
+    const s = seedStore([sched(R1), sched(R2)]);
+    setReannounceOf(s, R2, 'R26BK00000001');
+    return s;
+  };
+
+  it('list 모드에서 재공고가 index에 있으면 원 공고에 found를 기록하고 updated가 늘어난다', async () => {
+    const s = seed();
+    const g = fakeG2b(() => []);
+    const r = await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(rj(s).entries[R1]).toMatchObject({ status: 'no_bid', reannounce: { status: 'found', inferredNoBid: true, found: { noticeId: R2, via: 'collect' } } });
+    expect(r.updated).toBeGreaterThanOrEqual(1);
+  });
+
+  it('팔로우 중인 원 공고가 추정 유찰이면 final 이벤트에 inferred를 달고 해제한다', async () => {
+    const s = seed();
+    follow(s, R1);
+    const g = fakeG2b(() => []);
+    const r = await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(r.events).toContainEqual({ kind: 'final', noticeId: R1, title: `제목 ${R1}`, status: 'no_bid', inferred: true });
+    expect(fj(s).entries[R1]).toBeUndefined();
+  });
+
+  it('follow 모드에서는 연결하지 않는다', async () => {
+    const s = seed();
+    follow(s, R1);
+    const g = fakeG2b(() => opening(null));
+    await runResultRefresh(deps(s, g.fetch), { mode: 'follow' });
+    expect(rj(s).entries[R1]?.reannounce).toBeUndefined();
+  });
+});
+
+describe('runResultRefresh 재공고 감시', () => {
+  const NB = 'R26BK00000001-000';
+  const NB2 = 'R26BK00000002-000';
+  const NEW = 'R26BK00000099-000';
+  const nobid = (id: string, w: Record<string, unknown> | null = {}, o: Record<string, unknown> = {}) => ({
+    noticeId: id, noticeNo: id.slice(0, 13), round: '000', status: 'no_bid', openingAt: PAST, startAt: PAST, attempts: 0, nextCheckAt: PAST, checkedAt: PAST,
+    ...(w ? { reannounce: { status: 'watching', since: '2026-10-19T00:00:00+09:00', nextCheckAt: PAST, attempts: 0, orgCode: 'B1', opKind: 'Servc', ...w } } : {}),
+    ...o,
+  });
+  const put = (s: MemoryStore, ...es: Array<Record<string, unknown>>) =>
+    s.files.set('results.json', JSON.stringify({ schemaVersion: 1, bizNo: OURS, updatedAt: '', entries: Object.fromEntries(es.map((e) => [e.noticeId as string, e])) }));
+  const hitItem = { bidNtceNo: 'R26BK00000099', bidNtceOrd: '000', bidNtceNm: '새 공고', befBidBbancNo: 'R26BK00000001', reNtceYn: 'Y', bidNtceDt: '2026-10-20 09:00:00' };
+  const searching = (items: unknown[] = [hitItem]) => (op: string): unknown[] => (op.endsWith('PPSSrch') ? items : []);
+  const searchCalls = (calls: string[]) => calls.filter((u) => u.includes('PPSSrch'));
+
+  it('no_bid 판정 시 팔로우가 없어도 watching을 만든다', async () => {
+    const s = seedStore([sched(R1)]);
+    const g = fakeG2b(() => [{ prcbdrBizno: '9999999999', opengRsltDivNm: '유찰' }]);
+    await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(rj(s).entries[R1]).toMatchObject({ status: 'no_bid', reannounce: { status: 'watching', attempts: 0 } });
+  });
+
+  it('no_bid와 target reannounce면 watchingReannounce 이벤트를 내고 팔로우를 유지한다', async () => {
+    const s = seedStore([sched(R1)]);
+    await runResultRefresh(deps(s, fakeG2b(() => []).fetch), { mode: 'list' }); // 결과 항목만 만든다
+    const seeded = rj(s); seeded.entries[R1]!.nextCheckAt = PAST; s.files.set('results.json', JSON.stringify(seeded));
+    follow(s, R1, {}, 'reannounce');
+    const g = fakeG2b(() => [{ prcbdrBizno: '9999999999', opengRsltDivNm: '유찰' }]);
+    const r = await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(r.events).toEqual([{ kind: 'final', noticeId: R1, title: `제목 ${R1}`, status: 'no_bid', watchingReannounce: true }]);
+    expect(fj(s).entries[R1]).toMatchObject({ target: 'reannounce', notified: { final: expect.any(String) } });
+    expect(rj(s).entries[R1]!.reannounce!.status).toBe('watching');
+  });
+
+  it('no_bid와 target final이면 해제된다', async () => {
+    const s = seedStore([sched(R1)]);
+    await runResultRefresh(deps(s, fakeG2b(() => []).fetch), { mode: 'list' }); // 결과 항목만 만든다
+    const seeded = rj(s); seeded.entries[R1]!.nextCheckAt = PAST; s.files.set('results.json', JSON.stringify(seeded));
+    follow(s, R1, {}, 'final');
+    const g = fakeG2b(() => [{ prcbdrBizno: '9999999999', opengRsltDivNm: '유찰' }]);
+    const r = await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(r.events[0]).toMatchObject({ kind: 'final', status: 'no_bid' });
+    expect((r.events[0] as { watchingReannounce?: true }).watchingReannounce).toBeUndefined();
+    expect(fj(s).entries[R1]).toBeUndefined();
+  });
+
+  it('감시 틱: 기관 코드가 없으면 notice.json codes를 쓴다', async () => {
+    const s = seedStore([sched(NB)]);
+    put(s, nobid(NB, { orgCode: undefined, opKind: undefined }));
+    const nj = JSON.parse(s.files.get(`notices/${NB}/notice.json`) as string);
+    s.files.set(`notices/${NB}/notice.json`, JSON.stringify({ ...nj, codes: { demandOrgCode: 'B9', opKind: 'Thng' } }));
+    const g = fakeG2b(searching([]));
+    await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    const calls = searchCalls(g.calls);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toContain('getBidPblancListInfoThngPPSSrch');
+    expect(calls[0]).toContain('dminsttCd=B9');
+    expect(g.calls.some((u) => u.includes('inqryDiv=2'))).toBe(false);
+  });
+
+  it('감시 틱: codes도 없으면 공고정보를 1회 조회해 orgCode와 opKind를 저장한다', async () => {
+    const s = seedStore([sched(NB)]);
+    put(s, nobid(NB, { orgCode: undefined, opKind: undefined }));
+    const g = fakeG2b((op) => (op === 'getBidPblancListInfoServc' ? [{ bidNtceNo: 'R26BK00000001', bidNtceOrd: '000', dminsttCd: 'B7' }] : []));
+    await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(g.calls.filter((u) => u.includes('inqryDiv=2'))).toHaveLength(1);
+    expect(rj(s).entries[NB]!.reannounce).toMatchObject({ orgCode: 'B7', opKind: 'Servc' });
+    expect(searchCalls(g.calls)[0]).toContain('dminsttCd=B7');
+  });
+
+  it('팔로우 hit는 found와 reannounce 이벤트 1회, 두 번째 실행은 이벤트가 없다', async () => {
+    const s = seedStore([sched(NB)]);
+    put(s, nobid(NB));
+    follow(s, NB, {}, 'reannounce');
+    const g = fakeG2b(searching());
+    const r1 = await runResultRefresh(deps(s, g.fetch), { mode: 'follow' });
+    expect(r1.events).toEqual([{ kind: 'reannounce', noticeId: NB, title: `제목 ${NB}`, noticeNo: 'R26BK00000099', round: '000', newTitle: '새 공고' }]);
+    expect(rj(s).entries[NB]!.reannounce).toMatchObject({ status: 'found', found: { noticeNo: 'R26BK00000099', noticeId: NEW, via: 'search' } });
+    expect(fj(s).entries[NB]!.notified.reannounce).toBeTruthy();
+    const r2 = await runResultRefresh(deps(s, g.fetch), { mode: 'follow' });
+    expect(r2.events).toEqual([]);
+  });
+
+  it('비팔로우 hit는 found만 기록하고 이벤트가 없으며 updated가 늘어난다', async () => {
+    const s = seedStore([sched(NB)]);
+    put(s, nobid(NB));
+    const g = fakeG2b(searching());
+    const r = await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(r.events).toEqual([]);
+    expect(r.updated).toBeGreaterThanOrEqual(1);
+    expect(rj(s).entries[NB]!.reannounce!.status).toBe('found');
+  });
+
+  it('follow 모드에서는 비팔로우를 검색하지 않는다', async () => {
+    const s = seedStore([sched(NB)]);
+    put(s, nobid(NB));
+    const g = fakeG2b(searching());
+    await runResultRefresh(deps(s, g.fetch), { mode: 'follow' });
+    expect(searchCalls(g.calls)).toHaveLength(0);
+  });
+
+  it('list 모드 비팔로우는 한 실행에 5건까지', async () => {
+    const ids = Array.from({ length: 7 }, (_, i) => `R26BK0000010${i}-000`);
+    const s = seedStore(ids.map((id) => sched(id)));
+    put(s, ...ids.map((id) => nobid(id)));
+    const g = fakeG2b(searching([]));
+    await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(searchCalls(g.calls)).toHaveLength(5);
+  });
+
+  it('키 오류면 KEY_INVALID로 중단한다', async () => {
+    const s = seedStore([sched(NB)]);
+    put(s, nobid(NB));
+    const g = fakeG2b((op) => (op.endsWith('PPSSrch') ? 'KEY_INVALID' : []));
+    const r = await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(r.skipped).toBe('KEY_INVALID');
+  });
+
+  it('61일이 지나면 팔로우는 expired 이벤트와 해제, 비팔로우는 expired만', async () => {
+    const since = '2026-08-01T00:00:00+09:00';
+    const s = seedStore([sched(NB), sched(NB2)]);
+    put(s, nobid(NB, { since }), nobid(NB2, { since }));
+    follow(s, NB, {}, 'reannounce');
+    const g = fakeG2b(searching([]));
+    const r = await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(r.events).toEqual([{ kind: 'reannounce_expired', noticeId: NB, title: `제목 ${NB}` }]);
+    expect(fj(s).entries[NB]).toBeUndefined();
+    expect(rj(s).entries[NB]!.reannounce!.status).toBe('expired');
+    expect(rj(s).entries[NB2]!.reannounce!.status).toBe('expired');
+  });
+
+  it('승계: 재공고가 index에 있으면 새 공고로 팔로우를 넘긴다', async () => {
+    const s = seedStore([sched(NB), sched(NEW)]);
+    put(s, nobid(NB, { status: 'found', found: { noticeNo: 'R26BK00000099', round: '000', title: 't', noticeId: NEW, foundAt: PAST, via: 'search' } }));
+    follow(s, NB, { final: PAST }, 'reannounce');
+    const g = fakeG2b(() => []);
+    await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(fj(s).entries[NB]).toBeUndefined();
+    expect(fj(s).entries[NEW]).toMatchObject({ noticeId: NEW, target: 'reannounce', notified: {} });
+    expect(rj(s).entries[NB]!.reannounce!.status).toBe('found');
+  });
+
+  it('승계: 원 공고가 no_bid가 아니거나 target이 reannounce가 아니면 팔로우를 그대로 둔다', async () => {
+    const s = seedStore([sched(NB), sched(NEW)]);
+    const found = { status: 'found', found: { noticeNo: 'R26BK00000099', round: '000', title: 't', noticeId: NEW, foundAt: PAST, via: 'search' } };
+    put(s, nobid(NB, found, { status: 'ranked', nextCheckAt: new Date(NOW.getTime() + 3600_000).toISOString() }));
+    follow(s, NB, {}, 'final');
+    const g = fakeG2b(() => []);
+    await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(fj(s).entries[NB]).toBeDefined();
+    expect(fj(s).entries[NEW]).toBeUndefined();
+  });
+
+  it('감시 기간(61일)을 넘기면 코드가 없어도 API 호출 없이 만료 처리한다', async () => {
+    const s = seedStore([sched(NB)]);
+    put(s, nobid(NB, { since: '2026-08-01T00:00:00+09:00', orgCode: undefined, opKind: undefined }));
+    follow(s, NB, {}, 'reannounce');
+    const g = fakeG2b(searching());
+    const r = await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(g.calls.filter((u) => u.includes('PPSSrch') || u.includes('inqryDiv=2'))).toHaveLength(0);
+    expect(rj(s).entries[NB]!.reannounce!.status).toBe('expired');
+    expect(r.events).toEqual([{ kind: 'reannounce_expired', noticeId: NB, title: `제목 ${NB}` }]);
+    expect(fj(s).entries[NB]).toBeUndefined();
+  });
+
+  it('nextFollowCheckAt은 팔로우 감시를 포함하고 비팔로우 감시는 포함하지 않는다', async () => {
+    const later = new Date(NOW.getTime() + 3 * 3600_000).toISOString();
+    const s = seedStore([sched(NB)]);
+    put(s, nobid(NB, { nextCheckAt: later }));
+    const g = fakeG2b(() => []);
+    expect((await runResultRefresh(deps(s, g.fetch), { mode: 'list' })).nextFollowCheckAt).toBeNull();
+    follow(s, NB, {}, 'reannounce');
+    expect((await runResultRefresh(deps(s, g.fetch), { mode: 'list' })).nextFollowCheckAt).toBe(later);
+  });
+
+  it('감시 루프는 투찰금액 백필보다 먼저 실행된다', async () => {
+    const s = seedStore([sched(NB), sched(R2)]);
+    put(s, nobid(NB), { noticeId: R2, noticeNo: R2.slice(0, 13), round: '000', status: 'lost', openingAt: PAST, startAt: PAST, attempts: 0, nextCheckAt: PAST });
+    const g = fakeG2b(searching([]));
+    await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    const search = g.calls.findIndex((u) => u.includes('PPSSrch'));
+    const backfill = g.calls.findIndex((u) => u.includes('OpengCompt') && u.includes('R26BK00000002'));
+    expect(search).toBeGreaterThanOrEqual(0);
+    expect(backfill).toBeGreaterThan(search);
+  });
+
+  it('비팔로우 found 항목은 알림 이벤트가 없어 startJob 경로를 타지 않는다', async () => {
+    const s = seedStore([sched(NB)]);
+    put(s, nobid(NB));
+    const g = fakeG2b(searching());
+    const r = await runResultRefresh(deps(s, g.fetch), { mode: 'list' });
+    expect(rj(s).entries[NB]!.reannounce!.status).toBe('found');
+    expect(r.events.filter((e) => e.kind === 'reannounce')).toEqual([]);
   });
 });

@@ -25,7 +25,7 @@ export class FollowStore {
         // 옛 파일(target 없음)은 final로 본다. 파일은 고쳐 쓰지 않는다.
         for (const [id, e] of Object.entries(f.entries)) {
           if (!e || typeof e !== 'object') { delete f.entries[id]; continue; } // 깨진 항목 하나로 파일 전체를 버리지 않는다
-          f.entries[id] = { ...e, target: e.target === 'rank' ? 'rank' : 'final' };
+          f.entries[id] = { ...e, target: e.target === 'rank' || e.target === 'reannounce' ? e.target : 'final' };
         }
         return f;
       }

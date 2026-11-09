@@ -1,5 +1,6 @@
 import { backoffMs } from '../../core/results/judge';
 import { newEntry } from '../../core/results/plan';
+import { REANNOUNCE_FIRST_DELAY_MS } from '../../core/results/limits';
 import { followNextCheckAt, followStartAt } from '../../core/results/schedule';
 import { kindOf } from '../../core/model/ids';
 import type { ISODate } from '../../core/types/common';
@@ -17,8 +18,11 @@ function minNext(results: ResultFile, follows: FollowFile): ISODate | null {
   let min: number | null = null;
   for (const id of Object.keys(follows.entries)) {
     const r = results.entries[id];
-    if (!r || RESULT_TERMINAL.has(r.status)) continue;
-    const t = Date.parse(r.nextCheckAt);
+    if (!r) continue;
+    // 재공고까지 팔로우의 감시 시각도 후보(비팔로우 감시는 넣지 않는다)
+    const w = follows.entries[id]!.target === 'reannounce' && r.status === 'no_bid' && r.reannounce?.status === 'watching' ? r.reannounce : null;
+    if (RESULT_TERMINAL.has(r.status) && !w) continue;
+    const t = Date.parse(w ? w.nextCheckAt : r.nextCheckAt);
     if (min === null || t < min) min = t;
   }
   return min === null ? null : new Date(min).toISOString();
@@ -47,7 +51,8 @@ export async function setFollow(
       const results = await rs.load();
       const follows = await fs.load();
       let r: ResultEntry | null = results.entries[p.noticeId] ?? null;
-      if (r && RESULT_TERMINAL.has(r.status)) throw err('FOLLOW_FINISHED', '이미 결과가 확정된 공고입니다.');
+      if (r && RESULT_TERMINAL.has(r.status) && !(r.status === 'no_bid' && target === 'reannounce')) throw err('FOLLOW_FINISHED', '이미 결과가 확정된 공고입니다.');
+      if (target === 'reannounce' && r?.status === 'no_bid' && r.reannounce?.status === 'found') throw err('FOLLOW_REANNOUNCED', '이미 재공고가 확인된 공고입니다. 재공고를 팔로우하세요.');
       if (target === 'rank' && r && r.status === 'ranked') throw err('FOLLOW_RANK_DONE', '이미 개찰 순위가 확인된 공고라 개찰 결과만 팔로우할 수 없습니다.');
       if (!r) {
         r = newEntry({ noticeId: entry.noticeId, noticeNo: entry.noticeNo, round: entry.round, openingAt: sch.openingAt, bidCloseAt: sch.bidCloseAt, proposalEvalAt: sch.proposalEvalAt });
@@ -57,6 +62,16 @@ export async function setFollow(
       if (sch.proposalEvalAt) next.proposalEvalAt = sch.proposalEvalAt;
       const nx = followNextCheckAt(next, t.getTime());
       if (nx !== null) next.nextCheckAt = new Date(nx).toISOString();
+      if (r.status === 'no_bid' && target === 'reannounce') {
+        // 유찰 공고를 재공고까지 팔로우하면 감시를 (다시) 시작한다. 이미 감시 중이면 시작을 앞당기기만 한다.
+        const first = new Date(t.getTime() + REANNOUNCE_FIRST_DELAY_MS).toISOString();
+        const w = r.reannounce;
+        if (!w || w.status === 'expired') {
+          next.reannounce = { status: 'watching', since: t.toISOString(), nextCheckAt: first, attempts: 0, ...(w?.orgCode ? { orgCode: w.orgCode } : {}), ...(w?.opKind ? { opKind: w.opKind } : {}) };
+        } else if (w.status === 'watching') {
+          next.reannounce = { ...w, nextCheckAt: Date.parse(first) < Date.parse(w.nextCheckAt) ? first : w.nextCheckAt };
+        }
+      }
       results.entries[p.noticeId] = next;
       results.updatedAt = t.toISOString();
       const cur = follows.entries[p.noticeId];
@@ -69,7 +84,7 @@ export async function setFollow(
       follows.updatedAt = t.toISOString();
       await rs.save(results);
       await fs.save(follows);
-      return { following: true, target, nextFollowCheckAt: minNext(results, follows), startAt };
+      return { following: true, target, nextFollowCheckAt: minNext(results, follows), startAt: next.status === 'no_bid' && next.reannounce ? next.reannounce.nextCheckAt : startAt };
     });
   }
 

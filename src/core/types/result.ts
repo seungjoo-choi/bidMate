@@ -58,15 +58,17 @@ export interface ResultEntry {
 }
 export interface ResultFile { schemaVersion: 1; bizNo: string; updatedAt: ISODate; entries: Record<string, ResultEntry> }
 
-export type FollowTarget = 'rank' | 'final';
+export type FollowTarget = 'rank' | 'final' | 'reannounce';
 export const FOLLOW_TARGET_DEFAULT: FollowTarget = 'final';
-export interface FollowEntry { noticeId: string; followedAt: ISODate; target: FollowTarget; notified: { rank?: ISODate; final?: ISODate } }
+export interface FollowEntry { noticeId: string; followedAt: ISODate; target: FollowTarget; notified: { rank?: ISODate; final?: ISODate; reannounce?: ISODate } }
 export interface FollowFile { schemaVersion: 1; updatedAt: ISODate; entries: Record<string, FollowEntry> }
 
 export type NotifyEvent =
   | { kind: 'rank'; noticeId: string; title: string; rank: number; bidders: number; followEnded?: true }  // followEnded: 개찰 결과만 팔로우라 이 알림으로 팔로우를 끝냄
-  | { kind: 'final'; noticeId: string; title: string; status: 'won' | 'lost' | 'not_participated' | 'no_bid'; rank?: number; winnerName?: string; inferred?: true }
-  | { kind: 'expired'; noticeId: string; title: string };
+  | { kind: 'final'; noticeId: string; title: string; status: 'won' | 'lost' | 'not_participated' | 'no_bid'; rank?: number; winnerName?: string; watchingReannounce?: true; inferred?: true }
+  | { kind: 'expired'; noticeId: string; title: string }
+  | { kind: 'reannounce'; noticeId: string; title: string; noticeNo: string; round: string; newTitle: string }
+  | { kind: 'reannounce_expired'; noticeId: string; title: string };
 
 export interface ResultRunSummary {
   ran: boolean; checked: number; updated: number; won: number;

@@ -3,11 +3,18 @@ import { g2bDetailOf, redactKey, type G2bContext } from '../../adapters/g2b/open
 import type { G2bFailureInput } from '../../core/diagnostics/g2b-failure';
 import type { JobError } from '../../core/types/job';
 import { normalizeBizNo } from '../../core/evaluation/company';
-import { applyOurAmount, judge, shouldFetchAward } from '../../core/results/judge';
-import { backfillTargets, latestBids, newEntry, planTargets, resetForBiz } from '../../core/results/plan';
-import { followNextCheckAt, followStartAt } from '../../core/results/schedule';
+import { applyOurAmount, backoffMs, judge, shouldFetchAward } from '../../core/results/judge';
+import { backfillTargets, latestBids, newEntry, planReannounce, planTargets, resetForBiz } from '../../core/results/plan';
+import { ensureWatches, linkCollected } from '../../core/results/reannounce';
+import { REANNOUNCE_CALL_BUDGET, REANNOUNCE_FIRST_DELAY_MS, REANNOUNCE_TRACK_DAYS, REANNOUNCE_WINDOW_DAYS } from '../../core/results/limits';
+import { followNextCheckAt, followStartAt, reannounceNextCheckAt } from '../../core/results/schedule';
+import { isStopError, searchReannounce } from '../../adapters/g2b/reannounce-api';
+import { fetchNotice } from '../../adapters/g2b/openapi';
+import { noticeIdOf } from '../../core/model/ids';
+import type { NoticeCodes, OpKind } from '../../core/types/org';
+import { readJson } from '../file-store/json-store';
 import type { IndexEntry } from '../../core/types/index-file';
-import { RESULT_TERMINAL, type FollowFile, type NotifyEvent, type ResultEntry, type ResultFile, type ResultRunSummary } from '../../core/types/result';
+import { RESULT_TERMINAL, type FollowFile, type NotifyEvent, type ReannounceWatch, type ResultEntry, type ResultFile, type ResultRunSummary } from '../../core/types/result';
 import { NoticeStore } from '../notices/notice-store';
 import type { IFileStore } from '../file-store/types';
 import { FollowStore } from './follow-store';
@@ -29,14 +36,18 @@ export interface ResultTrackerDeps {
 const isKeyError = (code: string): boolean => code === 'G2B_KEY_INVALID' || code === 'G2B_KEY_MISSING';
 const iso = (ms: number): string => new Date(ms).toISOString();
 const changed = (a: ResultEntry, b: ResultEntry): boolean =>
-  a.status !== b.status || a.rank !== b.rank || a.bidders !== b.bidders || a.winnerBizNo !== b.winnerBizNo || a.amount !== b.amount || a.ourAmount !== b.ourAmount;
+  a.status !== b.status || a.rank !== b.rank || a.bidders !== b.bidders || a.winnerBizNo !== b.winnerBizNo || a.amount !== b.amount || a.ourAmount !== b.ourAmount
+  || a.reannounce?.status !== b.reannounce?.status || a.reannounce?.found?.noticeNo !== b.reannounce?.found?.noticeNo;
 
 function minNext(results: ResultFile, follows: FollowFile): string | null {
   let min: number | null = null;
   for (const id of Object.keys(follows.entries)) {
     const r = results.entries[id];
-    if (!r || RESULT_TERMINAL.has(r.status)) continue;
-    const t = Date.parse(r.nextCheckAt);
+    if (!r) continue;
+    // 재공고까지 팔로우의 감시는 종료 상태(no_bid) 위에서도 다음 확인 시각 후보다. 비팔로우 감시는 넣지 않는다.
+    const w = follows.entries[id]!.target === 'reannounce' && r.status === 'no_bid' && r.reannounce?.status === 'watching' ? r.reannounce : null;
+    if (RESULT_TERMINAL.has(r.status) && !w) continue;
+    const t = Date.parse(w ? w.nextCheckAt : r.nextCheckAt);
     if (min === null || t < min) min = t;
   }
   return min === null ? null : iso(min);
@@ -103,6 +114,23 @@ async function run(deps: ResultTrackerDeps, mode: 'list' | 'follow', ours: strin
         delete follows.entries[id];
         followRemoved.add(id);
       }
+      // 재공고가 index에 들어오면 팔로우를 재공고로 넘긴다(원 공고 결과 항목은 found 그대로 둔다).
+      for (const id of Object.keys(follows.entries)) {
+        const f = follows.entries[id]!;
+        const found = results.entries[id]?.reannounce;
+        if (found?.status !== 'found' || !found.found) continue;
+        // 유찰 확정 + 재공고까지 팔로우만 승계한다. 그 밖의 팔로우는 그대로 둔다.
+        if (results.entries[id]!.status !== 'no_bid' || f.target !== 'reannounce') continue;
+        const newId = found.found.noticeId;
+        if (!byId.has(newId)) continue;
+        if (!follows.entries[newId]) {
+          follows.entries[newId] = { noticeId: newId, followedAt: t0.toISOString(), target: f.target, notified: {} };
+          followTouched.add(newId);
+          followMoved.set(newId, id);
+        }
+        delete follows.entries[id];
+        followRemoved.add(id);
+      }
       // 팔로우 공고의 일정이 바뀌었으면 startAt과 다음 확인 시각을 다시 잡는다.
       for (const id of Object.keys(follows.entries)) {
         const r = results.entries[id];
@@ -136,8 +164,30 @@ async function run(deps: ResultTrackerDeps, mode: 'list' | 'follow', ours: strin
       touched.add(e.noticeId);
     }
 
+    // 수집된 재공고를 원 공고에 잇는다(list 모드만, API 호출 없음). 추정 유찰이면 팔로우 공고에 알리고 해제한다.
+    if (mode === 'list') {
+      for (const id of ensureWatches(results, t0)) touched.add(id);
+      for (const { id, prevStatus } of linkCollected(index, results, t0)) {
+        touched.add(id);
+        const r = results.entries[id]!;
+        if (r.status !== 'no_bid' || prevStatus === 'no_bid') continue;
+        out.updated++;
+        const f = follows.entries[id];
+        if (!f) continue;
+        if (!f.notified.final) {
+          out.events.push({ kind: 'final', noticeId: id, title: byId.get(id)?.title ?? '', status: 'no_bid', inferred: true });
+          f.notified.final = t0.toISOString();
+          followTouched.add(id);
+        }
+        if (f.target !== 'reannounce') {
+          delete follows.entries[id];
+          followRemoved.add(id);
+        }
+      }
+    }
+
     const ctx: G2bContext = { serviceKey: deps.serviceKey, fetch: deps.fetch, now };
-    const fail = (stage: 'opening' | 'failing' | 'award', e: IndexEntry, err: JobError): void => {
+    const fail = (stage: 'opening' | 'failing' | 'codes' | 'reannounce' | 'award', e: IndexEntry, err: JobError): void => {
       const d = g2bDetailOf(err);
       try {
         deps.onFailure?.({
@@ -182,6 +232,9 @@ async function run(deps: ResultTrackerDeps, mode: 'list' | 'follow', ours: strin
         const nx = followNextCheckAt(entry, nt.getTime());
         if (nx !== null) entry = { ...entry, nextCheckAt: iso(nx) };
       }
+      if (entry.status === 'no_bid' && prev.status !== 'no_bid' && !entry.reannounce) {
+        entry = { ...entry, reannounce: { status: 'watching', since: nt.toISOString(), nextCheckAt: iso(nt.getTime() + REANNOUNCE_FIRST_DELAY_MS), attempts: 0 } };
+      }
       results.entries[id] = entry;
       touched.add(id);
       out.checked++;
@@ -197,15 +250,133 @@ async function run(deps: ResultTrackerDeps, mode: 'list' | 'follow', ours: strin
         }
         rankSeen.add(id); // 해제 여부는 저장 시점의 범위로 정한다(아래 finally)
       } else {
+        // 재공고까지 팔로우는 유찰되어도 해제하지 않고 재공고를 기다린다.
+        const keep = j.event === 'final' && entry.status === 'no_bid' && f.target === 'reannounce';
         if (!f.notified.final) {
           ev = j.event === 'expired'
             ? { kind: 'expired', noticeId: id, title: e.title }
-            : { kind: 'final', noticeId: id, title: e.title, status: entry.status as 'won' | 'lost' | 'not_participated' | 'no_bid', ...(entry.rank !== undefined ? { rank: entry.rank } : {}), ...(entry.winnerName ? { winnerName: entry.winnerName } : {}) };
+            : { kind: 'final', noticeId: id, title: e.title, status: entry.status as 'won' | 'lost' | 'not_participated' | 'no_bid', ...(entry.rank !== undefined ? { rank: entry.rank } : {}), ...(entry.winnerName ? { winnerName: entry.winnerName } : {}), ...(keep ? { watchingReannounce: true as const } : {}) };
+          f.notified.final = nt.toISOString();
+          followTouched.add(id);
         }
-        delete follows.entries[id]; // 결과 확정/종료는 자동 해제
-        followRemoved.add(id);
+        if (!keep) {
+          delete follows.entries[id]; // 결과 확정/종료는 자동 해제
+          followRemoved.add(id);
+        }
       }
       if (ev) out.events.push(ev);
+    }
+
+    // 재공고 감시: 유찰 공고의 재공고를 기간 검색으로 찾는다. 비팔로우는 list 모드에서만, 호출 예산 안에서.
+    if (out.skipped !== 'KEY_INVALID') {
+      const readCodes = async (e: IndexEntry): Promise<NoticeCodes | undefined> => {
+        try { return (await readJson<{ codes?: NoticeCodes }>(store, `${e.folder}/notice.json`))?.codes; } catch (err) { if (isPermission(err)) throw err; return undefined; }
+      };
+      const watchTick = async (id: string, followed: boolean): Promise<'stop' | { calls: number }> => {
+        const e = byId.get(id);
+        const r = results.entries[id];
+        let w: ReannounceWatch | undefined = r?.reannounce;
+        if (!e || !r || !w) return { calls: 0 };
+        const nt = now();
+        const ntMs = nt.getTime();
+        const f = follows.entries[id];
+        let calls = 0;
+        // 감시 기간을 넘겼으면 API 호출 없이 만료 처리한다.
+        if (ntMs - Date.parse(w.since) > REANNOUNCE_TRACK_DAYS * 86_400_000) {
+          results.entries[id] = { ...r, reannounce: { ...w, status: 'expired', checkedAt: nt.toISOString() } };
+          touched.add(id);
+          out.updated++;
+          if (followed && f) {
+            out.events.push({ kind: 'reannounce_expired', noticeId: id, title: e.title });
+            delete follows.entries[id];
+            followRemoved.add(id);
+          }
+          return { calls: 0 };
+        }
+        const commit = (nw: ReannounceWatch): void => { results.entries[id] = { ...r, reannounce: nw }; touched.add(id); };
+        const retryLater = (cur: ReannounceWatch, error: { code: string; message: string }): void => {
+          const attempts = cur.attempts + 1;
+          commit({ ...cur, attempts, checkedAt: nt.toISOString(), lastError: { code: error.code, message: error.message }, nextCheckAt: iso(ntMs + backoffMs(attempts)) });
+        };
+        const stopOn = (error: JobError): boolean => {
+          if (isKeyError(error.code)) { out.skipped = 'KEY_INVALID'; out.ran = false; return true; }
+          return isStopError(error);
+        };
+        // 1. 검색에 필요한 기관 코드 보충(notice.json, 그다음 공고정보 1회)
+        if (!w.orgCode || !w.opKind) {
+          const codes = await readCodes(e);
+          w = { ...w, ...(!w.orgCode && codes?.demandOrgCode ? { orgCode: codes.demandOrgCode } : {}), ...(!w.opKind && codes?.opKind ? { opKind: codes.opKind } : {}) };
+        }
+        if (!w.orgCode) {
+          calls++;
+          const nr = await fetchNotice(e.noticeNo, e.round, ctx);
+          if (nr.ok) {
+            const kind = /(Servc|Thng|Cnstwk|Frgcpt)/.exec(nr.operation)?.[1] as OpKind | undefined;
+            const org = (nr.item.dminsttCd ?? '').trim();
+            w = { ...w, ...(org ? { orgCode: org } : {}), ...(kind ? { opKind: kind } : {}) };
+          } else {
+            fail('codes', e, nr.error);
+            retryLater(w, nr.error);
+            return stopOn(nr.error) ? 'stop' : { calls };
+          }
+        }
+        if (!w.orgCode) { retryLater(w, { code: 'REANNOUNCE_NO_ORG', message: '수요기관 코드를 찾지 못했습니다.' }); return { calls }; }
+        // 2. 기간 검색
+        const res = await searchReannounce({
+          prevNoticeNo: e.noticeNo, prevTitle: e.title, orgCode: w.orgCode,
+          opKinds: w.opKind ? [w.opKind] : ['Servc', 'Thng', 'Cnstwk', 'Frgcpt'],
+          fromMs: Math.max(Date.parse(r.openingAt), ntMs - REANNOUNCE_WINDOW_DAYS * 86_400_000), toMs: ntMs,
+        }, ctx);
+        calls += res.calls;
+        if (!res.ok) {
+          fail('reannounce', e, res.error);
+          retryLater(w, res.error);
+          return stopOn(res.error) ? 'stop' : { calls };
+        }
+        const { lastError: _le, ...clean } = w;
+        if (res.hit) {
+          const h = res.hit;
+          const kind = res.opKind ?? w.opKind;
+          commit({
+            ...clean, status: 'found', checkedAt: nt.toISOString(), attempts: 0,
+            found: { noticeNo: h.noticeNo, round: h.round, title: h.title, noticeId: noticeIdOf({ noticeNo: h.noticeNo, round: h.round }), ...(h.postedAt ? { postedAt: h.postedAt } : {}), foundAt: nt.toISOString(), via: 'search' },
+            ...(kind ? { opKind: kind } : {}),
+          });
+          out.updated++;
+          if (followed && f && !f.notified.reannounce) {
+            out.events.push({ kind: 'reannounce', noticeId: id, title: e.title, noticeNo: h.noticeNo, round: h.round, newTitle: h.title });
+            f.notified.reannounce = nt.toISOString();
+            followTouched.add(id);
+          }
+          return { calls };
+        }
+        const attempts = w.attempts + 1;
+        const nx = reannounceNextCheckAt(w, ntMs, followed);
+        if (nx === null) {
+          commit({ ...clean, status: 'expired', attempts, checkedAt: nt.toISOString() });
+          out.updated++;
+          if (followed && f) {
+            out.events.push({ kind: 'reannounce_expired', noticeId: id, title: e.title });
+            delete follows.entries[id];
+            followRemoved.add(id);
+          }
+        } else {
+          commit({ ...clean, attempts, checkedAt: nt.toISOString(), nextCheckAt: iso(nx) });
+        }
+        return { calls };
+      };
+      const rplan = planReannounce({ index, results, follows, now: t0, mode });
+      let budget = REANNOUNCE_CALL_BUDGET;
+      let stopAll = false;
+      for (const [ids, followed] of [[rplan.followed, true], [rplan.general, false]] as Array<[string[], boolean]>) {
+        for (const id of ids) {
+          if (!followed && budget <= 0) break;
+          const tick = await watchTick(id, followed);
+          if (tick === 'stop') { stopAll = true; break; }
+          if (!followed) budget -= tick.calls;
+        }
+        if (stopAll) break;
+      }
     }
 
     // 투찰금액 백필: 1단계만 조회하고 상태는 바꾸지 않는다. 키 오류로 중단됐으면 건너뛴다.

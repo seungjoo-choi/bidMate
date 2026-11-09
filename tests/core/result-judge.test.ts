@@ -211,6 +211,11 @@ describe('plan', () => {
     expect(Object.values(f.entries)[0]!.rank).toBeUndefined();
   });
 
+  it('resetForBiz: reannounce도 제거', () => {
+    const f = resetForBiz(rf([prevOf({ status: 'no_bid', reannounce: { status: 'watching', since: 's', nextCheckAt: 'n', attempts: 0 } })], '0000000000'), OURS, NOW);
+    expect(Object.values(f.entries)[0]!.reannounce).toBeUndefined();
+  });
+
   it('resetForBiz: ourAmount와 amountCheckedAt도 제거', () => {
     const f = resetForBiz(rf([prevOf({ status: 'won', ourAmount: 5, amountCheckedAt: 'T' })], '0000000000'), OURS, NOW);
     const e = Object.values(f.entries)[0]!;

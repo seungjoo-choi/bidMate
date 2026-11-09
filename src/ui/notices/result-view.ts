@@ -1,12 +1,27 @@
 import { kindOf } from '../../core/model/ids';
 import type { IndexEntry } from '../../core/types/index-file';
-import { RESULT_TERMINAL, type FollowTarget } from '../../core/types/result';
+import { RESULT_TERMINAL, type FollowTarget, type ResultStatus } from '../../core/types/result';
 
 /** 낙찰 확정 여부. 1순위(ranked)는 낙찰이 아니다. */
 export const isWon = (e: Pick<IndexEntry, 'result'>): boolean => e.result?.status === 'won';
 
 /** 유찰 확정 여부. */
 export const isNoBid = (e: Pick<IndexEntry, 'result'>): boolean => e.result?.status === 'no_bid';
+
+export type NoticeBadge = 'won' | 'no_bid' | 'reannounced' | 'reannounce';
+export const BADGE_LABEL: Record<NoticeBadge, string> = { won: '낙찰', no_bid: '유찰', reannounced: '재공고 있음', reannounce: '재공고' };
+
+/** 공고에 붙는 배지. 낙찰이면 won, 유찰이면 no_bid(재공고가 확인되면 reannounced 추가), 재공고 쪽이면 맨 뒤에 reannounce. */
+export function noticeBadges(e: Pick<IndexEntry, 'result' | 'reannounceOf'>): NoticeBadge[] {
+  const out: NoticeBadge[] = [];
+  if (e.result?.status === 'won') out.push('won');
+  if (e.result?.status === 'no_bid') {
+    out.push('no_bid');
+    if (e.result.reannounce?.status === 'found') out.push('reannounced');
+  }
+  if (e.reannounceOf) out.push('reannounce');
+  return out;
+}
 
 export type ResultCell = { tone: 'ok' | 'warn' | 'idle'; text: string } | null;
 
@@ -26,30 +41,47 @@ export function resultCell(e: Pick<IndexEntry, 'result' | 'schedule' | 'kind'>, 
     case 'won': return { tone: 'ok', text: '낙찰' };
     case 'lost': return { tone: 'idle', text: r.rank ? `탈락(${r.rank}순위)` : '탈락' };
     case 'ranked': return { tone: 'idle', text: r.rank ? `${r.rank}순위` : '순위 확인 중' };
-    case 'no_bid': return { tone: 'warn', text: '유찰' };
+    case 'no_bid': return { tone: 'warn', text: r.reannounce?.status === 'found' ? '유찰, 재공고 있음' : '유찰' };
     case 'not_participated': return { tone: 'idle', text: '미참여' };
     case 'expired': return { tone: 'idle', text: '추적 종료' };
   }
 }
 
-export const FOLLOW_TARGET_LABEL: Record<FollowTarget, string> = { rank: '개찰 결과만', final: '낙찰까지' };
+export const FOLLOW_TARGET_LABEL: Record<FollowTarget, string> = { rank: '개찰 결과만', final: '낙찰까지', reannounce: '재공고까지' };
 
 export const isFollowing = (e: Pick<IndexEntry, 'following'>): boolean => e.following !== undefined;
 
 export type FollowAction = { follow: false } | { follow: true; target: FollowTarget };
 export interface FollowMenuItem { key: FollowTarget | 'off'; label: string; description?: string; warn?: boolean; checked?: boolean; disabled?: boolean; dividerBefore?: boolean }
 
-/** 별/버튼 메뉴 항목. following: 현재 범위(아니면 null). rankDone: result.status === 'ranked'. notify: 전역 알림 설정 */
-export function followMenuItems(following: FollowTarget | null, rankDone: boolean, notify: { rank: boolean; final: boolean }): FollowMenuItem[] {
-  const rank: FollowMenuItem = rankDone
-    ? { key: 'rank', label: FOLLOW_TARGET_LABEL.rank, description: '이미 개찰 순위가 확인된 공고입니다', disabled: true, checked: following === 'rank' }
-    : !notify.rank
-      ? { key: 'rank', label: FOLLOW_TARGET_LABEL.rank, description: '설정에서 개찰 순위 알림이 꺼져 있어 알림은 오지 않습니다', warn: true, checked: following === 'rank' }
-      : { key: 'rank', label: FOLLOW_TARGET_LABEL.rank, description: '순위가 나오면 알리고 팔로우를 끝냅니다', checked: following === 'rank' };
-  const final: FollowMenuItem = !notify.final
-    ? { key: 'final', label: FOLLOW_TARGET_LABEL.final, description: '설정에서 최종 결과 알림이 꺼져 있어 최종 결과 알림은 오지 않습니다', warn: true, checked: following === 'final' }
-    : { key: 'final', label: FOLLOW_TARGET_LABEL.final, description: '순위와 최종 결과를 모두 알립니다', checked: following === 'final' };
-  const items = [rank, final];
+/** 별/버튼 메뉴 항목. following: 현재 범위(아니면 null). result: 목록 파생 결과. notify: 전역 알림 설정 */
+export function followMenuItems(following: FollowTarget | null, result: IndexEntry['result'] | undefined, notify: { rank: boolean; final: boolean }): FollowMenuItem[] {
+  const status = result?.status;
+  const rankDone = status === 'ranked';
+  const noBid = status === 'no_bid';
+  const closed = status !== undefined && RESULT_TERMINAL.has(status);
+  const closedText = noBid ? '이미 유찰된 공고입니다' : '결과가 확정된 공고입니다';
+  const rank: FollowMenuItem = closed
+    ? { key: 'rank', label: FOLLOW_TARGET_LABEL.rank, description: closedText, disabled: true, checked: following === 'rank' }
+    : rankDone
+      ? { key: 'rank', label: FOLLOW_TARGET_LABEL.rank, description: '이미 개찰 순위가 확인된 공고입니다', disabled: true, checked: following === 'rank' }
+      : !notify.rank
+        ? { key: 'rank', label: FOLLOW_TARGET_LABEL.rank, description: '설정에서 개찰 순위 알림이 꺼져 있어 알림은 오지 않습니다', warn: true, checked: following === 'rank' }
+        : { key: 'rank', label: FOLLOW_TARGET_LABEL.rank, description: '순위가 나오면 알리고 팔로우를 끝냅니다', checked: following === 'rank' };
+  const final: FollowMenuItem = closed
+    ? { key: 'final', label: FOLLOW_TARGET_LABEL.final, description: closedText, disabled: true, checked: following === 'final' }
+    : !notify.final
+      ? { key: 'final', label: FOLLOW_TARGET_LABEL.final, description: '설정에서 최종 결과 알림이 꺼져 있어 최종 결과 알림은 오지 않습니다', warn: true, checked: following === 'final' }
+      : { key: 'final', label: FOLLOW_TARGET_LABEL.final, description: '순위와 최종 결과를 모두 알립니다', checked: following === 'final' };
+  const checked = following === 'reannounce';
+  const reannounce: FollowMenuItem = noBid && result?.reannounce?.status === 'found'
+    ? { key: 'reannounce', label: FOLLOW_TARGET_LABEL.reannounce, description: '이미 재공고가 확인된 공고입니다', disabled: true, checked }
+    : closed && !noBid
+      ? { key: 'reannounce', label: FOLLOW_TARGET_LABEL.reannounce, description: '결과가 확정된 공고입니다', disabled: true, checked }
+      : !notify.final
+        ? { key: 'reannounce', label: FOLLOW_TARGET_LABEL.reannounce, description: '설정에서 최종 결과 알림이 꺼져 있어 재공고 알림은 오지 않습니다', warn: true, checked }
+        : { key: 'reannounce', label: FOLLOW_TARGET_LABEL.reannounce, description: '유찰되면 재공고가 올라올 때까지 확인해 알립니다', checked };
+  const items = [rank, final, reannounce];
   if (following !== null) items.push({ key: 'off', label: '팔로우 해제', dividerBefore: true });
   return items;
 }
@@ -59,7 +91,11 @@ export type FollowButton = { visible: false } | { visible: true; disabled: boole
 /** 팔로우 버튼 상태. 사전규격은 그리지 않고, 결과가 확정된 공고는 비활성. */
 export function followButton(e: Pick<IndexEntry, 'kind' | 'result' | 'following'>): FollowButton {
   if (kindOf(e) === 'prespec') return { visible: false };
-  if (!e.following && e.result && RESULT_TERMINAL.has(e.result.status)) return { visible: true, disabled: true, reason: '결과가 확정된 공고입니다' };
+  if (!e.following && e.result && RESULT_TERMINAL.has(e.result.status)) {
+    // 유찰되고 재공고가 아직 확인되지 않은 공고는 재공고까지 팔로우할 수 있다.
+    if (e.result.status === 'no_bid' && e.result.reannounce?.status !== 'found') return { visible: true, disabled: false };
+    return { visible: true, disabled: true, reason: '결과가 확정된 공고입니다' };
+  }
   return { visible: true, disabled: false };
 }
 
@@ -82,6 +118,12 @@ export function formatCheckAt(iso: string | undefined | null, now: Date = new Da
 /** 목록 둘째 줄의 팔로우 안내. 팔로우 중이 아니면 null. */
 export function followHint(e: Pick<IndexEntry, 'following' | 'result'>, now: Date = new Date()): string | null {
   if (!e.following) return null;
+  if (e.following === 'reannounce' && e.result?.status === 'no_bid') {
+    const w = e.result.reannounce;
+    if (w?.status === 'watching') return '재공고 확인 중';
+    if (w?.status === 'found') return `재공고 ${w.noticeNo ?? ''} 확인됨`;
+    return null;
+  }
   const start = e.result?.startAt;
   if (start && Date.parse(start) > now.getTime()) return `${formatCheckAt(start, now)}부터 ${e.following === 'rank' ? '순위' : '결과'} 확인`;
   if (e.following === 'rank') return '순위 확인 중';
@@ -91,20 +133,27 @@ export function followHint(e: Pick<IndexEntry, 'following' | 'result'>, now: Dat
 
 export type TrackStep = { label: string; state: 'done' | 'now' | 'todo' };
 
-/** 상세 화면 결과 추적 줄. 낙찰까지는 3단계, 개찰 결과만은 2단계. */
+/** 상세 화면 결과 추적 줄. 낙찰까지는 3단계, 개찰 결과만은 2단계, 재공고까지는 4단계. */
 export function trackSteps(r: IndexEntry['result'] | undefined, now: Date = new Date(), target: FollowTarget = 'final'): TrackStep[] {
   const started = !!r?.startAt && Date.parse(r.startAt) <= now.getTime();
   const opening: TrackStep = started
     ? { label: '개찰', state: 'done' }
     : { label: r?.startAt ? `개찰 ${formatCheckAt(r.startAt, now)}` : '개찰 대기', state: 'now' };
+  const reannounceStep = (): TrackStep => {
+    const w = r?.status === 'no_bid' ? r.reannounce : undefined;
+    if (w?.status === 'found') return { label: `재공고 ${w.noticeNo ?? ''}`.trim(), state: 'done' };
+    return { label: '재공고', state: w?.status === 'watching' ? 'now' : 'todo' };
+  };
   if (r?.status === 'ranked') {
     const rank = r.rank !== undefined ? `우리 ${r.rank}위${r.bidders ? ` / ${r.bidders}개사` : ''}` : '순위 확인';
     const steps: TrackStep[] = [{ label: '개찰', state: 'done' }, { label: rank, state: 'done' }];
     if (target !== 'rank') steps.push({ label: '최종 낙찰 대기', state: 'now' });
+    if (target === 'reannounce') steps.push(reannounceStep());
     return steps;
   }
-  const steps: TrackStep[] = [opening, { label: started ? '순위 발표 대기' : '순위 발표', state: started ? 'now' : 'todo' }];
-  if (target !== 'rank') steps.push({ label: '최종 결과', state: 'todo' });
+  const steps: TrackStep[] = [opening, { label: started ? '순위 발표 대기' : '순위 발표', state: r?.status === 'no_bid' ? 'done' : started ? 'now' : 'todo' }];
+  if (target !== 'rank') steps.push(r?.status === 'no_bid' ? { label: '유찰', state: 'done' } : { label: '최종 결과', state: 'todo' });
+  if (target === 'reannounce') steps.push(reannounceStep());
   return steps;
 }
 
@@ -114,6 +163,7 @@ export function followErrorText(code: string | undefined, message?: string): str
     case 'FOLLOW_NO_SCHEDULE': return '개찰일시나 제안서 평가일시가 없어 팔로우할 수 없습니다';
     case 'FOLLOW_FINISHED': return '이미 결과가 확정된 공고입니다';
     case 'FOLLOW_UNSUPPORTED': return '사전규격은 팔로우할 수 없습니다';
+    case 'FOLLOW_REANNOUNCED': return '이미 재공고가 확인된 공고입니다. 재공고를 팔로우하세요';
     case 'FOLLOW_RANK_DONE': return '이미 개찰 순위가 확인된 공고라 개찰 결과만 팔로우할 수 없습니다';
     case 'FOLLOW_BAD_TARGET': return '팔로우 범위가 올바르지 않습니다';
     case 'NEEDS_FS_PERMISSION': return '저장 폴더 권한이 필요합니다. 설정에서 폴더를 다시 승인하세요';
@@ -121,10 +171,17 @@ export function followErrorText(code: string | undefined, message?: string): str
   }
 }
 
-/** 팔로우 적용 직후 마스코트 토스트. next: 적용 후 범위(해제면 null), prev: 적용 전 범위 */
-export function followToastParts(next: FollowTarget | null, prev: FollowTarget | null, startAt: string | null, now: Date = new Date()): { title: string; text: string; mood: 'happy' | 'idle' } {
+/** 팔로우 적용 직후 마스코트 토스트. next: 적용 후 범위(해제면 null), prev: 적용 전 범위, status: 공고의 결과 상태 */
+export function followToastParts(next: FollowTarget | null, prev: FollowTarget | null, startAt: string | null, now: Date = new Date(), status?: ResultStatus): { title: string; text: string; mood: 'happy' | 'idle' } {
   if (next === null) return { title: '팔로우를 해제했습니다', text: '이 공고의 결과 알림을 더 보내지 않아요', mood: 'idle' };
+  if (next === 'reannounce') {
+    if (status === 'no_bid') return { title: '팔로우했습니다', text: '재공고가 올라오면 알려 드릴게요', mood: 'happy' };
+    if (prev !== null && prev !== next) return { title: '팔로우 범위를 바꿨습니다', text: '유찰이면 재공고까지 알려 드릴게요', mood: 'happy' };
+    const future = !!startAt && Date.parse(startAt) > now.getTime();
+    return { title: '팔로우했습니다', text: future ? `${formatCheckAt(startAt, now)}부터 확인해 낙찰까지 알리고 유찰이면 재공고까지 알려 드릴게요` : '낙찰까지 알리고 유찰이면 재공고까지 알려 드릴게요', mood: 'happy' };
+  }
   if (prev !== null && prev !== next) {
+    if (prev === 'reannounce' && next === 'final') return { title: '팔로우 범위를 바꿨습니다', text: '최종 결과까지만 알려 드릴게요', mood: 'happy' };
     return { title: '팔로우 범위를 바꿨습니다', text: next === 'final' ? '최종 결과까지 알려 드릴게요' : '개찰 순위까지만 알리고 팔로우를 끝낼게요', mood: 'happy' };
   }
   const future = !!startAt && Date.parse(startAt) > now.getTime();

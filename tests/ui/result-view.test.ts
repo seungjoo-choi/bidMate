@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IndexEntry } from '../../src/core/types/index-file';
-import { followButton, followErrorText, followHint, followMenuItems, followToastParts, formatCheckAt, formatPercent, formatWonShort, isFollowing, isNoBid, isWon, resultCell, trackSteps } from '../../src/ui/notices/result-view';
+import { followButton, followErrorText, followHint, followMenuItems, followToastParts, formatCheckAt, formatPercent, formatWonShort, isFollowing, isNoBid, isWon, noticeBadges, resultCell, trackSteps } from '../../src/ui/notices/result-view';
 
 // 2026-10-20(화) 12:00 로컬
 const NOW = new Date(2026, 9, 20, 12, 0);
@@ -54,25 +54,25 @@ describe('isFollowing', () => {
 describe('followMenuItems', () => {
   const on = { rank: true, final: true };
   it('팔로우 아님: 두 항목, 체크 없음, 기본 문구', () => {
-    const items = followMenuItems(null, false, on);
-    expect(items.map((i) => i.key)).toEqual(['rank', 'final']);
+    const items = followMenuItems(null, undefined, on);
+    expect(items.map((i) => i.key)).toEqual(['rank', 'final', 'reannounce']);
     expect(items.every((i) => !i.checked)).toBe(true);
     expect(items[0]!.description).toBe('순위가 나오면 알리고 팔로우를 끝냅니다');
     expect(items[1]!.description).toBe('순위와 최종 결과를 모두 알립니다');
   });
   it('팔로우 중: 현재 범위 체크, 해제 항목은 구분선', () => {
-    const items = followMenuItems('final', false, on);
+    const items = followMenuItems('final', undefined, on);
     expect(items.find((i) => i.key === 'final')!.checked).toBe(true);
     expect(items.find((i) => i.key === 'off')).toMatchObject({ label: '팔로우 해제', dividerBefore: true });
   });
   it('순위 확인된 공고는 개찰 결과만 비활성', () => {
-    expect(followMenuItems('final', true, on)[0]).toMatchObject({ disabled: true, description: '이미 개찰 순위가 확인된 공고입니다' });
+    expect(followMenuItems('final', { status: 'ranked' }, on)[0]).toMatchObject({ disabled: true, description: '이미 개찰 순위가 확인된 공고입니다' });
   });
   it('전역 알림이 꺼져 있으면 설명만 경고', () => {
-    const a = followMenuItems(null, false, { rank: false, final: true });
+    const a = followMenuItems(null, undefined, { rank: false, final: true });
     expect(a[0]).toMatchObject({ warn: true, description: '설정에서 개찰 순위 알림이 꺼져 있어 알림은 오지 않습니다' });
     expect(a[0]!.disabled).toBeFalsy();
-    const b = followMenuItems(null, false, { rank: true, final: false });
+    const b = followMenuItems(null, undefined, { rank: true, final: false });
     expect(b[1]).toMatchObject({ warn: true, description: '설정에서 최종 결과 알림이 꺼져 있어 최종 결과 알림은 오지 않습니다' });
   });
 });
@@ -160,5 +160,82 @@ describe('isNoBid', () => {
     expect(isNoBid({ result: { status: 'no_bid' } })).toBe(true);
     expect(isNoBid({ result: { status: 'won' } })).toBe(false);
     expect(isNoBid({})).toBe(false);
+  });
+});
+
+describe('noticeBadges와 재공고 셀', () => {
+  it('낙찰, 유찰, 재공고 있음, 재공고 배지', () => {
+    expect(noticeBadges({ result: { status: 'won' } })).toEqual(['won']);
+    expect(noticeBadges({ result: { status: 'no_bid' } })).toEqual(['no_bid']);
+    expect(noticeBadges({ result: { status: 'no_bid', reannounce: { status: 'found' } } })).toEqual(['no_bid', 'reannounced']);
+    expect(noticeBadges({ reannounceOf: 'R1' })).toEqual(['reannounce']);
+    expect(noticeBadges({ result: { status: 'no_bid', reannounce: { status: 'found' } }, reannounceOf: 'R1' })).toEqual(['no_bid', 'reannounced', 'reannounce']);
+    expect(noticeBadges({})).toEqual([]);
+  });
+  it('재공고가 확인된 유찰 셀', () => {
+    expect(resultCell({ result: { status: 'no_bid', reannounce: { status: 'found' } } })).toEqual({ tone: 'warn', text: '유찰, 재공고 있음' });
+    expect(resultCell({ result: { status: 'no_bid', reannounce: { status: 'watching' } } })).toEqual({ tone: 'warn', text: '유찰' });
+  });
+});
+
+describe('followMenuItems 재공고까지', () => {
+  const on = { rank: true, final: true };
+  it('유찰이면 개찰 결과만과 낙찰까지는 비활성, 재공고까지는 활성', () => {
+    const items = followMenuItems(null, { status: 'no_bid', reannounce: { status: 'watching' } }, on);
+    expect(items[0]).toMatchObject({ disabled: true, description: '이미 유찰된 공고입니다' });
+    expect(items[1]).toMatchObject({ disabled: true, description: '이미 유찰된 공고입니다' });
+    expect(items[2]).toMatchObject({ key: 'reannounce', label: '재공고까지', description: '유찰되면 재공고가 올라올 때까지 확인해 알립니다' });
+    expect(items[2]!.disabled).toBeFalsy();
+  });
+  it('재공고가 확인된 유찰이면 재공고까지도 비활성', () => {
+    expect(followMenuItems(null, { status: 'no_bid', reannounce: { status: 'found' } }, on)[2]).toMatchObject({ disabled: true, description: '이미 재공고가 확인된 공고입니다' });
+  });
+  it('탈락이면 전부 비활성', () => {
+    const items = followMenuItems(null, { status: 'lost' }, on);
+    expect(items.map((i) => i.disabled)).toEqual([true, true, true]);
+    expect(items[0]!.description).toBe('결과가 확정된 공고입니다');
+    expect(items[2]!.description).toBe('결과가 확정된 공고입니다');
+  });
+  it('최종 결과 알림이 꺼져 있으면 재공고까지에 경고', () => {
+    expect(followMenuItems(null, undefined, { rank: true, final: false })[2]).toMatchObject({ warn: true, description: '설정에서 최종 결과 알림이 꺼져 있어 재공고 알림은 오지 않습니다' });
+  });
+  it('재공고까지 팔로우 중이면 체크와 해제 항목', () => {
+    const items = followMenuItems('reannounce', undefined, on);
+    expect(items[2]!.checked).toBe(true);
+    expect(items.map((i) => i.key)).toEqual(['rank', 'final', 'reannounce', 'off']);
+  });
+});
+
+describe('재공고 팔로우 표시', () => {
+  it('followButton: 유찰은 활성, 재공고 확인된 유찰은 비활성', () => {
+    expect(followButton({ result: { status: 'no_bid' } })).toEqual({ visible: true, disabled: false });
+    expect(followButton({ result: { status: 'no_bid', reannounce: { status: 'watching' } } })).toEqual({ visible: true, disabled: false });
+    expect(followButton({ result: { status: 'no_bid', reannounce: { status: 'found' } } })).toMatchObject({ visible: true, disabled: true });
+  });
+  it('followHint: 확인 중, 확인됨, 종료', () => {
+    expect(followHint({ following: 'reannounce', result: { status: 'no_bid', reannounce: { status: 'watching' } } })).toBe('재공고 확인 중');
+    expect(followHint({ following: 'reannounce', result: { status: 'no_bid', reannounce: { status: 'found', noticeNo: 'R26BK00000002' } } })).toBe('재공고 R26BK00000002 확인됨');
+    expect(followHint({ following: 'reannounce', result: { status: 'no_bid', reannounce: { status: 'expired' } } })).toBeNull();
+  });
+  it('trackSteps: 재공고까지는 4단계', () => {
+    const watching = trackSteps({ status: 'no_bid', startAt: at(19, 14), reannounce: { status: 'watching' } }, NOW, 'reannounce');
+    expect(watching).toEqual([
+      { label: '개찰', state: 'done' }, { label: '순위 발표 대기', state: 'done' }, { label: '유찰', state: 'done' }, { label: '재공고', state: 'now' },
+    ]);
+    const found = trackSteps({ status: 'no_bid', startAt: at(19, 14), reannounce: { status: 'found', noticeNo: 'R26BK00000002' } }, NOW, 'reannounce');
+    expect(found[3]).toEqual({ label: '재공고 R26BK00000002', state: 'done' });
+    expect(trackSteps({ status: 'waiting', startAt: at(23, 14) }, NOW, 'reannounce')).toHaveLength(4);
+    expect(trackSteps({ status: 'waiting', startAt: at(23, 14) }, NOW, 'reannounce')[3]).toEqual({ label: '재공고', state: 'todo' });
+  });
+  it('followErrorText: FOLLOW_REANNOUNCED', () => {
+    expect(followErrorText('FOLLOW_REANNOUNCED')).toBe('이미 재공고가 확인된 공고입니다. 재공고를 팔로우하세요');
+  });
+  it('followToastParts: 재공고까지 4경우', () => {
+    const now = new Date('2026-10-21T12:00:00+09:00');
+    expect(followToastParts('reannounce', null, null, now, 'no_bid')).toEqual({ title: '팔로우했습니다', text: '재공고가 올라오면 알려 드릴게요', mood: 'happy' });
+    expect(followToastParts('reannounce', null, '2026-10-23T11:00:00+09:00', now).text).toMatch(/부터 확인해 낙찰까지 알리고 유찰이면 재공고까지 알려 드릴게요$/);
+    expect(followToastParts('reannounce', null, null, now).text).toBe('낙찰까지 알리고 유찰이면 재공고까지 알려 드릴게요');
+    expect(followToastParts('reannounce', 'final', null, now)).toMatchObject({ title: '팔로우 범위를 바꿨습니다', text: '유찰이면 재공고까지 알려 드릴게요' });
+    expect(followToastParts('final', 'reannounce', null, now).text).toBe('최종 결과까지만 알려 드릴게요');
   });
 });

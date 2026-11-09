@@ -535,3 +535,30 @@ describe('runCollectJob 상세화면 전문(pageText)', () => {
     expect(noticeOf(second.store).detailText?.chars).toBe(pageHtml.pageText.length);
   });
 });
+
+describe('runCollectJob 재공고 연결 필드', () => {
+  const run = async (extra: Record<string, string>) => {
+    const store = new MemoryStore();
+    const f = vi.fn(async (url: string) => (String(url).includes('apis.data.go.kr') ? new Response(apiBody({ ...baseItem, ...extra })) : new Response('', { status: 404 })));
+    const { d } = deps(store, f);
+    await runCollectJob(input(), d);
+    const ns = new NoticeStore(store);
+    const idx = await ns.loadIndex();
+    const notice = await ns.loadNotice(idx.notices[0]!.noticeId);
+    return { notice: notice!, entry: idx.notices[0]! };
+  };
+
+  it('재공고 응답이면 reannounceOf와 codes를 저장한다', async () => {
+    const { notice, entry } = await run({ reNtceYn: 'Y', befBidBbancNo: 'R1', dminsttCd: 'B553501' });
+    expect(notice.reannounceOf).toBe('R1');
+    expect(notice.codes?.demandOrgCode).toBe('B553501');
+    expect(notice.codes?.opKind).toBe('Servc');
+    expect(entry.reannounceOf).toBe('R1');
+  });
+
+  it('reNtceYn이 N이면 reannounceOf가 없다', async () => {
+    const { notice, entry } = await run({ reNtceYn: 'N', befBidBbancNo: 'R1' });
+    expect(notice.reannounceOf).toBeUndefined();
+    expect('reannounceOf' in entry).toBe(false);
+  });
+});

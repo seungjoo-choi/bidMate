@@ -23,7 +23,7 @@ import { batchActive, batchBlockReason, batchModeNote, headerToggle, needsPaidCo
 import { dDayLevel, formatDDay, formatDate, formatDateTime, isDueSoon, isPast } from '../../ui/review/format';
 import { AiBatchPanel } from './AiBatchPanel';
 import { FollowMenu, useFollowToggle } from './FollowToggle';
-import { followButton, followHint, type FollowAction, isFollowing, isNoBid, isWon, resultCell } from '../../ui/notices/result-view';
+import { followButton, followHint, type FollowAction, isFollowing, isNoBid, isWon, noticeBadges, resultCell, BADGE_LABEL } from '../../ui/notices/result-view';
 import { type EvalBatchState, runEvalBatch, selectableForEval } from '../../ui/notices/eval-fetch-view';
 import { PageTitle } from './menu';
 import { SearchButton } from './search/SearchButton';
@@ -121,7 +121,7 @@ export function NoticesPage() {
 
   const notify = settings?.notify ?? { rank: true, final: true };
   const applyFollow = async (n: IndexEntry, action: FollowAction) => {
-    const r = await follow.apply(n.noticeId, action, n.following ?? null);
+    const r = await follow.apply(n.noticeId, action, n.following ?? null, n.result?.status);
     if (r.ok) toast.show(r.body, { mascot: r.mood, title: r.title });
     else toast.show(r.text);
     if (!r.ok) return;
@@ -447,6 +447,7 @@ export function NoticesPage() {
                     <div className={`mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 pl-[26px] text-sm text-muted`}>
                       <span className="min-w-0 truncate font-mono">{noticeLabel(n)}</span>
                       {kindOf(n) === 'prespec' && <span className="shrink-0"><StatusBadge status="idle">사전규격</StatusBadge></span>}
+                      {noticeBadges(n).includes('reannounce') && <span className="shrink-0"><StatusBadge status="idle">{BADGE_LABEL.reannounce}</StatusBadge></span>}
                       {hint && (
                         <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-star">
                           <BellRing className="size-3.5" aria-hidden />{hint}
@@ -470,7 +471,7 @@ export function NoticesPage() {
                     )}
                   </div>
                   {fb.visible
-                    ? <FollowMenu variant="star" following={n.following ?? null} rankDone={n.result?.status === 'ranked'} notify={notify} busy={follow.isBusy(n.noticeId)} disabled={fb.disabled} reason={fb.reason} title={n.title} onSelect={(a) => void applyFollow(n, a)} />
+                    ? <FollowMenu variant="star" following={n.following ?? null} result={n.result} notify={notify} busy={follow.isBusy(n.noticeId)} disabled={fb.disabled} reason={fb.reason} title={n.title} onSelect={(a) => void applyFollow(n, a)} />
                     : <div />}
                 </div>
               );

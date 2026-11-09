@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { followNextCheckAt, followStartAt, isKstWeekday, kstParts, nextKstSlot } from '../../src/core/results/schedule';
+import { followNextCheckAt, followStartAt, isKstWeekday, kstParts, nextKstSlot, reannounceNextCheckAt } from '../../src/core/results/schedule';
 
 const kst = (s: string): number => Date.parse(`${s}+09:00`);
 const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17];
@@ -35,5 +35,20 @@ describe('schedule', () => {
     expect(followNextCheckAt({ status: 'waiting', startAt }, s + 6 * 60 * MIN)).toBe(kst('2026-10-21T17:00:00')); // 16:00 다음 정시
     expect(followNextCheckAt({ status: 'ranked', startAt }, kst('2026-10-23T17:01:00'))).toBe(kst('2026-10-26T10:00:00'));
     expect(followNextCheckAt({ status: 'ranked', startAt }, kst('2026-10-21T11:00:00'))).toBe(kst('2026-10-21T14:00:00'));
+  });
+
+  it('reannounceNextCheckAt 규칙', () => {
+    const since = kst('2026-10-01T00:00:00');
+    const w = { status: 'watching' as const, since: new Date(since).toISOString() };
+    expect(reannounceNextCheckAt(w, kst('2026-10-21T12:10:00'), true)).toBe(kst('2026-10-21T15:00:00')); // 수
+    expect(reannounceNextCheckAt(w, kst('2026-10-23T15:30:00'), true)).toBe(kst('2026-10-26T10:00:00')); // 금 -> 월
+    expect(reannounceNextCheckAt(w, kst('2026-10-21T10:00:00'), true)).toBe(kst('2026-10-21T15:00:00')); // 정각은 다음 칸
+    const now = kst('2026-10-21T12:10:00');
+    expect(reannounceNextCheckAt(w, now, false)).toBe(now + 24 * 60 * MIN);
+    const late = since + 61 * 86_400_000;
+    expect(reannounceNextCheckAt(w, late, true)).toBeNull();
+    expect(reannounceNextCheckAt(w, late, false)).toBeNull();
+    expect(reannounceNextCheckAt({ ...w, status: 'found' }, now, true)).toBeNull();
+    expect(reannounceNextCheckAt({ ...w, status: 'expired' }, now, false)).toBeNull();
   });
 });
