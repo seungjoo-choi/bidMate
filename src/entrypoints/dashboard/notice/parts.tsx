@@ -67,6 +67,7 @@ export function Timeline({ points }: { points: Milestone[] }) {
             {p.label}<Mark mark={p.mark} />
           </div>
           <div className={`mt-0.5 font-mono text-sm tabular-nums ${p.state === 'done' ? 'text-faint' : 'text-muted'}`}>{p.when}</div>
+          {p.sub && <div className="mt-0.5 truncate font-mono text-xs text-faint tabular-nums">{p.sub}</div>}
           {p.state === 'next' && p.dday && <div className="mt-1 font-mono text-xs font-bold text-accent">{p.dday}</div>}
         </li>
       ))}

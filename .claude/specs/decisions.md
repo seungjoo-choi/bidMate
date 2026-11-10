@@ -945,3 +945,16 @@ S0 실측 2차(2026-10-20): 2단계는 inqryDiv=4 + bidNtceNo로 성공. 용역 
 
 S0 실측(유찰): (실측 후 기록) 유찰 목록 op 이름, inqryDiv, keys, 1단계 유찰 공고 응답 형태(0건 또는 "유찰" 행), 2단계 0건 여부, 재입찰 공고의 1차 유찰 기록 유무.
 S0 실측(기간 검색): (실측 후 기록) PPSSrch op 성공 여부, keys에 befBidBbancNo와 reNtceYn 포함 여부, inqryDiv 의미, 기간 상한, 한도 초과 오류 코드와 메시지.
+
+## 2026-11-09 계약과정 진행 단계 표시 (Fable 설계, 사용자 선택: 공고 상세에 단계 줄)
+| 결정 | 이유 | 기각 대안 |
+|---|---|---|
+| 계약과정통합공개서비스(`ao/CntrctProcssIntgOpenService/getCntrctProcssIntgOpen{Servc,Thng,Cnstwk,Frgcpt}`, inqryDiv=1, bidNtceNo)를 공고 상세 개요 탭을 열 때 1회 조회, "다시 조회" 수동 | 사용자가 볼 때만 필요, 일일 한도 보호 | 결과 추적 주기에 합침 / 목록 일괄 |
+| 캐시는 공고 폴더 `process.json`(offscreen 작성), 마지막 차수에 계약이 있으면 재조회 안 함, 없으면 12시간 TTL | 탭 전환 remount 흡수, 계약 후 불변. results.json은 결과 추적 파생 캐시라 분리 | results.json 필드 / 캐시 없음 |
+| 결과 추적(judge, 알림)과 병행, 판정에 불참여. 읽기 전용 표시 | 낙찰 판정 규칙(2단계 낙찰정보 기준)을 바꾸지 않음 | judge 입력 추가 / 2단계 API 대체 |
+| 빈 차수는 "유찰"로 표기하지 않음. 낙찰/계약은 마지막 차수 기준 | 정정공고도 이전 차수는 비어 있음. 유찰 판정은 no-bid-reannounce 규칙 담당 | 000차 빈 낙찰 = 유찰 |
+| 대표자명(bidwinrInfoList 4번째 칸)과 raw 응답 미저장 | 개인정보 | 원본 보관 |
+| 별도 카드 "계약 진행", Timeline 재사용(Milestone.sub 추가), 차수마다 공고 점, 계약 여러 건은 점 1개 + 건별 행 | 일정 타임라인의 next 강조/마감 알림과 분리 | 일정 타임라인에 합침 |
+| op는 Servc→Thng→Cnstwk→Frgcpt 순회 후 성공 op 기억. 4개 이름 모두 실측 확인(2026-11-09) | fetchAward listOp 규칙과 동일 | 업무구분 추정 |
+| 사전규격 공고는 relatedBidNo가 있을 때만 그 번호로 조회, 없으면 카드 숨김 | bfSpecRgstNo 조회 inqryDiv 미확인 | bfSpecRgstNo 조회 |
+| 실패 기록 flow `process` 추가 | 기존 g2b-failure 경로 재사용 | flow result 재사용 |

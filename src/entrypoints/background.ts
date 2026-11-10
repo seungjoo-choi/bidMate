@@ -5,6 +5,7 @@ import { registerNaverworksContacts } from '../background/naverworks-contacts';
 import { registerEvalCollector } from '../background/eval-collector';
 import { registerDeadlineScheduler } from '../background/deadline-scheduler';
 import { registerOrgRelay } from '../background/org-relay';
+import { registerProcessRelay } from '../background/process-relay';
 import { registerResultScheduler } from '../background/result-scheduler';
 import { registerDetailReader } from '../background/detail-reader';
 import { registerG2bFailures } from '../background/g2b-failures';
@@ -32,6 +33,7 @@ export default defineBackground({
     registerEvalCollector();
     registerResultScheduler();
     registerOrgRelay();
+    registerProcessRelay();
     registerDeadlineScheduler();
     registerSiteRegistry();
     registerNoticeDelete();

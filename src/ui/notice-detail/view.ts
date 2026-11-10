@@ -374,7 +374,7 @@ export function overviewStats(n: Notice, now: Date = new Date()): StatItem[] {
 }
 
 /** 일정 타임라인의 한 지점. done=지남, next=다음에 올 지점(하나), upcoming=그 뒤 */
-export interface Milestone { key: string; label: string; when: string; dday: string | null; state: 'done' | 'next' | 'upcoming'; mark?: DetailRow['mark'] }
+export interface Milestone { key: string; label: string; when: string; dday: string | null; sub?: string; state: 'done' | 'next' | 'upcoming'; mark?: DetailRow['mark'] }
 
 export function scheduleTimeline(n: Notice, now: Date = new Date()): Milestone[] {
   const s = n.schedule;

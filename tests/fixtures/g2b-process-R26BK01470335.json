@@ -1,0 +1,59 @@
+{"response": {
+  "header": {
+    "resultCode": "00",
+    "resultMsg": "정상"
+  },
+  "body": {
+    "items": [
+      {
+        "orderPlanNo": "R26DD20731442",
+        "orderPlanUntyNo": "R26DD20731442",
+        "orderBizNm": "2026년 배수펌프장 운영관리(상주 전기안전관리) 용역",
+        "orderInsttNm": "경기도 광주시",
+        "orderYm": "2026-04",
+        "prcrmntMethdNm": "자체조달",
+        "cntrctCnclsMthdNm": "제한경쟁",
+        "bfSpecRgstNo": "R26BD00205777",
+        "bfSpecBizNm": "2026년 배수펌프장 운영관리(상주 전기안전관리) 용역",
+        "bfSpecDminsttNm": "경기도 광주시",
+        "bfSpecNtceInsttNm": "경기도 광주시",
+        "opninRgstClseDt": "2026-04-05 23:59:00",
+        "bidNtceNo": "R26BK01470335",
+        "bidNtceOrd": "000",
+        "prcrmntReqNo": "",
+        "bidNtceNm": "2026년 배수펌프장 운영관리(상주 전기안전관리) 용역",
+        "bidDminsttNm": "경기도 광주시",
+        "bidMthdNm": "전자입찰",
+        "bidNtceDt": "2026-04-16 15:06:07",
+        "bidwinrInfoList": "",
+        "cntrctInfoList": ""
+      },
+      {
+        "orderPlanNo": "R26DD20731442",
+        "orderPlanUntyNo": "R26DD20731442",
+        "orderBizNm": "2026년 배수펌프장 운영관리(상주 전기안전관리) 용역",
+        "orderInsttNm": "경기도 광주시",
+        "orderYm": "2026-04",
+        "prcrmntMethdNm": "자체조달",
+        "cntrctCnclsMthdNm": "제한경쟁",
+        "bfSpecRgstNo": "R26BD00205777",
+        "bfSpecBizNm": "2026년 배수펌프장 운영관리(상주 전기안전관리) 용역",
+        "bfSpecDminsttNm": "경기도 광주시",
+        "bfSpecNtceInsttNm": "경기도 광주시",
+        "opninRgstClseDt": "2026-04-05 23:59:00",
+        "bidNtceNo": "R26BK01470335",
+        "bidNtceOrd": "001",
+        "prcrmntReqNo": "",
+        "bidNtceNm": "2026년 배수펌프장 운영관리(상주 전기안전관리) 용역",
+        "bidDminsttNm": "경기도 광주시",
+        "bidMthdNm": "전자입찰",
+        "bidNtceDt": "2026-04-16 16:26:09",
+        "bidwinrInfoList": "[1^주식회사 티에스산업^1308190194^홍길동^209487800^86.869^30^2026-04-24 11:00:00]",
+        "cntrctInfoList": "[1^R26TA0182919201^2026년 배수펌프장 운영관리(상주 전기안전관리) 용역^경기도 광주시^경기도 광주시^제한경쟁^199180500^2026-06-10],[2^R26TA0182919200^2026년 배수펌프장 운영관리(상주 전기안전관리) 용역^경기도 광주시^경기도 광주시^제한경쟁^209487800^2026-05-06]"
+      }
+    ],
+    "numOfRows": 50,
+    "pageNo": 1,
+    "totalCount": 2
+  }
+}}

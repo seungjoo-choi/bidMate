@@ -20,6 +20,7 @@ import type { OrgProbeParams, OrgProbeResult } from '../adapters/g2b/org-api';
 import type { EvalIndexEntry, EvalRecord } from '../core/types/evaluation';
 import type { ISODate } from '../core/types/common';
 import type { EstimateFile, EstimateKey } from '../core/types/estimate';
+import type { ProcessGetResult } from '../core/types/process';
 import type { G2bFailureInput } from '../core/diagnostics/g2b-failure';
 import type { NotifyEvent, ResultProbeResult, ResultRunSummary } from '../core/types/result';
 import type { AiBatchState, AiProvider, AiReviewFile, AiRunState, AiScope } from '../core/types/ai';
@@ -191,6 +192,8 @@ export type Msg =
   | { type: 'result/probe'; payload: { noticeNo: string; serviceKey?: string }; response: ResultProbeResult }  // 대시보드→SW→offscreen(키는 SW가 주입)
   | { type: 'org/probe'; payload: OrgProbeParams; response: OrgProbeResult }  // 대시보드→SW. 키는 SW가 주입한다
   | { type: 'org/probe-run'; payload: OrgProbeParams & { serviceKey: string }; response: OrgProbeResult }  // SW→offscreen 전용
+  | { type: 'process/get'; payload: { noticeId: string; force?: boolean }; response: ProcessGetResult }  // 대시보드→SW. 키는 SW가 주입. throw 없음
+  | { type: 'process/fetch'; payload: { noticeId: string; force?: boolean; serviceKey: string }; response: ProcessGetResult }  // SW→offscreen 전용
   | { type: 'ai/get'; payload: { noticeId: string }; response: AiReviewFile | null }
   | { type: 'ai/run'; payload: { noticeId: string; scope: AiScope; keys?: AiKey[]; provider?: AiProvider; files?: string[] }; response: { runId: string } }  // 대시보드→SW. 키는 SW가 주입한다
   | { type: 'ai/compare-run'; payload: { noticeId: string; scope: AiScope; keys?: AiKey[]; providers: AiProvider[]; files?: string[] }; response: { compareId: string; runId: string } }  // 대시보드→SW. 키는 SW가 주입

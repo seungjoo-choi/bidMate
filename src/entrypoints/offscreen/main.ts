@@ -11,6 +11,7 @@ import { runExtractJob } from '../../engine/jobs/extract-job';
 import { createParserRegistry } from '../../engine/parsers/registry';
 import { createRfpService } from '../../engine/rfp/rfp-service';
 import { getEstimate, saveEstimate } from '../../engine/estimate/estimate-store';
+import { getProcess } from '../../engine/process/process-store';
 import { editExtraction, editNoticeField, getNotice, listNotices, readExtractionText, readNoticeTexts } from '../../engine/notices/notice-api';
 import { repairConfig } from '../../engine/config/config-store';
 import { deletePerformance, importPerformances, listPerformances, savePerformance } from '../../engine/config/performances-api';
@@ -245,6 +246,7 @@ listen('extraction/edit', (p) => editExtraction(fileStore, p, { isBusy: isNotice
 listen('notice/field-edit', (p) => editNoticeField(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
 listen('extraction/text', (p) => readExtractionText(fileStore, p), 'offscreen');
 listen('notice/texts', (p) => readNoticeTexts(fileStore, p), 'offscreen');
+listen('process/fetch', ({ noticeId, force, serviceKey }) => getProcess(fileStore, { noticeId, serviceKey, force }, { fetch: (...a) => fetch(...a), isBusy: isNoticeBusy, onFailure: reportG2bFailure }), 'offscreen');
 listen('estimate/get', (p) => getEstimate(fileStore, p.noticeId), 'offscreen');
 listen('estimate/save', (p) => saveEstimate(fileStore, p, { isBusy: isNoticeBusy }), 'offscreen');
 

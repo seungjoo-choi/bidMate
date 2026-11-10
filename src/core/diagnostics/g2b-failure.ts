@@ -4,16 +4,16 @@ import type { CollectResult, Job } from '../types/job';
 export const G2B_FAILURES_KEY = 'g2bFailures';
 export const G2B_FAILURES_MAX = 300;
 export const G2B_FAILURES_MAX_AGE_MS = 30 * 86_400_000;
-export const G2B_FLOWS = ['eval', 'result', 'collect', 'detail', 'attachment', 'key-test'] as const;
+export const G2B_FLOWS = ['eval', 'result', 'collect', 'detail', 'attachment', 'key-test', 'process'] as const;
 export type G2bFlow = (typeof G2B_FLOWS)[number];
-export const G2B_FLOW_LABEL: Record<G2bFlow, string> = { eval: '평가점수 가져오기', result: '낙찰 결과 조회', collect: '공고정보 조회', detail: '상세화면 읽기', attachment: '첨부파일 다운로드', 'key-test': '서비스키 테스트' };
+export const G2B_FLOW_LABEL: Record<G2bFlow, string> = { eval: '평가점수 가져오기', result: '낙찰 결과 조회', collect: '공고정보 조회', detail: '상세화면 읽기', attachment: '첨부파일 다운로드', 'key-test': '서비스키 테스트', process: '계약과정 조회' };
 export const G2B_TAB_PATHS = ['own', 'reused', 'reused-reloaded', 'created', 'created-fallback'] as const;
 export type G2bTabPath = (typeof G2B_TAB_PATHS)[number];
 export const G2B_TAB_LABEL: Record<G2bTabPath, string> = { own: '요청한 탭', reused: '열린 탭', 'reused-reloaded': '열린 탭(새로고침)', created: '새 탭', 'created-fallback': '새 탭(기존 탭 복구 실패)' };
 
 export interface G2bFailureInput {
   flow: G2bFlow;
-  stage: string;        // eval: 'tab'|'fetch'|'save'|'official' / result: 'opening'|'failing'|'award'|'run'|'probe' / collect: 'fetch_basic'|'prespec' / detail: 'read' / attachment: 'download' / key-test: 'bid'|'prespec'
+  stage: string;        // eval: 'tab'|'fetch'|'save'|'official' / result: 'opening'|'failing'|'codes'|'reannounce'|'award'|'run'|'probe' / collect: 'fetch_basic'|'prespec' / detail: 'read' / attachment: 'download' / key-test: 'bid'|'prespec' / process: 'fetch'
   code: string; message: string;
   noticeNo?: string; round?: string; noticeId?: string; jobId?: string;
   step?: number;        // eval 1~6

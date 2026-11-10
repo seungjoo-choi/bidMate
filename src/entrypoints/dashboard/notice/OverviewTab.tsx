@@ -8,6 +8,7 @@ import { FOLLOW_TARGET_LABEL, formatCheckAt } from '../../../ui/notices/result-v
 import { useSettings } from '../../../ui/hooks/useSettings';
 import { DetailList, StatStrip, Timeline } from './parts';
 import { EstimateCard } from './EstimateCard';
+import { ProcessCard } from './ProcessCard';
 import { PriceSimulatorCard } from './PriceSimulatorCard';
 import { QualificationCard } from './QualificationCard';
 import { kindOf } from '../../../core/model/ids';
@@ -67,6 +68,8 @@ export function OverviewTab({ notice, index, extraction }: { notice: Notice; ind
           )}
         </Card>
       )}
+
+      <ProcessCard noticeId={notice.id} />
 
       {kindOf(notice.ref) !== 'prespec' && <QualificationCard notice={notice} extraction={extraction} />}
 
